@@ -1,20 +1,18 @@
 #include "evepoll.h"
+#ifdef HAVE_EPOLL
 #include <sys/epoll.h>
+#include <resource.h>
 /* Initialize evepoll  */
 int evepoll_init(EVBASE *evbase)
 {
 	 struct rlimit rlim;
-        int max_fd = 0;
+        int max_fd = EV_MAX_FD;
         if(evbase)
         {
                 if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
                         && rlim.rlim_cur != RLIM_INFINITY )
                 {
                         max_fd = rlim.rlim_cur;
-                }
-                else
-                {
-                        max_fd = EV_MAX_FD;
                 }
                 evbase->evlist  = (EVENT **)calloc(max_fd, sizeof(EVENT *));
 		evbase->efd 	= epoll_create(max_fd);
@@ -91,8 +89,8 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
 	{
 		epoll_ctl(ebase->efd, EPOLL_CTL_DEL, event->ev_fd, &ep_event);		
 		memset(evbase->evs[event->fd], 0, sizeof(struct epoll_event));
-		if(event->ev_fd == evbase->maxfd)
-                        evbase->maxfd--;
+		if(event->ev_fd >= evbase->maxfd)
+                        evbase->maxfd = event->ev_fd - 1;
                 evbase->evlist[event->ev_fd] = NULL;
 		return 0;
 	}
@@ -106,13 +104,15 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, timeval *tv)
 	int timeout = 0;
 	short ev_flags = 0;
 	struct epoll_event ep_event = {0, {0}};
+	int fd = 0;
 	if(evbase)
 	{
-		if(tv)tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
+		if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
 		n = epoll_wait(evbase->efd, evbase->evs, evbase->ev_maxfd, timeout);
-		for(; i < evbase->ev_maxfd; i++)
+		for(; i < n; i++)
 		{
-			if(evbase->evlist[i])	
+			fd = evbase->evs[i]->data.fd;
+			if(evbase->evlist[fd] && evbase->evs[i]->data.ptr == (void *)evbase->evlist[fd])	
 			{
 				if(evbase->evs[i]->events & (EPOLLHUP | EPOLLERR))
 					ev_flags |= (EV_READ |EV_WRITE)
@@ -120,16 +120,9 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, timeval *tv)
 					ev_flags |= EV_READ;
 				if(evbase->evs[i]->events & EPOLLOUT)
 					ev_flags |= EV_WRITE;
-				if(evbase->evs[i]->data.ptr == (void *)evbase->evlist[i])
+				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
-					if((ev_flags &= evbase->evlist[i]->ev_flags))
-					{
-						evbase->evlist[i]->active(evbase->evlist[i], ev_flags);	
-					}
-				}
-				else
-				{
-					epoll_ctl(ebase->efd, EPOLL_CTL_DEL, event->ev_fd, &ep_event);
+					evbase->evlist[fd]->active(evbase->evlist[fd], ev_flags);	
 				}
 			}
 		}
@@ -148,4 +141,4 @@ void evepoll_clean(EVBASE **evbase)
                 (*evbase) = NULL;
         }	
 }
-
+#endif

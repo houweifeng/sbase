@@ -20,6 +20,7 @@ typedef struct _EVBASE
 	void *ev_read_fds;
 	void *ev_write_fds;
 	void *ev_fds;
+	void *changes;
 	void *evs;
 	int  ev_fd;
 

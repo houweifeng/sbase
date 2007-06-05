@@ -1,4 +1,7 @@
 #include "evpoll.h"
+#ifdef HAVE_POLL
+#include <poll.h>
+#include <resource.h>
 /* Initialize evpoll  */
 int evpoll_init(EVBASE *evbase)
 {
@@ -64,8 +67,8 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
         {
                 ((struct pollfd *)evbase->ev_fds)[event->ev_fd]->events = 0;
 		((struct pollfd *)evbase->ev_fds)[event->ev_fd]->fd  = -1;
-		 if(event->ev_fd == evbase->maxfd)
-                        evbase->maxfd--;
+		if(event->ev_fd >= evbase->maxfd)
+                        evbase->maxfd = event->ev_fd - 1;
 		evbase->evlist[event->ev_fd] = NULL;
         }	
 }
@@ -115,3 +118,4 @@ void evpoll_clean(EVBASE **evbase)
                 (*evbase) = NULL;
         }
 }
+#endif
