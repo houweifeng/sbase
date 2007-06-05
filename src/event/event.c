@@ -204,3 +204,12 @@ void event_clean(EVENT **event)
 	}
 }
 
+/* TEST server */
+#ifdef _DEBUG_EV_SERVER
+
+#endif
+
+/* TEST client */
+#ifdef _DEBUG_EV_CLIENT
+
+#endif

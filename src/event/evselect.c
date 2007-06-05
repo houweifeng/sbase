@@ -1,4 +1,7 @@
 #include "evselect.h"
+#ifdef HAVE_SELECT
+#include <sys/select.h>
+#include <resource.h>
 /* Initialize evselect  */
 int evselect_init(EVBASE *evbase)
 {
@@ -75,8 +78,8 @@ int evselect_del(EVBASE *evbase, EVENT *event)
         {
                 FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
                 FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
-		if(event->ev_fd == evbase->maxfd)
-                        evbase->maxfd--;
+		if(event->ev_fd >= evbase->maxfd)
+                        evbase->maxfd = event->ev_fd - 1;
 		evbase->evlist[event->ev_fd] = NULL;	
 		return 0;
         }
@@ -124,4 +127,4 @@ void evselect_clean(EVBASE **evbase)
                 (*evbase) = NULL;
         }
 }
-
+#endif
