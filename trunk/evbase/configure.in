@@ -1,0 +1,90 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ(2.61)
+AC_INIT(libevbase, 0.0.1, [SounOS@gmail.com])
+AM_INIT_AUTOMAKE
+AC_CONFIG_SRCDIR([src/evdevpoll.c])
+AC_CONFIG_HEADER([config.h])
+
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_LIBTOOL
+
+# Checks for libraries.
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h signal.h unistd.h sys/select.h sys/epoll.h sys/queue.h sys/event.h sys/ioctl.h sys/devpoll.h port.h poll.h windows.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_HEADER_TIME
+
+# Checks Library is exists 
+#check port
+haveevport=no
+AC_CHECK_FUNCS(port_create, [haveevport=yes], )
+if test "$haveevport" = "yes" ; then
+        AC_DEFINE(HAVE_EVPORT, 1,
+                [Define if your system supports event ports])
+        AC_LIBOBJ(evport)
+fi
+#check select
+haveevselect=no
+AC_CHECK_FUNCS(select, [haveevselect=yes], )
+if test "$haveevselect" = "yes" ; then
+        AC_DEFINE(HAVE_EVSELECT, 1,
+                [Define if your system supports select])
+        AC_LIBOBJ(select)
+fi
+#check poll
+haveevpoll=no
+AC_CHECK_FUNCS(poll, [haveevpoll=yes], )
+if test "$haveevpoll" = "yes" ; then
+        AC_DEFINE(HAVE_EVPOLL, 1,
+                [Define if your system supports poll])
+        AC_LIBOBJ(poll)
+fi
+#check signal
+haveevrtsig=no
+AC_CHECK_FUNCS(signal, [haveevrtsig=yes], )
+if test "$haveevrtsig" = "yes" ; then
+        AC_DEFINE(HAVE_EVRTSIG, 1,
+                [Define if your system supports signal])
+        AC_LIBOBJ(signal)
+fi
+
+#check epoll
+haveevepoll=no
+AC_CHECK_FUNCS(epoll_create, [haveevepoll=yes], )
+if test "$haveevepoll" = "yes" ; then
+        AC_DEFINE(HAVE_EVEPOLL, 1,
+                [Define if your system supports epoll])
+        AC_LIBOBJ(epoll)
+fi
+
+#check kqueue
+haveevkqueue=no
+AC_CHECK_FUNCS(kqueue, [haveevkqueue=yes], )
+if test "$haveevkqueue" = "yes" ; then
+        AC_DEFINE(HAVE_EVKQUEUE, 1,
+                [Define if your system supports kqueue])
+        AC_LIBOBJ(kqueue)
+fi
+#check devpoll
+haveevdevpoll=no
+AC_CHECK_FUNCS(devpoll, [haveevdevpoll=yes], )
+if test "$ac_cv_header_sys_devpoll_h" = "yes" ; then
+        AC_DEFINE(HAVE_EVDEVPOLL, 1,
+                [Define if your system supports dev/poll])
+        AC_LIBOBJ(devpoll)
+fi
+
+# Checks for library functions.
+AC_CHECK_EXTRA_OPTIONS
+AC_FUNC_SELECT_ARGTYPES
+AC_CHECK_FUNCS([inet_ntoa memset select socket strerror])
+
+AC_CONFIG_FILES([Makefile
+                 src/Makefile])
+AC_OUTPUT
