@@ -29,14 +29,14 @@
 int max_connections = 0;
 int lfd = 0;
 EVBASE *evbase = NULL;
+char buffer[CONN_MAX][BUF_SIZE];
+EVENT *events[CONN_MAX];
 void ev_handler(int fd, short ev_flags, void *arg)
 {
 	int rfd = 0 ;
 	struct 	sockaddr_in rsa;
 	socklen_t rsa_len = 0;
-	char buf[BUF_SIZE];
 	int n = 0;
-	EVENT *event = NULL;
 	if(fd == lfd )
 	{
 		if((ev_flags & EV_READ))
@@ -45,47 +45,69 @@ void ev_handler(int fd, short ev_flags, void *arg)
 			{
 				fprintf(stdout, "Accept new connection %s:%d via %d\n",
 						inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd);	
-				if((event = event_init()))
-                		{
-                        		event->set(event, rfd, EV_READ, (void *)event, &ev_handler);
-                        		evbase->add(evbase, event);
-                		}
+				/* set FD NON-BLOCK */
+				fcntl(rfd, F_SETFL, O_NONBLOCK);
+				if((events[rfd] = event_init()))
+				{
+					events[rfd]->set(events[rfd], rfd, EV_READ, (void *)events[rfd], &ev_handler);
+					evbase->add(evbase, events[rfd]);
+				}
+				return ;
 			}
 			else
 			{
 				fprintf(stderr, "Accept new connection failed, %s\n", strerror(errno));
 			}
 		}	
+		return ;
 	}
 	else
 	{
+		fprintf(stdout, "EVENT %d on %d\n", ev_flags, fd);
 		if(ev_flags & EV_READ)
 		{
-			if( ( n = read(fd, buf, BUF_SIZE)) > 0 )
+			if( ( n = read(fd, buffer[fd], BUF_SIZE)) > 0 )
 			{
 				fprintf(stdout, "Read %d bytes from %d\n", n, fd);
-				if(  (n = write(fd, buf, n) )> 0 )
+				buffer[fd][n] = 0;
+				fprintf(stdout, "Updating event[%x] on %d \n", events[fd], fd);
+				if(events[fd])
 				{
-					fprintf(stdout, "Echo %d bytes to %d\n", n, fd);
-				}
-				else
-				{
-					fprintf(stderr, "Echo data to %d failed, %s", fd, strerror(errno));	
+					events[fd]->update(events[fd], EV_READ|EV_WRITE);	
 				}
 			}		
 			else
-                        {
-                                if(n == 0 )
-                                {
-                                        fprintf(stdout, "Connection %d closed\n", fd);
-                                }
-                                else
-                                {
-                                        fprintf(stderr, "Reading from %d failed, %s", fd, strerror(errno));
-                                }
-                        }
-                }
-        }
+			{
+				if(n == 0 )
+				{
+					if(events[fd])
+					{
+						events[fd]->del(events[fd]);
+						events[fd] = NULL;
+						shutdown(fd, SHUT_RDWR);
+						close(fd);
+						fprintf(stdout, "Connection %d closed\n", fd);
+					}
+				}
+				else
+				{
+					fprintf(stderr, "Reading from %d failed, %s\n", fd, strerror(errno));
+				}
+			}
+		}
+		if(ev_flags & EV_WRITE)
+		{
+			if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
+			{
+				fprintf(stdout, "Echo %d bytes to %d\n", n, fd);
+				events[fd]->update(events[fd], EV_READ);
+			}
+			else
+			{
+				fprintf(stderr, "Echo data to %d failed, %s\n", fd, strerror(errno));	
+			}
+		}
+	}
 }
 
 int main(int argc, char **argv)
@@ -96,6 +118,7 @@ int main(int argc, char **argv)
 	struct sockaddr_in sa;	
 	socklen_t sa_len;
 	int opt = 1;
+	int i = 0;
 	EVENT  *event = NULL;
 	if(argc < 3)
 	{
@@ -107,6 +130,8 @@ int main(int argc, char **argv)
 	max_connections = (connection_limit > 0) ? connection_limit : CONN_MAX;
 	/* Set resource limit */
 	SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, max_connections);	
+	/* Initialize global vars */
+	memset(events, 0, sizeof(EVENT *) * CONN_MAX);
 	/* Initialize inet */ 
 	lfd = socket(AF_INET, SOCK_STREAM, 0);
         setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
@@ -140,12 +165,13 @@ int main(int argc, char **argv)
         {
                 if((event = event_init()))
                 {
+			fprintf(stdout, "Initialized event \n");
                         event->set(event, lfd, EV_READ, (void *)event, &ev_handler);
                         evbase->add(evbase, event);
                         while(1)
                         {
                                 evbase->loop(evbase, 0, NULL);
-                                usleep(1000);
+                                usleep(10);
                         }
                 }
                 else

@@ -1,5 +1,5 @@
 #include "evkqueue.h"
-#ifdef HAVE_EVENT_H
+#ifdef HAVE_EVKQUEUE
 #include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +13,8 @@ int evkqueue_init(EVBASE *evbase)
 	struct rlimit rlim;
 	if(evbase)
 	{
-		if((ebase->fd = kqueue()) == -1) return -1;
+		if((evbase->efd = kqueue()) == -1) 
+			return -1;
 		if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
 				&& rlim.rlim_cur != RLIM_INFINITY )
 		{
@@ -31,7 +32,8 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
 	struct kevent *kqev = NULL;
 	if(evbase && event && evbase->ev_changes && evbase->evs)
 	{
-		kqev = &(evbase->ev_changes[event->ev_fd]);
+		event->ev_base = evbase;
+		kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
 		memset(kqev, 0, sizeof(struct kevent));
 		if(event->ev_flags & EV_READ)
 		{
@@ -60,7 +62,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
 	struct kevent *kqev = NULL;
         if(evbase && event && evbase->ev_changes && evbase->evs)
         {
-                kqev = &(evbase->ev_changes[event->ev_fd]);
+                kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
                 memset(kqev, 0, sizeof(struct kevent));
                 if(event->ev_flags & EV_READ)
                 {
@@ -87,7 +89,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
 	struct kevent *kqev = NULL;
         if(evbase && event && evbase->ev_changes && evbase->evs)
         {
-                kqev = &(evbase->ev_changes[event->ev_fd]);
+                kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
                 memset(kqev, 0, sizeof(struct kevent));
                 if(event->ev_flags & EV_READ)
                 {
@@ -111,9 +113,9 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
         return -1;
 }
 /* Loop evbase */
-void evkqueue_loop(EVBASE *evbase, short, struct timeval *tv)
+void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
-	int i = 0; n = 0;
+	int i = 0, n = 0;
         short ev_flags = 0;	
 	struct timespec ts;
 	struct kevent *kqev = NULL;
@@ -121,10 +123,12 @@ void evkqueue_loop(EVBASE *evbase, short, struct timeval *tv)
 	{
 		memset(&ts, 0, sizeof(struct timespec));
 		if(tv) TIMEVAL_TO_TIMESPEC(tv, &ts);
-		n = kevent(evbase->fd, evbase->ev_changes, evbase->maxfd, evbase->evs, evbase->maxfd, &ts);	
-		for(; i < n; i++)
+		n = kevent(evbase->efd, evbase->ev_changes,
+			 evbase->maxfd, evbase->evs, evbase->maxfd, &ts);	
+		if(n <= 0 ) return ;
+		for(i = 0; i < n; i++)
 		{
-			kqev = &(evbase->evs[i]);
+			kqev = &(((struct kevent *)evbase->evs)[i]);
 			if(kqev && evbase->evlist[kqev->ident] == kqev->udata)
 			{
 				if(kqev->filter & EVFILT_READ)	ev_flags |= EV_READ;

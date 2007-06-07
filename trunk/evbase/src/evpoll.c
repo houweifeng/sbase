@@ -24,51 +24,71 @@ int evpoll_init(EVBASE *evbase)
 /* Add new event to evbase */
 int evpoll_add(EVBASE *evbase, EVENT *event)
 {
-	if(evbase && event && evbase->ev_fds)
+	struct pollfd *ev = NULL;
+	short ev_flags = 0;
+	if(evbase && event && evbase->ev_fds && evbase->evlist)
 	{
+		event->ev_base = evbase;
+		ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
 		if(event->ev_flags & EV_READ)
                 {
-			((struct pollfd *)evbase->ev_fds)[event->ev_fd].events &= POLLIN;
-			((struct pollfd *)evbase->ev_fds)[event->ev_fd].fd  = event->ev_fd;
+			ev_flags |= POLLIN;
                 }
                 if(event->ev_flags & EV_WRITE)
                 {
-			((struct pollfd *)evbase->ev_fds)[event->ev_fd].events &= POLLOUT;
-			((struct pollfd *)evbase->ev_fds)[event->ev_fd].fd  = event->ev_fd;
+			ev_flags |= POLLOUT;
                 }
-                if(event->ev_fd > evbase->maxfd)
-                        evbase->maxfd = event->ev_fd;
-                evbase->evlist[event->ev_fd] = event;		
-	}	
+		if(ev_flags)
+		{
+			ev->events = ev_flags;
+			ev->revents = 0;
+			ev->fd	  = event->ev_fd;
+			if(event->ev_fd > evbase->maxfd)
+				evbase->maxfd = event->ev_fd;
+			evbase->evlist[event->ev_fd] = event;	
+			fprintf(stdout, "Added POLL event:%d on %d\n", event->ev_flags, event->ev_fd);
+		}
+		return 0;
+	}
+	return -1;
 }
 /* Update event in evbase */
 int evpoll_update(EVBASE *evbase, EVENT *event)
 {
+	struct pollfd *ev = NULL;
+        short ev_flags = 0;
 	if(evbase && event && evbase->ev_fds)
         {
-		((struct pollfd *)evbase->ev_fds)[event->ev_fd].events = 0;
+		event->ev_base = evbase;
+                ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
                 if(event->ev_flags & EV_READ)
                 {
-                        ((struct pollfd *)evbase->ev_fds)[event->ev_fd].events &= POLLIN;
-			((struct pollfd *)evbase->ev_fds)[event->ev_fd].fd  = event->ev_fd;
+                        ev_flags |= POLLIN;
                 }
                 if(event->ev_flags & EV_WRITE)
                 {
-                        ((struct pollfd *)evbase->ev_fds)[event->ev_fd].events &= POLLOUT;
-			((struct pollfd *)evbase->ev_fds)[event->ev_fd].fd  = event->ev_fd;
+                        ev_flags |= POLLOUT;
                 }
-                if(event->ev_fd > evbase->maxfd)
-                        evbase->maxfd = event->ev_fd;
-                evbase->evlist[event->ev_fd] = event; 
+                if(ev_flags)
+                {
+                        ev->events = ev_flags;
+			ev->revents = 0;
+			ev->fd	  = event->ev_fd;
+                        if(event->ev_fd > evbase->maxfd)
+                                evbase->maxfd = event->ev_fd;
+                        evbase->evlist[event->ev_fd] = event;
+                        fprintf(stdout, "Updated POLL event:%d on %d\n", event->ev_flags, event->ev_fd);
+			return 0;
+                }
         }	
+	return -1;
 }
 /* Delete event from evbase */
 int evpoll_del(EVBASE *evbase, EVENT *event)
 {
 	if(evbase && event && evbase->ev_fds)
         {
-                ((struct pollfd *)evbase->ev_fds)[event->ev_fd].events = 0;
-		((struct pollfd *)evbase->ev_fds)[event->ev_fd].fd  = -1;
+		memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
 		if(event->ev_fd >= evbase->maxfd)
                         evbase->maxfd = event->ev_fd - 1;
 		evbase->evlist[event->ev_fd] = NULL;
@@ -80,23 +100,28 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 	int sec = 0;
 	int n = 0, i = 0;
 	short ev_flags = 0;
+	struct pollfd *ev = NULL;
 	if(evbase && evbase->ev_fds)
 	{	
-		sec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
-		n = poll(evbase->ev_fds, evbase->maxfd, sec);		
-		for(; i < evbase->maxfd; i++)
+		if(tv) sec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
+		n = poll(evbase->ev_fds, evbase->maxfd + 1 , sec);		
+		if(n <= 0) return ;
+		//fprintf(stdout, "active %d in %d\n", n,  evbase->maxfd + 1);
+		for(; i <= evbase->maxfd; i++)
 		{
-			if(evbase->evlist[i] && ((struct pollfd *)evbase->ev_fds)[i].fd > 0)
+			ev = &(((struct pollfd *)evbase->ev_fds)[i]);
+			if(evbase->evlist[i] && ev->fd > 0)
 			{
-				if(((struct pollfd *)evbase->ev_fds)[i].revents & POLLIN)
+				ev_flags = 0;
+				if(ev->revents & POLLIN)
 				{
 					ev_flags |= EV_READ;
 				}
-				if(((struct pollfd *)evbase->ev_fds)[i].revents & POLLOUT)	
+				if(ev->revents & POLLOUT)	
 				{
 					ev_flags |= EV_WRITE;
 				}
-				if(((struct pollfd *)evbase->ev_fds)[i].revents & (POLLHUP|POLLERR))	
+				if(ev->revents & (POLLHUP|POLLERR))	
 				{
 					ev_flags |= (EV_READ|EV_WRITE);
 				}

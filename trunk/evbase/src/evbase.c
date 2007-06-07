@@ -72,7 +72,7 @@ EVBASE *evbase_init()
 		evbase->clean 	=  evpoll_clean;
 		fprintf(stdout, "Using POLL event mode \n");
 #endif 
-#ifdef HAVE_EVRTSIG
+#ifdef N_HAVE_EVRTSIG
 		evbase->init 	=  evrtsig_init;
 		evbase->add 	=  evrtsig_add;
 		evbase->update 	=  evrtsig_update;
@@ -81,7 +81,7 @@ EVBASE *evbase_init()
 		evbase->clean	=  evrtsig_clean;
 		fprintf(stdout, "Using SIGNAL event mode \n");
 #endif 
-#ifdef HAVE_EVEPOLL
+#ifdef N_HAVE_EVEPOLL
 		evbase->init 	=  evepoll_init;
 		evbase->add 	=  evepoll_add;
 		evbase->update 	=  evepoll_update;
@@ -152,7 +152,7 @@ void event_set(EVENT *event, int fd, short flags, void *arg, void *handler)
 {
 	if(event)
 	{
-		if(fd > 0 && arg && handler)
+		if(fd > 0 && handler)
 		{
 			event->ev_fd		= 	fd;
 			event->ev_flags		=	flags;
@@ -169,7 +169,10 @@ void event_update(EVENT *event, short flags)
 	{
 		event->ev_flags = flags;	
 		if(event->ev_base && event->ev_base->update)
+		{
 			event->ev_base->update(event->ev_base, event);
+			fprintf(stdout, "Updated event[%x] to %d on %d\n", event, event->ev_flags, event->ev_fd);
+		}
 	}	
 }
 
@@ -180,7 +183,10 @@ void event_del(EVENT *event)
 	{
 		event->ev_flags = 0;
 		if(event->ev_base && event->ev_base->del)
+		{
                         event->ev_base->del(event->ev_base, event);
+			fprintf(stdout, "Delete event[%x] on %d\n", event, event->ev_fd);
+		}
 	}	
 }
 
