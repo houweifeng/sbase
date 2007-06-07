@@ -11,7 +11,7 @@ extern "C" {
 #endif
 #define EV_READ		0x01
 #define EV_WRITE	0x02
-#define EV_MAX_FD	65535
+#define EV_MAX_FD	1024
 #define EV_USEC_SLEEP	100
 struct _EVENT;
 #ifndef _TYPEDEF_EVBASE
@@ -21,7 +21,7 @@ typedef struct _EVBASE
 	void *ev_read_fds;
 	void *ev_write_fds;
 	void *ev_fds;
-	void *changes;
+	void *ev_changes;
 	void *evs;
 	int  efd;
 

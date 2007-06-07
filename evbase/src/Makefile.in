@@ -34,7 +34,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = ev_server$(EXEEXT)
+bin_PROGRAMS = ev_server$(EXEEXT) ev_client$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -63,6 +63,12 @@ am_libevbase_la_OBJECTS = evdevpoll.lo evbase.lo evepoll.lo \
 libevbase_la_OBJECTS = $(am_libevbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
+am_ev_client_OBJECTS = ev_client.$(OBJEXT)
+ev_client_OBJECTS = $(am_ev_client_OBJECTS)
+ev_client_DEPENDENCIES = libevbase.la
+ev_client_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(ev_client_LDFLAGS) $(LDFLAGS) -o $@
 am_ev_server_OBJECTS = ev_server.$(OBJEXT)
 ev_server_OBJECTS = $(am_ev_server_OBJECTS)
 ev_server_DEPENDENCIES = libevbase.la
@@ -81,8 +87,10 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libevbase_la_SOURCES) $(ev_server_SOURCES)
-DIST_SOURCES = $(libevbase_la_SOURCES) $(ev_server_SOURCES)
+SOURCES = $(libevbase_la_SOURCES) $(ev_client_SOURCES) \
+	$(ev_server_SOURCES)
+DIST_SOURCES = $(libevbase_la_SOURCES) $(ev_client_SOURCES) \
+	$(ev_server_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -219,6 +227,9 @@ include_HEADERS = evbase.h
 ev_server_SOURCES = ev_server.c evbase.h
 ev_server_LDFLAGS = -static
 ev_server_LDADD = libevbase.la
+ev_client_SOURCES = ev_client.c evbase.h
+ev_client_LDFLAGS = -static
+ev_client_LDADD = libevbase.la
 all: all-am
 
 .SUFFIXES:
@@ -309,6 +320,9 @@ clean-binPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
+ev_client$(EXEEXT): $(ev_client_OBJECTS) $(ev_client_DEPENDENCIES) 
+	@rm -f ev_client$(EXEEXT)
+	$(ev_client_LINK) $(ev_client_OBJECTS) $(ev_client_LDADD) $(LIBS)
 ev_server$(EXEEXT): $(ev_server_OBJECTS) $(ev_server_DEPENDENCIES) 
 	@rm -f ev_server$(EXEEXT)
 	$(ev_server_LINK) $(ev_server_OBJECTS) $(ev_server_LDADD) $(LIBS)
@@ -319,6 +333,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_client.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_server.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdevpoll.Plo@am__quote@
