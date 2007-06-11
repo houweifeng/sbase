@@ -11,7 +11,7 @@ LOGGER *logger_init(char *logfile)
 		if(logfile)
 		{
 			strcpy(logger->file, logfile);
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 			pthread_mutex_init(&(logger->mutex), NULL);
 #endif
 
@@ -19,7 +19,7 @@ LOGGER *logger_init(char *logfile)
 			{
 				fprintf(stderr, "FATAL:open log file[%s]  failed, %s",
 						logfile, strerror(errno));
-				logger->close(logger);
+				logger->close(&logger);
 			}
 		}
 		else
@@ -42,7 +42,7 @@ void logger_add(LOGGER *logger, char *__file__, int __line__, int __level__, cha
 	int n = 0; 
 	if(logger) 
 	{ 
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_lock(&(logger->mutex)); 
 #endif
 		if(logger->fd) 
@@ -50,7 +50,7 @@ void logger_add(LOGGER *logger, char *__file__, int __line__, int __level__, cha
 			gettimeofday(&tv, NULL); 
 			time(&timep); 
 			p = localtime(&timep); 
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 			n = sprintf(s, 
 					"[%02d/%s/%04d:%02d:%02d:%02d +%06u] [%u/%08x] #%s::%d# \"%s:", 
 					p->tm_mday, ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,  
@@ -79,7 +79,7 @@ void logger_add(LOGGER *logger, char *__file__, int __line__, int __level__, cha
 				logger->fd = 0; 
 			} 
 		}	 
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_unlock(&(logger->mutex)); 
 #endif
 	}	 
@@ -91,7 +91,7 @@ void logger_close(LOGGER **logger)
 	if(*logger) 
 	{ 
 		if((*logger)->fd > 0 ) close((*logger)->fd); 
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_destroy(&(logger->mutex)); 
 #endif
 		free((*logger)); 

@@ -20,7 +20,7 @@ TIMER *timer_init()
 		timer->reset		= timer_reset;
 		timer->check		= timer_check;
 		timer->clean		= timer_clean;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_init(&(timer->mutex), NULL);
 #endif
 	}
@@ -32,7 +32,7 @@ void timer_reset(TIMER *timer)
 {
 	if(timer)
 	{
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_lock(&(timer->mutex));
 #endif
 		gettimeofday(&(timer->tv), NULL);
@@ -40,7 +40,7 @@ void timer_reset(TIMER *timer)
                 timer->start_usec       = timer->tv.tv_sec * 1000000llu + timer->tv.tv_usec * 1llu;
 		timer->last_sec         = timer->start_sec;
                 timer->last_usec        = timer->start_usec;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_unlock(&(timer->mutex));
 #endif
 	}
@@ -51,7 +51,7 @@ void timer_sample(TIMER *timer)
 {
 	if(timer)
 	{
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_lock(&(timer->mutex));
 #endif
 		gettimeofday(&(timer->tv), NULL);	
@@ -62,7 +62,7 @@ void timer_sample(TIMER *timer)
                 timer->last_usec        = timer->tv.tv_sec * 1000000llu + timer->tv.tv_usec;
 		timer->sec_used  	= timer->tv.tv_sec - timer->start_sec;
 		timer->usec_used 	= timer->last_usec - timer->start_usec;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_unlock(&(timer->mutex));
 #endif
 	}
@@ -74,7 +74,7 @@ void timer_check(TIMER *timer, uint32_t interval)
 	uint64_t n = 0llu;
 	if(timer)
 	{
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_lock(&(timer->mutex));
 #endif
                 gettimeofday(&(timer->tv), NULL);       
@@ -90,7 +90,7 @@ void timer_check(TIMER *timer, uint32_t interval)
                         timer->usec_used        = timer->last_usec - timer->start_usec;
 
                 }
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_unlock(&(timer->mutex));
 #endif
 	}

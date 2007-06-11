@@ -4,7 +4,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
 
@@ -16,7 +16,7 @@ extern "C" {
 
 #ifndef _TYPEDEF_TIMER
 #define _TYPEDEF_TIMER
-typedef struct _TIMER
+typedef struct _TIMER 
 {
 	struct timeval tv;
 	time_t start_sec;
@@ -27,9 +27,6 @@ typedef struct _TIMER
 	uint64_t last_usec;
 	time_t last_sec_used;
         uint64_t last_usec_used;
-#ifdef HAVE_PTHREAD_H
-	pthread_mutex_t mutex;	
-#endif
 
 	void (*reset)(struct _TIMER *);
 	void (*check)(struct _TIMER *, uint32_t );

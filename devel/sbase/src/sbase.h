@@ -4,10 +4,6 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#endif
-#include <locale.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -15,17 +11,15 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
-#include <sys/mman.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
-#include <event.h>
+#include <evbase.h>
 #ifndef _SBASE_H
 #define _SBASE_H
-#define HAVE_SBASE_H
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -87,7 +81,9 @@ typedef struct _BUFFER
 	void *data;
 	void *end;
 	size_t size;
+#ifdef HAVE_PTHREAD
 	pthread_mutex_t mutex;
+#endif
 
 	void 	*(*calloc)(struct _BUFFER *, size_t);
 	void 	*(*malloc)(struct _BUFFER *, size_t);
@@ -130,7 +126,8 @@ BUFFER *buffer_init();
 #define FILE_CHUNK  0x04
 #define ALL_CHUNK  (MEM_CHUNK | FILE_CHUNK)
 #define FILE_NAME_LIMIT 255 
-typedef struct _CHUNK{
+typedef struct _CHUNK
+{
 	/* property */
 	int id;
 	int type;
@@ -141,8 +138,9 @@ typedef struct _CHUNK{
 	} file;
 	uint64_t offset;
 	uint64_t len;
-
+#ifdef HAVE_PTHREAD
 	pthread_mutex_t mutex;
+#endif
 
 	/* method */
 	int (*set)(struct _CHUNK *, int , int , char *, uint64_t, uint64_t);
@@ -184,7 +182,6 @@ CHUNK *chunk_init();
                        ); \
         } \
 }
-
 #endif
 
 
@@ -203,11 +200,11 @@ CHUNK *chunk_init();
 #define WORK_PROC	0x00
 #define WORK_THREAD	0x01
 
-#ifndef TYPEDEF_SBASE
-#define TYPEDEF_SBASE
+#ifndef _TYPEDEF_SBASE
+#define _TYPEDEF_SBASE
 typedef struct _SBASE{
 	/* PROCTHREAD */
-	int 	work ;
+	int 	working_mode ;
 	int	max_procthreads;
 
 	/* Service options */
@@ -215,7 +212,7 @@ typedef struct _SBASE{
 	int	running_services;
 
 	/* Event options */
-	struct event_base *ev_eventbase;
+	EVBASE *evbase;
 
 	/* Running options */
 	int running_status;
@@ -230,7 +227,7 @@ typedef struct _SBASE{
 	int  (*set_log)(struct _SBASE * , const char *);
         int  (*start)(struct _SBASE * );
         int  (*stop)(struct _SBASE * );
-        void (*clean)(struct _SBASE *);
+        void (*clean)(struct _SBASE **);
 }SBASE;
 /* Initialize struct sbase */
 SBASE *sbase();
@@ -248,13 +245,14 @@ typedef struct _SERVICE
         char *ip;
         int port;
         struct sockaddr_in sa;
+	int backlog ;
 
         /* Event options */
-        struct event_base *ev_eventbase;
-        struct event ev_event;
+	EVBASE *evbase;
+        EVENT  *event;
 
         /* Prothread options */
-        int work;
+        int working_mode;
         int max_procthreads;
         int running_procthreads;
        	struct _PROCTHREAD **procthreads;
@@ -298,9 +296,9 @@ typedef struct _SERVICE
         void (*event_handler)(int, short, void*);
         int  (*set)(struct _SERVICE * );
         void (*run)(struct _SERVICE * );
-        int  (*addconn)(struct _SERVICE *, int , struct sockaddr_in);
+        int  (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
         void (*terminate)(struct _SERVICE * );
-        void (*clean)(struct _SERVICE * );
+        void (*clean)(struct _SERVICE ** );
 }SERVICE;
 /* Initialize service */
 SERVICE *service_init();
@@ -316,8 +314,7 @@ typedef struct _PROCTHREAD
         int index;
 
         /* Event options */
-        int                     fd ;
-        struct event_base       *ev_eventbase;
+	EVBASE			*evbase;
 
         /* Running options */
         int                     running_status;
@@ -336,10 +333,10 @@ typedef struct _PROCTHREAD
         struct _LOGGER		*logger;
 
         /* Methods */
-        void (*run)(struct _PROCTHREAD *)
-        void (*addconn)(struct _PROCTHREAD *, int, struct sockaddr_in )
-        void (*add_connection)(struct _PROCTHREAD *, int, struct sockaddr_in )
-        void (*terminate_connection)(struct _PROCTHREAD *, struct _CONN *)
+        void (*run)(void *);
+        void (*addconn)(struct _PROCTHREAD *, struct _CONN *);
+        void (*add_connection)(struct _PROCTHREAD *, struct _CONN *);
+        void (*terminate_connection)(struct _PROCTHREAD *, struct _CONN *);
         void (*terminate)(struct _PROCTHREAD*);
         void (*clean)(struct _PROCTHREAD**);
 
@@ -358,6 +355,7 @@ PROCTHREAD *procthread_init();
 #define C_STATE_USING     0x04
 #define C_STATE_CLOSE     0x08
 #define IP_MAX            16
+#define CONN_NONBLOCK     1
 #define CONN_SLEEP_USEC	  100u
 #define CONN_IO_TIMEOUT   100000u
 #define RECONNECT_MAX     10000
@@ -377,13 +375,21 @@ typedef struct _CONN
 	int			s_state;
 	int			c_state;
 	/* Packet options */
-	int			packet_type;
-	int			packet_length;
-	char			packet_delimiter;
-	char			packet_delimiter_length;
+        int			packet_type;
+        int 			packet_length;
+        char 			*packet_delimiter;
+        int  			packet_delimiter_length;
+        uint32_t 		buffer_size;
+
 	/* Global  options */
+	//message queue 
+	struct _QUEUE           *message_queue;
 	//buffer 
 	struct _BUFFER		*buffer;
+	//OOB 
+	struct _BUFFER          *oob;
+	//cache
+	struct _BUFFER          *cache;
 	//packet 
 	struct _BUFFER		*packet;
 	// chunk 
@@ -396,9 +402,8 @@ typedef struct _CONN
         struct _TIMER           *timer;
 
 	/* Event options */
-	struct    event_base 	*ev_eventbase;
-	struct    event 	ev_event;
-	short     		event_flags;
+	EVBASE 			*evbase;
+	EVENT			*event;
 
 	/* Connection options */
 	int                     reconnect_count ;
@@ -407,13 +412,23 @@ typedef struct _CONN
 	uint32_t  		timeout;/* I/O TIMEOUT */
 	int       		is_nonblock ;
 
+	/* Callback */
+	/* Read From Buffer and return packet length to get */
+        int (*cb_packet_reader)(const struct _CONN*, const struct _BUFFER *);
+        /* Packet Handler */
+        void (*cb_packet_handler)(const struct _CONN*, const struct _BUFFER *);
+        /* Data Handler */
+        void (*cb_data_handler)(const struct _CONN*, const struct _BUFFER *,
+		 const struct _CHUNK *, const struct _BUFFER *);
+        /* OOB Data Handler */
+        void (*cb_oob_handler)(const struct _CONN *, const struct _BUFFER *oob);
+	
 	/* Methods */
-	int       (*event_init)(struct _CONN *);
-	void      (*event_update)(struct _CONN *, short);
-	void      (*event_handler)(int , short, void *);
-	size_t    (*packet_reader)(struct _CONN *);
+	int	  (*set)(struct _CONN *);
+	void	  (*event_handler)(int, short, void *);
 	void      (*read_handler)(struct _CONN *);
 	void      (*write_handler)(struct _CONN *);
+	size_t    (*packet_reader)(struct _CONN *);
 	void      (*packet_handler)(struct _CONN *);
 	void      (*chunk_reader)(struct _CONN *);
 	void      (*recv_chunk)(struct _CONN *, size_t);
@@ -422,20 +437,22 @@ typedef struct _CONN
 	int       (*push_file)(struct _CONN *, char *, uint64_t, uint64_t);
 	void      (*data_handler)(struct _CONN *);
 	void      (*oob_handler)(struct _CONN *);
+	void	  (*push_message)(struct _CONN *, int);
 	int       (*connect)(struct _CONN *);
 	int       (*set_nonblock)(struct _CONN *);
 	int       (*read)(struct _CONN *, void *, size_t , uint32_t);
 	int       (*write)(struct _CONN *, void *, size_t , uint32_t);
 	int       (*close)(struct _CONN *); 
 	void      (*stats)(struct _CONN *);
-	void      (*clean)(struct _CONN *);
-	void      (*vlog)(char *,...);
+	void      (*clean)(struct _CONN **);
+	void      (*vlog)(const char *,...);
 } CONN;
 /* Initialize CONN */
 CONN *conn_init(char *ip, int port);
 #endif
 
 #ifdef __cplusplus
-}
+ }
 #endif
+
 #endif

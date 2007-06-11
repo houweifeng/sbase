@@ -31,7 +31,7 @@ typedef struct _MESSAGE
 /* Initialize message */
 MESSAGE *message_init();
 /* Clean message */
-void message_clean(MESSAGE *msg);
+void message_clean(MESSAGE **msg);
 #define MESSAGE_SIZE    sizeof(MESSAGE)
 #endif
 

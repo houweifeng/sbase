@@ -1,4 +1,7 @@
 #include "sbase.h"
+#include "timer.h"
+#include "logger.h"
+
 #ifndef SETRLIMIT
 #define SETRLIMIT(NAME, RLIM, rlim_set)\
 {\
@@ -41,13 +44,13 @@ SBASE *sbase()
 	SBASE *sb = (SBASE *)calloc(1, sizeof(SBASE));	
 	if(sb == NULL )
 	{
-		sb->init        	= sbase_init;
+		//sb->init        	= sbase_init;
 		sb->set_log		= sbase_set_log;
 		sb->add_service        	= sbase_add_service;
 		sb->start       	= sbase_start;
 		sb->stop        	= sbase_stop;
 		sb->clean		= sbase_clean;
-		sb->ev_eventbase	= event_init();
+		sb->evbase		= evbase_init();
 		sb->timer		= timer_init();
 	}
 	return sb;
@@ -59,24 +62,24 @@ int sbase_set_log(struct _SBASE *sb, const char *logfile)
 	if(sb)
 	{
 		if(sb->logger == NULL)
-			sb->logger = logger_init(logfile);		
+			sb->logger = logger_init((char *)logfile);		
 	}		
 }
 
 /* Add service */
 int sbase_add_service(struct _SBASE *sb, struct _SERVICE *service)
 {
-	if(sb & service)
+	if(sb && service)
 	{
 		sb->services = realloc(sb->services, sizeof(SERVICE *) * (sb->running_services + 1));
 		if(sb->services)
 		{
 			sb->services[sb->running_services++] = service;
-			service->ev_eventbase = sb->ev_eventbase;		
+			service->evbase = sb->evbase;
 			if(service->set(service) != 0)
 			{
 				FATAL_LOG(sb->logger, "Setting service[%08x] failed, %s",
-					 strerror(errno));	
+					 service, strerror(errno));	
 				_exit(-1);
 			}
 			if(service->logger == NULL)
@@ -89,46 +92,49 @@ int sbase_add_service(struct _SBASE *sb, struct _SERVICE *service)
 int sbase_start(struct _SBASE *sb)
 {
 	pid_t pid;
-	int i = 0;	
+	int i = 0, j = 0;
 	if(sb)
 	{
-#ifdef HAVE_PTHREAD_H
-if(sb->work == WORK_PROC) goto procthread_init;
-else goto running;
+#ifdef HAVE_PTHREAD
+		if(sb->working_mode == WORK_PROC) 
+			goto procthread_init;
+		else 
+			goto running;
 #endif
 procthread_init:
-for(i = 0; i < sb->max_procthreads; i++)
-{
-	pid = fork();
-	switch (pid)
-	{
-		case -1:
-			exit(EXIT_FAILURE);
-			break;
-		case 0: //child process
-			if(setsid() == -1)
-				exit(EXIT_FAILURE);
-			goto running;
-			break;
-		default://parent
-			continue;
-			break;
-	}
-}
-running:
-	/* service procthread running */
-	for(i = 0; i < sb->running_services; i++)
-	{
-		if(sb->services[i])
+		for(i = 0; i < sb->max_procthreads; i++)
 		{
-			sb->services[i]->run(sb->services[i]);	
+			pid = fork();
+			switch (pid)
+			{
+				case -1:
+					exit(EXIT_FAILURE);
+					break;
+				case 0: //child process
+					if(setsid() == -1)
+						exit(EXIT_FAILURE);
+					goto running;
+					break;
+				default://parent
+					continue;
+					break;
+			}
 		}
-	}	
-	sb->running_status = 1;
-	while(sb->running_status)
-	{
-		event_base_loop(sb->ev_eventbase, EV_ONCE |EV_NONBLOCK);	
-		usleep(sb->sleep_usec);
+running:
+		/* service procthread running */
+		for(j = 0; j < sb->running_services; j++)
+		{
+			if(sb->services[j])
+			{
+				sb->services[j]->run(sb->services[j]);	
+			}
+		}	
+		sb->running_status = 1;
+		while(sb->running_status)
+		{
+			sb->evbase->loop(sb->evbase, 0, NULL);
+			usleep(sb->sleep_usec);
+		}
 	}
 }
 
@@ -151,7 +157,7 @@ int sbase_stop(struct _SBASE *sb)
 void sbase_clean(struct _SBASE **sb)
 {
 	int i = 0;
-	if(*sb && *sb->running_status == 0 )	
+	if((*sb) && (*sb)->running_status == 0 )	
 	{
 		/* Clean services */
 		if((*sb)->services)
@@ -159,24 +165,18 @@ void sbase_clean(struct _SBASE **sb)
 			for(i = 0; i < (*sb)->running_services; i++)
 			{
 				if((*sb)->services[i])
-				(*sb)->services[i]->clean(&((*sb)->services[i]));
+					(*sb)->services[i]->clean(&((*sb)->services[i]));
 			}
-			free((*sb)->services)
+			free((*sb)->services);
 			(*sb)->services = NULL;
 		}
 		/* Clean eventbase */
-		if((*sb)->ev_eventbase)
-		{
-			event_base_free((*sb)->ev_eventbase);
-			(*sb)->ev_eventbase = NULL;
-		}
+		if((*sb)->evbase) (*sb)->evbase->clean(&((*sb)->evbase));
 		/* Clean timer */
 		if((*sb)->timer) (*sb)->timer->clean(&((*sb)->timer));
 		/* Clean logger */
-		if((*sb)->logger) (*sb)->logger->close((*sb)->logger);
+		if((*sb)->logger) (*sb)->logger->close(&((*sb)->logger));
 		free((*sb));
-		*sb = NULL;
+		(*sb) = NULL;
 	}
 }
-
-

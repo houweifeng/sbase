@@ -11,7 +11,7 @@ QUEUE *queue_init()
 		queue->head	= queue_head;
 		queue->tail	= queue_tail;
 		queue->clean	= queue_clean;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
         	pthread_mutex_init(&(queue->mutex), NULL);
 #endif
 		
@@ -23,7 +23,7 @@ void queue_push(QUEUE *queue, void *data)
 {
 	if(queue)
 	{
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_lock(&(queue->mutex));
 #endif
 		if(queue->last)
@@ -38,7 +38,7 @@ void queue_push(QUEUE *queue, void *data)
 		}
 		queue->last->data = data;
 		queue->total++;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_unlock(&(queue->mutex));
 #endif
 	}	
@@ -50,7 +50,7 @@ void *queue_pop(QUEUE *queue)
 	QUEUE_ELEM *elem = NULL;
 	if(queue)
 	{
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_lock(&(queue->mutex));
 #endif
 		if(queue->total > 0 && (elem = queue->first) )
@@ -67,7 +67,7 @@ void *queue_pop(QUEUE *queue)
 			free(elem);
 			queue->total--;
 		}
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_unlock(&(queue->mutex));
 #endif
 	}
@@ -80,7 +80,7 @@ void queue_del(QUEUE *queue)
         QUEUE_ELEM *elem = NULL; 
         if(queue)
         {
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_lock(&(queue->mutex));
 #endif
 		if(queue->total > 0 && (elem = queue->first) )
@@ -97,7 +97,7 @@ void queue_del(QUEUE *queue)
 			free(elem);
 			queue->total--;
 		}
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_unlock(&(queue->mutex));
 #endif
         }
@@ -132,7 +132,7 @@ void queue_clean(QUEUE **queue)
 	QUEUE_ELEM *elem = NULL, *p = NULL;
 	if(queue)
 	{
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_lock(&((*queue)->mutex));
 #endif
 		p = elem = (*queue)->first;
@@ -143,7 +143,7 @@ void queue_clean(QUEUE **queue)
 			p = elem;
 			(*queue)->total--;
 		}					
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_unlock(&((*queue)->mutex));
 		pthread_mutex_destroy(&((*queue)->mutex));
 #endif
