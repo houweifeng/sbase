@@ -4,26 +4,14 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <assert.h>
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#endif
-#include <locale.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/resource.h>
 #include <sys/socket.h>
-#include <sys/mman.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
-#include <event.h>
 #include "sbase.h"
 
 #ifndef _SERVICE_H
@@ -39,13 +27,14 @@ int service_set(SERVICE *);
 /* Run service */
 void service_run(SERVICE *);
 /* Add new conn */
-void service_addconn(SERVICE *, int , struct sockaddr_in );
+int service_addconn(SERVICE *, int , struct sockaddr_in *);
+/* Add connection */
+void service_addconnection(SERVICE *, CONN *);
 /* Terminate service */
 void service_terminate(SERVICE *);
 /* Clean service */
 void service_clean(SERVICE **);
 
-#endif
 #ifdef __cplusplus
  }
 #endif

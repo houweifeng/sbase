@@ -1,8 +1,10 @@
+#include <evbase.h>
 #include "sbase.h"
 #include "procthread.h"
 #include "buffer.h"
 #include "queue.h"
 #include "timer.h"
+#include "message.h"
 
 /* Initialize procthread */
 PROCTHREAD *procthread_init()
@@ -10,10 +12,9 @@ PROCTHREAD *procthread_init()
 	PROCTHREAD *pth = (PROCTHREAD *) calloc(1, sizeof(PROCTHREAD));
 	if(pth)
 	{
-		pth->ev_eventbase 		= event_base_init();		
+		pth->evbase 			= evbase_init();		
 		pth->message_queue		= queue_init();
 		pth->timer			= timer_init();
-		//pth->logger			= logger_init();
 		pth->run			= procthread_run;
 		pth->addconn			= procthread_addconn;
 		pth->add_connection		= procthread_add_connection;
@@ -35,28 +36,20 @@ void procthread_run(void *arg)
 
 	while(pth->running_status)
 	{
-		event_loop(pth->ev_eventbase, EV_ONCE|EV_NONBLOCK);			
-		usleep(pth->sleep_usec)
-			msg = pth->message_queue->pop(pth->message_queue);
+		pth->evbase->loop(pth->evbase, 0, NULL);
+		msg = pth->message_queue->pop(pth->message_queue);
 		if(msg)
 		{
-			DEBUG_LOG(pth->log, "Handling message[%08x] ID[%d]", msg, msg->msg_id);
-			if(msg->handler) conn = (SESSION *)msg->handler;
-			else conn = NULL;
+			conn = (CONN *)msg->handler;
 			switch(msg->msg_id)
 			{
 				/* NEW connection */
 				case MESSAGE_NEW_SESSION :
-					if(msg->handler)
-					{
-						pth->add_connection(pth, msg->fd,
-								*((struct sockaddr_in *)msg->handler));
-						free(msg->handler);
-					}
+					if(conn) pth->add_connection(pth, conn);
 					break;
 					/* Close connection */
 				case MESSAGE_QUIT :
-					if(pth->connions[msg->fd])
+					if(pth->connections[msg->fd])
 						pth->terminate_connection(pth, conn);
 					break;
 				case MESSAGE_INPUT :
@@ -73,14 +66,14 @@ void procthread_run(void *arg)
 				default:
 					break;
 			}
-			msg->clean(msg);
+			msg->clean(&msg);
 		}
-		usleep(pth->sleep_usec)
+		usleep(pth->sleep_usec);
 	}
 }
 
 /* Add connection msg */
-void procthread_addconn(PROCTHREAD *pth, int fd, struct sockaddr_in sa)
+void procthread_addconn(PROCTHREAD *pth, CONN *conn)
 {
 	MESSAGE *msg = NULL;
 	if(pth && pth->message_queue)
@@ -88,46 +81,36 @@ void procthread_addconn(PROCTHREAD *pth, int fd, struct sockaddr_in sa)
 		if((msg = message_init()))
 		{
 			msg->msg_id = MESSAGE_NEW_SESSION;
-			msg->fd = fd;
-			msg->handler = calloc(1, sizeof(struct sockaddr_in ));
-			if(msg->handler) memcpy(msg->handler, &sa, sizeof(struct sockaddr_in));
-			DEBUG_LOG(pth->logger, "message for NEW_SESSION[%d] %s:%d",
-				fd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port));
+			msg->fd = conn->fd;
+			msg->handler = conn;
+			pth->message_queue->push(pth->message_queue, msg);
+			DEBUG_LOG(pth->logger, "Message for NEW_SESSION[%d] %s:%d",
+				conn->fd, conn->ip, conn->port);
 		}
 	}	
 }
 
 /* Add new connection */
-void procthread_add_connection(PROCTHREAD *pth, int fd, struct sockaddr_in sa)
+void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 {
-	CONN *conn = NULL;
-	char *ip = NULL;
-	int  port = 0;
-
-	if(pth && pth->connections 
-		&& pth->running_connections < max_connections && fd > 0 )
+	if(pth && conn && pth->connections 
+		&& pth->running_connections < pth->max_connections 
+		&& conn->fd > 0 && conn->fd < pth->max_connections)
 	{
-		ip = inet_ntoa(sa.sin_addr);
-		port = ntohs(sa.sin_port);
-		if(conn = conn_init(ip, port))
-		{
-			conn->eventbase = pth->ev_eventbase;
-			conn->fd = fd;
-			conn->event_init(conn);
-			pth->connections[fd] = conn;
+			conn->evbase = pth->evbase;
+			conn->message_queue = pth->message_queue;
+			pth->connections[conn->fd] = conn;
 			DEBUG_LOG(pth->logger,
 				"Procthread[%d] ID[%d] added new connection[%d] from %s:%d",
-				 fd, ip, port);
-		}
+				 pth->index, pth->id, conn->fd, conn->ip, conn->port);
 	}
 	else
 	{
-		if(fd > 0 )
+		if(conn && conn->fd > 0 )
 		{
 			ERROR_LOG(pth->logger, "Procthread[%d] ID[%d] connection full, closing fd[%d]",
-			pth->index, pth->id, fd);
-			shutdown(fd, SHUT_RDWR);
-			close(fd);
+			pth->index, pth->id, conn->fd);
+			pth->terminate_connection(pth, conn);
 		}
 	}
 }
@@ -135,11 +118,11 @@ void procthread_add_connection(PROCTHREAD *pth, int fd, struct sockaddr_in sa)
 /* Terminate connection */
 void procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 {
-	if(pth && pth->connections && conn && conn->fd < pth->max_connection  )
+	if(pth && pth->connections && conn && conn->fd < pth->max_connections && conn->fd > 0  )
 	{
 		pth->connections[conn->fd] = NULL;
 		conn->close(conn);	
-		conn->clean(conn);
+		conn->clean(&conn);
 	}
 }
 
@@ -151,7 +134,7 @@ void procthread_terminate(PROCTHREAD *pth)
 
 	if(pth && pth->connections)
 	{
-		for(i = 0; i < pth->max_connection; i++)
+		for(i = 0; i < pth->max_connections; i++)
 		{
 			conn = pth->connections[i];
 			pth->connections[i] = NULL;
@@ -171,12 +154,12 @@ void procthread_clean(PROCTHREAD **pth)
 		/* Clean connections */
 		if((*pth)->connections)
 		{	
-			for(i = 0; i < (*pth)->max_connection; i++)
+			for(i = 0; i < (*pth)->max_connections; i++)
 			{
 				(*pth)->connections[i]->clean(&((*pth)->connections[i]));
 			}
-			free(pth->connections);
-			pth->connections = NULL;
+			free((*pth)->connections);
+			(*pth)->connections = NULL;
 		}
 		/* Clean message queue */
 		if((*pth)->message_queue)

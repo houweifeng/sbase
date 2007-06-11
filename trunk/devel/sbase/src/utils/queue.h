@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
 #ifndef _QUEUE_H
@@ -24,7 +24,7 @@ typedef struct _QUEUE
 	QUEUE_ELEM *first;
 	QUEUE_ELEM *last;	
 	size_t total;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 	pthread_mutex_t mutex;
 #endif
 	void	(*push)(struct _QUEUE *, void *);		

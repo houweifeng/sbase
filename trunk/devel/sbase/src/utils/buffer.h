@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
 
@@ -19,7 +19,7 @@ typedef struct _BUFFER
 	void *data;
 	void *end;
 	size_t size;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 	pthread_mutex_t mutex;
 #endif
 

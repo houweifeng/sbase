@@ -7,7 +7,8 @@
 #include "queue.h"
 #include "queue.h"
 #include "timer.h"
-#ifdef HAVE_PTHREAD_H
+#include "sbase.h"
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
 
@@ -18,16 +19,16 @@
 extern "C" {
 #endif
 /* Running procthread */
-void procthread_run(PROCTHREAD *);
+void procthread_run(void *);
 
 /* Add connection message */
-void procthread_addconn(PROCTHREAD *, int , struct sockaddr_in);
+void procthread_addconn(PROCTHREAD *, CONN *);
 
 /* Add new connection */
-void procthread_add_connection(PROCTHREAD *);
+void procthread_add_connection(PROCTHREAD *, CONN *);
 
 /* Terminate connection */
-void procthread_terminate_connection(PROCTHREAD *);
+void procthread_terminate_connection(PROCTHREAD *, CONN *);
 
 /* Terminate procthread */
 void procthread_terminate(PROCTHREAD *);
@@ -35,7 +36,6 @@ void procthread_terminate(PROCTHREAD *);
 /* Clean procthread */
 void procthread_clean(PROCTHREAD **);
 
-#endif
 #ifdef __cplusplus
  }
 #endif

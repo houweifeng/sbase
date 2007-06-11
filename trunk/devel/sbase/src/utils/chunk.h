@@ -15,7 +15,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
 #include "buffer.h"
@@ -44,7 +44,7 @@ typedef struct _CHUNK{
         } file;
         uint64_t offset;
         uint64_t len;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 	pthread_mutex_t mutex;
 #endif
 

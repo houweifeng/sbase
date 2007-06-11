@@ -11,6 +11,7 @@ extern "C" {
 #endif
 #define EV_READ		0x01
 #define EV_WRITE	0x02
+#define EV_PERSIST	0x04
 #define EV_MAX_FD	1024
 #define EV_USEC_SLEEP	100
 struct _EVENT;

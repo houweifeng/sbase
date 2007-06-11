@@ -13,7 +13,7 @@ CHUNK *chunk_init()
 		chunk->reset	= chk_reset;
 		chunk->clean	= chk_clean;
 		chunk->buf	= buffer_init();
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
         pthread_mutex_init(&(chunk->mutex), NULL);
 #endif
 
@@ -27,7 +27,7 @@ int chk_set(CHUNK *chunk, int id, int type, char *filename, uint64_t offset, uin
 	if(chunk)
 	{	
 		chunk->reset(chunk);
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
         pthread_mutex_lock(&(chunk->mutex));
 #endif
 
@@ -45,7 +45,7 @@ int chk_set(CHUNK *chunk, int id, int type, char *filename, uint64_t offset, uin
 		if(filename)strcpy(chunk->file.name, filename);
 		chunk->offset = offset ;
 		chunk->len = len;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
         pthread_mutex_unlock(&(chunk->mutex));
 #endif
 
@@ -59,7 +59,7 @@ int chk_append(CHUNK *chunk, void *data, size_t len)
 	int ret = -1;
 	if(chunk)
 	{
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_lock(&(chunk->mutex));
 #endif
 		if(chunk->buf && chunk->buf->push(chunk->buf, data, len) == 0 )
@@ -67,7 +67,7 @@ int chk_append(CHUNK *chunk, void *data, size_t len)
 			chunk->len += len;
 			ret = 0;
 		}
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_unlock(&(chunk->mutex));
 #endif
 
@@ -86,7 +86,7 @@ int chk_fill(CHUNK *chunk, void *data, size_t len)
 	size_t size;
 	if(chunk == NULL ) return -1;
 	if(chunk->len <= 0 ) return 0;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 	pthread_mutex_lock(&(chunk->mutex));
 #endif
 	switch(chunk->type)	
@@ -131,7 +131,7 @@ int chk_fill(CHUNK *chunk, void *data, size_t len)
 		default :
 			n = -1;
 	}
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 	pthread_mutex_unlock(&(chunk->mutex));
 #endif
 	return n;
@@ -147,7 +147,7 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 
 	if(chunk == NULL ) return -1;
 	if(chunk->len <= 0 ) return -1;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
         pthread_mutex_lock(&(chunk->mutex));
 #endif
 	switch(chunk->type)	
@@ -233,7 +233,7 @@ end:
 		default :
 			return n = -1;
 	}
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
                 pthread_mutex_unlock(&(chunk->mutex));
 #endif
 
@@ -245,7 +245,7 @@ void chk_reset(CHUNK *chunk)
 {
 	if(chunk)
 	{
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_lock(&(chunk->mutex));
 #endif
 		switch(chunk->type)
@@ -267,7 +267,7 @@ void chk_reset(CHUNK *chunk)
 		chunk->type = 0;
 		chunk->offset = 0llu;
 		chunk->len = 0llu;
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
 		pthread_mutex_unlock(&(chunk->mutex));
 #endif
 
@@ -283,7 +283,7 @@ void chk_clean(CHUNK **chunk)
         {
                 (*chunk)->buf->clean(&(*chunk)->buf);
         }
-#ifdef HAVE_PTHREAD_H
+#ifdef HAVE_PTHREAD
         pthread_mutex_destroy(&((*chunk)->mutex));
 #endif
         free((*chunk));

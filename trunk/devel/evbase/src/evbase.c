@@ -81,7 +81,7 @@ EVBASE *evbase_init()
 		evbase->clean	=  evrtsig_clean;
 		fprintf(stdout, "Using SIGNAL event mode \n");
 #endif 
-#ifdef N_HAVE_EVEPOLL
+#ifdef HAVE_EVEPOLL
 		evbase->init 	=  evepoll_init;
 		evbase->add 	=  evepoll_add;
 		evbase->update 	=  evepoll_update;
