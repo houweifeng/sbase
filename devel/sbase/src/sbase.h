@@ -296,7 +296,7 @@ typedef struct _SERVICE
         void (*event_handler)(int, short, void*);
         int  (*set)(struct _SERVICE * );
         void (*run)(struct _SERVICE * );
-        int  (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
+        void (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
         void (*terminate)(struct _SERVICE * );
         void (*clean)(struct _SERVICE ** );
 }SERVICE;

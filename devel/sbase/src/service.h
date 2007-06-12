@@ -27,7 +27,7 @@ int service_set(SERVICE *);
 /* Run service */
 void service_run(SERVICE *);
 /* Add new conn */
-int service_addconn(SERVICE *, int , struct sockaddr_in *);
+void service_addconn(SERVICE *, int , struct sockaddr_in *);
 /* Add connection */
 void service_addconnection(SERVICE *, CONN *);
 /* Terminate service */

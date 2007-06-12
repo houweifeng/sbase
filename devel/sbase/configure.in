@@ -35,6 +35,12 @@ AC_FUNC_REALLOC
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([gettimeofday inet_ntoa memmove memset munmap socket strerror])
+havepthread=no
+AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
+if test "$havepthread" = "yes" ; then
+	CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
+        LDFLAGS="${LDFLAGS} -lpthread"
+fi
 AC_CHECK_EXTRA_OPTIONS
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
