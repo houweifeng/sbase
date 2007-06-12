@@ -77,8 +77,10 @@ void service_run(SERVICE *service)
 	if(service)
 	{
 #ifdef	HAVE_PTHREAD
-		if(service->working_mode == WORK_PROC) goto work_proc_init;
-		else goto work_thread_init;
+		if(service->working_mode == WORK_PROC) 
+			goto work_proc_init;
+		else 
+			goto work_thread_init;
 #endif
 work_proc_init:
 		/* Initialize procthread(s) */
@@ -93,7 +95,7 @@ work_proc_init:
 					strerror(errno));
 			exit(EXIT_FAILURE);
 		}	
-		return ;
+return ;
 work_thread_init:
 		/* Initialize Threads */
 		service->procthreads = (PROCTHREAD **)calloc(service->max_procthreads,
@@ -117,7 +119,7 @@ work_thread_init:
 				exit(EXIT_FAILURE);
 			}
 #ifdef HAVE_PTHREAD
-			if(pthread_create(&procthread_id, NULL, service->procthreads[i]->run,
+			if(pthread_create(&procthread_id, NULL, (void *)&(service->procthreads[i]->run),
 						(void *)service->procthreads[i]) == 0)
 			{
 				DEBUG_LOG(service->logger, "Created procthreads[%d] ID[%08x]",
@@ -169,7 +171,7 @@ void service_event_handler(int event_fd, short event, void *arg)
 }
 
 /* Add new conn */
-int service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
+void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 {
 	CONN *conn = NULL;
 	char *ip = NULL;
@@ -201,19 +203,17 @@ int service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 			conn->cb_data_handler = service->cb_data_handler;
 			conn->cb_oob_handler = service->cb_oob_handler;
 		}
-		else return -1;
+		else return ;
 		/* Add connection for procthread */
 		if(service->working_mode == WORK_PROC && service->procthread)
 		{
-			service->procthread->add_connection(service->procthread, conn);
-			return 0;
+			return service->procthread->add_connection(service->procthread, conn);
 		}
 		/* Add connection to procthread pool */
 		if(service->working_mode == WORK_THREAD && service->procthreads)
 		{
 			index = fd % service->max_procthreads;
-			service->procthreads[index]->add_connection(service->procthreads[index], conn);
-			return 0;
+			return service->procthreads[index]->add_connection(service->procthreads[index], conn);
                 }
 	}
 	return ;

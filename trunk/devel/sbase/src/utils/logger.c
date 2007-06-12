@@ -92,7 +92,7 @@ void logger_close(LOGGER **logger)
 	{ 
 		if((*logger)->fd > 0 ) close((*logger)->fd); 
 #ifdef HAVE_PTHREAD
-                pthread_mutex_destroy(&(logger->mutex)); 
+                pthread_mutex_destroy(&((*logger)->mutex)); 
 #endif
 		free((*logger)); 
 		(*logger) = NULL; 
