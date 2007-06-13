@@ -192,8 +192,9 @@ CHUNK *chunk_init();
 #define S_STATE_WRITE_STATE     0x04
 #define S_STATE_PACKET_HANDLING	0x08
 #define S_STATE_DATA_HANDLING	0x10
+#define S_STATE_CLOSE		0x12
 #define S_STATES	(S_STATE_READY & S_STATE_READ_CHUNK & S_STATE_WRITE_STATE \
-			S_STATE_PACKET_HANDLING & S_STATE_DATA_HANDLING )
+			S_STATE_PACKET_HANDLING & S_STATE_DATA_HANDLING & S_STATE_CLOSE )
 #endif
 
 /* WORK TYPE */
@@ -312,6 +313,7 @@ typedef struct _PROCTHREAD
         /* PROCTHREAD ID INDEX */
         int id;
         int index;
+	struct _SERVICE *service;
 
         /* Event options */
 	EVBASE			*evbase;
@@ -319,8 +321,6 @@ typedef struct _PROCTHREAD
         /* Running options */
         int                     running_status;
         struct _CONN            **connections;
-        uint32_t                max_connections;
-        uint32_t                running_connections;
         uint32_t                sleep_usec;
 
         /* MESSAGE QUEUE OPTIONS */
@@ -373,13 +373,18 @@ typedef struct _CONN
 	/* Transaction option */
 	int			s_id;
 	int			s_state;
-	int			c_state;
+
 	/* Packet options */
         int			packet_type;
         int 			packet_length;
         char 			*packet_delimiter;
         int  			packet_delimiter_length;
         uint32_t 		buffer_size;
+	/* connection bytes stats */
+	uint64_t		recv_oob_total;
+	uint64_t		sent_oob_total;
+	uint64_t		recv_data_total;
+	uint64_t		sent_data_total;
 
 	/* Global  options */
 	//message queue 
@@ -404,13 +409,6 @@ typedef struct _CONN
 	/* Event options */
 	EVBASE 			*evbase;
 	EVENT			*event;
-
-	/* Connection options */
-	int                     reconnect_count ;
-        int                     connect_state;
-	uint32_t  		sleep_usec;/* Waiting for I/O TIMEOUT */
-	uint32_t  		timeout;/* I/O TIMEOUT */
-	int       		is_nonblock ;
 
 	/* Callback */
 	/* Read From Buffer and return packet length to get */
@@ -438,14 +436,8 @@ typedef struct _CONN
 	void      (*data_handler)(struct _CONN *);
 	void      (*oob_handler)(struct _CONN *);
 	void	  (*push_message)(struct _CONN *, int);
-	int       (*connect)(struct _CONN *);
-	int       (*set_nonblock)(struct _CONN *);
-	int       (*read)(struct _CONN *, void *, size_t , uint32_t);
-	int       (*write)(struct _CONN *, void *, size_t , uint32_t);
-	int       (*close)(struct _CONN *); 
-	void      (*stats)(struct _CONN *);
+	void      (*terminate)(struct _CONN *); 
 	void      (*clean)(struct _CONN **);
-	void      (*vlog)(const char *,...);
 } CONN;
 /* Initialize CONN */
 CONN *conn_init(char *ip, int port);

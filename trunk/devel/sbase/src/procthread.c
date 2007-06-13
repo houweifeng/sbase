@@ -94,12 +94,13 @@ void procthread_addconn(PROCTHREAD *pth, CONN *conn)
 void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 {
 	if(pth && conn && pth->connections 
-		&& pth->running_connections < pth->max_connections 
-		&& conn->fd > 0 && conn->fd < pth->max_connections)
+		&& pth->service->running_connections < pth->service->max_connections 
+		&& conn->fd > 0 && conn->fd < pth->service->max_connections)
 	{
 			conn->evbase = pth->evbase;
 			conn->message_queue = pth->message_queue;
 			pth->connections[conn->fd] = conn;
+			pth->service->running_connections++;
 			DEBUG_LOG(pth->logger,
 				"Procthread[%d] ID[%d] added new connection[%d] from %s:%d",
 				 pth->index, pth->id, conn->fd, conn->ip, conn->port);
@@ -118,10 +119,11 @@ void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 /* Terminate connection */
 void procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 {
-	if(pth && pth->connections && conn && conn->fd < pth->max_connections && conn->fd > 0  )
+	if(pth && pth->connections && conn && conn->fd < pth->service->max_connections && conn->fd > 0  )
 	{
 		pth->connections[conn->fd] = NULL;
-		conn->close(conn);	
+		pth->service->running_connections--;
+		conn->terminate(conn);	
 		conn->clean(&conn);
 	}
 }
@@ -132,13 +134,15 @@ void procthread_terminate(PROCTHREAD *pth)
 	int i = 0;
 	CONN *conn = NULL;
 
-	if(pth && pth->connections)
+	if(pth && pth->connections && pth->service)
 	{
-		for(i = 0; i < pth->max_connections; i++)
+		for(i = 0; i < pth->service->max_connections; i++)
 		{
-			conn = pth->connections[i];
-			pth->connections[i] = NULL;
-			conn->close(conn);	
+			if((conn = pth->connections[i]))
+			{
+				conn->terminate(conn);	
+				pth->service->running_connections--;
+			}
 		}	
 	}
 }
@@ -154,9 +158,10 @@ void procthread_clean(PROCTHREAD **pth)
 		/* Clean connections */
 		if((*pth)->connections)
 		{	
-			for(i = 0; i < (*pth)->max_connections; i++)
+			for(i = 0; i < (*pth)->service->max_connections; i++)
 			{
-				(*pth)->connections[i]->clean(&((*pth)->connections[i]));
+				if((*pth)->connections[i])
+					(*pth)->connections[i]->clean(&((*pth)->connections[i]));
 			}
 			free((*pth)->connections);
 			(*pth)->connections = NULL;
