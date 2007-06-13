@@ -16,7 +16,9 @@ evrtsig.h \
 evselect.c \
 evselect.h \
 evwin32.c \
-evwin32.h
+evwin32.h \
+log.h
+
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = evbase.h
 bin_PROGRAMS = ev_server ev_client

@@ -10,17 +10,18 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "evbase.h"
+#include "log.h"
 #define SETRLIMIT(NAME, RLIM, rlim_set)\
 {\
         struct rlimit rlim;\
         rlim.rlim_cur = rlim_set;\
         rlim.rlim_max = rlim_set;\
         if(setrlimit(RLIM, (&rlim)) != 0) {\
-                fprintf(stderr, "setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s\n",\
+                FATAL_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
                  _exit(-1);\
         } else {\
-                fprintf(stdout, "setrlimit RLIM[%s] cur[%ld] max[%ld]\n",\
+                DEBUG_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
@@ -36,9 +37,9 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	{
 		if( ( n = read(fd, buffer[fd], BUF_SIZE)) > 0 )
 		{
-			fprintf(stdout, "Read %d bytes from %d\n", n, fd);
+			DEBUG_LOG("Read %d bytes from %d", n, fd);
 			buffer[fd][n] = 0;
-			fprintf(stdout, "Updating event[%x] on %d \n", events[fd], fd);
+			DEBUG_LOG("Updating event[%x] on %d ", events[fd], fd);
 			if(events[fd])
 			{
 				events[fd]->add(events[fd], EV_WRITE);	
@@ -47,7 +48,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 		else
 		{
 			if(n < 0 )
-				fprintf(stderr, "Reading from %d failed, %s\n", fd, strerror(errno));
+				FATAL_LOG("Reading from %d failed, %s", fd, strerror(errno));
 			goto err;
 		}
 	}
@@ -55,12 +56,12 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	{
 		if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
 		{
-			fprintf(stdout, "Wrote %d bytes via %d\n", n, fd);
+			DEBUG_LOG("Wrote %d bytes via %d", n, fd);
 		}
 		else
 		{
 			if(n < 0)
-				fprintf(stderr, "Wrote data via %d failed, %s\n", fd, strerror(errno));	
+				FATAL_LOG("Wrote data via %d failed, %s", fd, strerror(errno));	
 			goto err;
 		}
 		if(events[fd]) events[fd]->del(events[fd], EV_WRITE);
@@ -74,7 +75,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 			events[fd] = NULL;
 			shutdown(fd, SHUT_RDWR);
 			close(fd);
-			fprintf(stdout, "Connection %d closed\n", fd);
+			DEBUG_LOG("Connection %d closed", fd);
 		}
 
 	}
@@ -124,12 +125,12 @@ int main(int argc, char **argv)
 					events[fd]->set(events[fd], fd, EV_READ|EV_WRITE|EV_PERSIST, 
 						(void *)events[fd], &ev_handler);
 					evbase->add(evbase, events[fd]);
-					sprintf(buffer[fd], "%d:client message\n", fd);
+					sprintf(buffer[fd], "%d:client message", fd);
 				}
 			}
 			else
 			{
-				fprintf(stderr, "Connect to %s:%d failed, %s\n", ip, port, strerror(errno));
+				FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
 				break;
 			}
 		}

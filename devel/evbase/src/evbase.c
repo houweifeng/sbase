@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
+#include "log.h"
 #include "evbase.h"
 #ifdef HAVE_EVPORT
 #include "evport.h"
@@ -42,6 +44,7 @@ void event_clean(EVENT **event);
 EVBASE *evbase_init()
 {
 	EVBASE *evbase = (EVBASE *)calloc(1, sizeof(EVBASE));	
+	char *s = NULL;
 	if(evbase)
 	{
 #ifdef HAVE_EVPORT
@@ -51,7 +54,7 @@ EVBASE *evbase_init()
 		evbase->del 	=  evport_del;
 		evbase->loop 	=  evport_loop;
 		evbase->clean 	=  evport_clean;
-		fprintf(stdout, "Using PORT event mode \n");
+		s = "Using PORT event mode";
 #endif 
 #ifdef HAVE_EVSELECT
 		evbase->init 	=  evselect_init;
@@ -60,7 +63,7 @@ EVBASE *evbase_init()
 		evbase->del 	=  evselect_del;
 		evbase->loop 	=  evselect_loop;
 		evbase->clean 	=  evselect_clean;
-		fprintf(stdout, "Using SELECT event mode \n");
+		s = "Using SELECT event mode";
 #endif 
 #ifdef HAVE_EVPOLL
 		evbase->init 	=  evpoll_init;
@@ -69,7 +72,7 @@ EVBASE *evbase_init()
 		evbase->del 	=  evpoll_del;
 		evbase->loop 	=  evpoll_loop;
 		evbase->clean 	=  evpoll_clean;
-		fprintf(stdout, "Using POLL event mode \n");
+		s = "Using POLL event mode";
 #endif 
 #ifdef N_HAVE_EVRTSIG
 		evbase->init 	=  evrtsig_init;
@@ -78,7 +81,7 @@ EVBASE *evbase_init()
 		evbase->del 	=  evrtsig_del;
 		evbase->loop 	=  evrtsig_loop;
 		evbase->clean	=  evrtsig_clean;
-		fprintf(stdout, "Using SIGNAL event mode \n");
+		s = "Using SIGNAL event mode";
 #endif 
 #ifdef HAVE_EVEPOLL
 		evbase->init 	=  evepoll_init;
@@ -87,7 +90,7 @@ EVBASE *evbase_init()
 		evbase->del 	=  evepoll_del;
 		evbase->loop 	=  evepoll_loop;
 		evbase->clean 	=  evepoll_clean;
-		fprintf(stdout, "Using EPOLL event mode \n");
+		s = "Using EPOLL event mode";
 #endif 
 #ifdef HAVE_EVKQUEUE
 		evbase->init 	=  evkqueue_init;
@@ -96,7 +99,7 @@ EVBASE *evbase_init()
 		evbase->del 	=  evkqueue_del;
 		evbase->loop 	=  evkqueue_loop;
 		evbase->clean 	=  evkqueue_clean;
-		fprintf(stdout, "Using KQUEUE event mode \n");
+		s = "Using KQUEUE event mode";
 #endif 
 #ifdef HAVE_EVDEVPOLL
 		evbase->init 	=  evdevpoll_init;
@@ -105,7 +108,7 @@ EVBASE *evbase_init()
 		evbase->del 	=  evdevpoll_del;
 		evbase->loop 	=  evdevpoll_loop;
 		evbase->clean 	=  evdevpoll_clean;
-		fprintf(stdout, "Using DEVPOLL event mode \n");
+		s = "Using DEVPOLL event mode";
 #endif 
 #ifdef WIN32
 		evbase->init 	=  evwin32_init;
@@ -114,13 +117,15 @@ EVBASE *evbase_init()
 		evbase->del 	=  evwin32_del;
 		evbase->loop 	=  evwin32_loop;
 		evbase->clean 	=  evwin32_clean;
-		fprintf(stdout, "Using WIN32 event mode \n");
+		s = "Using WIN32 event mode";
 #endif
+		DEBUG_LOG(s);
 		//evbase->clean 	=  evbase_clean;
 		if(evbase->init == NULL || evbase->add == NULL || evbase->update == NULL 
 				|| evbase->del == NULL || evbase->loop == NULL || evbase->clean == NULL)
 		{
 			free(evbase); 
+			FATAL_LOG("Initialize evbase failed, %s", strerror(errno));
 			evbase = NULL;
 		}
 		else
@@ -171,7 +176,7 @@ void event_add(EVENT *event, short flags)
 		if(event->ev_base && event->ev_base->update)
 		{
 			event->ev_base->update(event->ev_base, event);
-			fprintf(stdout, "Updated event[%x] to %d on %d\n", 
+			DEBUG_LOG("Updated event[%x] to %d on %d", 
 					event, event->ev_flags, event->ev_fd);
 		}
 	}
@@ -188,7 +193,7 @@ void event_del(EVENT *event, short flags)
 			if(event->ev_base && event->ev_base->update)
 			{
 				event->ev_base->update(event->ev_base, event);
-				fprintf(stdout, "Updated event[%x] to %d on %d\n", 
+				DEBUG_LOG("Updated event[%x] to %d on %d", 
 						event, event->ev_flags, event->ev_fd);
 			}
 
@@ -205,7 +210,7 @@ void event_destroy(EVENT *event)
                 if(event->ev_base && event->ev_base->del)
                 {
                         event->ev_base->del(event->ev_base, event);
-                        fprintf(stdout, "Destroy event[%x] on %d\n", event, event->ev_fd);
+                        DEBUG_LOG("Destroy event[%x] on %d", event, event->ev_fd);
                 }
         }
 }

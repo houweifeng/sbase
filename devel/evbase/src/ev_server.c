@@ -10,17 +10,18 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "evbase.h"
+#include "log.h"
 #define SETRLIMIT(NAME, RLIM, rlim_set)\
 {\
         struct rlimit rlim;\
         rlim.rlim_cur = rlim_set;\
         rlim.rlim_max = rlim_set;\
         if(setrlimit(RLIM, (&rlim)) != 0) {\
-                fprintf(stderr, "setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s\n",\
+                FATAL_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
                  _exit(-1);\
         } else {\
-                fprintf(stdout, "setrlimit RLIM[%s] cur[%ld] max[%ld]\n",\
+                DEBUG_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
@@ -43,7 +44,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 		{
 			if((rfd = accept(fd, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
 			{
-				fprintf(stdout, "Accept new connection %s:%d via %d\n",
+				DEBUG_LOG("Accept new connection %s:%d via %d",
 						inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd);	
 				/* set FD NON-BLOCK */
 				fcntl(rfd, F_SETFL, O_NONBLOCK);
@@ -57,21 +58,21 @@ void ev_handler(int fd, short ev_flags, void *arg)
 			}
 			else
 			{
-				fprintf(stderr, "Accept new connection failed, %s\n", strerror(errno));
+				FATAL_LOG("Accept new connection failed, %s", strerror(errno));
 			}
 		}	
 		return ;
 	}
 	else
 	{
-		fprintf(stdout, "EVENT %d on %d\n", ev_flags, fd);
+		DEBUG_LOG("EVENT %d on %d", ev_flags, fd);
 		if(ev_flags & EV_READ)
 		{
 			if( ( n = read(fd, buffer[fd], BUF_SIZE)) > 0 )
 			{
-				fprintf(stdout, "Read %d bytes from %d\n", n, fd);
+				DEBUG_LOG("Read %d bytes from %d", n, fd);
 				buffer[fd][n] = 0;
-				fprintf(stdout, "Updating event[%x] on %d \n", events[fd], fd);
+				DEBUG_LOG("Updating event[%x] on %d ", events[fd], fd);
 				if(events[fd])
 				{
 					events[fd]->add(events[fd], EV_WRITE);	
@@ -80,7 +81,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 			else
 			{
 				if(n < 0 )
-					fprintf(stderr, "Reading from %d failed, %s\n", fd, strerror(errno));
+					FATAL_LOG("Reading from %d failed, %s", fd, strerror(errno));
 				goto err;
 			}
 		}
@@ -88,12 +89,12 @@ void ev_handler(int fd, short ev_flags, void *arg)
 		{
 			if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
 			{
-				fprintf(stdout, "Echo %d bytes to %d\n", n, fd);
+				DEBUG_LOG("Echo %d bytes to %d", n, fd);
 			}
 			else
 			{
 				if(n < 0)
-					fprintf(stderr, "Echo data to %d failed, %s\n", fd, strerror(errno));	
+					FATAL_LOG("Echo data to %d failed, %s", fd, strerror(errno));	
 				goto err;
 			}
 			if(events[fd]) events[fd]->del(events[fd], EV_WRITE);
@@ -107,7 +108,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 				events[fd] = NULL;
 				shutdown(fd, SHUT_RDWR);
 				close(fd);
-				fprintf(stdout, "Connection %d closed\n", fd);
+				DEBUG_LOG("Connection %d closed", fd);
 			}
 		}
 		return ;
@@ -148,28 +149,28 @@ int main(int argc, char **argv)
 	/* Bind */
 	if(bind(lfd, (struct sockaddr *)&sa, sa_len ) != 0 )
         {
-                fprintf(stdout, "Binding failed, %s\n", strerror(errno));
+                DEBUG_LOG("Binding failed, %s", strerror(errno));
                 return ;
         }
 	/* set FD NON-BLOCK */
 	if(fcntl(lfd, F_SETFL, O_NONBLOCK) != 0 )
         {
-                fprintf(stdout, "Setting NON-BLOCK failed, %s\n", strerror(errno));
+                DEBUG_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
                 return ;
         }
 	/* Listen */
 	if(listen(lfd, CONN_MAX) != 0 )
         {
-                fprintf(stdout, "Listening  failed, %s\n", strerror(errno));
+                DEBUG_LOG("Listening  failed, %s", strerror(errno));
                 return ;
         }
-	fprintf(stdout, "Initialize evbase \n");
+	DEBUG_LOG("Initialize evbase ");
         /* set evbase */
         if((evbase = evbase_init()))
         {
                 if((event = event_init()))
                 {
-			fprintf(stdout, "Initialized event \n");
+			DEBUG_LOG("Initialized event ");
                         event->set(event, lfd, EV_READ|EV_PERSIST, (void *)event, &ev_handler);
                         evbase->add(evbase, event);
                         while(1)

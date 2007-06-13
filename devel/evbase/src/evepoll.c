@@ -1,4 +1,5 @@
 #include "evepoll.h"
+#include "log.h"
 #ifdef HAVE_EVEPOLL
 #include <stdlib.h>
 #include <string.h>
@@ -48,7 +49,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 		ep_event.events = ev_flags;
 		ep_event.data.ptr = (void *)event;
 		epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
-		fprintf(stdout, "add event %d on %d\n", ev_flags, event->ev_fd);
+		DEBUG_LOG("Added event %d on %d", ev_flags, event->ev_fd);
 		if(event->ev_fd > evbase->maxfd)
                         evbase->maxfd = event->ev_fd;
                 evbase->evlist[event->ev_fd] = event;
@@ -118,7 +119,8 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 	{
 		if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
 		n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd, timeout);
-		if(n) fprintf(stdout, "loop result:%d\n", n);
+		if(n <= 0) return ;
+		DEBUG_LOG("Actived %d event in %d", n, evbase->maxfd);
 		for(i = 0; i < n; i++)
 		{
 			evp = &(((struct epoll_event *)evbase->evs)[i]);
@@ -136,7 +138,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 					ev_flags |= EV_WRITE;
 				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
-					fprintf(stdout, "EV:%d on %d \n", ev_flags, fd);
+					DEBUG_LOG("EV:%d on %d", ev_flags, fd);
 					evbase->evlist[fd]->active(evbase->evlist[fd], ev_flags);	
 				}
 			}
