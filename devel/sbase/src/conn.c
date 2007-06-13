@@ -1,10 +1,29 @@
 #include <stdarg.h>
+#include <netinet/tcp.h>
 #include "timer.h"
 #include "queue.h"
 #include "buffer.h"
 #include "message.h"
 #include "conn.h"
 #include "chunk.h"
+#define CONN_CHECK_RET(conn, ret) \
+{ \
+        if(conn == NULL ) return ret; \
+        if(conn->s_state == S_STATE_CLOSE) return ret; \
+}
+#define CONN_CHECK(conn) \
+{ \
+        if(conn == NULL) return ;\
+        if(conn->s_state == S_STATE_CLOSE) return ;\
+}
+#define CONN_TERMINATE(conn) \
+{ \
+	if(conn) \
+	{ \
+		conn->s_state = S_STATE_CLOSE; \
+		conn->push_message(conn, MESSAGE_QUIT); \
+	} \
+}
 /* Initialize CONN */
 CONN *conn_init(char *ip, int port)
 {
@@ -18,8 +37,7 @@ CONN *conn_init(char *ip, int port)
 		conn->packet		= buffer_init();
 		conn->chunk		= chunk_init();
 		conn->send_queue 	= queue_init();
-		conn->sleep_usec 	= CONN_SLEEP_USEC;
-		conn->timeout 		= CONN_IO_TIMEOUT;
+		conn->event		= event_init();
 		conn->set		= conn_set;
 		conn->event_handler 	= conn_event_handler;
 		conn->read_handler	= conn_read_handler;
@@ -32,15 +50,8 @@ CONN *conn_init(char *ip, int port)
 		conn->push_chunk	= conn_push_chunk;
 		conn->data_handler	= conn_data_handler;
 		conn->push_message	= conn_push_message;
-		/* client connection connect to server */
-		conn->connect 		= conn_connect;
-		conn->set_nonblock 	= conn_set_nonblock;
-		conn->read 		= conn_read;
-		conn->write 		= conn_write;
-		conn->close 		= conn_close;
-		conn->stats 		= conn_stats;
+		conn->terminate 	= conn_terminate;
 		conn->clean 		= conn_clean;
-		conn->vlog 		= conn_vlog;
 		strcpy(conn->ip, ip);
 		conn->port  = port; 
 		conn->sa.sin_family = AF_INET;
@@ -61,19 +72,34 @@ ERROR:
 /* Initialize setting  */
 int conn_set(CONN *conn)
 {
-	if(conn)
+	int keep_alive = 1;//设定KeepAlive
+        int keep_idle = 1;//开始首次KeepAlive探测前的TCP空闭时间
+        int keep_interval = 1;//两次KeepAlive探测间的时间间隔
+        int keep_count = 3;//判定断开前的KeepAlive探测次数
+	if(conn && conn->fd > 0 )
 	{
-		if(conn->evbase && (conn->event = event_init()))
+		fcntl(conn->fd, F_SETFL, O_NONBLOCK);
+		/* set keepalive */
+		setsockopt(conn->fd, SOL_SOCKET, SO_KEEPALIVE,
+				(void*)&keep_alive, sizeof(keep_alive));
+		setsockopt(conn->fd, SOL_TCP, TCP_KEEPIDLE,
+				(void *)&keep_idle,sizeof(keep_idle));
+		setsockopt(conn->fd,SOL_TCP,TCP_KEEPINTVL,
+				(void *)&keep_interval, sizeof(keep_interval));
+		setsockopt(conn->fd,SOL_TCP,TCP_KEEPCNT,
+				(void *)&keep_count,sizeof(keep_count));
+		if(conn->evbase && conn->event)
 		{
-			conn->event->set(conn->event, conn->fd, EV_READ, (void *)conn, conn->event_handler);
+			conn->event->set(conn->event, conn->fd, EV_READ|EV_PERSIST, (void *)conn, conn->event_handler);
 			conn->evbase->add(conn->evbase, conn->event);
 			return 0;
 		}
 		else
 		{
 			FATAL_LOG(conn->logger, "Connection[%08x] fd[%d] EVBASE or Initialize event failed, %s",
-				conn, conn->fd, strerror(errno));	
-			conn->push_message(conn, MESSAGE_QUIT);
+					conn, conn->fd, strerror(errno));	
+			/* Terminate connection */
+			CONN_TERMINATE(conn);
 		}
 	}	
 	return -1;	
@@ -105,20 +131,52 @@ void conn_event_handler(int event_fd, short event, void *arg)
 void conn_read_handler(CONN *conn)
 {
 	int n = 0;
-	char tmp[BUF_SIZE];
+	BUFFER *tmp = NULL ;
+	
+	/* Check connection and transaction state  */
+	CONN_CHECK(conn);
 	if(conn)
 	{
-		if(read(conn->fd, tmp, BUF_SIZE) < 0 )
+		if((tmp = buffer_init()) == NULL ) goto end;
+		/* Receive OOB */
+		tmp->calloc(tmp, conn->buffer_size);
+		if((n = recv(conn->fd, tmp->data, conn->buffer_size, MSG_OOB)) > 0 )	
 		{
-			conn->close(conn);
-			return ;
+			conn->recv_oob_total += n;
+			DEBUG_LOG(conn->logger, "Received %d bytes OOB total %llu from %s:%d via %d",
+				n, conn->recv_oob_total, conn->ip, conn->port, conn->fd);
+			conn->oob->push(conn->oob, tmp->data, n);	
+			conn->oob_handler(conn);
+			/* CONN TIMER sample */
+			if(conn->timer) conn->timer->sample(conn->timer);
+			goto end;
 		}
+		/* Receive normal data */
+		n = read(conn->fd, tmp->data, conn->buffer_size);
+		if( n <= 0 )
+		{
+			/* Terminate connection */
+                        CONN_TERMINATE(conn);
+			goto end;
+		}
+		/* CONN TIMER sample */
+		if(conn->timer) conn->timer->sample(conn->timer);
+		/* Push to buffer */
+		conn->buffer->push(conn->buffer, tmp->data, n);
+		conn->recv_data_total += n;	
+		DEBUG_LOG(conn->logger, "Received %d bytes data total %llu from %s:%d via %d",
+                                n, conn->recv_data_total, conn->ip, conn->port, conn->fd);
+		/* Handle buffer with packet_reader OR chunk_reader (with high priority) */
+		if(conn->s_state == S_STATE_READ_CHUNK)
+			conn->chunk_reader(conn);
 		else
-		{
 			conn->packet_reader(conn);			
-		}
-				
 	}
+	end:
+	{
+		if(tmp) tmp->clean(&tmp);
+	}
+	return ;
 }
 
 /* Write hanler */
@@ -128,20 +186,28 @@ void conn_write_handler(CONN *conn)
 	CHUNK *cp = NULL;
 	if(conn && conn->send_queue)
 	{
-		cp = conn->send_queue->head(conn->send_queue);
+		cp = (CHUNK *)conn->send_queue->head(conn->send_queue);
 		if(cp)
 		{
 			if( n = cp->send(cp, conn->fd, conn->buffer_size) > 0 )
 			{
-				DEBUG_LOG(conn->logger, "Sent %d byte(s) to %s:%d via %d leave %llu ",
-						n, conn->ip, conn->port, conn->fd, cp->len);
+				conn->sent_data_total += n;
+				DEBUG_LOG(conn->logger, "Sent %d byte(s) total %llu to %s:%d via %d leave %llu ",
+						n, conn->sent_data_total, conn->ip, conn->port, conn->fd, cp->len);
+				/* CONN TIMER sample */
+                        	if(conn->timer) conn->timer->sample(conn->timer);
 			}
 			else
 			{
-				DEBUG_LOG(conn->logger, "ERROR:sending data to %s:%d failed, %s",
-					conn->ip, conn->port, strerror(errno));
-				conn->close(conn);
+				FATAL_LOG(conn->logger, "Sending data to %s:%d via %d failed, %s",
+					conn->ip, conn->port, conn->fd, strerror(errno));
+				/* Terminate connection */
+                        	CONN_TERMINATE(conn);
 			}
+		}
+		if(conn->send_queue->total == 0)
+		{
+			conn->event->del(conn->event, EV_WRITE);	
 		}
 	}		
 }
@@ -181,7 +247,8 @@ void conn_chunk_reader(CONN *conn)
 			 	conn->buffer->data, conn->buffer->size) ) > 0 )
 			{
 				conn->buffer->del(conn->buffer, n);
-				DEBUG_LOG(conn->logger, "Filled  %d byte(s) to CHUNK", n);
+				DEBUG_LOG(conn->logger, "Filled  %d byte(s) to CHUNK on conn[%s:%d] via %d",
+					n, conn->ip, conn->port, conn->fd);
 				if(conn->chunk->len <= 0 )
 				{
 					conn->s_state = S_STATE_DATA_HANDLING;
@@ -212,6 +279,7 @@ void conn_recv_file(CONN *conn, char *filename,
 		conn->chunk_reader(conn);
         } 
 }
+
 /* Push Chunk */
 int conn_push_chunk(CONN *conn, void *data, size_t size)
 {
@@ -229,7 +297,8 @@ int conn_push_chunk(CONN *conn, void *data, size_t size)
 			cp->append(cp, data, size);
 			conn->send_queue->push(conn->send_queue, (void *)cp);
 		}
-		if(conn->send_queue->total == 0 ) conn->event->update(conn->event, EV_READ);			
+		if(conn->send_queue->total > 0 ) 
+			conn->event->add(conn->event, EV_WRITE);	
 	}	
 }
 
@@ -243,7 +312,8 @@ int conn_push_file(CONN *conn, char *filename,
 		cp = chunk_init();
 		cp->set(cp, conn->s_id, FILE_CHUNK, filename, offset, size);
 		conn->send_queue->push(conn->send_queue, (void *)cp);
-		if(conn->send_queue->total == 0 ) conn->event->update(conn->event, EV_READ);			
+		if(conn->send_queue->total > 0 ) 
+			conn->event->add(conn->event, EV_WRITE);	
 	}
 }
 
@@ -275,205 +345,17 @@ void conn_push_message(CONN *conn, int message_id)
 	}
 }
 
-/* Connect to remote Host */
-int conn_connect(CONN *conn)
+/* Terminate connection  */
+void conn_terminate(CONN *conn)
 {
-	int ret = -1;
-	int opt = 0 ;
-	if(conn)
-	{
-                if(conn->fd > 0 )
-		{
-			shutdown(conn->fd, SHUT_RDWR);
-			close(conn->fd);
-		}
-		if(conn->reconnect_count > RECONNECT_MAX)
-		{
-			DEBUG_LOG(conn->logger, "RECONNECT Too much time(s) checking network!");
-			return -1;
-		}
-		conn->fd = socket(AF_INET, SOCK_STREAM, 0);
-		if(connect(conn->fd, (struct sockaddr *)&(conn->sa),
-			 sizeof(conn->sa)) != 0)
-		{
-			DEBUG_LOG(conn->logger, "connected to %s:%d failed",
-			 conn->ip, conn->port, conn->fd);				
-			goto ERROR;
-		}
-		conn->c_state = C_STATE_FREE;
-		conn->connect_state = C_STATE_CONNECTED;	
-		conn->reconnect_count++;
-		DEBUG_LOG(conn->logger, "connected  to %s:%d fd[%d]",
-               		conn->ip, conn->port, conn->fd);
-	}
-	return 0;
-ERROR:
-	{
-		if(conn)
-		{
-			if(conn->fd > 0 )
-			{
-				shutdown(conn->fd, SHUT_RDWR);
-				close(conn->fd);
-			}
-			conn->fd = -1;
-			conn->c_state = C_STATE_CLOSE;
-			conn->connect_state = C_STATE_UNCONNECT;
-		}
-		return -1;
-	}
-}
-
-/* Check STATE OR Reconnect */
-void conn_stats(CONN *conn)
-{
-	int buf_size = 1024;
-	char buf[buf_size];
-	if(conn)
-	{
-		recv(conn->fd, buf, buf_size,  MSG_OOB);
-		if(send(conn->fd, (void *)"\0", 1,  MSG_OOB) < 0 )
-		{
-			DEBUG_LOG(conn->logger, 
-				"connection to %s:%d via fd[%d] is shutdown, trying to reconnect",
-				conn->ip,conn->port, conn->fd);
-			conn->c_state 		= C_STATE_CLOSE;
-			conn->connect_state 	= C_STATE_UNCONNECT;
-			conn->connect(conn);
-		}
-		return ;
-	}
-}
-
-/* Setting Non-Block */
-int conn_set_nonblock(CONN *conn)
-{
-	if(conn)
-	{
-		if(fcntl(conn->fd, F_SETFL, O_NONBLOCK) != 0 )
-		{
-			ERROR_LOG(conn->logger, "Set fd[%d] NONBLOCK failed, %s",
-				conn->fd, strerror(errno));
-		}
-		else
-		{
-			conn->is_nonblock = CONN_NONBLOCK;
-			DEBUG_LOG(conn->logger,  "Set fd[%d] NONBLOCK ", conn->fd);
-		}
-	}
-	return -1;
-}
-
-/* Read data  via fd */
-int conn_read(CONN *conn, void *buf, size_t len, uint32_t timeout)
-{
-	int n = 0,  recv =  0;
-	size_t total = len ;
-	char *p = (char *)buf;
-	TIMER *timer = NULL;
-	uint32_t sleep_usec = conn->sleep_usec;
-	uint32_t io_timeout = (timeout > 0 ) ? timeout : conn->timeout;
-
-	timer = timer_init();
-	if(timer == NULL)
-	{
-		ERROR_LOG(conn->logger, "Initialize timer failed, %s", strerror(errno));
-		return -1;
-	}
-	while(total > 0 )
-	{
-		if( (n = read(conn->fd, p, total) ) > 0)
-		{
-			p += n;
-			total -= n;
-			recv += n;
-			DEBUG_LOG(conn->logger, "Received %d bytes data from %s:%d via %d ", 
-                                recv, conn->ip, conn->port, conn->fd);
-		}
-		/*
-		else
-		{
-			ERROR_LOG(conn->logger, "Reading data from %s:%d failed, %s ", 
-				conn->ip, conn->port, strerror(errno));
-		}
-		*/
-		timer->sample(timer);
-		if(timer->usec_used >= io_timeout)
-		{
-			ERROR_LOG(conn->logger, "Reading data from %s:%d timeout",
-					conn->ip, conn->port);
-			goto end;
-		}
-		usleep(sleep_usec);
-	}
-end:
-	{
-		if(timer)timer->clean(&timer);
-	}
-	return ((recv > 0)? recv : -1);
-}
-
-/* Write data  via fd */
-int conn_write(CONN *conn, void *buf, size_t len, uint32_t timeout)
-{
-	int n = 0, sent = 0;
-	size_t total =  len ;
-	char *p = (char *)buf;
-	TIMER *timer = NULL;
-	uint32_t sleep_usec = conn->sleep_usec;
-	uint32_t io_timeout = (timeout > 0 ) ? timeout : conn->timeout;
-	
-	timer = timer_init();
-	if(timer == NULL)
-	{
-		ERROR_LOG(conn->logger, "Initialize timer failed, %s", strerror(errno));
-		return -1;
-	}
-	while(total > 0 )
-	{
-		if( (n = write(conn->fd, p, total) ) > 0)
-		{
-			p += n;
-			total -= n;
-			sent += n;
-			DEBUG_LOG(conn->logger, "Wrote %d bytes data to %s:%d via %d ",
-                                sent, conn->ip, conn->port, conn->fd);
-		}
-		else
-		{
-			ERROR_LOG(conn->logger, "Writting data to %s:%d failed, %s ",
-                            conn->ip, conn->port, strerror(errno));
-		}
-		timer->sample(timer);
-                if(timer->usec_used >= io_timeout)
-		if(timer->usec_used >= io_timeout)
-		{
-			ERROR_LOG(conn->logger, 
-				"Writting data to %s:%d timeout ",
-				conn->ip, conn->port);
-			goto end;
-		}
-		usleep(sleep_usec);
-	}
-end:
+        if(conn)
         {
-                if(timer)timer->clean(&timer);
+		conn->event->destroy(conn->event);
+                shutdown(conn->fd, SHUT_RDWR);
+                close(conn->fd);
+                conn->fd = -1;
         }
-	return ((sent > 0 )?sent : -1);
-}
-
-/* Close Connection to remote Host */
-int conn_close(CONN *conn)
-{
-	if(conn)
-	{
-		conn->c_state = C_STATE_CLOSE;
-		conn->connect_state = C_STATE_UNCONNECT;
-		shutdown(conn->fd, SHUT_RDWR);
-		close(conn->fd);
-		conn->fd = -1;
-	}
-	return -1;	
+	return ;
 }
 
 /* Clean Connection */
@@ -482,6 +364,8 @@ void conn_clean(CONN **conn)
 	CHUNK *cp = NULL;
 	if((*conn))
 	{
+		/* Clean event */
+		if((*conn)->buffer) (*conn)->event->clean(&((*conn)->event));
 		/* Clean BUFFER */
 		if((*conn)->buffer) (*conn)->buffer->clean(&((*conn)->buffer));
 		/* Clean OOB */
@@ -505,15 +389,4 @@ void conn_clean(CONN **conn)
 		free((*conn));
 		(*conn) = NULL;
 	}	
-}
-
-/* vprintf log */
-void conn_vlog(const char *format,...)
-{
-	va_list ap;
-
-	va_start(ap, format);	
-	vfprintf(stdout, format, ap);
-	fprintf(stdout, "\n");
-	va_end(ap);	
 }

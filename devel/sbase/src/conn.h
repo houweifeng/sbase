@@ -44,22 +44,10 @@ int conn_push_file(struct _CONN *,  char *, uint64_t,  uint64_t);
 void conn_data_handler(struct _CONN *);
 /* Push message */
 void conn_push_message(struct _CONN *, int );
-/* Connect to remote Host */
-int conn_connect(CONN *conn);
-/* Setting Non-Block */
-int conn_set_nonblock(CONN *conn);
-/* Read data  via fd */
-int conn_read(CONN *conn, void *buf, size_t size, uint32_t timeout);
-/* Write data  via fd */
-int conn_write(CONN *conn, void *buf, size_t size, uint32_t timeout);
-/* Close Connection to remote Host */
-int conn_close(CONN *conn);
-/* Check Connection STATE */
-void conn_stats(CONN *conn);
+/* Terminate connection  */
+void conn_terminate(CONN *conn);
 /* Clean Connection */
 void conn_clean(CONN **conn);
-/* vprintf log */
-void conn_vlog(const char *format,...);
 
 #ifdef __cplusplus
  }

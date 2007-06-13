@@ -110,6 +110,7 @@ work_thread_init:
 		{
 			if((service->procthreads[i] = procthread_init()))
 			{
+				service->procthreads[i]->service = service;
 				service->procthreads[i]->logger = service->logger;
 			}
 			else
