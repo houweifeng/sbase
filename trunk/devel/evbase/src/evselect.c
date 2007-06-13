@@ -1,4 +1,5 @@
 #include "evselect.h"
+#include "log.h"
 #ifdef HAVE_EVSELECT
 #include <stdlib.h>
 #include <string.h>
@@ -49,7 +50,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
 			if(event->ev_fd > evbase->maxfd) 
 				evbase->maxfd = event->ev_fd;
 			evbase->evlist[event->ev_fd] = event;	
-			fprintf(stdout, "Added event[%x] %d on %d\n", event, ev_flags, event->ev_fd);
+			DEBUG_LOG("Added event[%x] %d on %d", event, ev_flags, event->ev_fd);
 			return 0;
 		}
 	}	
@@ -80,7 +81,7 @@ int evselect_update(EVBASE *evbase, EVENT *event)
                         if(event->ev_fd > evbase->maxfd)
                                 evbase->maxfd = event->ev_fd;
                         evbase->evlist[event->ev_fd] = event;
-                        fprintf(stdout, "Updated event[%x] %d on %d\n", event, ev_flags, event->ev_fd);
+                        DEBUG_LOG("Updated event[%x] %d on %d", event, ev_flags, event->ev_fd);
                         return 0;
                 }
         }
@@ -112,7 +113,7 @@ void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
 	{
 		n = select(evbase->maxfd + 1, (fd_set *)evbase->ev_read_fds, (fd_set *)evbase->ev_write_fds, NULL, tv);
 		if(n <= 0) return ;
-                fprintf(stdout, "active %d in %d\n", n,  evbase->maxfd + 1);
+                DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
 		for(i = 0; i <= evbase->maxfd; ++i)
 		{
 			if(evbase->evlist[i])

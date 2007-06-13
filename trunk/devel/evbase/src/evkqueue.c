@@ -1,4 +1,5 @@
 #include "evkqueue.h"
+#include "log.h"
 #ifdef HAVE_EVKQUEUE
 #include <sys/types.h>
 #include <stdlib.h>
