@@ -26,17 +26,16 @@
 #ifdef WIN32
 #include "evwin32.h"
 #endif
-/* Clean evbase */
-void evbase_clean(EVBASE **evbase);
-
-/* Delete event */
-void event_del(EVENT *event);
-/* Update event */
-void event_update(EVENT *event, short flags);
 /* Set event */
 void event_set(EVENT *event, int fd, short flags, void *arg, void *handler);
+/* Add event */
+void event_add(EVENT *event, short flags);
+/* Delete event */
+void event_del(EVENT *event, short flags);
 /* Active event */
 void event_active(EVENT *event, short ev_flags);
+/* Destroy event */
+void event_destroy(EVENT *event);
 /* Clean event */
 void event_clean(EVENT **event);
 /* Initialize evbase */
@@ -139,9 +138,10 @@ EVENT *event_init()
 	if(event)
 	{
 		event->set 	= event_set;
-		event->update	= event_update;
+		event->add	= event_add;
 		event->del	= event_del;
 		event->active	= event_active;
+		event->destroy	= event_destroy;
 		event->clean	= event_clean;
 	}
 	return event;
@@ -162,32 +162,52 @@ void event_set(EVENT *event, int fd, short flags, void *arg, void *handler)
 	}
 }
 
-/* Update event */
-void event_update(EVENT *event, short flags)
+/* Add event flags */
+void event_add(EVENT *event, short flags)
 {
 	if(event)
 	{
-		event->ev_flags = flags;	
+		event->ev_flags |= flags;
 		if(event->ev_base && event->ev_base->update)
 		{
 			event->ev_base->update(event->ev_base, event);
-			fprintf(stdout, "Updated event[%x] to %d on %d\n", event, event->ev_flags, event->ev_fd);
+			fprintf(stdout, "Updated event[%x] to %d on %d\n", 
+					event, event->ev_flags, event->ev_fd);
+		}
+	}
+}
+
+/* Delete event flags */
+void event_del(EVENT *event, short flags)
+{
+	if(event)
+	{
+		if(event->ev_flags & flags)
+		{
+			event->ev_flags ^= flags;
+			if(event->ev_base && event->ev_base->update)
+			{
+				event->ev_base->update(event->ev_base, event);
+				fprintf(stdout, "Updated event[%x] to %d on %d\n", 
+						event, event->ev_flags, event->ev_fd);
+			}
+
 		}
 	}	
 }
 
-/* Delete event */
-void event_del(EVENT *event)
+/* Destroy event */
+void event_destroy(EVENT *event)
 {
-	if(event)
-	{
-		event->ev_flags = 0;
-		if(event->ev_base && event->ev_base->del)
-		{
+        if(event)
+        {
+                event->ev_flags = 0;
+                if(event->ev_base && event->ev_base->del)
+                {
                         event->ev_base->del(event->ev_base, event);
-			fprintf(stdout, "Delete event[%x] on %d\n", event, event->ev_fd);
-		}
-	}	
+                        fprintf(stdout, "Destroy event[%x] on %d\n", event, event->ev_fd);
+                }
+        }
 }
 
 /* Active event */
@@ -196,6 +216,10 @@ void event_active(EVENT *event, short ev_flags)
 	if(event && event->ev_handler)
 	{
 		event->ev_handler(event->ev_fd, ev_flags, event->ev_arg);	
+		if(!(event->ev_flags & EV_PERSIST))
+		{
+			event->destroy(event);
+		}
 	}
 }
 
