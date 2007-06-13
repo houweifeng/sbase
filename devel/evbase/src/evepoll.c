@@ -28,7 +28,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 	int op = 0;
 	struct epoll_event ep_event = {0, {0}};
 	int ev_flags = 0;
-	if(evbase && event)
+	if(evbase && event && event->ev_fd > 0 )
 	{
 		event->ev_base = evbase;
 		/* Delete OLD garbage */
@@ -62,7 +62,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         int op = 0;
         struct epoll_event ep_event = {0, {0}};
         int ev_flags = 0;
-        if(evbase && event)
+        if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd )
         {
                 //memset(evbase->evs[event->ev_fd], 0, sizeof(struct epoll_event));
                 /* Delete OLD garbage */
@@ -90,7 +90,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
 int evepoll_del(EVBASE *evbase, EVENT *event)
 {
 	struct epoll_event ep_event = {0, {0}};
-	if(evbase && event)
+	if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
 	{
 		ep_event.data.fd = event->ev_fd;
                 ep_event.events = 0;
@@ -125,7 +125,6 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 			ev = (EVENT *)evp->data.ptr;
 			fd = ev->ev_fd;
 			//fd = evp->data.fd;
-			fprintf(stdout, "EV:%d on %d \n", evp->events, fd);
 			if(evbase->evlist[fd] && evp->data.ptr == (void *)evbase->evlist[fd])	
 			{
 				ev_flags = 0;
@@ -137,6 +136,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 					ev_flags |= EV_WRITE;
 				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
+					fprintf(stdout, "EV:%d on %d \n", ev_flags, fd);
 					evbase->evlist[fd]->active(evbase->evlist[fd], ev_flags);	
 				}
 			}

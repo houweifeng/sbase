@@ -26,7 +26,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
 {
 	struct pollfd *ev = NULL;
 	short ev_flags = 0;
-	if(evbase && event && evbase->ev_fds && evbase->evlist)
+	if(evbase && event && event->ev_fd > 0 && evbase->ev_fds && evbase->evlist)
 	{
 		event->ev_base = evbase;
 		ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
@@ -57,7 +57,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
 {
 	struct pollfd *ev = NULL;
         short ev_flags = 0;
-	if(evbase && event && evbase->ev_fds)
+	if(evbase && event && evbase->ev_fds && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
         {
 		event->ev_base = evbase;
                 ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
@@ -86,7 +86,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
 /* Delete event from evbase */
 int evpoll_del(EVBASE *evbase, EVENT *event)
 {
-	if(evbase && event && evbase->ev_fds)
+	if(evbase && event && evbase->ev_fds && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
         {
 		memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
 		if(event->ev_fd >= evbase->maxfd)

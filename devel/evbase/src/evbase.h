@@ -50,9 +50,10 @@ typedef struct _EVENT
 	struct _EVBASE *ev_base;
 	void (*ev_handler)(int fd, short flags, void *arg);	
 	void (*set)(struct _EVENT *, int fd, short event, void *arg, void *);
-	void (*update)(struct _EVENT *, short flags);
-	void (*del)(struct _EVENT *);
+	void (*add)(struct _EVENT *, short flags);
+	void (*del)(struct _EVENT *, short flags);
 	void (*active)(struct _EVENT *, short flags);
+	void (*destroy)(struct _EVENT *);
 	void (*clean)(struct _EVENT **);
 }EVENT;
 EVENT *event_init();

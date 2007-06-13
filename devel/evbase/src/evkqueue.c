@@ -30,7 +30,7 @@ int evkqueue_init(EVBASE *evbase)
 int evkqueue_add(EVBASE *evbase, EVENT *event)
 {
 	struct kevent *kqev = NULL;
-	if(evbase && event && evbase->ev_changes && evbase->evs)
+	if(evbase && event && evbase->ev_changes && evbase->evs && event->ev_fd > 0)
 	{
 		event->ev_base = evbase;
 		kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
@@ -60,7 +60,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
 int evkqueue_update(EVBASE *evbase, EVENT *event)
 {
 	struct kevent *kqev = NULL;
-        if(evbase && event && evbase->ev_changes && evbase->evs)
+        if(evbase && event && evbase->ev_changes && evbase->evs && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
         {
                 kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
                 memset(kqev, 0, sizeof(struct kevent));
@@ -87,7 +87,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
 int evkqueue_del(EVBASE *evbase, EVENT *event)
 {
 	struct kevent *kqev = NULL;
-        if(evbase && event && evbase->ev_changes && evbase->evs)
+        if(evbase && event && evbase->ev_changes && evbase->evs && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
         {
                 kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
                 memset(kqev, 0, sizeof(struct kevent));

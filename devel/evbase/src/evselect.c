@@ -31,7 +31,7 @@ int evselect_init(EVBASE *evbase)
 int evselect_add(EVBASE *evbase, EVENT *event)
 {
 	short ev_flags = 0;
-	if(evbase && event)
+	if(evbase && event && event->ev_fd > 0)
 	{
 		event->ev_base = evbase;
 		if( evbase->ev_read_fds && (event->ev_flags & EV_READ))
@@ -59,7 +59,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
 int evselect_update(EVBASE *evbase, EVENT *event)
 {
 	short ev_flags = 0;
-	if(evbase && event)
+	if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
         {
 		if(evbase->ev_read_fds) 
 			FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
@@ -89,7 +89,7 @@ int evselect_update(EVBASE *evbase, EVENT *event)
 /* Delete event from evbase */
 int evselect_del(EVBASE *evbase, EVENT *event)
 {
-	if(evbase && event)
+	if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
         {
                 if(evbase->ev_read_fds)
 			FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
