@@ -115,6 +115,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 	int fd = 0;
 	struct epoll_event *evp = NULL;
 	EVENT *ev = NULL;
+	//DEBUG_LOG("Loop evbase[%08x]", evbase);
 	if(evbase)
 	{
 		if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
@@ -138,8 +139,9 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 					ev_flags |= EV_WRITE;
 				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
-					DEBUG_LOG("EV:%d on %d", ev_flags, fd);
+					DEBUG_LOG("Activing EV[%d] on %d", ev_flags, fd);
 					evbase->evlist[fd]->active(evbase->evlist[fd], ev_flags);	
+					DEBUG_LOG("Actived EV[%d] on %d", ev_flags, fd);
 				}
 			}
 		}

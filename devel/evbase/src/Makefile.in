@@ -34,7 +34,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = ev_server$(EXEEXT) ev_client$(EXEEXT)
+bin_PROGRAMS = ev_server$(EXEEXT) ev_client$(EXEEXT) \
+	ev_udp_client$(EXEEXT) ev_udp_server$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -75,6 +76,18 @@ ev_server_DEPENDENCIES = libevbase.la
 ev_server_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(ev_server_LDFLAGS) $(LDFLAGS) -o $@
+am_ev_udp_client_OBJECTS = ev_udp_client.$(OBJEXT)
+ev_udp_client_OBJECTS = $(am_ev_udp_client_OBJECTS)
+ev_udp_client_DEPENDENCIES = libevbase.la
+ev_udp_client_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(ev_udp_client_LDFLAGS) $(LDFLAGS) -o $@
+am_ev_udp_server_OBJECTS = ev_udp_server.$(OBJEXT)
+ev_udp_server_OBJECTS = $(am_ev_udp_server_OBJECTS)
+ev_udp_server_DEPENDENCIES = libevbase.la
+ev_udp_server_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(ev_udp_server_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -88,9 +101,11 @@ LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libevbase_la_SOURCES) $(ev_client_SOURCES) \
-	$(ev_server_SOURCES)
+	$(ev_server_SOURCES) $(ev_udp_client_SOURCES) \
+	$(ev_udp_server_SOURCES)
 DIST_SOURCES = $(libevbase_la_SOURCES) $(ev_client_SOURCES) \
-	$(ev_server_SOURCES)
+	$(ev_server_SOURCES) $(ev_udp_client_SOURCES) \
+	$(ev_udp_server_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -231,6 +246,12 @@ ev_server_LDADD = libevbase.la
 ev_client_SOURCES = ev_client.c evbase.h
 ev_client_LDFLAGS = -static
 ev_client_LDADD = libevbase.la
+ev_udp_server_SOURCES = ev_udp_server.c evbase.h
+ev_udp_server_LDFLAGS = -static
+ev_udp_server_LDADD = libevbase.la
+ev_udp_client_SOURCES = ev_udp_client.c evbase.h
+ev_udp_client_LDFLAGS = -static
+ev_udp_client_LDADD = libevbase.la
 all: all-am
 
 .SUFFIXES:
@@ -327,6 +348,12 @@ ev_client$(EXEEXT): $(ev_client_OBJECTS) $(ev_client_DEPENDENCIES)
 ev_server$(EXEEXT): $(ev_server_OBJECTS) $(ev_server_DEPENDENCIES) 
 	@rm -f ev_server$(EXEEXT)
 	$(ev_server_LINK) $(ev_server_OBJECTS) $(ev_server_LDADD) $(LIBS)
+ev_udp_client$(EXEEXT): $(ev_udp_client_OBJECTS) $(ev_udp_client_DEPENDENCIES) 
+	@rm -f ev_udp_client$(EXEEXT)
+	$(ev_udp_client_LINK) $(ev_udp_client_OBJECTS) $(ev_udp_client_LDADD) $(LIBS)
+ev_udp_server$(EXEEXT): $(ev_udp_server_OBJECTS) $(ev_udp_server_DEPENDENCIES) 
+	@rm -f ev_udp_server$(EXEEXT)
+	$(ev_udp_server_LINK) $(ev_udp_server_OBJECTS) $(ev_udp_server_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -336,6 +363,8 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_client.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_server.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_udp_client.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_udp_server.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdevpoll.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evepoll.Plo@am__quote@

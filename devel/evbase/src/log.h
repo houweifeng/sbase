@@ -42,4 +42,11 @@ static char *ymonths[]= {
 	fprintf(stderr, format);							\
 	fprintf(stderr, "\"\n");							\
 }
+#define SHOW_LOG(format...)								\
+{											\
+	LOG_HEADER(stdout);                                                             \
+        fprintf(stdout, "\"DEBUG:");                                                    	\
+        fprintf(stdout, format);                                                        \
+        fprintf(stdout, "\"\n");                                                        \
+}
 #endif

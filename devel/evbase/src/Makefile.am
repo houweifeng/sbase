@@ -21,11 +21,18 @@ log.h
 
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = evbase.h
-bin_PROGRAMS = ev_server ev_client
+bin_PROGRAMS = ev_server ev_client ev_udp_client ev_udp_server
 ev_server_SOURCES = ev_server.c evbase.h
 ev_server_LDFLAGS = -static
 ev_server_LDADD = libevbase.la
 ev_client_SOURCES = ev_client.c evbase.h
 ev_client_LDFLAGS = -static
 ev_client_LDADD = libevbase.la
+ev_udp_server_SOURCES = ev_udp_server.c evbase.h
+ev_udp_server_LDFLAGS = -static
+ev_udp_server_LDADD = libevbase.la
+ev_udp_client_SOURCES = ev_udp_client.c evbase.h
+ev_udp_client_LDFLAGS = -static
+ev_udp_client_LDADD = libevbase.la
+
 

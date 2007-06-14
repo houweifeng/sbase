@@ -113,7 +113,7 @@ void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
 	{
 		n = select(evbase->maxfd + 1, (fd_set *)evbase->ev_read_fds, (fd_set *)evbase->ev_write_fds, NULL, tv);
 		if(n <= 0) return ;
-                DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
+                //DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
 		for(i = 0; i <= evbase->maxfd; ++i)
 		{
 			if(evbase->evlist[i])
