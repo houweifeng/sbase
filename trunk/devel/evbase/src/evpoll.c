@@ -107,7 +107,7 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 		if(tv) sec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
 		n = poll(evbase->ev_fds, evbase->maxfd + 1 , sec);		
 		if(n <= 0) return ;
-		DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
+		//DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
 		for(; i <= evbase->maxfd; i++)
 		{
 			ev = &(((struct pollfd *)evbase->ev_fds)[i]);
