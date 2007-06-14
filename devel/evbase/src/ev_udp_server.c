@@ -60,7 +60,8 @@ void ev_handler(int fd, short ev_flags, void *arg)
                                 goto err_end;
 			}
 			//rfd = dup(fd);
-			memset(&rsa, 0 , sizeof(struct sockaddr_in));
+			rsa_len = sizeof(struct sockaddr_in);
+			memset(&rsa, 0 , rsa_len);
 			if(( n = recvfrom(fd, buffer[rfd], BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
 			{
 				buffer[rfd][n] = 0;
