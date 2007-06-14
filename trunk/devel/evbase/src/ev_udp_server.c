@@ -110,7 +110,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	}
 	else
 	{
-		SHOW_LOG("EVENT %d on %d", ev_flags, fd);
+		DEBUG_LOG("EVENT %d on %d", ev_flags, fd);
 		if(ev_flags & EV_READ)
 		{
 			if( ( n = recvfrom(fd, buffer[fd], BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
@@ -130,7 +130,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 					FATAL_LOG("Reading from %d failed, %s", fd, strerror(errno));
 				goto err;
 			}
-			SHOW_LOG("EV_READ on %d end", fd);
+			DEBUG_LOG("EV_READ on %d end", fd);
 		}
 		if(ev_flags & EV_WRITE)
 		{
@@ -147,7 +147,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 			}
 			if(events[fd]) events[fd]->del(events[fd], EV_WRITE);
 		}
-		SHOW_LOG("EV_OVER on %d", fd);
+		DEBUG_LOG("EV_OVER on %d", fd);
 		return ;
 		err:
 		{
