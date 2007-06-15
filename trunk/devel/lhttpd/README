@@ -1,0 +1,4 @@
+  The libsbase is framework libarary base-on TCP/UDP ,libsbase using libevent for I/O driver event. You can use it very easy if you have C language network programming . You you define your packet type and define the packet reader and packet handler. 
+  The struct SBASE is very important for programmer .
+
+  requirement libevent libsbase >= 0.1.4
