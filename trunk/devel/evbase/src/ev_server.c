@@ -21,7 +21,7 @@
                                 NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
                  _exit(-1);\
         } else {\
-                DEBUG_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
+                SHOW_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
@@ -44,7 +44,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 		{
 			if((rfd = accept(fd, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
 			{
-				DEBUG_LOG("Accept new connection %s:%d via %d",
+				SHOW_LOG("Accept new connection %s:%d via %d",
 						inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd);	
 				/* set FD NON-BLOCK */
 				fcntl(rfd, F_SETFL, O_NONBLOCK);
@@ -65,14 +65,14 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	}
 	else
 	{
-		DEBUG_LOG("EVENT %d on %d", ev_flags, fd);
+		SHOW_LOG("EVENT %d on %d", ev_flags, fd);
 		if(ev_flags & EV_READ)
 		{
 			if( ( n = read(fd, buffer[fd], BUF_SIZE)) > 0 )
 			{
-				DEBUG_LOG("Read %d bytes from %d", n, fd);
+				SHOW_LOG("Read %d bytes from %d", n, fd);
 				buffer[fd][n] = 0;
-				DEBUG_LOG("Updating event[%x] on %d ", events[fd], fd);
+				SHOW_LOG("Updating event[%x] on %d ", events[fd], fd);
 				if(events[fd])
 				{
 					events[fd]->add(events[fd], EV_WRITE);	
@@ -89,7 +89,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 		{
 			if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
 			{
-				DEBUG_LOG("Echo %d bytes to %d", n, fd);
+				SHOW_LOG("Echo %d bytes to %d", n, fd);
 			}
 			else
 			{
@@ -108,7 +108,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 				events[fd] = NULL;
 				shutdown(fd, SHUT_RDWR);
 				close(fd);
-				DEBUG_LOG("Connection %d closed", fd);
+				SHOW_LOG("Connection %d closed", fd);
 			}
 		}
 		return ;
@@ -149,28 +149,28 @@ int main(int argc, char **argv)
 	/* Bind */
 	if(bind(lfd, (struct sockaddr *)&sa, sa_len ) != 0 )
         {
-                DEBUG_LOG("Binding failed, %s", strerror(errno));
+                SHOW_LOG("Binding failed, %s", strerror(errno));
                 return ;
         }
 	/* set FD NON-BLOCK */
 	if(fcntl(lfd, F_SETFL, O_NONBLOCK) != 0 )
         {
-                DEBUG_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
+                SHOW_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
                 return ;
         }
 	/* Listen */
 	if(listen(lfd, CONN_MAX) != 0 )
         {
-                DEBUG_LOG("Listening  failed, %s", strerror(errno));
+                SHOW_LOG("Listening  failed, %s", strerror(errno));
                 return ;
         }
-	DEBUG_LOG("Initialize evbase ");
+	SHOW_LOG("Initialize evbase ");
         /* set evbase */
         if((evbase = evbase_init()))
         {
                 if((event = event_init()))
                 {
-			DEBUG_LOG("Initialized event ");
+			SHOW_LOG("Initialized event ");
                         event->set(event, lfd, EV_READ|EV_PERSIST, (void *)event, &ev_handler);
                         evbase->add(evbase, event);
                         while(1)
