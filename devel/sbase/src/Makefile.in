@@ -56,11 +56,13 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libsbase_la_LIBADD =
 am_libsbase_la_OBJECTS = libsbase_la-conn.lo libsbase_la-procthread.lo \
 	libsbase_la-sbase.lo libsbase_la-service.lo \
-	libsbase_la-buffer.lo libsbase_la-cache.lo \
-	libsbase_la-chunk.lo libsbase_la-logger.lo libsbase_la-md5.lo \
-	libsbase_la-message.lo libsbase_la-queue.lo \
-	libsbase_la-timer.lo
+	libsbase_la-buffer.lo libsbase_la-chunk.lo \
+	libsbase_la-logger.lo libsbase_la-message.lo \
+	libsbase_la-queue.lo libsbase_la-timer.lo
 libsbase_la_OBJECTS = $(am_libsbase_la_OBJECTS)
+libsbase_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libsbase_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -197,23 +199,25 @@ service.c \
 service.h \
 utils/buffer.c \
 utils/buffer.h \
-utils/cache.c \
-utils/cache.h \
 utils/chunk.c \
 utils/chunk.h \
 utils/logger.c \
 utils/logger.h \
-utils/md5.c \
-utils/md5.h \
 utils/message.c \
 utils/message.h \
 utils/queue.c \
 utils/queue.h \
 utils/timer.c \
-utils/timer.h \
-utils/tree.h 
+utils/timer.h 
+
+EXTRA_DIST = utils/tree.h \
+utils/cache.c \
+utils/cache.h \
+utils/md5.c \
+utils/md5.h 
 
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
+libsbase_la_LDFLAGS = -levbase
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = sbase.h
 all: all-am
@@ -277,7 +281,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libsbase.la: $(libsbase_la_OBJECTS) $(libsbase_la_DEPENDENCIES) 
-	$(LINK) -rpath $(libdir) $(libsbase_la_OBJECTS) $(libsbase_la_LIBADD) $(LIBS)
+	$(libsbase_la_LINK) -rpath $(libdir) $(libsbase_la_OBJECTS) $(libsbase_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -286,11 +290,9 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-buffer.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-cache.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-chunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-logger.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-md5.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-message.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-procthread.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-queue.Plo@am__quote@
@@ -354,13 +356,6 @@ libsbase_la-buffer.lo: utils/buffer.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-buffer.lo `test -f 'utils/buffer.c' || echo '$(srcdir)/'`utils/buffer.c
 
-libsbase_la-cache.lo: utils/cache.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-cache.lo -MD -MP -MF $(DEPDIR)/libsbase_la-cache.Tpo -c -o libsbase_la-cache.lo `test -f 'utils/cache.c' || echo '$(srcdir)/'`utils/cache.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-cache.Tpo $(DEPDIR)/libsbase_la-cache.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/cache.c' object='libsbase_la-cache.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-cache.lo `test -f 'utils/cache.c' || echo '$(srcdir)/'`utils/cache.c
-
 libsbase_la-chunk.lo: utils/chunk.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-chunk.lo -MD -MP -MF $(DEPDIR)/libsbase_la-chunk.Tpo -c -o libsbase_la-chunk.lo `test -f 'utils/chunk.c' || echo '$(srcdir)/'`utils/chunk.c
 @am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-chunk.Tpo $(DEPDIR)/libsbase_la-chunk.Plo
@@ -374,13 +369,6 @@ libsbase_la-logger.lo: utils/logger.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='libsbase_la-logger.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-logger.lo `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c
-
-libsbase_la-md5.lo: utils/md5.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-md5.lo -MD -MP -MF $(DEPDIR)/libsbase_la-md5.Tpo -c -o libsbase_la-md5.lo `test -f 'utils/md5.c' || echo '$(srcdir)/'`utils/md5.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-md5.Tpo $(DEPDIR)/libsbase_la-md5.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/md5.c' object='libsbase_la-md5.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-md5.lo `test -f 'utils/md5.c' || echo '$(srcdir)/'`utils/md5.c
 
 libsbase_la-message.lo: utils/message.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-message.lo -MD -MP -MF $(DEPDIR)/libsbase_la-message.Tpo -c -o libsbase_la-message.lo `test -f 'utils/message.c' || echo '$(srcdir)/'`utils/message.c

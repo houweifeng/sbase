@@ -21,6 +21,9 @@ extern "C" {
 /* Running procthread */
 void procthread_run(void *);
 
+/* Running procthread once */
+void procthread_running_once(PROCTHREAD *);
+
 /* Add connection message */
 void procthread_addconn(PROCTHREAD *, CONN *);
 
