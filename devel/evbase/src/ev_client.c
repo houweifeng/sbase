@@ -21,7 +21,7 @@
                                 NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
                  _exit(-1);\
         } else {\
-                DEBUG_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
+                SHOW_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
@@ -37,9 +37,9 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	{
 		if( ( n = read(fd, buffer[fd], BUF_SIZE)) > 0 )
 		{
-			DEBUG_LOG("Read %d bytes from %d", n, fd);
+			SHOW_LOG("Read %d bytes from %d", n, fd);
 			buffer[fd][n] = 0;
-			DEBUG_LOG("Updating event[%x] on %d ", events[fd], fd);
+			SHOW_LOG("Updating event[%x] on %d ", events[fd], fd);
 			if(events[fd])
 			{
 				events[fd]->add(events[fd], EV_WRITE);	
@@ -56,7 +56,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	{
 		if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
 		{
-			DEBUG_LOG("Wrote %d bytes via %d", n, fd);
+			SHOW_LOG("Wrote %d bytes via %d", n, fd);
 		}
 		else
 		{
@@ -75,7 +75,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 			events[fd] = NULL;
 			shutdown(fd, SHUT_RDWR);
 			close(fd);
-			DEBUG_LOG("Connection %d closed", fd);
+			SHOW_LOG("Connection %d closed", fd);
 		}
 
 	}
