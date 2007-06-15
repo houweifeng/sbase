@@ -25,7 +25,7 @@
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
-#define CONN_MAX 65535
+#define CONN_MAX 131070
 #define BUF_SIZE 8192
 EVBASE *evbase = NULL;
 char buffer[CONN_MAX][BUF_SIZE];

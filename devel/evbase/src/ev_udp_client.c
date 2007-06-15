@@ -25,7 +25,7 @@
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
-#define CONN_MAX 65535
+#define CONN_MAX 131070
 #define BUF_SIZE 8192
 EVBASE *evbase = NULL;
 char buffer[CONN_MAX][BUF_SIZE];
@@ -88,8 +88,8 @@ int main(int argc, char **argv)
 	char *ip = NULL;
 	int port = 0;
 	int fd = 0;
-	struct sockaddr_in sa;	
-	socklen_t sa_len;
+	struct sockaddr_in sa, lsa;	
+	socklen_t sa_len, lsa_len = -1;
 	int opt = 1;
 	int i = 0;
 	int conn_num = 0;
@@ -117,6 +117,12 @@ int main(int argc, char **argv)
 	{
 		while((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 && fd < conn_num)
 		{
+			/* Set REUSE */
+			//setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                        //	(char *)&opt, (socklen_t) sizeof(opt) );
+			/* Bind */
+			//if(lsa_len != -1)
+			//	bind(fd, (struct sockaddr *)&lsa, lsa_len);
 			/* Connect */
 			if(connect(fd, (struct sockaddr *)&sa, sa_len) == 0 )
 			{
@@ -129,11 +135,16 @@ int main(int argc, char **argv)
 					evbase->add(evbase, events[fd]);
 					sprintf(buffer[fd], "%d:client message", fd);
 				}
+				lsa_len = sizeof(struct sockaddr_in);
+				memset(&lsa, 0, lsa_len);
+				getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
+				SHOW_LOG("Connected to %s:%d via %d port:%d", ip, port, fd, ntohs(lsa.sin_port));
 			}
 			else
 			{
 				FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
 				break;
+				//_exit(-1);
 			}
 		}
 		while(1)
