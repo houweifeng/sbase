@@ -24,7 +24,7 @@
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
-#define CONN_MAX 65535
+#define CONN_MAX 131070
 #define BUF_SIZE 8192
 int max_connections = 0;
 int lfd = 0;
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
 	connection_limit = atoi(argv[2]);
 	max_connections = (connection_limit > 0) ? connection_limit : CONN_MAX;
 	/* Set resource limit */
-	SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, max_connections);	
+	SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
 	/* Initialize global vars */
 	memset(events, 0, sizeof(EVENT *) * CONN_MAX);
 	/* Initialize inet */ 
