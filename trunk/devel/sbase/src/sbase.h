@@ -62,6 +62,40 @@ extern "C" {
 #ifndef	INET_BACKLOG
 #define	INET_BACKLOG		65535 
 #endif
+#ifndef PACKET_ALL
+#define PACKET_CUSTOMIZED     	0x01 /* packet customized by user */
+#define PACKET_CERTAIN_LENGTH	0x02 /* packet with certain length */
+#define PACKET_DELIMITER	0x04 /* packet spliting with delimiter */
+#define PACKET_ALL        (PACKET_CUSTOMIZED | PACKET_CERTAIN_LENGTH | PACKET_DELIMITER)
+#endif
+
+#ifndef SETRLIMIT
+#define SETRLIMIT(NAME, RLIM, rlim_set)\
+{\
+	struct rlimit rlim;\
+	rlim.rlim_cur = rlim_set;\
+	rlim.rlim_max = rlim_set;\
+	if(setrlimit(RLIM, (&rlim)) != 0) {\
+		fprintf(stderr, "setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s",\
+				NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
+		 _exit(-1);\
+	} else {\
+		fprintf(stdout, "setrlimit RLIM[%s] cur[%ld] max[%ld]",\
+				NAME, rlim.rlim_cur, rlim.rlim_max);\
+	}\
+}
+#define GETRLIMIT(NAME, RLIM)\
+{\
+	struct rlimit rlim;\
+	if(getrlimit(RLIM, &rlim) != 0 ) {\
+		fprintf(stderr, "getrlimit RLIM[%s] failed, %s",\
+				NAME, strerror(errno));\
+	} else {\
+		fprintf(stdout, "getrlimit RLIM[%s] cur[%ld] max[%ld]", \
+				NAME, rlim.rlim_cur, rlim.rlim_max);\
+	}\
+}
+#endif
 
 /* TYPES PREDEFINE */
 struct _SERVICE;
@@ -198,8 +232,8 @@ CHUNK *chunk_init();
 #endif
 
 /* WORK TYPE */
-#define WORK_PROC	0x00
-#define WORK_THREAD	0x01
+#define WORKING_PROC	0x00
+#define WORKING_THREAD	0x01
 
 #ifndef _TYPEDEF_SBASE
 #define _TYPEDEF_SBASE
@@ -214,6 +248,9 @@ typedef struct _SBASE{
 
 	/* Event options */
 	EVBASE *evbase;
+	
+	/* Message Queue options for WORKING_PROC_MODE */
+        struct _QUEUE *message_queue;
 
 	/* Running options */
 	int running_status;
@@ -225,13 +262,13 @@ typedef struct _SBASE{
 
         /* APIS */
         int  (*add_service)(struct _SBASE * , struct _SERVICE *);
-	int  (*set_log)(struct _SBASE * , const char *);
+	int  (*set_log)(struct _SBASE * , char *);
         int  (*start)(struct _SBASE * );
         int  (*stop)(struct _SBASE * );
         void (*clean)(struct _SBASE **);
 }SBASE;
 /* Initialize struct sbase */
-SBASE *sbase();
+SBASE *sbase_init();
 #endif
 
 /* SERVICE */
@@ -240,9 +277,10 @@ SBASE *sbase();
 typedef struct _SERVICE
 {
         /* INET options */
-        int sock_type;
+        int socket_type;
         int family;
         int fd;
+	char *name ;
         char *ip;
         int port;
         struct sockaddr_in sa;
@@ -251,6 +289,9 @@ typedef struct _SERVICE
         /* Event options */
 	EVBASE *evbase;
         EVENT  *event;
+
+	/* Message Queue options for WORKING_PROC_MODE */
+        struct _QUEUE *message_queue;
 
         /* Prothread options */
         int working_mode;
@@ -273,6 +314,7 @@ typedef struct _SERVICE
         /* Global options */
         struct _TIMER *timer;
         struct _LOGGER *logger;
+	char *logfile;
 
         /* Running options */
         int      running_status;
@@ -334,6 +376,7 @@ typedef struct _PROCTHREAD
 
         /* Methods */
         void (*run)(void *);
+	void (*running_once)(struct _PROCTHREAD *);
         void (*addconn)(struct _PROCTHREAD *, struct _CONN *);
         void (*add_connection)(struct _PROCTHREAD *, struct _CONN *);
         void (*terminate_connection)(struct _PROCTHREAD *, struct _CONN *);
@@ -360,7 +403,7 @@ PROCTHREAD *procthread_init();
 #define CONN_IO_TIMEOUT   100000u
 #define RECONNECT_MAX     10000
 #ifndef CONN_MAX
-#define CONN_MAX          65535
+#define CONN_MAX          131070
 #endif
 /* struct CONN */
 typedef struct _CONN
@@ -387,6 +430,8 @@ typedef struct _CONN
 	uint64_t		sent_data_total;
 
 	/* Global  options */
+	//parent pointer 
+	//void			*parent;
 	//message queue 
 	struct _QUEUE           *message_queue;
 	//buffer 
@@ -426,7 +471,7 @@ typedef struct _CONN
 	void	  (*event_handler)(int, short, void *);
 	void      (*read_handler)(struct _CONN *);
 	void      (*write_handler)(struct _CONN *);
-	size_t    (*packet_reader)(struct _CONN *);
+	int    	  (*packet_reader)(struct _CONN *);
 	void      (*packet_handler)(struct _CONN *);
 	void      (*chunk_reader)(struct _CONN *);
 	void      (*recv_chunk)(struct _CONN *, size_t);

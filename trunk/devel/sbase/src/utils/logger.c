@@ -3,6 +3,7 @@
 /* Initialize LOGGER */
 LOGGER *logger_init(char *logfile)
 {
+	//fprintf(stdout, "Initializing logger:%s\n", logfile);
 	LOGGER *logger = (LOGGER *)calloc(1, sizeof(LOGGER));
 	if(logger)
 	{

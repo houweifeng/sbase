@@ -27,7 +27,7 @@ void conn_read_handler(struct _CONN *);
 /* Write hanler */
 void conn_write_handler(struct _CONN *);
 /* Packet reader */
-size_t conn_packet_reader(struct _CONN *);
+int conn_packet_reader(struct _CONN *);
 /* Packet Handler */
 void conn_packet_handler(struct _CONN *);
 /* CHUNK reader */

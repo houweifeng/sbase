@@ -1,6 +1,9 @@
 #include <evbase.h>
+#include "sbase.h"
 #include "service.h"
 #include "procthread.h"
+#include "logger.h"
+#include "conn.h"
 
 /* Initialize service */
 SERVICE *service_init()
@@ -14,6 +17,8 @@ SERVICE *service_init()
 		service->addconn	= service_addconn;
 		service->terminate	= service_terminate;
 		service->clean		= service_clean;
+		service->event 		= event_init();
+		service->timer		= timer_init();
 	}
 	return service;
 }
@@ -25,10 +30,16 @@ int service_set(SERVICE *service)
 	if(service)
 	{
 		//service->running_status = 1;	
-		/* INET setting  */
-		if((service->fd = socket(service->family, service->sock_type, 0)) <= 0 )
+		/* Setting logger */
+		if(service->logfile)
 		{
-			FATAL_LOG(service->logger, "Initialize socket failed, %s", strerror(errno));
+			DEBUG_LOGGER(service->logger, "Setting service[%d] log to %s", service->name, service->logfile);
+			service->logger = logger_init(service->logfile);
+		}
+		/* INET setting  */
+		if((service->fd = socket(service->family, service->socket_type, 0)) <= 0 )
+		{
+			FATAL_LOGGER(service->logger, "Initialize socket failed, %s", strerror(errno));
 			return -1;
 		}
 		service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
@@ -39,14 +50,14 @@ int service_set(SERVICE *service)
 		//Bind 
 		if(bind(service->fd, (struct sockaddr *)&(service->sa), (socklen_t)sizeof(struct sockaddr)) != 0 )
 		{
-			FATAL_LOG(service->logger, "Bind fd[%d] to %s:%d failed, %s",
+			FATAL_LOGGER(service->logger, "Bind fd[%d] to %s:%d failed, %s",
 					service->fd, service->ip, service->port, strerror(errno));
 			return -1;
 		}
 		//Listen
-		if(Listen(service->fd, service->backlog) != 0)
+		if(listen(service->fd, service->backlog) != 0)
 		{
-			FATAL_LOG(service->logger, "Listen fd[%d] On %s:%d failed, %s",
+			FATAL_LOGGER(service->logger, "Listen fd[%d] On %s:%d failed, %s",
 					service->fd, service->ip, service->port, strerror(errno));	
 			return -1;
 		}
@@ -54,14 +65,17 @@ int service_set(SERVICE *service)
 		//service->ev_eventbase = event_init();
 		if(service->evbase == NULL)
 		{
-			 FATAL_LOG(service->logger, "Eventbase on fd[%d]  %s:%d is NULL",
+			 FATAL_LOGGER(service->logger, "Eventbase on fd[%d]  %s:%d is NULL",
                                         service->fd, service->ip, service->port);
 			return -1;
 		}
-		service->event = event_init();
-		service->event->set(service->event, service->fd,
- 			EV_READ | EV_PERSIST, (void *)service, service->event_handler);
-		service->evbase->add(service->evbase, service->event);
+		if(service->event)
+		{
+			service->event->set(service->event, service->fd,
+					EV_READ | EV_PERSIST, (void *)service, service->event_handler);
+			service->evbase->add(service->evbase, service->event);
+		}
+		return 0;
 	}
 	return -1;
 }
@@ -77,7 +91,7 @@ void service_run(SERVICE *service)
 	if(service)
 	{
 #ifdef	HAVE_PTHREAD
-		if(service->working_mode == WORK_PROC) 
+		if(service->working_mode == WORKING_PROC) 
 			goto work_proc_init;
 		else 
 			goto work_thread_init;
@@ -87,11 +101,17 @@ work_proc_init:
 		if((service->procthread = procthread_init()))
 		{
 			service->procthread->logger = service->logger;
+			if(service->procthread->evbase)
+				service->procthread->evbase->clean(&(service->procthread->evbase));
+			service->procthread->evbase = service->evbase;
+			if(service->procthread->message_queue)
+				service->procthread->message_queue->clean(&(service->procthread->message_queue));
+			service->procthread->message_queue = service->message_queue;
 			service->running_status = 1;
 		}
 		else
 		{
-			FATAL_LOG(service->logger, "Initialize procthreads failed, %s",
+			FATAL_LOGGER(service->logger, "Initialize procthreads failed, %s",
 					strerror(errno));
 			exit(EXIT_FAILURE);
 		}	
@@ -102,7 +122,7 @@ work_thread_init:
 				sizeof(PROCTHREAD *));
 		if(service->procthreads == NULL)
 		{
-			FATAL_LOG(service->logger, "Initialize procthreads pool failed, %s",
+			FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
 					strerror(errno));
 			exit(EXIT_FAILURE);
 		}
@@ -115,7 +135,7 @@ work_thread_init:
 			}
 			else
 			{
-				FATAL_LOG(service->logger, "Initialize procthreads pool failed, %s",
+				FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
 						strerror(errno));
 				exit(EXIT_FAILURE);
 			}
@@ -123,12 +143,12 @@ work_thread_init:
 			if(pthread_create(&procthread_id, NULL, (void *)&(service->procthreads[i]->run),
 						(void *)service->procthreads[i]) == 0)
 			{
-				DEBUG_LOG(service->logger, "Created procthreads[%d] ID[%08x]",
+				DEBUG_LOGGER(service->logger, "Created procthreads[%d] ID[%08x]",
 						i, procthread_id);	
 			}	
 			else
 			{
-				FATAL_LOG(service->logger, "Create procthreads[%d] failed, %s",
+				FATAL_LOGGER(service->logger, "Create procthreads[%d] failed, %s",
 						i, strerror(errno));
 				exit(EXIT_FAILURE);				
 			}
@@ -150,7 +170,7 @@ void service_event_handler(int event_fd, short event, void *arg)
 	{
 		if(event_fd != service->fd) 
 		{
-			FATAL_LOG(service->logger, "Invalid event_fd[%d] not match daemon fd[%d]",
+			FATAL_LOGGER(service->logger, "Invalid event_fd[%d] not match daemon fd[%d]",
 				event_fd, service->fd);
 			return ;
 		}
@@ -158,17 +178,18 @@ void service_event_handler(int event_fd, short event, void *arg)
 		{
 			if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0 )	
 			{
-				DEBUG_LOG(service->logger, "Accept new connection[%d] from %s:%d",
+				DEBUG_LOGGER(service->logger, "Accept new connection[%d] from %s:%d",
 					fd, inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port));			
-				service->addconn(service, fd, &rsa);
+				return service->addconn(service, fd, &rsa);
 			}
 			else
 			{
-				FATAL_LOG(service->logger, "Accept new connection failed, %s",
+				FATAL_LOGGER(service->logger, "Accept new connection failed, %s",
 					strerror(errno));
 			}
 		}
 	}
+	return ;
 }
 
 /* Add new conn */
@@ -183,7 +204,7 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 		/*Check Connections Count */
 		if(service->running_connections >= service->max_connections)
 		{
-			ERROR_LOG(service->logger, "Connections count[%d] reach max[%d]",
+			ERROR_LOGGER(service->logger, "Connections count[%d] reach max[%d]",
 				service->running_connections, service->max_connections);
 			shutdown(fd, SHUT_RDWR);
 			close(fd);
@@ -194,6 +215,7 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 		port = ntohs(sa->sin_port);
 		if((conn = conn_init(ip, port)))
 		{        
+			conn->fd = fd;
 			conn->packet_type = service->packet_type;
 			conn->packet_length = service->packet_length;
 			conn->packet_delimiter = service->packet_delimiter;
@@ -206,15 +228,19 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 		}
 		else return ;
 		/* Add connection for procthread */
-		if(service->working_mode == WORK_PROC && service->procthread)
+		if(service->working_mode == WORKING_PROC && service->procthread)
 		{
-			return service->procthread->add_connection(service->procthread, conn);
+			DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthread[%d]",
+                                conn->fd, conn->ip, conn->port, getpid());
+			return service->procthread->addconn(service->procthread, conn);
 		}
 		/* Add connection to procthread pool */
-		if(service->working_mode == WORK_THREAD && service->procthreads)
+		if(service->working_mode == WORKING_THREAD && service->procthreads)
 		{
 			index = fd % service->max_procthreads;
-			return service->procthreads[index]->add_connection(service->procthreads[index], conn);
+			DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthreads[%d]",
+				conn->fd, conn->ip, conn->port, index);
+			return service->procthreads[index]->addconn(service->procthreads[index], conn);
                 }
 	}
 	return ;
@@ -226,7 +252,7 @@ void service_terminate(SERVICE *service)
 	if(service)
 	{
 		service->running_status = 0;	
-		if(service->working_mode == WORK_PROC)
+		if(service->working_mode == WORKING_PROC)
 		{
 			service->procthread->terminate(service->procthread);
 			shutdown(service->fd, SHUT_RDWR);
@@ -242,7 +268,7 @@ void service_clean(SERVICE **service)
 {
 	if((*service))
 	{
-		if((*service)->working_mode == WORK_PROC)
+		if((*service)->working_mode == WORKING_PROC)
                 {
                         (*service)->procthread->clean(&(*service)->procthread);
 			free((*service));
