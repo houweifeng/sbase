@@ -86,8 +86,8 @@ int main(int argc, char **argv)
 	char *ip = NULL;
 	int port = 0;
 	int fd = 0;
-	struct sockaddr_in sa;	
-	socklen_t sa_len;
+	struct sockaddr_in sa, lsa;
+        socklen_t sa_len, lsa_len = -1;
 	int opt = 1;
 	int i = 0;
 	int conn_num = 0;
@@ -127,6 +127,10 @@ int main(int argc, char **argv)
 					evbase->add(evbase, events[fd]);
 					sprintf(buffer[fd], "%d:client message", fd);
 				}
+				lsa_len = sizeof(struct sockaddr_in);
+                                memset(&lsa, 0, lsa_len);
+                                getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
+                                SHOW_LOG("Connected to %s:%d via %d port:%d", ip, port, fd, ntohs(lsa.sin_port));
 			}
 			else
 			{
