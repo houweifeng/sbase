@@ -106,6 +106,7 @@ work_proc_init:
 			service->procthread->evbase = service->evbase;
 			if(service->procthread->message_queue)
 				service->procthread->message_queue->clean(&(service->procthread->message_queue));
+			service->procthread->service = service;
 			service->procthread->message_queue = service->message_queue;
 			service->running_status = 1;
 		}
@@ -216,6 +217,7 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 		if((conn = conn_init(ip, port)))
 		{        
 			conn->fd = fd;
+			conn->logger = service->logger;
 			conn->packet_type = service->packet_type;
 			conn->packet_length = service->packet_length;
 			conn->packet_delimiter = service->packet_delimiter;

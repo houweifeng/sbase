@@ -264,6 +264,7 @@ typedef struct _SBASE{
         int  (*add_service)(struct _SBASE * , struct _SERVICE *);
 	int  (*set_log)(struct _SBASE * , char *);
         int  (*start)(struct _SBASE * );
+	void (*running_once)(struct _SBASE *);
         int  (*stop)(struct _SBASE * );
         void (*clean)(struct _SBASE **);
 }SBASE;
@@ -431,7 +432,7 @@ typedef struct _CONN
 
 	/* Global  options */
 	//parent pointer 
-	//void			*parent;
+	void			*parent;
 	//message queue 
 	struct _QUEUE           *message_queue;
 	//buffer 

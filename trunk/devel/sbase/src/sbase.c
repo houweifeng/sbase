@@ -12,6 +12,8 @@ int sbase_add_service(struct _SBASE *, struct _SERVICE *);
 /* SBASE Initialize setting logger  */
 int sbase_set_log(struct _SBASE *sb, char *logfile);
 int sbase_start(struct _SBASE *);
+/* Running once */
+void sbase_running_once(SBASE *sb);
 int sbase_stop(struct _SBASE *);
 void sbase_clean(struct _SBASE **);
 
@@ -28,6 +30,7 @@ SBASE *sbase_init(int max_connections)
 		sb->set_log		= sbase_set_log;
 		sb->add_service        	= sbase_add_service;
 		sb->start       	= sbase_start;
+		sb->running_once	= sbase_running_once;
 		sb->stop        	= sbase_stop;
 		sb->clean		= sbase_clean;
 		sb->evbase		= evbase_init();
@@ -69,6 +72,8 @@ int sbase_add_service(struct _SBASE *sb, struct _SERVICE *service)
 			}
 			if(service->logger == NULL)
 				service->logger = sb->logger;
+			DEBUG_LOGGER(sb->logger, "Added service[%08x][%s] to sbase[%08x]",
+				service, service->name, sb);
 			return 0;
 		}
 	}
@@ -135,16 +140,72 @@ running:
 			while(sb->running_status)
 			{
 				sb->evbase->loop(sb->evbase, 0, NULL);
-				for(i = 0; i < sb->running_services; ++i)
-				{
-					sb->services[i]->procthread->running_once(sb->services[i]->procthread);
-				}
+				sb->running_once(sb);
 				usleep(sb->sleep_usec);
 			}
 		}
 	}
 }
 
+/* Running once */
+void sbase_running_once(SBASE *sb)
+{
+	MESSAGE *msg = NULL;
+	CONN    *conn = NULL;
+	PROCTHREAD *pth = NULL;
+	if(sb)
+	{
+		msg = sb->message_queue->pop(sb->message_queue);
+		if(msg)
+		{
+			DEBUG_LOGGER(sb->logger, "Got message[%08x] id[%d] handler[%08x] parent[%08x]",
+                                        msg, msg->msg_id, msg->handler, msg->parent);
+			if(!(msg->msg_id & MESSAGE_ALL))
+			{
+				WARN_LOGGER(sb->logger, "Unkown message[%d]", msg->msg_id);
+				goto next;
+			}
+			conn = (CONN *)msg->handler;
+			pth = (PROCTHREAD *)msg->parent;
+			if(conn == NULL || pth == NULL || msg->fd != conn->fd || pth->service == NULL )
+			{
+				WARN_LOGGER(sb->logger, "Invalid MESSAGE[%08x] fd[%d] handler[%08x] parent[%08x]",
+					msg, msg->fd, conn, pth);
+				goto next;
+			}
+			DEBUG_LOGGER(sb->logger, "Got message[%s] On service[%s] connection[%d] %s:%d",
+					messagelist[msg->msg_id], pth->service->name, conn->fd, conn->ip, conn->port);
+			switch(msg->msg_id)
+			{
+				/* NEW connection */
+				case MESSAGE_NEW_SESSION :
+					pth->add_connection(pth, conn);
+					break;
+				/* Close connection */
+				case MESSAGE_QUIT :
+					if(pth->connections[msg->fd])
+						pth->terminate_connection(pth, conn);
+					break;
+				case MESSAGE_INPUT :
+					break;
+				case MESSAGE_OUTPUT :
+					conn->write_handler(conn);
+					break;
+				case MESSAGE_PACKET :
+					conn->packet_handler(conn);
+					break;
+				case MESSAGE_DATA :
+					conn->data_handler(conn);
+					break;
+				default:
+					break;
+			}
+next:
+			msg->clean(&msg);
+		}
+	}
+}
+ 
 /* Stop SBASE */
 int sbase_stop(struct _SBASE *sb)
 {

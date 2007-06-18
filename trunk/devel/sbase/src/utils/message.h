@@ -13,7 +13,7 @@ extern "C" {
 #ifndef _TYPEDEF_MESSAGE
 #define _TYPEDEF_MESSAGE
 /* MESSAGE ACTION ID DEFINE */
-#define MESSAGE_QUIT            0x00
+#define MESSAGE_QUIT            0x20
 #define MESSAGE_NEW_SESSION     0x01
 #define MESSAGE_INPUT           0x02
 #define MESSAGE_OUTPUT          0x04
@@ -23,7 +23,7 @@ extern "C" {
 				| MESSAGE_PACKET | MESSAGE_DATA)
 static char *messagelist[] = 
 {
-	"MESSAGE_QUIT",
+	"",
 	"MESSAGE_NEW_SESSION",
 	"MESSAGE_INPUT",
 	"",
@@ -31,14 +31,15 @@ static char *messagelist[] =
 	"","","",
 	"MESSAGE_PACKET",
 	"","","","","","","",
-	"MESSAGE_DATA"	
+	"MESSAGE_DATA","","","","","","","","","","","","","","","",
+	"MESSAGE_QUIT"
 };
 typedef struct _MESSAGE
 {
         int             msg_id;
         int             fd;
         void            *handler;
-//	void		*parent;
+	void		*parent;
 
         void            (*clean)(struct _MESSAGE **);
 }MESSAGE;

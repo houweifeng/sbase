@@ -74,14 +74,17 @@ ERROR:
 /* Initialize setting  */
 int conn_set(CONN *conn)
 {
+	/*
 	int keep_alive = 1;//设定KeepAlive
         int keep_idle = 1;//开始首次KeepAlive探测前的TCP空闭时间
         int keep_interval = 1;//两次KeepAlive探测间的时间间隔
         int keep_count = 3;//判定断开前的KeepAlive探测次数
+	*/
 	if(conn && conn->fd > 0 )
 	{
 		fcntl(conn->fd, F_SETFL, O_NONBLOCK);
 		/* set keepalive */
+		/*
 		setsockopt(conn->fd, SOL_SOCKET, SO_KEEPALIVE,
 				(void*)&keep_alive, sizeof(keep_alive));
 		setsockopt(conn->fd, SOL_TCP, TCP_KEEPIDLE,
@@ -90,6 +93,7 @@ int conn_set(CONN *conn)
 				(void *)&keep_interval, sizeof(keep_interval));
 		setsockopt(conn->fd,SOL_TCP,TCP_KEEPCNT,
 				(void *)&keep_count,sizeof(keep_count));
+		*/
 		if(conn->evbase && conn->event)
 		{
 			conn->event->set(conn->event, conn->fd, EV_READ|EV_PERSIST, (void *)conn, conn->event_handler);
@@ -133,30 +137,35 @@ void conn_event_handler(int event_fd, short event, void *arg)
 void conn_read_handler(CONN *conn)
 {
 	int n = 0;
-	BUFFER *tmp = NULL ;
+	BUFFER *buf = NULL ;
+	char *tmp = NULL;
+	int nbuf = BUF_SIZE;
 		
 	/* Check connection and transaction state  */
 	CONN_CHECK(conn);
 	if(conn)
 	{
-		if((tmp = buffer_init()) == NULL ) goto end;
+		if(conn->buffer_size)
+			nbuf = conn->buffer_size;
+		if((buf = buffer_init()) == NULL 
+			|| ((tmp = (char *)buf->calloc(buf, nbuf)) == NULL) ) goto end;
 		/* Receive OOB */
-		tmp->calloc(tmp, conn->buffer_size);
-		if((n = recv(conn->fd, tmp->data, conn->buffer_size, MSG_OOB)) > 0 )	
+		if((n = recv(conn->fd, tmp, nbuf, MSG_OOB)) > 0 )	
 		{
 			conn->recv_oob_total += n;
 			DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %llu from %s:%d via %d",
 				n, conn->recv_oob_total, conn->ip, conn->port, conn->fd);
-			conn->oob->push(conn->oob, tmp->data, n);	
+			conn->oob->push(conn->oob, buf->data, n);	
 			conn->oob_handler(conn);
 			/* CONN TIMER sample */
 			if(conn->timer) conn->timer->sample(conn->timer);
 			goto end;
 		}
 		/* Receive normal data */
-		n = read(conn->fd, tmp->data, conn->buffer_size);
-		if( n <= 0 )
+		if( (n = read(conn->fd, tmp, nbuf)) <= 0 )
 		{
+			FATAL_LOGGER(conn->logger, "Reading data from %s:%d via %d failed, %s",
+				conn->ip, conn->port, conn->fd, strerror(errno));
 			/* Terminate connection */
                         CONN_TERMINATE(conn);
 			goto end;
@@ -164,7 +173,7 @@ void conn_read_handler(CONN *conn)
 		/* CONN TIMER sample */
 		if(conn->timer) conn->timer->sample(conn->timer);
 		/* Push to buffer */
-		conn->buffer->push(conn->buffer, tmp->data, n);
+		conn->buffer->push(conn->buffer, tmp, n);
 		conn->recv_data_total += n;	
 		DEBUG_LOGGER(conn->logger, "Received %d bytes data total %llu from %s:%d via %d",
                                 n, conn->recv_data_total, conn->ip, conn->port, conn->fd);
@@ -176,7 +185,7 @@ void conn_read_handler(CONN *conn)
 	}
 	end:
 	{
-		if(tmp) tmp->clean(&tmp);
+		if(buf) buf->clean(&buf);
 	}
 	return ;
 }
@@ -427,7 +436,7 @@ void conn_push_message(CONN *conn, int message_id)
 			msg->msg_id = message_id;
 			msg->fd	= conn->fd;
 			msg->handler = (void *)conn;
-			//msg->parent  = (void *)conn->parent;
+			msg->parent  = (void *)conn->parent;
 			
 		}	
 		else
