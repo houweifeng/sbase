@@ -7,6 +7,8 @@ BUFFER *buffer_init()
         {
                 buf->recalloc   = buf_recalloc;
                 buf->remalloc   = buf_remalloc;
+		buf->malloc	= buf_malloc;
+		buf->calloc	= buf_calloc;
                 buf->push       = buf_push;
                 buf->del        = buf_del;
                 buf->reset      = buf_reset;
@@ -31,24 +33,16 @@ void* buf_calloc(BUFFER *buf, size_t size)
 		if(buf->data)
 		{
 			buf->data = realloc(buf->data, buf->size + size);	
+			ret = ((char *)buf->data) + buf->size;
+                        memset(ret, 0, size);
 		}
 		else
 		{
 			buf->data = calloc(1, size);
+			ret = buf->data;
 		}
-		if(buf->data)
-		{
-			ret = ((char *)buf->data) + buf->size;
-			memset(ret, 0, size);
-			buf->size += size;
-			buf->end = (char *)(buf->data) + buf->size;
-		}
-		else
-		{
-			buf->size = 0;
-                        buf->data = NULL;
-			buf->end = NULL;
-		}
+		buf->size += size;
+		buf->end = (char *)(buf->data) + buf->size;
 #ifdef HAVE_PTHREAD
 		pthread_mutex_unlock(&(buf->mutex));
 #endif
@@ -71,23 +65,15 @@ void* buf_malloc(BUFFER *buf, size_t size)
                 if(buf->data)
                 {
                         buf->data = realloc(buf->data, buf->size + size); 
+			ret = ((char *)buf->data) + buf->size;
                 }
                 else
                 {
                         buf->data = malloc(size);
+			ret = buf->data;
                 } 
-		if(buf->data)
-                {
-			ret = ((char *)buf->data) + buf->size;
-                        buf->size += size;
-                        buf->end = (char *)(buf->data) + buf->size;
-                }
-                else
-                {
-                        buf->size = 0;
-                        buf->data = NULL;
-                        buf->end = NULL;
-                }
+		buf->size += size;
+                buf->end = (char *)(buf->data) + buf->size;
 #ifdef HAVE_PTHREAD
                 pthread_mutex_unlock(&(buf->mutex));
 #endif

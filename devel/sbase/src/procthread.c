@@ -100,18 +100,18 @@ void procthread_run(void *arg)
 void procthread_addconn(PROCTHREAD *pth, CONN *conn)
 {
 	MESSAGE *msg = NULL;
-	fprintf(stdout, "Adding NEW CONN[%08x] IN PROCTHREAD[%08x]", conn, pth);
-	if(pth && pth->message_queue)
+	//DEBUG_LOGGER(pth->logger, "Adding NEW CONN[%08x] IN PROCTHREAD[%08x]", conn, pth);
+	if(pth && pth->message_queue && conn)
 	{
 		if((msg = message_init()))
 		{
 			msg->msg_id = MESSAGE_NEW_SESSION;
 			msg->fd = conn->fd;
 			msg->handler = conn;
-			//msg->parent  = (void *)pth;
+			msg->parent  = (void *)pth;
 			pth->message_queue->push(pth->message_queue, msg);
-			DEBUG_LOGGER(pth->logger, "Message for NEW_SESSION[%d] %s:%d",
-				conn->fd, conn->ip, conn->port);
+			DEBUG_LOGGER(pth->logger, "Added message for NEW_SESSION[%d] %s:%d total %d",
+				conn->fd, conn->ip, conn->port, pth->message_queue->total);
 		}
 	}	
 }
@@ -131,7 +131,7 @@ void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 			/* Add event to evbase */
 			conn->evbase = pth->evbase;
 			conn->message_queue = pth->message_queue;
-			//conn->parent = (void *)pth;
+			conn->parent = (void *)pth;
 			if(conn->set(conn) != 0)
 			{
 				FATAL_LOGGER(pth->logger, "Setting connections[%d] %s:%d failed, %s",
