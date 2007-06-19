@@ -145,6 +145,7 @@ void evselect_clean(EVBASE **evbase)
                 if((*evbase)->ev_fds)free((*evbase)->ev_fds);
                 if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
                 if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
+		free(*evbase);
                 (*evbase) = NULL;
         }
 }
