@@ -40,7 +40,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	int n = 0;
 	if(fd == lfd )
 	{
-		if((ev_flags & EV_READ))
+		if((ev_flags & E_READ))
 		{
 			if((rfd = accept(fd, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
 			{
@@ -48,9 +48,9 @@ void ev_handler(int fd, short ev_flags, void *arg)
 						inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd);	
 				/* set FD NON-BLOCK */
 				fcntl(rfd, F_SETFL, O_NONBLOCK);
-				if((events[rfd] = event_init()))
+				if((events[rfd] = ev_init()))
 				{
-					events[rfd]->set(events[rfd], rfd, EV_READ|EV_PERSIST,
+					events[rfd]->set(events[rfd], rfd, E_READ|E_PERSIST,
 						(void *)events[rfd], &ev_handler);
 					evbase->add(evbase, events[rfd]);
 				}
@@ -66,7 +66,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	else
 	{
 		SHOW_LOG("EVENT %d on %d", ev_flags, fd);
-		if(ev_flags & EV_READ)
+		if(ev_flags & E_READ)
 		{
 			if( ( n = read(fd, buffer[fd], BUF_SIZE)) > 0 )
 			{
@@ -75,7 +75,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 				SHOW_LOG("Updating event[%x] on %d ", events[fd], fd);
 				if(events[fd])
 				{
-					events[fd]->add(events[fd], EV_WRITE);	
+					events[fd]->add(events[fd], E_WRITE);	
 				}
 			}		
 			else
@@ -85,7 +85,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 				goto err;
 			}
 		}
-		if(ev_flags & EV_WRITE)
+		if(ev_flags & E_WRITE)
 		{
 			if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
 			{
@@ -97,7 +97,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 					FATAL_LOG("Echo data to %d failed, %s", fd, strerror(errno));	
 				goto err;
 			}
-			if(events[fd]) events[fd]->del(events[fd], EV_WRITE);
+			if(events[fd]) events[fd]->del(events[fd], E_WRITE);
 		}
 		return ;
 		err:
@@ -168,10 +168,10 @@ int main(int argc, char **argv)
         /* set evbase */
         if((evbase = evbase_init()))
         {
-                if((event = event_init()))
+                if((event = ev_init()))
                 {
 			SHOW_LOG("Initialized event ");
-                        event->set(event, lfd, EV_READ|EV_PERSIST, (void *)event, &ev_handler);
+                        event->set(event, lfd, E_READ|E_PERSIST, (void *)event, &ev_handler);
                         evbase->add(evbase, event);
                         while(1)
                         {

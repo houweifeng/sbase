@@ -35,12 +35,12 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 		/* Delete OLD garbage */
 		//epoll_ctl(ebase->efd, EPOLL_CTL_DEL, event->ev_fd, NULL);
 		memset(&(((struct epoll_event *)evbase->evs)[event->ev_fd]), 0, sizeof(struct epoll_event));
-		if(event->ev_flags & EV_READ)
+		if(event->ev_flags & E_READ)
 		{
 			op = EPOLL_CTL_ADD;
 			ev_flags |= EPOLLIN;
 		}	
-		if(event->ev_flags & EV_WRITE)
+		if(event->ev_flags & E_WRITE)
                 {
                         op = EPOLL_CTL_ADD;
                         ev_flags |= EPOLLOUT;
@@ -68,11 +68,11 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
                 //memset(evbase->evs[event->ev_fd], 0, sizeof(struct epoll_event));
                 /* Delete OLD garbage */
                 //epoll_ctl(ebase->efd, EPOLL_CTL_DEL, event->ev_fd, NULL);
-                if(event->ev_flags & EV_READ)
+                if(event->ev_flags & E_READ)
                 {
                         ev_flags |= EPOLLIN;
                 }
-                if(event->ev_flags & EV_WRITE)
+                if(event->ev_flags & E_WRITE)
                 {
                         ev_flags |= EPOLLOUT;
                 }
@@ -132,11 +132,11 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 			{
 				ev_flags = 0;
 				if(evp->events & (EPOLLHUP | EPOLLERR))
-					ev_flags |= (EV_READ |EV_WRITE);
+					ev_flags |= (E_READ |E_WRITE);
 				if(evp->events & EPOLLIN)
-					ev_flags |= EV_READ;
+					ev_flags |= E_READ;
 				if(evp->events & EPOLLOUT)
-					ev_flags |= EV_WRITE;
+					ev_flags |= E_WRITE;
 				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
 					DEBUG_LOG("Activing EV[%d] on %d", ev_flags, fd);

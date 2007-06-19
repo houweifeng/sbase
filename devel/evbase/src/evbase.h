@@ -9,9 +9,9 @@ extern "C" {
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#define EV_READ		0x01
-#define EV_WRITE	0x02
-#define EV_PERSIST	0x04
+#define E_READ		0x01
+#define E_WRITE	0x02
+#define E_PERSIST	0x04
 #define EV_MAX_FD	1024
 #define EV_USEC_SLEEP	100
 struct _EVENT;
@@ -56,7 +56,7 @@ typedef struct _EVENT
 	void (*destroy)(struct _EVENT *);
 	void (*clean)(struct _EVENT **);
 }EVENT;
-EVENT *event_init();
+EVENT *ev_init();
 #endif 
 
 #ifdef __cplusplus

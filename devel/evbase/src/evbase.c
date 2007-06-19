@@ -137,7 +137,7 @@ EVBASE *evbase_init()
 }
 
 /* Initialize event */
-EVENT *event_init()
+EVENT *ev_init()
 {
 	EVENT *event = (EVENT *)calloc(1, sizeof(EVENT));
 	if(event)
@@ -221,7 +221,7 @@ void event_active(EVENT *event, short ev_flags)
 	if(event && event->ev_handler)
 	{
 		event->ev_handler(event->ev_fd, ev_flags, event->ev_arg);	
-		if(!(event->ev_flags & EV_PERSIST))
+		if(!(event->ev_flags & E_PERSIST))
 		{
 			event->destroy(event);
 		}

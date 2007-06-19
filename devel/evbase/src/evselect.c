@@ -35,14 +35,14 @@ int evselect_add(EVBASE *evbase, EVENT *event)
 	if(evbase && event && event->ev_fd > 0)
 	{
 		event->ev_base = evbase;
-		if( evbase->ev_read_fds && (event->ev_flags & EV_READ))
+		if( evbase->ev_read_fds && (event->ev_flags & E_READ))
 		{
 			FD_SET(event->ev_fd, (fd_set *)evbase->ev_read_fds);	
-			ev_flags |= EV_READ;
+			ev_flags |= E_READ;
 		}
-		if(evbase->ev_read_fds && (event->ev_flags & EV_WRITE))
+		if(evbase->ev_read_fds && (event->ev_flags & E_WRITE))
 		{
-			ev_flags |= EV_WRITE;
+			ev_flags |= E_WRITE;
 			FD_SET(event->ev_fd, (fd_set *)evbase->ev_write_fds);	
 		}
 		if(ev_flags)
@@ -66,15 +66,15 @@ int evselect_update(EVBASE *evbase, EVENT *event)
 			FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
 		if(evbase->ev_write_fds) 
 			FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
-                if(event->ev_flags & EV_READ)
+                if(event->ev_flags & E_READ)
                 {
                         FD_SET(event->ev_fd, (fd_set *)evbase->ev_read_fds);
-			ev_flags |= EV_READ;
+			ev_flags |= E_READ;
                 }
-                if(event->ev_flags & EV_WRITE)
+                if(event->ev_flags & E_WRITE)
                 {
                         FD_SET(event->ev_fd, (fd_set *)evbase->ev_write_fds);
-			ev_flags |= EV_WRITE;
+			ev_flags |= E_WRITE;
                 }
 		if(ev_flags)
                 {
@@ -121,11 +121,11 @@ void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
 				ev_flags = 0;
 				if(FD_ISSET(i, (fd_set *)evbase->ev_read_fds))	
 				{
-					ev_flags |= EV_READ;
+					ev_flags |= E_READ;
 				}
 				if(FD_ISSET(i, (fd_set *)evbase->ev_write_fds))
                                 {
-                                        ev_flags |= EV_WRITE;
+                                        ev_flags |= E_WRITE;
                                 }
 				if((ev_flags  &= evbase->evlist[i]->ev_flags))	
 				{

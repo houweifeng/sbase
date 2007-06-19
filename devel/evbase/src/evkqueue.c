@@ -36,14 +36,14 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
 		event->ev_base = evbase;
 		kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
 		memset(kqev, 0, sizeof(struct kevent));
-		if(event->ev_flags & EV_READ)
+		if(event->ev_flags & E_READ)
 		{
 			kqev->ident  = event->ev_fd;
 			kqev->filter |= EVFILT_READ;
 			kqev->flags = EV_ADD|EV_CLEAR;	
 			kqev->udata = (void *)event;
 		}
-		if(event->ev_flags & EV_WRITE)
+		if(event->ev_flags & E_WRITE)
                 {
                         kqev->ident = event->ev_fd;
                         kqev->filter |= EVFILT_WRITE;
@@ -65,14 +65,14 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         {
                 kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
                 memset(kqev, 0, sizeof(struct kevent));
-                if(event->ev_flags & EV_READ)
+                if(event->ev_flags & E_READ)
                 {
                         kqev->ident  = event->ev_fd;
                         kqev->filter |= EVFILT_READ;
                         kqev->flags = EV_ADD|EV_CLEAR;
                         kqev->udata = (void *)event;
                 }
-                if(event->ev_flags & EV_WRITE)
+                if(event->ev_flags & E_WRITE)
                 {
                         kqev->ident = event->ev_fd;
                         kqev->filter |= EVFILT_WRITE;
@@ -92,14 +92,14 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
         {
                 kqev = &(((struct kevent *)evbase->ev_changes)[event->ev_fd]);
                 memset(kqev, 0, sizeof(struct kevent));
-                if(event->ev_flags & EV_READ)
+                if(event->ev_flags & E_READ)
                 {
                         kqev->ident  = event->ev_fd;
                         kqev->filter |= EVFILT_READ;
                         kqev->flags = EV_DELETE|EV_CLEAR;
                         kqev->udata = (void *)event;
                 }
-                if(event->ev_flags & EV_WRITE)
+                if(event->ev_flags & E_WRITE)
                 {
                         kqev->ident = event->ev_fd;
                         kqev->filter |= EVFILT_WRITE;
@@ -132,8 +132,8 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 			kqev = &(((struct kevent *)evbase->evs)[i]);
 			if(kqev && evbase->evlist[kqev->ident] == kqev->udata)
 			{
-				if(kqev->filter & EVFILT_READ)	ev_flags |= EV_READ;
-				if(kqev->filter & EVFILT_WRITE)	ev_flags |= EV_WRITE;
+				if(kqev->filter & EVFILT_READ)	ev_flags |= E_READ;
+				if(kqev->filter & EVFILT_WRITE)	ev_flags |= E_WRITE;
 				if((ev_flags &=  evbase->evlist[kqev->ident]->ev_flags )!= 0) 
 					evbase->evlist[kqev->ident]->active(evbase->evlist[kqev->ident], ev_flags);
 			}
