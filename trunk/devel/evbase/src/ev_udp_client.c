@@ -35,7 +35,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	int n = 0;
 	struct sockaddr_in rsa;
 	socklen_t rsa_len ;
-	if(ev_flags & EV_READ)
+	if(ev_flags & E_READ)
 	{
 		if( ( n = recvfrom(fd, buffer[fd], BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
 		{
@@ -44,7 +44,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 			SHOW_LOG("Updating event[%x] on %d ", events[fd], fd);
 			if(events[fd])
 			{
-				events[fd]->add(events[fd], EV_WRITE);	
+				events[fd]->add(events[fd], E_WRITE);	
 			}
 		}		
 		else
@@ -54,7 +54,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 			goto err;
 		}
 	}
-	if(ev_flags & EV_WRITE)
+	if(ev_flags & E_WRITE)
 	{
 		if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
 		{
@@ -66,7 +66,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 				FATAL_LOG("Wrote data via %d failed, %s", fd, strerror(errno));	
 			goto err;
 		}
-		if(events[fd]) events[fd]->del(events[fd], EV_WRITE);
+		if(events[fd]) events[fd]->del(events[fd], E_WRITE);
 	}
 	return ;
 	err:
@@ -128,9 +128,9 @@ int main(int argc, char **argv)
 			{
 				/* set FD NON-BLOCK */
                                 fcntl(fd, F_SETFL, O_NONBLOCK);
-				if((events[fd] = event_init()))
+				if((events[fd] = ev_init()))
 				{
-					events[fd]->set(events[fd], fd, EV_READ|EV_WRITE|EV_PERSIST, 
+					events[fd]->set(events[fd], fd, E_READ|E_WRITE|E_PERSIST, 
 						(void *)events[fd], &ev_handler);
 					evbase->add(evbase, events[fd]);
 					sprintf(buffer[fd], "%d:client message", fd);

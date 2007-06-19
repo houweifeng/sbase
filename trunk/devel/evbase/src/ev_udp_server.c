@@ -43,7 +43,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	SHOW_LOG("fd[%d] ev[%d] arg[%08x]", fd, ev_flags, arg);
 	if(fd == lfd )
 	{
-		if((ev_flags & EV_READ))
+		if((ev_flags & E_READ))
 		{
 			rfd = socket(AF_INET, SOCK_DGRAM, 0);
 			setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR,
@@ -94,9 +94,9 @@ void ev_handler(int fd, short ev_flags, void *arg)
 				}
 				/* set FD NON-BLOCK */
 				fcntl(rfd, F_SETFL, O_NONBLOCK);
-				if((events[rfd] = event_init()))
+				if((events[rfd] = ev_init()))
 				{
-					events[rfd]->set(events[rfd], rfd, EV_READ|EV_PERSIST,
+					events[rfd]->set(events[rfd], rfd, E_READ|E_PERSIST,
 							(void *)events[rfd], &ev_handler);
 					evbase->add(evbase, events[rfd]);
 				}
@@ -111,7 +111,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 	else
 	{
 		DEBUG_LOG("EVENT %d on %d", ev_flags, fd);
-		if(ev_flags & EV_READ)
+		if(ev_flags & E_READ)
 		{
 			if( ( n = recvfrom(fd, buffer[fd], BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
 			{
@@ -120,7 +120,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 				SHOW_LOG("Updating event[%08x] on %d ", events[fd], fd);
 				if(events[fd])
 				{
-					events[fd]->add(events[fd], EV_WRITE);	
+					events[fd]->add(events[fd], E_WRITE);	
 					SHOW_LOG("Updated event[%08x] on %d ", events[fd], fd);
 				}
 			}	
@@ -130,11 +130,11 @@ void ev_handler(int fd, short ev_flags, void *arg)
 					FATAL_LOG("Reading from %d failed, %s", fd, strerror(errno));
 				goto err;
 			}
-			DEBUG_LOG("EV_READ on %d end", fd);
+			DEBUG_LOG("E_READ on %d end", fd);
 		}
-		if(ev_flags & EV_WRITE)
+		if(ev_flags & E_WRITE)
 		{
-			SHOW_LOG("EV_WRITE on %d end", fd);
+			SHOW_LOG("E_WRITE on %d end", fd);
 			if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
 			{
 				SHOW_LOG("Echo %d bytes to %d", n, fd);
@@ -145,7 +145,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 					FATAL_LOG("Echo data to %d failed, %s", fd, strerror(errno));	
 				goto err;
 			}
-			if(events[fd]) events[fd]->del(events[fd], EV_WRITE);
+			if(events[fd]) events[fd]->del(events[fd], E_WRITE);
 		}
 		DEBUG_LOG("EV_OVER on %d", fd);
 		return ;
@@ -217,10 +217,10 @@ int main(int argc, char **argv)
         /* set evbase */
         if((evbase = evbase_init()))
         {
-                if((event = event_init()))
+                if((event = ev_init()))
                 {
 			SHOW_LOG("Initialized event ");
-                        event->set(event, lfd, EV_READ|EV_PERSIST, (void *)event, &ev_handler);
+                        event->set(event, lfd, E_READ|E_PERSIST, (void *)event, &ev_handler);
                         evbase->add(evbase, event);
                         while(1)
                         {

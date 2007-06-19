@@ -31,11 +31,11 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
 	{
 		event->ev_base = evbase;
 		ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
-		if(event->ev_flags & EV_READ)
+		if(event->ev_flags & E_READ)
                 {
 			ev_flags |= POLLIN;
                 }
-                if(event->ev_flags & EV_WRITE)
+                if(event->ev_flags & E_WRITE)
                 {
 			ev_flags |= POLLOUT;
                 }
@@ -62,11 +62,11 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
         {
 		event->ev_base = evbase;
                 ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
-                if(event->ev_flags & EV_READ)
+                if(event->ev_flags & E_READ)
                 {
                         ev_flags |= POLLIN;
                 }
-                if(event->ev_flags & EV_WRITE)
+                if(event->ev_flags & E_WRITE)
                 {
                         ev_flags |= POLLOUT;
                 }
@@ -116,15 +116,15 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 				ev_flags = 0;
 				if(ev->revents & POLLIN)
 				{
-					ev_flags |= EV_READ;
+					ev_flags |= E_READ;
 				}
 				if(ev->revents & POLLOUT)	
 				{
-					ev_flags |= EV_WRITE;
+					ev_flags |= E_WRITE;
 				}
 				if(ev->revents & (POLLHUP|POLLERR))	
 				{
-					ev_flags |= (EV_READ|EV_WRITE);
+					ev_flags |= (E_READ|E_WRITE);
 				}
 				if((ev_flags  &= evbase->evlist[i]->ev_flags))
                                 {
