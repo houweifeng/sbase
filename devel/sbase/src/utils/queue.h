@@ -24,9 +24,8 @@ typedef struct _QUEUE
 	QUEUE_ELEM *first;
 	QUEUE_ELEM *last;	
 	size_t total;
-#ifdef HAVE_PTHREAD
-	pthread_mutex_t mutex;
-#endif
+	void *mutex;
+
 	void	(*push)(struct _QUEUE *, void *);		
 	void* 	(*pop)(struct _QUEUE *);
 	void 	(*del)(struct _QUEUE *);

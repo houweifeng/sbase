@@ -38,9 +38,7 @@ typedef struct _LOGGER
 {
 	char file[LOGGER_FILENAME_LIMIT];
 	int fd ;
-#ifdef HAVE_PTHREAD
-	pthread_mutex_t mutex;	
-#endif
+	void *mutex;
 
 	void (*add)(struct _LOGGER *, char *, int, int, char *format, ...);		
 	void (*close)(struct _LOGGER **);

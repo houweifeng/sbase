@@ -17,7 +17,7 @@ SERVICE *service_init()
 		service->addconn	= service_addconn;
 		service->terminate	= service_terminate;
 		service->clean		= service_clean;
-		service->event 		= event_init();
+		service->event 		= ev_init();
 		service->timer		= timer_init();
 	}
 	return service;
@@ -62,7 +62,7 @@ int service_set(SERVICE *service)
 			return -1;
 		}
 		/* Event base */
-		//service->ev_eventbase = event_init();
+		//service->ev_eventbase = ev_init();
 		if(service->evbase == NULL)
 		{
 			 FATAL_LOGGER(service->logger, "Eventbase on fd[%d]  %s:%d is NULL",
@@ -72,7 +72,7 @@ int service_set(SERVICE *service)
 		if(service->event)
 		{
 			service->event->set(service->event, service->fd,
-					EV_READ | EV_PERSIST, (void *)service, service->event_handler);
+					E_READ | E_PERSIST, (void *)service, service->event_handler);
 			service->evbase->add(service->evbase, service->event);
 		}
 		return 0;
@@ -104,10 +104,15 @@ work_proc_init:
 			if(service->procthread->evbase)
 				service->procthread->evbase->clean(&(service->procthread->evbase));
 			service->procthread->evbase = service->evbase;
-			if(service->procthread->message_queue)
+			if(service->message_queue && service->procthread->message_queue)
+			{
 				service->procthread->message_queue->clean(&(service->procthread->message_queue));
+				service->procthread->message_queue = service->message_queue;
+				DEBUG_LOGGER(service->logger, 
+				 "Replaced procthread[%08x]->message_queue with service[%08x]->message_queue[%08x]",
+				 service->procthread, service, service->message_queue);
+			}
 			service->procthread->service = service;
-			service->procthread->message_queue = service->message_queue;
 			service->running_status = 1;
 		}
 		else
@@ -164,8 +169,8 @@ work_thread_init:
 void service_event_handler(int event_fd, short event, void *arg)
 {
 	struct sockaddr_in rsa;
-	socklen_t rsa_len = 0;
 	int fd = 0;
+	socklen_t rsa_len ;
 	SERVICE *service = (SERVICE *)arg;
 	if(service)
 	{
@@ -175,7 +180,7 @@ void service_event_handler(int event_fd, short event, void *arg)
 				event_fd, service->fd);
 			return ;
 		}
-		if(event & EV_READ)
+		if(event & E_READ)
 		{
 			if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0 )	
 			{

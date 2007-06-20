@@ -28,9 +28,7 @@ typedef struct _TIMER
 	time_t last_sec_used;
         uint64_t last_usec_used;
 
-#ifdef HAVE_PTHREAD
-	pthread_mutex_t mutex;
-#endif
+	void *mutex;
 
 	void (*reset)(struct _TIMER *);
 	void (*check)(struct _TIMER *, uint32_t );

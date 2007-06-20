@@ -39,7 +39,7 @@ CONN *conn_init(char *ip, int port)
 		conn->packet		= buffer_init();
 		conn->chunk		= chunk_init();
 		conn->send_queue 	= queue_init();
-		conn->event		= event_init();
+		conn->event		= ev_init();
 		conn->set		= conn_set;
 		conn->event_handler 	= conn_event_handler;
 		conn->read_handler	= conn_read_handler;
@@ -96,7 +96,7 @@ int conn_set(CONN *conn)
 		*/
 		if(conn->evbase && conn->event)
 		{
-			conn->event->set(conn->event, conn->fd, EV_READ|EV_PERSIST, (void *)conn, conn->event_handler);
+			conn->event->set(conn->event, conn->fd, E_READ|E_PERSIST, (void *)conn, conn->event_handler);
 			conn->evbase->add(conn->evbase, conn->event);
 			return 0;
 		}
@@ -119,14 +119,14 @@ void conn_event_handler(int event_fd, short event, void *arg)
 	{
 		if(event_fd == conn->fd)
 		{
-			if(event & EV_READ)
+			if(event & E_READ)
 			{
-				DEBUG_LOGGER(conn->logger, "EV_READ:%d", EV_READ);
+				DEBUG_LOGGER(conn->logger, "E_READ:%d", E_READ);
 				conn->read_handler(conn);
 			}
-			if(event & EV_WRITE)
+			if(event & E_WRITE)
 			{
-				DEBUG_LOGGER(conn->logger, "EV_WRITE:%d", EV_WRITE);
+				DEBUG_LOGGER(conn->logger, "E_WRITE:%d", E_WRITE);
 				conn->write_handler(conn);
 			} 
 		}	
@@ -228,7 +228,7 @@ void conn_write_handler(CONN *conn)
 		}
 		if(conn->send_queue->total <= 0)
 		{
-			conn->event->del(conn->event, EV_WRITE);	
+			conn->event->del(conn->event, E_WRITE);	
 		}
 	}		
 }
@@ -241,9 +241,9 @@ int conn_packet_reader(CONN *conn)
 
         /* Check connection and transaction state */
         CONN_CHECK_RET(conn, -1);
-
 	if(conn)
 	{
+		DEBUG_LOGGER(conn->logger, "Reading packet type[%d]", conn->packet_type);
 		/* Remove invalid packet type */
 		if(!(conn->packet_type & PACKET_ALL))
 		{
@@ -256,7 +256,8 @@ int conn_packet_reader(CONN *conn)
 		if(conn->packet_type == PACKET_CUSTOMIZED && conn->cb_packet_reader)
 		{
 			len = conn->cb_packet_reader(conn, (const BUFFER *) conn->buffer);	
-			DEBUG_LOGGER(conn->logger, "Reading packet with customized function[%08x] length[%d] on %s:%d via %d",
+			DEBUG_LOGGER(conn->logger, 
+					"Reading packet with customized function[%08x] length[%d] on %s:%d via %d",
 					conn->cb_packet_reader, len, conn->ip, conn->port, conn->fd);
 			goto end;
 		}
@@ -273,6 +274,7 @@ int conn_packet_reader(CONN *conn)
 		{
 			p = (char *) conn->buffer->data;
 			e = (char *) conn->buffer->end;
+			i = 0;
 			while(p < e && i < conn->packet_delimiter_length )
 			{
 				if(((char *)conn->packet_delimiter)[i++] != *p++) i = 0;
@@ -282,6 +284,9 @@ int conn_packet_reader(CONN *conn)
 					break;
 				}
 			}
+			DEBUG_LOGGER(conn->logger, "Reading packet with delimiter[%d] length[%d] on %s:%d via %d",
+					conn->packet_delimiter_length, len, conn->ip, conn->port, conn->fd);
+
 			goto end;
 		}
 		return ;
@@ -389,7 +394,7 @@ int conn_push_chunk(CONN *conn, void *data, size_t size)
 			conn->send_queue->push(conn->send_queue, (void *)cp);
 		}
 		if(conn->send_queue->total > 0 ) 
-			conn->event->add(conn->event, EV_WRITE);	
+			conn->event->add(conn->event, E_WRITE);	
 	}	
 }
 
@@ -407,7 +412,7 @@ int conn_push_file(CONN *conn, char *filename,
 		cp->set(cp, conn->s_id, FILE_CHUNK, filename, offset, size);
 		conn->send_queue->push(conn->send_queue, (void *)cp);
 		if(conn->send_queue->total > 0 ) 
-			conn->event->add(conn->event, EV_WRITE);	
+			conn->event->add(conn->event, E_WRITE);	
 	}
 }
 
@@ -431,13 +436,18 @@ void conn_push_message(CONN *conn, int message_id)
 	MESSAGE *msg = NULL;
 	if(conn)
 	{
-		if((msg = message_init()))
+		//DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] on %s:%d via %d",
+				//messagelist[message_id], conn->message_queue, conn->ip, conn->port, conn->fd);
+
+		if((message_id & MESSAGE_ALL) && conn->message_queue && (msg = message_init()))
 		{
 			msg->msg_id = message_id;
 			msg->fd	= conn->fd;
 			msg->handler = (void *)conn;
 			msg->parent  = (void *)conn->parent;
-			
+			conn->message_queue->push(conn->message_queue, (void *)msg);
+			DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] on %s:%d via %d",
+				messagelist[message_id], conn->message_queue, conn->ip, conn->port, conn->fd);
 		}	
 		else
 		{

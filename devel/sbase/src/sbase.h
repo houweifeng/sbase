@@ -14,9 +14,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#ifdef HAVE_PTHREAD
-#include <pthread.h>
-#endif
 #include <evbase.h>
 #ifndef _SBASE_H
 #define _SBASE_H
@@ -107,7 +104,6 @@ struct _BUFFER;
 struct _QUEUE;
 struct _CHUNK;
 
-/* BUFFER */
 #ifndef _TYPEDEF_BUFFER
 #define _TYPEDEF_BUFFER
 typedef struct _BUFFER
@@ -115,9 +111,7 @@ typedef struct _BUFFER
 	void *data;
 	void *end;
 	size_t size;
-#ifdef HAVE_PTHREAD
-	pthread_mutex_t mutex;
-#endif
+	void *mutex;
 
 	void 	*(*calloc)(struct _BUFFER *, size_t);
 	void 	*(*malloc)(struct _BUFFER *, size_t);
@@ -129,8 +123,7 @@ typedef struct _BUFFER
 	void 	(*clean)(struct _BUFFER **);
 
 }BUFFER;
-BUFFER *buffer_init();
-#define BUFFER_SIZE sizeof(BUFFER)
+
 #define BUFFER_VIEW(buf) \
 { \
 	if(buf) \
@@ -151,6 +144,7 @@ BUFFER *buffer_init();
 		buf->reset, buf->clean); \
 	} \
 }
+struct _BUFFER *buffer_init();
 #endif
 
 /* CHUNK */
@@ -160,64 +154,52 @@ BUFFER *buffer_init();
 #define FILE_CHUNK  0x04
 #define ALL_CHUNK  (MEM_CHUNK | FILE_CHUNK)
 #define FILE_NAME_LIMIT 255 
-typedef struct _CHUNK
-{
-	/* property */
-	int id;
-	int type;
-	BUFFER *buf;
-	struct {
-		int   fd ;
-		char  name[FILE_NAME_LIMIT + 1];
-	} file;
-	uint64_t offset;
-	uint64_t len;
-#ifdef HAVE_PTHREAD
-	pthread_mutex_t mutex;
-#endif
+typedef struct _CHUNK{
+        /* property */
+        int id;
+        int type;
+        struct _BUFFER *buf;
+        struct {
+                int   fd ;
+                char  name[FILE_NAME_LIMIT + 1];
+        } file;
+        uint64_t offset;
+        uint64_t len;
+	void *mutex;
 
-	/* method */
-	int (*set)(struct _CHUNK *, int , int , char *, uint64_t, uint64_t);
-	int (*append)(struct _CHUNK *, void *, size_t); 
-	int (*fill)(struct _CHUNK *, void *, size_t); 
-	int (*send)(struct _CHUNK *, int , size_t );
-	void (*reset)(struct _CHUNK *); 
-	void (*clean)(struct _CHUNK **); 
+        /* method */
+        int (*set)(struct _CHUNK *, int , int , char *, uint64_t, uint64_t);
+        int (*append)(struct _CHUNK *, void *, size_t); 
+        int (*fill)(struct _CHUNK *, void *, size_t); 
+        int (*send)(struct _CHUNK *, int , size_t );
+        void (*reset)(struct _CHUNK *); 
+        void (*clean)(struct _CHUNK **); 
 }CHUNK;
 #define CHUNK_SIZE sizeof(CHUNK)
 /* Initialize struct CHUNK */
-CHUNK *chunk_init();
+struct _CHUNK *chunk_init();
 #define CHUNK_VIEW(chunk) \
 { \
 	if(chunk) \
 	{ \
 		fprintf(stdout, "chunk:%08X\n" \
-				"chunk->id:%d\n" \
-				"chunk->type:%02X\n" \
-				"chunk->buf:%08X\n" \
-				"chunk->buf->data:%08X\n" \
-				"chunk->buf->size:%u\n" \
-				"chunk->file.fd:%d\n" \
-				"chunk->file.name:%s\n" \
-				"chunk->offset:%llu\n" \
-				"chunk->len:%llu\n" \
-				"chunk->set():%08X\n" \
-				"chunk->append():%08X\n" \
-				"chunk->fill():%08X\n" \
-				"chunk->send():%08X\n" \
-                                "chunk->reset():%08X\n" \
-                                "chunk->clean():%08X\n\n", \
-                                chunk, chunk->id, chunk->type, \
-                                chunk->buf, chunk->buf->data, chunk->buf->size, \
-                                chunk->file.fd, chunk->file.name, \
-                                chunk->offset, chunk->len, chunk->set,\
-                                chunk->append, chunk->fill, chunk->send,\
-                                chunk->reset, chunk->clean \
-                       ); \
-        } \
+		"chunk->id:%d\n" \
+		"chunk->type:%02X\n" \
+		"chunk->buf:%08X\n" \
+		"chunk->buf->data:%08X\n" \
+		"chunk->buf->size:%u\n" \
+		"chunk->file.fd:%d\n" \
+		"chunk->file.name:%s\n" \
+		"chunk->offset:%llu\n" \
+		"chunk->len:%llu\n\n", \
+		chunk, chunk->id, chunk->type, \
+		chunk->buf, chunk->buf->data, chunk->buf->size, \
+		chunk->file.fd, chunk->file.name, \
+		chunk->offset, chunk->len \
+		); \
+	} \
 }
 #endif
-
 
 /* Transaction state */
 #ifndef S_STATES

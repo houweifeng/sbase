@@ -19,9 +19,7 @@ typedef struct _BUFFER
 	void *data;
 	void *end;
 	size_t size;
-#ifdef HAVE_PTHREAD
-	pthread_mutex_t mutex;
-#endif
+	void *mutex;
 
 	void 	*(*calloc)(struct _BUFFER *, size_t);
 	void 	*(*malloc)(struct _BUFFER *, size_t);
@@ -54,8 +52,9 @@ typedef struct _BUFFER
 		buf->reset, buf->clean); \
 	} \
 }
-BUFFER *buffer_init();
+struct _BUFFER *buffer_init();
 #endif
+
 /* calloc memory at end of buffer */
 void* buf_calloc(BUFFER *, size_t);
 /* malloc memory at end of buffer */

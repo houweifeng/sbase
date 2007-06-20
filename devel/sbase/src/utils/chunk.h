@@ -37,16 +37,14 @@ typedef struct _CHUNK{
         /* property */
         int id;
         int type;
-        BUFFER *buf;
+        struct _BUFFER *buf;
         struct {
                 int   fd ;
                 char  name[FILE_NAME_LIMIT + 1];
         } file;
         uint64_t offset;
         uint64_t len;
-#ifdef HAVE_PTHREAD
-	pthread_mutex_t mutex;
-#endif
+	void *mutex;
 
         /* method */
         int (*set)(struct _CHUNK *, int , int , char *, uint64_t, uint64_t);
@@ -58,7 +56,7 @@ typedef struct _CHUNK{
 }CHUNK;
 #define CHUNK_SIZE sizeof(CHUNK)
 /* Initialize struct CHUNK */
-CHUNK *chunk_init();
+struct _CHUNK *chunk_init();
 #define CHUNK_VIEW(chunk) \
 { \
 	if(chunk) \
