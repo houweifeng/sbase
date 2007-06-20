@@ -157,6 +157,7 @@ void evepoll_clean(EVBASE **evbase)
                 if((*evbase)->ev_fds)free((*evbase)->ev_fds);
                 if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
                 if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
+		if((*evbase)->efd > 0 )close((*evbase)->efd);
 		free(*evbase);
                 (*evbase) = NULL;
         }	

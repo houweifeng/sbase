@@ -37,6 +37,12 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([memset setlocale strchr strdup strerror strncasecmp])
+havepthread=no
+AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
+if test "$havepthread" = "yes" ; then
+        CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
+        LDFLAGS="${LDFLAGS} -lpthread"
+fi
 AC_CHECK_EXTRA_OPTIONS
 AC_CONFIG_FILES([Makefile
                  doc/Makefile
