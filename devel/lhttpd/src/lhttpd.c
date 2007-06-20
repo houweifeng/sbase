@@ -350,10 +350,10 @@ void http_path_handler(HTTP_REQ *req)
 /* HTTP Dir Index view */
 void http_index_dir(const CONN *conn, HTTP_REQ *req)
 {
-	BUFFER *html = NULL;
+	struct _BUFFER *html = NULL;
 	char 	buf[BUFFER_SIZE];
 	char 	*path = req->abspath;
-	struct 	dirent *file;
+	struct 	dirent *file = NULL;
 	int 	n = 0;
 	char 	*format = NULL;
 	DIR 	*dp = NULL;
@@ -617,7 +617,7 @@ void http_put_handler(const CONN *conn, HTTP_REQ *req)
 }
 
 /* handle packet */
-void cb_packet_handler(const CONN *conn,  const BUFFER *packet)
+void cb_packet_handler(const CONN *conn,  const struct _BUFFER *packet)
 {
 	HTTP_REQ req;
 	char *buf = (char *)calloc(1, BUFFER_SIZE);
@@ -691,13 +691,13 @@ void cb_packet_handler(const CONN *conn,  const BUFFER *packet)
 	return ;
 }
 
-void cb_data_handler(const CONN *conn,  const BUFFER *packet, const CHUNK *chunk, const BUFFER *cache)
+void cb_data_handler(const CONN *conn,  const struct  _BUFFER *packet, const struct _CHUNK *chunk, const struct _BUFFER *cache)
 {
 	
 }
 
 /* read packet from buffer */
-int cb_packet_reader(const CONN *conn, const BUFFER *buf)
+int cb_packet_reader(const CONN *conn, const struct _BUFFER *buf)
 {
 	char *p   = (char *)(buf->data);
 	char *end = (char *)(buf->end);
@@ -818,6 +818,9 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	*s++ = 0;
 	service->packet_delimiter_length = strlen(service->packet_delimiter);
 	service->buffer_size = iniparser_getint(dict, "LHTTPD:buffer_size", BUF_SIZE);
+	service->cb_packet_reader = &cb_packet_reader;
+	service->cb_packet_handler = &cb_packet_handler;
+	service->cb_data_handler = &cb_data_handler;
 	/* server */
 	fprintf(stdout, "Parsing for server...\n");
 	server_root = iniparser_getstr(dict, "LHTTPD:server_root");

@@ -539,13 +539,13 @@ void http_get_handler(const CONN *conn, HTTP_REQ *req);
 void http_put_handler(const CONN *conn, HTTP_REQ *req);
 
 /* read packet from buffer */
-int packet_reader(const CONN *conn, const BUFFER *buf);
+int packet_reader(const CONN *conn, const struct _BUFFER *buf);
 
 /* handle packet */
-void packet_handler(const CONN *conn,  const BUFFER *packet);
+void packet_handler(const CONN *conn,  const struct _BUFFER *packet);
 
 /* handler data */
-void data_handler(const CONN *conn,  const BUFFER *packet, const CHUNK *chunk, const BUFFER *cache);
+void data_handler(const CONN *conn,  const struct _BUFFER *packet, const struct _CHUNK *chunk, const struct _BUFFER *cache);
 
 #ifndef ERROR_LOG
 #define ERROR_LOG(format...)fprintf(stderr, format);fflush(stderr)
