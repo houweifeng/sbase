@@ -21,7 +21,8 @@ TIMER *timer_init()
 		timer->check		= timer_check;
 		timer->clean		= timer_clean;
 #ifdef HAVE_PTHREAD
-		pthread_mutex_init(&(timer->mutex), NULL);
+		timer->mutex = calloc(1, sizeof(pthread_mutex_t));
+		if(timer->mutex) pthread_mutex_init((pthread_mutex_t *)timer->mutex, NULL);
 #endif
 	}
 	return timer;
@@ -33,7 +34,7 @@ void timer_reset(TIMER *timer)
 	if(timer)
 	{
 #ifdef HAVE_PTHREAD
-                pthread_mutex_lock(&(timer->mutex));
+                if(timer->mutex) pthread_mutex_lock((pthread_mutex_t *)timer->mutex);
 #endif
 		gettimeofday(&(timer->tv), NULL);
                 timer->start_sec        = timer->tv.tv_sec;
@@ -41,7 +42,7 @@ void timer_reset(TIMER *timer)
 		timer->last_sec         = timer->start_sec;
                 timer->last_usec        = timer->start_usec;
 #ifdef HAVE_PTHREAD
-                pthread_mutex_unlock(&(timer->mutex));
+                if(timer->mutex) pthread_mutex_unlock((pthread_mutex_t *)timer->mutex);
 #endif
 	}
 }
@@ -52,7 +53,7 @@ void timer_sample(TIMER *timer)
 	if(timer)
 	{
 #ifdef HAVE_PTHREAD
-                pthread_mutex_lock(&(timer->mutex));
+                if(timer->mutex) pthread_mutex_lock((pthread_mutex_t *)timer->mutex);
 #endif
 		gettimeofday(&(timer->tv), NULL);	
 		timer->last_sec_used    = timer->tv.tv_sec - timer->last_sec;
@@ -63,7 +64,7 @@ void timer_sample(TIMER *timer)
 		timer->sec_used  	= timer->tv.tv_sec - timer->start_sec;
 		timer->usec_used 	= timer->last_usec - timer->start_usec;
 #ifdef HAVE_PTHREAD
-                pthread_mutex_unlock(&(timer->mutex));
+                if(timer->mutex) pthread_mutex_unlock((pthread_mutex_t *)timer->mutex);
 #endif
 	}
 }
@@ -75,7 +76,7 @@ void timer_check(TIMER *timer, uint32_t interval)
 	if(timer)
 	{
 #ifdef HAVE_PTHREAD
-		pthread_mutex_lock(&(timer->mutex));
+		if(timer->mutex) pthread_mutex_lock((pthread_mutex_t *)timer->mutex);
 #endif
                 gettimeofday(&(timer->tv), NULL);       
                 n = (timer->tv.tv_sec * 1000000llu + timer->tv.tv_usec);
@@ -91,7 +92,7 @@ void timer_check(TIMER *timer, uint32_t interval)
 
                 }
 #ifdef HAVE_PTHREAD
-                pthread_mutex_unlock(&(timer->mutex));
+                if(timer->mutex) pthread_mutex_unlock((pthread_mutex_t *)timer->mutex);
 #endif
 	}
 }
@@ -99,8 +100,19 @@ void timer_check(TIMER *timer, uint32_t interval)
 /* Clean Timer */
 void timer_clean(TIMER **timer)
 {
-	if((*timer)) free((*timer));
-	(*timer) = NULL;
+	if((*timer))
+	{
+#ifdef HAVE_PTHREAD
+		if((*timer)->mutex)
+		{
+			pthread_mutex_unlock((pthread_mutex_t *)(*timer)->mutex);
+			pthread_mutex_destroy((pthread_mutex_t *)(*timer)->mutex);
+			free((*timer)->mutex);
+		}
+#endif
+		free((*timer));
+		(*timer) = NULL;
+	}
 }
 
 /* Heartbeat */

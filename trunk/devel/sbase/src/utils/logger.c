@@ -13,7 +13,8 @@ LOGGER *logger_init(char *logfile)
 		{
 			strcpy(logger->file, logfile);
 #ifdef HAVE_PTHREAD
-			pthread_mutex_init(&(logger->mutex), NULL);
+			logger->mutex = calloc(1, sizeof(pthread_mutex_t));
+			if(logger->mutex) pthread_mutex_init((pthread_mutex_t *)logger->mutex, NULL);
 #endif
 
 			if( (logger->fd = open(logger->file, O_CREAT |O_WRONLY |O_APPEND, 0644)) <= 0 )
@@ -44,7 +45,7 @@ void logger_add(LOGGER *logger, char *__file__, int __line__, int __level__, cha
 	if(logger) 
 	{ 
 #ifdef HAVE_PTHREAD
-		pthread_mutex_lock(&(logger->mutex)); 
+		if(logger->mutex) pthread_mutex_lock((pthread_mutex_t *)logger->mutex); 
 #endif
 		if(logger->fd) 
 		{ 
@@ -81,7 +82,7 @@ void logger_add(LOGGER *logger, char *__file__, int __line__, int __level__, cha
 			} 
 		}	 
 #ifdef HAVE_PTHREAD
-		pthread_mutex_unlock(&(logger->mutex)); 
+		if(logger->mutex) pthread_mutex_unlock((pthread_mutex_t *)logger->mutex); 
 #endif
 	}	 
 }
@@ -93,7 +94,12 @@ void logger_close(LOGGER **logger)
 	{ 
 		if((*logger)->fd > 0 ) close((*logger)->fd); 
 #ifdef HAVE_PTHREAD
-                pthread_mutex_destroy(&((*logger)->mutex)); 
+		if((*logger)->mutex)
+		{
+                	pthread_mutex_unlock((pthread_mutex_t *) (*logger)->mutex); 
+                	pthread_mutex_destroy((pthread_mutex_t *) (*logger)->mutex); 
+			free((*logger)->mutex);
+		}
 #endif
 		free((*logger)); 
 		(*logger) = NULL; 

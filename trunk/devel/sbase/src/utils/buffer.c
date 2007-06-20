@@ -14,7 +14,8 @@ BUFFER *buffer_init()
                 buf->reset      = buf_reset;
                 buf->clean      = buf_clean;
 #ifdef HAVE_PTHREAD
-		pthread_mutex_init(&(buf->mutex), NULL);	
+		buf->mutex	= calloc(1, sizeof(pthread_mutex_t));
+		if(buf->mutex) pthread_mutex_init((pthread_mutex_t *)buf->mutex, NULL);	
 #endif
         }
 	return buf;
@@ -27,7 +28,7 @@ void* buf_calloc(BUFFER *buf, size_t size)
 	if(buf)
 	{
 #ifdef HAVE_PTHREAD
-		pthread_mutex_lock(&(buf->mutex));
+		if(buf->mutex) pthread_mutex_lock((pthread_mutex_t *)buf->mutex);
 #endif
 
 		if(buf->data)
@@ -44,7 +45,7 @@ void* buf_calloc(BUFFER *buf, size_t size)
 		buf->size += size;
 		buf->end = (char *)(buf->data) + buf->size;
 #ifdef HAVE_PTHREAD
-		pthread_mutex_unlock(&(buf->mutex));
+		if(buf->mutex) pthread_mutex_unlock((pthread_mutex_t *)buf->mutex);
 #endif
 
 	}
@@ -59,7 +60,7 @@ void* buf_malloc(BUFFER *buf, size_t size)
 	if(buf)
         {
 #ifdef HAVE_PTHREAD
-                pthread_mutex_lock(&(buf->mutex));
+                if(buf->mutex) pthread_mutex_lock((pthread_mutex_t *)buf->mutex);
 #endif
 
                 if(buf->data)
@@ -75,7 +76,7 @@ void* buf_malloc(BUFFER *buf, size_t size)
 		buf->size += size;
                 buf->end = (char *)(buf->data) + buf->size;
 #ifdef HAVE_PTHREAD
-                pthread_mutex_unlock(&(buf->mutex));
+                if(buf->mutex) pthread_mutex_unlock((pthread_mutex_t *)buf->mutex);
 #endif
 
         }
@@ -89,7 +90,7 @@ void* buf_recalloc(BUFFER *buf, size_t size)
 	if(buf)
 	{
 #ifdef HAVE_PTHREAD
-		pthread_mutex_lock(&(buf->mutex));
+		if(buf->mutex) pthread_mutex_lock((pthread_mutex_t *)buf->mutex);
 #endif
 
 		if(buf->data)
@@ -114,7 +115,7 @@ void* buf_recalloc(BUFFER *buf, size_t size)
 			buf->end = NULL;
 		}
 #ifdef HAVE_PTHREAD
-		pthread_mutex_unlock(&(buf->mutex));
+		if(buf->mutex) pthread_mutex_unlock((pthread_mutex_t *)buf->mutex);
 #endif
 
 	}
@@ -129,7 +130,7 @@ void* buf_remalloc(BUFFER *buf, size_t size)
 	if(buf)
         {
 #ifdef HAVE_PTHREAD
-                pthread_mutex_lock(&(buf->mutex));
+                if(buf->mutex) pthread_mutex_lock((pthread_mutex_t *)buf->mutex);
 #endif
 
                 if(buf->data)
@@ -153,7 +154,7 @@ void* buf_remalloc(BUFFER *buf, size_t size)
                         buf->end = NULL;
                 }
 #ifdef HAVE_PTHREAD
-                pthread_mutex_unlock(&(buf->mutex));
+                if(buf->mutex) pthread_mutex_unlock((pthread_mutex_t *)buf->mutex);
 #endif
 
         }
@@ -168,7 +169,7 @@ int  buf_push(BUFFER *buf, void *data, size_t size)
 	if(buf)
 	{
 #ifdef HAVE_PTHREAD
-		pthread_mutex_lock(&(buf->mutex));
+		if(buf->mutex) pthread_mutex_lock((pthread_mutex_t *)buf->mutex);
 #endif
 		buf->data = realloc(buf->data, (buf->size + size));
 		buf->size += size;
@@ -178,7 +179,7 @@ int  buf_push(BUFFER *buf, void *data, size_t size)
 			ret = 0;
 		}
 #ifdef HAVE_PTHREAD
-		pthread_mutex_unlock(&(buf->mutex));
+		if(buf->mutex) pthread_mutex_unlock((pthread_mutex_t *)buf->mutex);
 #endif
 
 	}
@@ -192,7 +193,7 @@ int buf_del(BUFFER *buf, size_t size)
 	if(buf)
 	{
 #ifdef HAVE_PTHREAD
-                pthread_mutex_lock(&(buf->mutex));
+                if(buf->mutex) pthread_mutex_lock((pthread_mutex_t *)buf->mutex);
 #endif
 	
 		if(buf->data)
@@ -221,7 +222,7 @@ int buf_del(BUFFER *buf, size_t size)
 			}
 		}
 #ifdef HAVE_PTHREAD
-                pthread_mutex_unlock(&(buf->mutex));
+                if(buf->mutex) pthread_mutex_unlock((pthread_mutex_t *)buf->mutex);
 #endif
 
 	}
@@ -234,14 +235,14 @@ void buf_reset(BUFFER *buf)
 	if(buf)
 	{                       
 #ifdef HAVE_PTHREAD
-		pthread_mutex_lock(&(buf->mutex));
+		if(buf->mutex) pthread_mutex_lock((pthread_mutex_t *)buf->mutex);
 #endif
 		if(buf->data) free(buf->data);
 		buf->data = NULL;
 		buf->size = 0;
 		buf->end = NULL;
 #ifdef HAVE_PTHREAD
-		pthread_mutex_unlock(&(buf->mutex));
+		if(buf->mutex) pthread_mutex_unlock((pthread_mutex_t *)buf->mutex);
 #endif
 
 	}
@@ -253,7 +254,12 @@ void buf_clean(BUFFER **buf)
 	if((*buf))
 	{
 #ifdef HAVE_PTHREAD
-		pthread_mutex_destroy(&((*buf)->mutex));
+	if((*buf)->mutex)
+	{
+		pthread_mutex_unlock((pthread_mutex_t *)(*buf)->mutex);
+		pthread_mutex_destroy((pthread_mutex_t *)(*buf)->mutex);
+		free((*buf)->mutex);
+	}
 #endif
 		if((*buf)->data) free((*buf)->data);	
 		free((*buf));
