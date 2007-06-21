@@ -116,6 +116,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 	int fd = 0;
 	struct epoll_event *evp = NULL;
 	EVENT *ev = NULL;
+	int flags = 0;
 	////DEBUG_LOG("Loop evbase[%08x]", evbase);
 	if(evbase)
 	{
@@ -132,15 +133,18 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 			evp = &(((struct epoll_event *)evbase->evs)[i]);
 			ev = (EVENT *)evp->data.ptr;
 			fd = ev->ev_fd;
+			flags = evp->events;
 			//fd = evp->data.fd;
 			if(evbase->evlist[fd] && evp->data.ptr == (void *)evbase->evlist[fd])	
 			{
 				ev_flags = 0;
-				if(evp->events & (EPOLLHUP | EPOLLERR))
-					ev_flags |= (E_READ |E_WRITE);
-				if(evp->events & EPOLLIN)
+				if(flags & EPOLLHUP )
+					flags |= (EPOLLIN | EPOLLOUT);
+				else if(evp->events & EPOLLERR )
+					flags |= (EPOLLIN | EPOLLOUT);
+				if(flags & EPOLLIN)
 					ev_flags |= E_READ;
-				if(evp->events & EPOLLOUT)
+				if(flags & EPOLLOUT)
 					ev_flags |= E_WRITE;
 				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
