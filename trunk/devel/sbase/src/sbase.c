@@ -11,7 +11,8 @@
 int sbase_add_service(struct _SBASE *, struct _SERVICE *);
 /* SBASE Initialize setting logger  */
 int sbase_set_log(struct _SBASE *sb, char *logfile);
-int sbase_start(struct _SBASE *);
+/* Running as timer limit */
+int sbase_running(SBASE *sb, uint32_t seconds);
 /* Running once */
 void sbase_running_once(SBASE *sb);
 int sbase_stop(struct _SBASE *);
@@ -29,7 +30,7 @@ SBASE *sbase_init(int max_connections)
 		//sb->init        	= sbase_init;
 		sb->set_log		= sbase_set_log;
 		sb->add_service        	= sbase_add_service;
-		sb->start       	= sbase_start;
+		sb->running       	= sbase_running;
 		sb->running_once	= sbase_running_once;
 		sb->stop        	= sbase_stop;
 		sb->clean		= sbase_clean;
@@ -80,14 +81,15 @@ int sbase_add_service(struct _SBASE *sb, struct _SERVICE *service)
 	return -1;
 }
 
-/* Start SBASE */
-int sbase_start(struct _SBASE *sb)
+/* Running SBASE */
+int sbase_running(struct _SBASE *sb, uint32_t seconds)
 {
 	pid_t pid;
 	int i = 0, j = 0;
 	MESSAGE *msg = NULL;
 	PROCTHREAD *pth = NULL;
 	CONN *conn = NULL;
+	TIMER *timer = NULL;
 	if(sb)
 	{
 #ifdef HAVE_PTHREAD
@@ -127,21 +129,58 @@ running:
 		sb->running_status = 1;
 		if(sb->working_mode != WORKING_PROC)
 		{
-			while(sb->running_status)
+			if(seconds > 0) 
 			{
-				sb->evbase->loop(sb->evbase, 0, NULL);
-				usleep(sb->sleep_usec);
+				timer = timer_init();
+				while(sb->running_status)
+				{
+					if(timer)
+					{
+						timer->sample(timer);
+						if(timer->sec_used >= seconds)
+							sb->stop(sb);
+					}
+					sb->evbase->loop(sb->evbase, 0, NULL);
+					usleep(sb->sleep_usec);
+				}
+			}
+			else
+			{
+				while(sb->running_status)
+				{
+					sb->evbase->loop(sb->evbase, 0, NULL);
+					usleep(sb->sleep_usec);
+				}
 			}
 			return ;
 		}
 		else
 		{
 			/* only for WORKING_PROC */
-			while(sb->running_status)
+			if(seconds > 0 )
 			{
-				sb->evbase->loop(sb->evbase, 0, NULL);
-				sb->running_once(sb);
-				usleep(sb->sleep_usec);
+				timer = timer_init();
+				while(sb->running_status)
+				{
+					if(timer)
+					{
+						timer->sample(timer);
+						if(timer->sec_used >= seconds)
+							sb->stop(sb);
+					}
+					sb->evbase->loop(sb->evbase, 0, NULL);
+					sb->running_once(sb);
+					usleep(sb->sleep_usec);
+				}
+			}
+			else
+			{
+				while(sb->running_status)
+				{
+					sb->evbase->loop(sb->evbase, 0, NULL);
+					sb->running_once(sb);
+					usleep(sb->sleep_usec);
+				}
 			}
 		}
 	}
