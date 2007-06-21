@@ -204,7 +204,7 @@ void conn_write_handler(CONN *conn)
 		cp = (CHUNK *)conn->send_queue->head(conn->send_queue);
 		if(cp)
 		{
-			if( n = cp->send(cp, conn->fd, conn->buffer_size) > 0 )
+			if( (n = cp->send(cp, conn->fd, conn->buffer_size)) > 0 )
 			{
 				conn->sent_data_total += n;
 				DEBUG_LOGGER(conn->logger, "Sent %d byte(s) total %llu to %s:%d via %d leave %llu ",
