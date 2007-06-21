@@ -82,7 +82,7 @@ int conn_set(CONN *conn)
 	*/
 	if(conn && conn->fd > 0 )
 	{
-		fcntl(conn->fd, F_SETFL, O_NONBLOCK);
+		//fcntl(conn->fd, F_SETFL, O_NONBLOCK);
 		/* set keepalive */
 		/*
 		setsockopt(conn->fd, SOL_SOCKET, SO_KEEPALIVE,
@@ -119,6 +119,11 @@ void conn_event_handler(int event_fd, short event, void *arg)
 	{
 		if(event_fd == conn->fd)
 		{
+			if(event & E_CLOSE)
+                        {
+                                DEBUG_LOGGER(conn->logger, "E_CLOSE:%d", E_CLOSE);
+                                return conn->push_message(conn, MESSAGE_QUIT);
+                        }
 			if(event & E_READ)
 			{
 				DEBUG_LOGGER(conn->logger, "E_READ:%d", E_READ);
