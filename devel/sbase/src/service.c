@@ -190,8 +190,8 @@ void service_event_handler(int event_fd, short event, void *arg)
 			}
 			else
 			{
-				FATAL_LOGGER(service->logger, "Accept new connection failed, %s",
-					strerror(errno));
+				FATAL_LOGGER(service->logger, "Accept new connection[%d] failed, %s",
+					strerror(errno), fd);
 			}
 		}
 	}
