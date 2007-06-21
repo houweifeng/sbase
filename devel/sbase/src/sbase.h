@@ -73,11 +73,11 @@ extern "C" {
 	rlim.rlim_cur = rlim_set;\
 	rlim.rlim_max = rlim_set;\
 	if(setrlimit(RLIM, (&rlim)) != 0) {\
-		fprintf(stderr, "setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s",\
+		fprintf(stderr, "setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s\n",\
 				NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
 		 _exit(-1);\
 	} else {\
-		fprintf(stdout, "setrlimit RLIM[%s] cur[%ld] max[%ld]",\
+		fprintf(stdout, "setrlimit RLIM[%s] cur[%ld] max[%ld]\n",\
 				NAME, rlim.rlim_cur, rlim.rlim_max);\
 	}\
 }
@@ -85,10 +85,10 @@ extern "C" {
 {\
 	struct rlimit rlim;\
 	if(getrlimit(RLIM, &rlim) != 0 ) {\
-		fprintf(stderr, "getrlimit RLIM[%s] failed, %s",\
+		fprintf(stderr, "getrlimit RLIM[%s] failed, %s\n",\
 				NAME, strerror(errno));\
 	} else {\
-		fprintf(stdout, "getrlimit RLIM[%s] cur[%ld] max[%ld]", \
+		fprintf(stdout, "getrlimit RLIM[%s] cur[%ld] max[%ld]\n", \
 				NAME, rlim.rlim_cur, rlim.rlim_max);\
 	}\
 }
@@ -245,7 +245,7 @@ typedef struct _SBASE{
         /* APIS */
         int  (*add_service)(struct _SBASE * , struct _SERVICE *);
 	int  (*set_log)(struct _SBASE * , char *);
-        int  (*start)(struct _SBASE * );
+	int  (*running)(struct _SBASE *, uint32_t seconds);
 	void (*running_once)(struct _SBASE *);
         int  (*stop)(struct _SBASE * );
         void (*clean)(struct _SBASE **);

@@ -355,6 +355,7 @@ void conn_recv_chunk(CONN *conn, size_t size)
 	if(conn && conn->chunk)
 	{
 		conn->chunk->set(conn->chunk, conn->s_id, MEM_CHUNK, NULL, 0, size);
+		conn->s_state = S_STATE_READ_CHUNK;
 		conn->chunk_reader(conn);
 	}			
 }
@@ -369,6 +370,7 @@ void conn_recv_file(CONN *conn, char *filename,
         if(conn && conn->chunk)
         {
                 conn->chunk->set(conn->chunk, conn->s_id, MEM_CHUNK, filename, offset, size);
+		conn->s_state = S_STATE_READ_CHUNK;
 		conn->chunk_reader(conn);
         } 
 }
@@ -476,7 +478,7 @@ void conn_clean(CONN **conn)
 	if((*conn))
 	{
 		/* Clean event */
-		if((*conn)->buffer) (*conn)->event->clean(&((*conn)->event));
+		if((*conn)->event) (*conn)->event->clean(&((*conn)->event));
 		/* Clean BUFFER */
 		if((*conn)->buffer) (*conn)->buffer->clean(&((*conn)->buffer));
 		/* Clean OOB */
