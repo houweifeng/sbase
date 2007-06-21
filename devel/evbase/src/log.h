@@ -24,6 +24,7 @@ static char *ymonths[]= {
 			p->tm_mday, ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,	\
 			p->tm_min, p->tm_sec, (size_t)tv.tv_usec, __FILE__, __LINE__);	\
 }
+#ifndef DEBUG_LOG
 #ifdef _DEBUG										
 #define DEBUG_LOG(format...)								\
 {											\
@@ -31,22 +32,27 @@ static char *ymonths[]= {
 	fprintf(stdout, "\"DEBUG:");							\
 	fprintf(stdout, format);							\
 	fprintf(stdout, "\"\n");							\
+	fflush(stdout);									\
 }											
 #else											
-#define  DEBUG_LOG(format...)								
+#define  DEBUG_LOG(format...)
 #endif											
+#endif
+
 #define FATAL_LOG(format...)								\
 {											\
 	LOG_HEADER(stderr);								\
 	fprintf(stderr, "\"FATAL:");							\
 	fprintf(stderr, format);							\
 	fprintf(stderr, "\"\n");							\
+	fflush(stdout);									\
 }
 #define SHOW_LOG(format...)								\
 {											\
 	LOG_HEADER(stdout);                                                             \
-        fprintf(stdout, "\"DEBUG:");                                                    	\
+        fprintf(stdout, "\"DEBUG:");                                                    \
         fprintf(stdout, format);                                                        \
         fprintf(stdout, "\"\n");                                                        \
+	fflush(stdout);									\
 }
 #endif
