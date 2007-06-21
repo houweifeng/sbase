@@ -872,5 +872,5 @@ int main(int argc, char **argv){
                 return -1;
 	}
 	DEBUG_LOG("Initialized successed\n");
-	sbase->start(sbase);
+	sbase->running(sbase, 0);
 }
