@@ -1,5 +1,6 @@
 #include "evselect.h"
 #include "log.h"
+#include <errno.h>
 #ifdef HAVE_EVSELECT
 #include <stdlib.h>
 #include <string.h>

@@ -1,5 +1,6 @@
 #include "evpoll.h"
 #include "log.h"
+#include <errno.h>
 #ifdef HAVE_EVPOLL
 #include <stdlib.h>
 #include <string.h>
@@ -106,6 +107,10 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 	{	
 		if(tv) sec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
 		n = poll(evbase->ev_fds, evbase->maxfd + 1 , sec);		
+		if(n == -1)
+                {
+                        FATAL_LOG("Looping evbase[%08x] error[%d], %s", evbase, errno, strerror(errno));
+                }
 		if(n <= 0) return ;
 		////DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
 		for(; i <= evbase->maxfd; i++)
