@@ -50,10 +50,11 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 		ep_event.events = ev_flags;
 		ep_event.data.ptr = (void *)event;
 		epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
-		//DEBUG_LOG("Added event %d on %d", ev_flags, event->ev_fd);
+		DEBUG_LOG("Added event %d on %d", ev_flags, event->ev_fd);
 		if(event->ev_fd > evbase->maxfd)
                         evbase->maxfd = event->ev_fd;
                 evbase->evlist[event->ev_fd] = event;
+		evbase->nfd++;
 		return 0;	
 	}
 	return -1;
@@ -101,6 +102,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
 		if(event->ev_fd >= evbase->maxfd)
                         evbase->maxfd = event->ev_fd - 1;
                 evbase->evlist[event->ev_fd] = NULL;
+		evbase->nfd--;
 		return 0;
 	}
 	return -1;
@@ -117,17 +119,19 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 	struct epoll_event *evp = NULL;
 	EVENT *ev = NULL;
 	int flags = 0;
-	////DEBUG_LOG("Loop evbase[%08x]", evbase);
-	if(evbase)
+	//DEBUG_LOG("Loop evbase[%08x]", evbase);
+	//if(evbase)
+	if(evbase && evbase->nfd > 0)
 	{
 		if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
+		memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->maxfd);
 		n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd, timeout);
 		if(n == -1)
 		{
 			FATAL_LOG("Looping evbase[%08x] error[%d], %s", evbase, errno, strerror(errno));
 		}
 		if(n <= 0) return ;
-		//DEBUG_LOG("Actived %d event in %d", n, evbase->maxfd);
+		DEBUG_LOG("Actived %d event in %d", n, evbase->maxfd);
 		for(i = 0; i < n; i++)
 		{
 			evp = &(((struct epoll_event *)evbase->evs)[i]);
@@ -148,9 +152,9 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 					ev_flags |= E_WRITE;
 				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
-					//DEBUG_LOG("Activing EV[%d] on %d", ev_flags, fd);
+					DEBUG_LOG("Activing EV[%d] on %d", ev_flags, fd);
 					evbase->evlist[fd]->active(evbase->evlist[fd], ev_flags);	
-					//DEBUG_LOG("Actived EV[%d] on %d", ev_flags, fd);
+					DEBUG_LOG("Actived EV[%d] on %d", ev_flags, fd);
 				}
 			}
 		}

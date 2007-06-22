@@ -48,7 +48,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
 			if(event->ev_fd > evbase->maxfd)
 				evbase->maxfd = event->ev_fd;
 			evbase->evlist[event->ev_fd] = event;	
-			//DEBUG_LOG("Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
+			DEBUG_LOG("Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
 		}
 		return 0;
 	}
@@ -79,7 +79,8 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
                         if(event->ev_fd > evbase->maxfd)
                                 evbase->maxfd = event->ev_fd;
                         evbase->evlist[event->ev_fd] = event;
-                        //DEBUG_LOG("Updated POLL event:%d on %d", event->ev_flags, event->ev_fd);
+			evbase->nfd++;
+                        DEBUG_LOG("Updated POLL event:%d on %d", event->ev_flags, event->ev_fd);
 			return 0;
                 }
         }	
@@ -94,6 +95,7 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
 		if(event->ev_fd >= evbase->maxfd)
                         evbase->maxfd = event->ev_fd - 1;
 		evbase->evlist[event->ev_fd] = NULL;
+		evbase->nfd--;
         }	
 }
 /* Loop evbase */
@@ -103,7 +105,7 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 	int n = 0, i = 0;
 	short ev_flags = 0;
 	struct pollfd *ev = NULL;
-	if(evbase && evbase->ev_fds)
+	if(evbase && evbase->ev_fds && evbase->nfd > 0)
 	{	
 		if(tv) sec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
 		n = poll(evbase->ev_fds, evbase->maxfd + 1 , sec);		
@@ -112,7 +114,7 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                         FATAL_LOG("Looping evbase[%08x] error[%d], %s", evbase, errno, strerror(errno));
                 }
 		if(n <= 0) return ;
-		////DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
+		//DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
 		for(; i <= evbase->maxfd; i++)
 		{
 			ev = &(((struct pollfd *)evbase->ev_fds)[i]);
