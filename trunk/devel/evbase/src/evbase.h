@@ -24,7 +24,8 @@ typedef struct _EVBASE
 	void *ev_changes;
 	void *evs;
 	int  efd;
-
+	
+	int nfd;
 	int  maxfd;
 	struct _EVENT **evlist;
 	int usec_sleep ;
