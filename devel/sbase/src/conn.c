@@ -82,7 +82,7 @@ int conn_set(CONN *conn)
 	*/
 	if(conn && conn->fd > 0 )
 	{
-		//fcntl(conn->fd, F_SETFL, O_NONBLOCK);
+		fcntl(conn->fd, F_SETFL, O_NONBLOCK);
 		/* set keepalive */
 		/*
 		setsockopt(conn->fd, SOL_SOCKET, SO_KEEPALIVE,
@@ -169,8 +169,8 @@ void conn_read_handler(CONN *conn)
 		/* Receive normal data */
 		if( (n = read(conn->fd, tmp, nbuf)) <= 0 )
 		{
-			FATAL_LOGGER(conn->logger, "Reading data from %s:%d via %d failed, %s",
-				conn->ip, conn->port, conn->fd, strerror(errno));
+			FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d via %d failed, %s",
+				n, conn->ip, conn->port, conn->fd, strerror(errno));
 			/* Terminate connection */
                         CONN_TERMINATE(conn);
 			goto end;
