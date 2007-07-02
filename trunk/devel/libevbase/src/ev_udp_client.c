@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -25,8 +27,8 @@
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
-#define CONN_MAX 131070
-#define BUF_SIZE 8192
+#define CONN_MAX 65535
+#define BUF_SIZE 128
 EVBASE *evbase = NULL;
 char buffer[CONN_MAX][BUF_SIZE];
 EVENT *events[CONN_MAX];

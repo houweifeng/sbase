@@ -45,7 +45,7 @@ extern "C" {
 #define MAX_PACKET_LEN		65535
 #endif
 #ifndef MAX_PROCTHREADS
-#define MAX_PROCTHREADS		256
+#define MAX_PROCTHREADS		2048
 #endif
 #ifndef MIN_SLEEP_USEC
 #define MIN_SLEEP_USEC		1000
