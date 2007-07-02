@@ -34,8 +34,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = ev_server$(EXEEXT) ev_client$(EXEEXT) \
-	ev_udp_client$(EXEEXT) ev_udp_server$(EXEEXT)
+bin_PROGRAMS = lechod$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -57,37 +56,24 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(includedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libevbase_la_LIBADD =
-am_libevbase_la_OBJECTS = evdevpoll.lo evbase.lo evepoll.lo \
-	evkqueue.lo evpoll.lo evport.lo evrtsig.lo evselect.lo \
-	evwin32.lo
-libevbase_la_OBJECTS = $(am_libevbase_la_OBJECTS)
+libsbase_la_LIBADD =
+am_libsbase_la_OBJECTS = libsbase_la-conn.lo libsbase_la-procthread.lo \
+	libsbase_la-sbase.lo libsbase_la-service.lo \
+	libsbase_la-buffer.lo libsbase_la-chunk.lo \
+	libsbase_la-logger.lo libsbase_la-message.lo \
+	libsbase_la-queue.lo libsbase_la-timer.lo
+libsbase_la_OBJECTS = $(am_libsbase_la_OBJECTS)
+libsbase_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libsbase_la_LDFLAGS) $(LDFLAGS) -o $@
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_ev_client_OBJECTS = ev_client.$(OBJEXT)
-ev_client_OBJECTS = $(am_ev_client_OBJECTS)
-ev_client_DEPENDENCIES = libevbase.la
-ev_client_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(ev_client_LDFLAGS) $(LDFLAGS) -o $@
-am_ev_server_OBJECTS = ev_server.$(OBJEXT)
-ev_server_OBJECTS = $(am_ev_server_OBJECTS)
-ev_server_DEPENDENCIES = libevbase.la
-ev_server_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(ev_server_LDFLAGS) $(LDFLAGS) -o $@
-am_ev_udp_client_OBJECTS = ev_udp_client.$(OBJEXT)
-ev_udp_client_OBJECTS = $(am_ev_udp_client_OBJECTS)
-ev_udp_client_DEPENDENCIES = libevbase.la
-ev_udp_client_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(ev_udp_client_LDFLAGS) $(LDFLAGS) -o $@
-am_ev_udp_server_OBJECTS = ev_udp_server.$(OBJEXT)
-ev_udp_server_OBJECTS = $(am_ev_udp_server_OBJECTS)
-ev_udp_server_DEPENDENCIES = libevbase.la
-ev_udp_server_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(ev_udp_server_LDFLAGS) $(LDFLAGS) -o $@
+am_lechod_OBJECTS = lechod.$(OBJEXT) iniparser.$(OBJEXT)
+lechod_OBJECTS = $(am_lechod_OBJECTS)
+lechod_DEPENDENCIES = libsbase.la
+lechod_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lechod_LDFLAGS) \
+	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -100,12 +86,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libevbase_la_SOURCES) $(ev_client_SOURCES) \
-	$(ev_server_SOURCES) $(ev_udp_client_SOURCES) \
-	$(ev_udp_server_SOURCES)
-DIST_SOURCES = $(libevbase_la_SOURCES) $(ev_client_SOURCES) \
-	$(ev_server_SOURCES) $(ev_udp_client_SOURCES) \
-	$(ev_udp_server_SOURCES)
+SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES)
+DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -161,7 +143,6 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
-SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -217,41 +198,41 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-lib_LTLIBRARIES = libevbase.la
-libevbase_la_SOURCES = evdevpoll.c \
-evdevpoll.h \
-evbase.c \
-evbase.h \
-evepoll.c \
-evepoll.h \
-evkqueue.c \
-evkqueue.h \
-evpoll.c \
-evpoll.h \
-evport.c \
-evport.h \
-evrtsig.c \
-evrtsig.h \
-evselect.c \
-evselect.h \
-evwin32.c \
-evwin32.h \
-log.h
+lib_LTLIBRARIES = libsbase.la
+libsbase_la_SOURCES = conn.c \
+conn.h \
+procthread.c \
+procthread.h \
+sbase.c \
+sbase.h \
+service.c \
+service.h \
+utils/buffer.c \
+utils/buffer.h \
+utils/chunk.c \
+utils/chunk.h \
+utils/logger.c \
+utils/logger.h \
+utils/message.c \
+utils/message.h \
+utils/queue.c \
+utils/queue.h \
+utils/timer.c \
+utils/timer.h 
 
+EXTRA_DIST = utils/tree.h \
+utils/cache.c \
+utils/cache.h \
+utils/md5.c \
+utils/md5.h 
+
+libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
+libsbase_la_LDFLAGS = -levbase
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
-include_HEADERS = evbase.h
-ev_server_SOURCES = ev_server.c evbase.h
-ev_server_LDFLAGS = -static
-ev_server_LDADD = libevbase.la
-ev_client_SOURCES = ev_client.c evbase.h
-ev_client_LDFLAGS = -static
-ev_client_LDADD = libevbase.la
-ev_udp_server_SOURCES = ev_udp_server.c evbase.h
-ev_udp_server_LDFLAGS = -static
-ev_udp_server_LDADD = libevbase.la
-ev_udp_client_SOURCES = ev_udp_client.c evbase.h
-ev_udp_client_LDFLAGS = -static
-ev_udp_client_LDADD = libevbase.la
+include_HEADERS = sbase.h
+lechod_SOURCES = lechod.c iniparser.c iniparser.h
+lechod_LDADD = libsbase.la
+lechod_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -312,8 +293,8 @@ clean-libLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libevbase.la: $(libevbase_la_OBJECTS) $(libevbase_la_DEPENDENCIES) 
-	$(LINK) -rpath $(libdir) $(libevbase_la_OBJECTS) $(libevbase_la_LIBADD) $(LIBS)
+libsbase.la: $(libsbase_la_OBJECTS) $(libsbase_la_DEPENDENCIES) 
+	$(libsbase_la_LINK) -rpath $(libdir) $(libsbase_la_OBJECTS) $(libsbase_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -342,18 +323,9 @@ clean-binPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
-ev_client$(EXEEXT): $(ev_client_OBJECTS) $(ev_client_DEPENDENCIES) 
-	@rm -f ev_client$(EXEEXT)
-	$(ev_client_LINK) $(ev_client_OBJECTS) $(ev_client_LDADD) $(LIBS)
-ev_server$(EXEEXT): $(ev_server_OBJECTS) $(ev_server_DEPENDENCIES) 
-	@rm -f ev_server$(EXEEXT)
-	$(ev_server_LINK) $(ev_server_OBJECTS) $(ev_server_LDADD) $(LIBS)
-ev_udp_client$(EXEEXT): $(ev_udp_client_OBJECTS) $(ev_udp_client_DEPENDENCIES) 
-	@rm -f ev_udp_client$(EXEEXT)
-	$(ev_udp_client_LINK) $(ev_udp_client_OBJECTS) $(ev_udp_client_LDADD) $(LIBS)
-ev_udp_server$(EXEEXT): $(ev_udp_server_OBJECTS) $(ev_udp_server_DEPENDENCIES) 
-	@rm -f ev_udp_server$(EXEEXT)
-	$(ev_udp_server_LINK) $(ev_udp_server_OBJECTS) $(ev_udp_server_LDADD) $(LIBS)
+lechod$(EXEEXT): $(lechod_OBJECTS) $(lechod_DEPENDENCIES) 
+	@rm -f lechod$(EXEEXT)
+	$(lechod_LINK) $(lechod_OBJECTS) $(lechod_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -361,19 +333,18 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_client.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_server.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_udp_client.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_udp_server.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evbase.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdevpoll.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evepoll.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evkqueue.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpoll.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evport.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evrtsig.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evselect.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evwin32.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iniparser.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-buffer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-chunk.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-logger.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-message.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-procthread.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-queue.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-sbase.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-service.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-timer.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -395,6 +366,76 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+libsbase_la-conn.lo: conn.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-conn.lo -MD -MP -MF $(DEPDIR)/libsbase_la-conn.Tpo -c -o libsbase_la-conn.lo `test -f 'conn.c' || echo '$(srcdir)/'`conn.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-conn.Tpo $(DEPDIR)/libsbase_la-conn.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='conn.c' object='libsbase_la-conn.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-conn.lo `test -f 'conn.c' || echo '$(srcdir)/'`conn.c
+
+libsbase_la-procthread.lo: procthread.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-procthread.lo -MD -MP -MF $(DEPDIR)/libsbase_la-procthread.Tpo -c -o libsbase_la-procthread.lo `test -f 'procthread.c' || echo '$(srcdir)/'`procthread.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-procthread.Tpo $(DEPDIR)/libsbase_la-procthread.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='procthread.c' object='libsbase_la-procthread.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-procthread.lo `test -f 'procthread.c' || echo '$(srcdir)/'`procthread.c
+
+libsbase_la-sbase.lo: sbase.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-sbase.lo -MD -MP -MF $(DEPDIR)/libsbase_la-sbase.Tpo -c -o libsbase_la-sbase.lo `test -f 'sbase.c' || echo '$(srcdir)/'`sbase.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-sbase.Tpo $(DEPDIR)/libsbase_la-sbase.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sbase.c' object='libsbase_la-sbase.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-sbase.lo `test -f 'sbase.c' || echo '$(srcdir)/'`sbase.c
+
+libsbase_la-service.lo: service.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-service.lo -MD -MP -MF $(DEPDIR)/libsbase_la-service.Tpo -c -o libsbase_la-service.lo `test -f 'service.c' || echo '$(srcdir)/'`service.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-service.Tpo $(DEPDIR)/libsbase_la-service.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='service.c' object='libsbase_la-service.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-service.lo `test -f 'service.c' || echo '$(srcdir)/'`service.c
+
+libsbase_la-buffer.lo: utils/buffer.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-buffer.lo -MD -MP -MF $(DEPDIR)/libsbase_la-buffer.Tpo -c -o libsbase_la-buffer.lo `test -f 'utils/buffer.c' || echo '$(srcdir)/'`utils/buffer.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-buffer.Tpo $(DEPDIR)/libsbase_la-buffer.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/buffer.c' object='libsbase_la-buffer.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-buffer.lo `test -f 'utils/buffer.c' || echo '$(srcdir)/'`utils/buffer.c
+
+libsbase_la-chunk.lo: utils/chunk.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-chunk.lo -MD -MP -MF $(DEPDIR)/libsbase_la-chunk.Tpo -c -o libsbase_la-chunk.lo `test -f 'utils/chunk.c' || echo '$(srcdir)/'`utils/chunk.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-chunk.Tpo $(DEPDIR)/libsbase_la-chunk.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/chunk.c' object='libsbase_la-chunk.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-chunk.lo `test -f 'utils/chunk.c' || echo '$(srcdir)/'`utils/chunk.c
+
+libsbase_la-logger.lo: utils/logger.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-logger.lo -MD -MP -MF $(DEPDIR)/libsbase_la-logger.Tpo -c -o libsbase_la-logger.lo `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-logger.Tpo $(DEPDIR)/libsbase_la-logger.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='libsbase_la-logger.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-logger.lo `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c
+
+libsbase_la-message.lo: utils/message.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-message.lo -MD -MP -MF $(DEPDIR)/libsbase_la-message.Tpo -c -o libsbase_la-message.lo `test -f 'utils/message.c' || echo '$(srcdir)/'`utils/message.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-message.Tpo $(DEPDIR)/libsbase_la-message.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/message.c' object='libsbase_la-message.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-message.lo `test -f 'utils/message.c' || echo '$(srcdir)/'`utils/message.c
+
+libsbase_la-queue.lo: utils/queue.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-queue.lo -MD -MP -MF $(DEPDIR)/libsbase_la-queue.Tpo -c -o libsbase_la-queue.lo `test -f 'utils/queue.c' || echo '$(srcdir)/'`utils/queue.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-queue.Tpo $(DEPDIR)/libsbase_la-queue.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/queue.c' object='libsbase_la-queue.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-queue.lo `test -f 'utils/queue.c' || echo '$(srcdir)/'`utils/queue.c
+
+libsbase_la-timer.lo: utils/timer.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-timer.lo -MD -MP -MF $(DEPDIR)/libsbase_la-timer.Tpo -c -o libsbase_la-timer.lo `test -f 'utils/timer.c' || echo '$(srcdir)/'`utils/timer.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-timer.Tpo $(DEPDIR)/libsbase_la-timer.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/timer.c' object='libsbase_la-timer.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-timer.lo `test -f 'utils/timer.c' || echo '$(srcdir)/'`utils/timer.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
