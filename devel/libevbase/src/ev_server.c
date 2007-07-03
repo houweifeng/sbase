@@ -30,6 +30,7 @@
 #define CONN_MAX 131070
 #define BUF_SIZE 128
 int max_connections = 0;
+int connections = 0;
 int lfd = 0;
 EVBASE *evbase = NULL;
 char buffer[CONN_MAX][BUF_SIZE];
@@ -46,8 +47,9 @@ void ev_handler(int fd, short ev_flags, void *arg)
 		{
 			if((rfd = accept(fd, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
 			{
-				SHOW_LOG("Accept new connection %s:%d via %d",
-						inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd);	
+				SHOW_LOG("Accept new connection %s:%d via %d total %d ",
+					inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port),
+					rfd, ++connections);
 				/* set FD NON-BLOCK */
 				fcntl(rfd, F_SETFL, O_NONBLOCK);
 				if((events[rfd] = ev_init()))
@@ -126,14 +128,17 @@ int main(int argc, char **argv)
 	socklen_t sa_len;
 	int opt = 1;
 	int i = 0;
+	int nprocess = 0;
+	pid_t pid ;
 	EVENT  *event = NULL;
-	if(argc < 3)
+	if(argc < 4)
 	{
-		fprintf(stderr, "Usage:%s port connection_limit\n", argv[0]);	
+		fprintf(stderr, "Usage:%s port connection_limit process_limit\n", argv[0]);	
 		_exit(-1);
 	}	
 	port = atoi(argv[1]);
 	connection_limit = atoi(argv[2]);
+	nprocess = atoi(argv[3]);
 	max_connections = (connection_limit > 0) ? connection_limit : CONN_MAX;
 	/* Set resource limit */
 	SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
@@ -167,6 +172,26 @@ int main(int argc, char **argv)
                 return ;
         }
 	SHOW_LOG("Initialize evbase ");
+	for(i = 0; i < nprocess; i++)
+	{
+		pid = fork();
+		switch (pid)
+		{
+			case -1:
+				exit(EXIT_FAILURE);
+				break;
+			case 0: //child process
+				if(setsid() == -1)
+					exit(EXIT_FAILURE);
+				goto running;
+				break;
+			default://parent
+				continue;
+				break;
+		}
+	}
+	return 0;
+running:
         /* set evbase */
         if((evbase = evbase_init()))
         {
