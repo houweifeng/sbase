@@ -89,6 +89,13 @@ if test "$ac_cv_header_sys_devpoll_h" = "yes" ; then
                 [Define if your system supports dev/poll])
         AC_LIBOBJ(devpoll)
 fi
+#pthread
+havepthread=no
+AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
+if test "$havepthread" = "yes" ; then
+        CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
+        LDFLAGS="${LDFLAGS} -lpthread"
+fi
 
 AC_CHECK_EXTRA_OPTIONS
 
