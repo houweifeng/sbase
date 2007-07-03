@@ -117,6 +117,7 @@ procthread_init:
 					break;
 			}
 		}
+		return 0;
 running:
 		/* service procthread running */
 		for(j = 0; j < sb->running_services; j++)
