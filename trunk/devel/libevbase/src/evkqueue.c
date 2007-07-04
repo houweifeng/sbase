@@ -137,7 +137,8 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 		for(i = 0; i < n; i++)
 		{
 			kqev = &(((struct kevent *)evbase->evs)[i]);
-			if(kqev && evbase->evlist[kqev->ident] == kqev->udata)
+			if(kqev && kqev->ident >= 0 && kqev->ident <= evbase->maxfd
+			 	&& evbase->evlist[kqev->ident] == kqev->udata)
 			{
 				if(kqev->filter & EVFILT_READ)	ev_flags |= E_READ;
 				if(kqev->filter & EVFILT_WRITE)	ev_flags |= E_WRITE;
