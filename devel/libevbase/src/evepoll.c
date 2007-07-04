@@ -136,10 +136,19 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 		{
 			evp = &(((struct epoll_event *)evbase->evs)[i]);
 			ev = (EVENT *)evp->data.ptr;
+			if(ev == NULL)
+			{
+				FATAL_LOG("Invalid i:%d evp:%08x event:%08x",
+				i, evp, ev);
+				continue;
+			}
 			fd = ev->ev_fd;
 			flags = evp->events;
+			DEBUG_LOG("Activing i:%d evp:%08x ev:%08x fd:%d flags:%d",
+				i, evp, ev, fd, flags);
 			//fd = evp->data.fd;
-			if(evbase->evlist[fd] && evp->data.ptr == (void *)evbase->evlist[fd])	
+			if(fd >= 0 && fd <= evbase->maxfd &&  evbase->evlist[fd] 
+				&& evp->data.ptr == (void *)evbase->evlist[fd])	
 			{
 				ev_flags = 0;
 				if(flags & EPOLLHUP )
@@ -150,6 +159,9 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 					ev_flags |= E_READ;
 				if(flags & EPOLLOUT)
 					ev_flags |= E_WRITE;
+				DEBUG_LOG(
+				"Activing i:%d evp:%08x ev:%08x fd:%d ev_flags:%d", 
+                                i, evp, ev, fd, ev_flags);
 				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
 					DEBUG_LOG("Activing EV[%d] on %d", ev_flags, fd);
