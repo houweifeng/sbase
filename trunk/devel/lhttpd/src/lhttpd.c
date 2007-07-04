@@ -6,6 +6,7 @@
 #include "lhttpd.h"
 #include "mystring.h"
 #include "iniparser.h"
+#include "log.h"
 #define SBASE_LOG	"/tmp/sbase_access_log"
 #define LHTTPD_LOG	"/tmp/lhttpd_access_log"
 /* global vars*/
@@ -14,11 +15,11 @@ dictionary *dict = NULL;
 char  *default_version = "1.1";
 char  *default_server_root = "/var/www/html";
 char  *server_root = NULL;
-char *html_head  = "<html><head><title>lhttpd 0.1 Index View </title>\n\
+char *html_head  = "<html><head><title>lhttpd 0.2 Index View </title>\n\
 	<meta http-equiv='content-type' content='text/html; charset=UTF-8'>\n</head>\
 	<body>\n<h2>SounOS lhttpd </h2>\n<hr noshade>\n<ul>";
 char *html_tail  = "<hr noshade><em>\n\
-	<a href='http://libsbase.googlecode.com/svn/trunk/0.1/'>lhttpd 0.1</a>\n\
+	<a href='http://sbase.googlecode.com/svn/trunk/devel/lhttpd/'>lhttpd 0.2</a>\n\
 	Powered By<a href='http://code.google.com/p/libsbase/'>\
 	SounOS::sbase</a></body></html>\n";
 char *html_dir_format  = "<li><a href='%s/%s'>%s/</a></li>\n";
@@ -214,7 +215,7 @@ int http_command_line_parser(HTTP_REQ *req, char *req_line, char **ptr)
 	}
 	if(req->method == -1)
 	{
-		ERROR_LOG("Invalid request METHOD[%s]\n", s1);
+		FATAL_LOG("Invalid request METHOD[%s]\n", s1);
 		return -1;
 	}
 	/* ltrim */
@@ -237,7 +238,7 @@ int http_command_line_parser(HTTP_REQ *req, char *req_line, char **ptr)
 	http_urldecode(req->url);
 	if(*(req->url) == '\0' )
 	{
-		ERROR_LOG("NULL request PATH\n");
+		FATAL_LOG("NULL request PATH\n");
 		return -1;	
 	}
 	while(*s != '\0' && *s++ != '/');
@@ -343,7 +344,7 @@ void http_path_handler(HTTP_REQ *req)
 			}
 		}	
 	}
-        DEBUG_LOG("Got URL full abspath:%s\n", req->abspath);
+        DEBUG_LOG("Got URL full abspath:%s", req->abspath);
 	return ;
 }
 
@@ -553,7 +554,11 @@ int http_send_file(const CONN *conn, HTTP_REQ *req, struct stat st)
 		resp_header->send(resp_header, conn);
 		resp_header->clear(resp_header);
 		if(st.st_size > 0llu)
+		{
+			DEBUG_LOG("Push file:%s info send_queue on %s:%d via %d",
+				req->abspath, conn->ip, conn->port, conn->fd);
 			conn->push_file((CONN *)conn, req->abspath, 0, st.st_size);
+		}
 	}
 	return 0;
 }
@@ -599,6 +604,7 @@ void http_get_handler(const CONN *conn, HTTP_REQ *req)
 	/* SEND file */
 	else
 	{
+		DEBUG_LOG("Sending file %s", req->abspath);
 		http_send_file(conn, req, st);
 	}
 	close :
@@ -719,7 +725,7 @@ static void stop(int sig){
 	switch (sig) {
 		case SIGINT:
 		case SIGTERM:
-			ERROR_LOG("lhttpd server is interrupted by user.\n");
+			FATAL_LOG("lhttpd server is interrupted by user.\n");
 			if(sbase)sbase->stop(sbase);
 			break;
 		default:
@@ -864,13 +870,13 @@ int main(int argc, char **argv){
 		exit(EXIT_FAILURE);
 		return -1;
 	}
-	DEBUG_LOG("Initializing fron configure file:%s\n", conf);
+	DEBUG_LOG("Initializing fron configure file:%s", conf);
 	/* Initialize sbase */
 	if(sbase_initialize(sbase, conf) != 0 )
 	{
-		fprintf(stderr, "Initialize from configure file failed\n");
+		FATAL_LOG("Initialize from configure file failed");
                 return -1;
 	}
-	DEBUG_LOG("Initialized successed\n");
+	DEBUG_LOG("Initialized successed");
 	sbase->running(sbase, 0);
 }

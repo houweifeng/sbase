@@ -50,6 +50,7 @@ CONN *conn_init(char *ip, int port)
 		conn->recv_chunk	= conn_recv_chunk;
 		conn->recv_file		= conn_recv_file;
 		conn->push_chunk	= conn_push_chunk;
+		conn->push_file	= conn_push_file;
 		conn->data_handler	= conn_data_handler;
 		conn->push_message	= conn_push_message;
 		conn->terminate 	= conn_terminate;
@@ -420,6 +421,9 @@ int conn_push_file(CONN *conn, char *filename,
 		conn->send_queue->push(conn->send_queue, (void *)cp);
 		if(conn->send_queue->total > 0 ) 
 			conn->event->add(conn->event, E_WRITE);	
+		DEBUG_LOGGER(conn->logger, 
+			"Pushed file\"%s\" [%llu][%llu] to send_queue on %s:%d via %d\n",
+			filename, offset, size, conn->ip, conn->port, conn->fd);
 	}
 }
 

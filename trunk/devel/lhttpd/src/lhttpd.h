@@ -547,16 +547,4 @@ void packet_handler(const CONN *conn,  const struct _BUFFER *packet);
 /* handler data */
 void data_handler(const CONN *conn,  const struct _BUFFER *packet, const struct _CHUNK *chunk, const struct _BUFFER *cache);
 
-#ifndef ERROR_LOG
-#define ERROR_LOG(format...)fprintf(stderr, format);fflush(stderr)
-#endif
-
-#ifndef DEBUG_LOG
-#ifdef  _DEBUG
-   #define DEBUG_LOG(format...)fprintf(stdout, "%s:%d ", __FILE__, __LINE__);fprintf(stdout, format);fflush(stdout)
-#else
-   #define DEBUG_LOG(format...)
-#endif
-#endif
-
 #endif
