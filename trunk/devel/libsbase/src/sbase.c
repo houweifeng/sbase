@@ -65,6 +65,7 @@ int sbase_add_service(struct _SBASE *sb, struct _SERVICE *service)
 			sb->services[sb->running_services++] = service;
 			service->evbase = sb->evbase;
 			service->message_queue = sb->message_queue;
+			service->working_mode = sb->working_mode;
 			if(service->set(service) != 0)
 			{
 				FATAL_LOGGER(sb->logger, "Setting service[%08x] failed, %s",
