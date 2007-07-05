@@ -90,11 +90,14 @@ void service_run(SERVICE *service)
 	/* Running */
 	if(service)
 	{
+	DEBUG_LOGGER(service->logger, "service[%s] using WORKING_MODE[%d]", 
+	service->name, service->working_mode);
 #ifdef	HAVE_PTHREAD
 		if(service->working_mode == WORKING_PROC) 
 			goto work_proc_init;
 		else 
 			goto work_thread_init;
+		return ;
 #endif
 work_proc_init:
 		/* Initialize procthread(s) */
@@ -146,8 +149,9 @@ work_thread_init:
 				exit(EXIT_FAILURE);
 			}
 #ifdef HAVE_PTHREAD
-			if(pthread_create(&procthread_id, NULL, (void *)&(service->procthreads[i]->run),
-						(void *)service->procthreads[i]) == 0)
+			if(pthread_create(&procthread_id, NULL, 
+				(void *)(service->procthreads[i]->run),
+				(void *)service->procthreads[i]) == 0)
 			{
 				DEBUG_LOGGER(service->logger, "Created procthreads[%d] ID[%08x]",
 						i, procthread_id);	
@@ -158,7 +162,6 @@ work_thread_init:
 						i, strerror(errno));
 				exit(EXIT_FAILURE);				
 			}
-
 #endif
 		}	
 		return ;
