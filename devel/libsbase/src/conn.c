@@ -42,6 +42,7 @@ CONN *conn_init(char *ip, int port)
 		conn->event		= ev_init();
 		conn->set		= conn_set;
 		conn->event_handler 	= conn_event_handler;
+		conn->state_handler 	= conn_state_handler;
 		conn->read_handler	= conn_read_handler;
 		conn->write_handler	= conn_write_handler;
 		conn->packet_reader	= conn_packet_reader;
@@ -136,6 +137,22 @@ void conn_event_handler(int event_fd, short event, void *arg)
 				conn->write_handler(conn);
 			} 
 		}	
+	}
+}
+
+/* Check connection state  TIMEOUT */
+void conn_state_handler(CONN *conn)
+{
+	/* Check connection and transaction state  */
+        CONN_CHECK(conn);
+	if(conn && conn->timer)
+	{
+		if(conn->timeout > 0 && (time(NULL) - conn->timer->last_sec) >= conn->timeout)
+		{
+			WARN_LOGGER(conn->logger, "Connection[%d] from %s:%d TIMEOUT",
+				conn->fd, conn->ip, conn->port);
+			return conn->push_message(conn, MESSAGE_QUIT);
+		}
 	}
 }
 
