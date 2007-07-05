@@ -22,6 +22,8 @@ extern "C" {
 int conn_set(CONN *conn);
 /* Event handler */
 void conn_event_handler(int , short, void *);
+/* Check connection state  TIMEOUT */
+void conn_state_handler(struct _CONN *);
 /* Read handler */
 void conn_read_handler(struct _CONN *);
 /* Write hanler */

@@ -399,6 +399,7 @@ typedef struct _CONN
 	/* Transaction option */
 	int			s_id;
 	int			s_state;
+	int			timeout;
 
 	/* Packet options */
         int			packet_type;
@@ -452,6 +453,7 @@ typedef struct _CONN
 	/* Methods */
 	int	  (*set)(struct _CONN *);
 	void	  (*event_handler)(int, short, void *);
+	void      (*state_handler)(struct _CONN *);
 	void      (*read_handler)(struct _CONN *);
 	void      (*write_handler)(struct _CONN *);
 	int    	  (*packet_reader)(struct _CONN *);
