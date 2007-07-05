@@ -20,7 +20,7 @@ char *html_head  = "<html><head><title>lhttpd 0.2 Index View </title>\n\
 	<body>\n<h2>SounOS lhttpd </h2>\n<hr noshade>\n<ul>";
 char *html_tail  = "<hr noshade><em>\n\
 	<a href='http://sbase.googlecode.com/svn/trunk/devel/lhttpd/'>lhttpd 0.2</a>\n\
-	Powered By<a href='http://code.google.com/p/libsbase/'>\
+	Powered By<a href='http://code.google.com/p/sbase/'>\
 	SounOS::sbase</a></body></html>\n";
 char *html_dir_format  = "<li><a href='%s/%s'>%s/</a></li>\n";
 char *html_index_title = "<table width=100% bgcolor=#c0c0c0 ><tr><td align=left width=500 ><B>File Name</B></td><td width=200 align=left ><B>File Size</B></td></tr></table>\n";
