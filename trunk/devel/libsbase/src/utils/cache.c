@@ -31,7 +31,7 @@ int main(int argc, char **argv)
 	char buf[nbuf];
 	TIMER *timer = timer_init();
 	INODE inode;
-	DB_CACHE *cache = db_cache_init(home, dbname, 0, 0, stderr);	
+	DB_CACHE *cache = db_cache_init(home, dbname, 0, stderr);
 	if(cache)
 	{
 		timer->reset(timer);

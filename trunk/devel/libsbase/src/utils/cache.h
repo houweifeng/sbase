@@ -57,6 +57,8 @@ typedef struct _DB_CACHE									\
 	int  (*get)(struct _DB_CACHE *, name *, void **);					\
 	int  (*update)(struct _DB_CACHE *, name *, void *);					\
 	int  (*del)(struct _DB_CACHE *, name *);						\
+	int  (*destroy)(struct _DB_CACHE *);							\
+	int  (*clearidx)(struct _DB_CACHE *);							\
 	int  (*resume)(struct _DB_CACHE *);							\
 	int  (*dump)(struct _DB_CACHE *);							\
 	int  (*list)(struct _DB_CACHE *, FILE *);						\
@@ -75,6 +77,10 @@ int db_cache_get(DB_CACHE *, name *, void **);							\
 int db_cache_update(DB_CACHE *, name *, void *);						\
 /* Delete data */										\
 int db_cache_del(DB_CACHE *, name *);								\
+/* Destroy cache */										\
+int db_cache_destroy(DB_CACHE *);								\
+/* Clean index */                                                                               \
+int db_cache_clearidx(DB_CACHE *cache);                                                         \
 /* Resume cache */										\
 int db_cache_resume(DB_CACHE *);								\
 /* Dump cache */										\
@@ -113,6 +119,8 @@ DB_CACHE *db_cache_init(const char *home, const char *db,					\
 		cache->get 	= db_cache_get;							\
 		cache->update 	= db_cache_update;						\
 		cache->del 	= db_cache_del;							\
+		cache->destroy 	= db_cache_destroy;						\
+		cache->clearidx	= db_cache_clearidx;						\
 		cache->resume 	= db_cache_resume;						\
 		cache->list 	= db_cache_list;						\
 		cache->dump 	= db_cache_dump;						\
@@ -194,7 +202,7 @@ int db_cache_get(DB_CACHE *cache, name *node, void **data)					\
 				ret = 0;							\
 			}									\
 		}										\
-		CACHE_MUTEX_UNLOCK(cache->mutex);							\
+		CACHE_MUTEX_UNLOCK(cache->mutex);						\
 	}											\
         return ret;              								\
 }												\
@@ -226,6 +234,23 @@ int db_cache_update(DB_CACHE *cache, name *node, void *data)					\
         }											\
         return ret;										\
 }												\
+												\
+/* Destroy cache */                                                                             \
+int db_cache_destroy(DB_CACHE *cache)								\
+{												\
+	int ret = -1;										\
+	if(cache)										\
+	{											\
+		cache->clearidx(cache);								\
+		CACHE_MUTEX_LOCK(cache->mutex);							\
+		ret = ( truncate(cache->idxfile, 0) 						\
+			| cache->db->truncate(cache->db, NULL, 0, 0) 				\
+			|  cache->db->sync(cache->db, 0));					\
+		CACHE_MUTEX_UNLOCK(cache->mutex);						\
+	}											\
+	return ret;										\
+}												\
+												\
 /* Delete data */										\
 int db_cache_del(DB_CACHE *cache, name *node)							\
 {												\
@@ -247,6 +272,24 @@ int db_cache_del(DB_CACHE *cache, name *node)							\
         }											\
         return ret;										\
 }												\
+												\
+/* Clean index */										\
+int db_cache_clearidx(DB_CACHE *cache)								\
+{												\
+	name *p = NULL;										\
+	if(cache)										\
+	{											\
+		CACHE_MUTEX_LOCK(cache->mutex);							\
+		while((p = RB_MIN(base, &(cache->index))))					\
+		{										\
+			RB_REMOVE(base, &(cache->index), p);					\
+			name##_CLEAN(&p);							\
+		}										\
+		CACHE_MUTEX_UNLOCK(cache->mutex);						\
+	}											\
+	return 0;										\
+}												\
+												\
 /* Resume cache */										\
 int db_cache_resume(DB_CACHE *cache)								\
 {												\
@@ -303,6 +346,7 @@ int db_cache_dump(DB_CACHE *cache)								\
 			fprintf(stderr, "Open idxfile[%s] failed, %s\n",			\
 				 cache->idxfile, strerror(errno));				\
 		}										\
+		cache->db->sync(cache->db, 0);							\
 		CACHE_MUTEX_UNLOCK(cache->mutex);						\
 	}											\
 	return ret;										\
@@ -338,6 +382,7 @@ void  db_cache_clean(DB_CACHE **cache)								\
 {												\
 	if(*cache)										\
 	{											\
+		(*cache)->clearidx((*cache));							\
 		CACHE_MUTEX_DESTROY((*cache)->mutex);						\
 		free(*cache);									\
 		*cache = NULL;									\
