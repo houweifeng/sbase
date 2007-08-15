@@ -19,7 +19,7 @@
 #define CACHE_EXT ".cache"
 #define IDX_DIR  "idx"
 #define IDX_EXT	 ".idx"
-#define DEF_CACHE_SIZE  33554432
+#define DEF_CACHE_SIZE  2147483644
 #define DEF_PAGE_SIZE	1024
 #define NKEY	16
 #ifdef HAVE_PTHREAD
@@ -68,7 +68,7 @@ name *name##_INIT();                             						\
 void  name##_CLEAN(name **);                 							\
 /* DB_CACHE Initialize */									\
 DB_CACHE *db_cache_init(const char *home, const char *db,					\
-	size_t page_size, FILE *);								\
+	size_t page_size, size_t cache_size, FILE *);						\
 /* Add key/value to DB_CACHE */									\
 int db_cache_add(DB_CACHE *, name *, void *);							\
 /* Get data */											\
@@ -107,8 +107,9 @@ void name##_CLEAN(name **node)                  						\
 }												\
 /* DB_CACHE Initialize */									\
 DB_CACHE *db_cache_init(const char *home, const char *db,					\
-	size_t page_size, FILE *errout)								\
+	size_t page_size, size_t cache_size, FILE *errout)					\
 {												\
+	size_t cachesize = (cache_size > 0 ) ? cache_size : DEF_CACHE_SIZE;			\
 	size_t pagesize	 = (page_size > 0 ) ? page_size : DEF_PAGE_SIZE;			\
 	int n = 0;										\
 	DB_CACHE *cache = (DB_CACHE *)calloc(1, sizeof(DB_CACHE));				\

@@ -29,9 +29,11 @@ int main(int argc, char **argv)
 	int ns = 0;
 	int nbuf = 256;
 	char buf[nbuf];
+	uint64_t total = 0, md5_total = 0;
+	int n = 0;
 	TIMER *timer = timer_init();
 	INODE inode;
-	DB_CACHE *cache = db_cache_init(home, dbname, 0, stderr);
+	DB_CACHE *cache = db_cache_init(home, dbname, 0, 0, stderr);
 	if(cache)
 	{
 		timer->reset(timer);
@@ -42,19 +44,33 @@ int main(int argc, char **argv)
 		{
 			while((s = fgets(buf, nbuf, fp)))
 			{
+				timer->reset(timer);
 				memset(&inode, 0, sizeof(INODE));
 				ns = strlen(buf);
 				buf[--ns] = 0;
 				MD5(s, ns, inode.key);	
+				timer->sample(timer);
+				fprintf(stdout, "MD5:%llu\n", timer->usec_used);
+				md5_total += timer->usec_used;
+				timer->reset(timer);
 				//fprintf(stdout, "%s\n", s);
 				///strcpy(inode.prop.kw, s);
 				inode.size = (size_t)(ns + 1);
 				cache->add(cache, &inode, s);
+				timer->sample(timer);
+				fprintf(stdout, "CACHE:%llu\n", timer->usec_used);
+				total += timer->usec_used;
+				n++;	
 			}
 			fclose(fp);
 		}
-		fprintf(stdout, "List cache ...\n");
-		cache->list(cache, stdout);
+		if(n > 0)
+		{
+			fprintf(stdout, "MD5 TIME USED:%llu AVG:%llu\n", md5_total, (md5_total/n));
+			fprintf(stdout, "CACHE TIME USED:%llu AVG:%llu\n", total, (total/n));
+		}
+		//fprintf(stdout, "List cache ...\n");
+		//cache->list(cache, stdout);
 		timer->reset(timer);
 		fprintf(stdout, "Dump cache ...\n");
 		cache->dump(cache);
