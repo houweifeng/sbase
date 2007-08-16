@@ -239,14 +239,15 @@ int db_cache_update(DB_CACHE *cache, name *node, void *data)					\
 /* Destroy cache */                                                                             \
 int db_cache_destroy(DB_CACHE *cache)								\
 {												\
-	int ret = -1;										\
+	int ret = 0;										\
+	int n = 0;										\
 	if(cache)										\
 	{											\
 		cache->clearidx(cache);								\
 		CACHE_MUTEX_LOCK(cache->mutex);							\
-		ret = ( truncate(cache->idxfile, 0) 						\
-			| cache->db->truncate(cache->db, NULL, 0, 0) 				\
-			|  cache->db->sync(cache->db, 0));					\
+		ret |= truncate(cache->idxfile, 0); 						\
+		ret |= cache->db->truncate(cache->db, NULL, &n, 0); 				\
+		ret |= cache->db->sync(cache->db, 0);						\
 		CACHE_MUTEX_UNLOCK(cache->mutex);						\
 	}											\
 	return ret;										\
