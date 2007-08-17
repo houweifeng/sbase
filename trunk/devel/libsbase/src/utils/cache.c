@@ -5,6 +5,7 @@
 #include "cache.h"
 #include "timer.h"
 #include "md5.h"
+#define	BUF_SIZE	1024 * 1024 * 20
 struct  _INODE;
 typedef struct _IPRO
 {
@@ -18,24 +19,34 @@ int main(int argc, char **argv)
 {
 	if(argc < 3)
 	{
-		fprintf(stderr, "Usage:%s homedir dbname (dictfile) \n", argv[0]);
+		fprintf(stderr, "Usage:%s homedir dbname (dictfile) (datafile) \n", argv[0]);
 		_exit(-1);
 	}
 	char *home = argv[1];
 	char *dbname = argv[2];
 	char *dict = (argc > 3) ? argv[3] :  NULL;
+	char *dfile = (argc > 4) ? argv[4] :  NULL;
 	FILE  *fp = NULL;
 	char *s = NULL;
 	int ns = 0;
 	int nbuf = 256;
 	char buf[nbuf];
+	char *p = (char *)calloc(1, BUF_SIZE);
+	int np = 0;
 	uint64_t total = 0, md5_total = 0;
 	int n = 0;
+	int fd = 0;
+
 	TIMER *timer = timer_init();
 	INODE inode;
 	DB_CACHE *cache = db_cache_init(home, dbname, 0, 0, stderr);
 	if(cache)
 	{
+		if(dfile && (fd = open(dfile, O_RDONLY)))
+		{
+			np = read(fd, p, BUF_SIZE);
+			close(fd);
+		}
 		timer->reset(timer);
 		cache->resume(cache);	
 		timer->sample(timer);
@@ -55,8 +66,8 @@ int main(int argc, char **argv)
 				timer->reset(timer);
 				//fprintf(stdout, "%s\n", s);
 				///strcpy(inode.prop.kw, s);
-				inode.size = (size_t)(ns + 1);
-				cache->add(cache, &inode, s);
+				inode.size = (size_t)np;
+				cache->add(cache, &inode, p);
 				timer->sample(timer);
 				fprintf(stdout, "CACHE:%llu\n", timer->usec_used);
 				total += timer->usec_used;
