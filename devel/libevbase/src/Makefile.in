@@ -64,7 +64,7 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libevbase_la_LIBADD =
 am_libevbase_la_OBJECTS = evdevpoll.lo evbase.lo evepoll.lo \
 	evkqueue.lo evpoll.lo evport.lo evrtsig.lo evselect.lo \
-	evwin32.lo
+	evwin32.lo logger.lo
 libevbase_la_OBJECTS = $(am_libevbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -218,20 +218,21 @@ evselect.c \
 evselect.h \
 evwin32.c \
 evwin32.h \
-log.h
+logger.h \
+logger.c 
 
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = evbase.h
-ev_server_SOURCES = ev_server.c evbase.h
+ev_server_SOURCES = ev_server.c evbase.h log.h
 ev_server_LDFLAGS = -static
 ev_server_LDADD = libevbase.la
-ev_client_SOURCES = ev_client.c evbase.h
+ev_client_SOURCES = ev_client.c evbase.h log.h
 ev_client_LDFLAGS = -static
 ev_client_LDADD = libevbase.la
-ev_udp_server_SOURCES = ev_udp_server.c evbase.h
+ev_udp_server_SOURCES = ev_udp_server.c evbase.h log.h
 ev_udp_server_LDFLAGS = -static
 ev_udp_server_LDADD = libevbase.la
-ev_udp_client_SOURCES = ev_udp_client.c evbase.h
+ev_udp_client_SOURCES = ev_udp_client.c evbase.h log.h
 ev_udp_client_LDFLAGS = -static
 ev_udp_client_LDADD = libevbase.la
 all: all-am
@@ -356,6 +357,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evrtsig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evselect.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evwin32.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logger.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \

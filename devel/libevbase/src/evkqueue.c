@@ -1,5 +1,5 @@
 #include "evkqueue.h"
-#include "log.h"
+#include "logger.h"
 #include <errno.h>
 #ifdef HAVE_EVKQUEUE
 #include <sys/types.h>
@@ -131,7 +131,8 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 			 evbase->maxfd, evbase->evs, evbase->maxfd, &ts);	
 		if(n == -1)
                 {
-                        FATAL_LOG("Looping evbase[%08x] error[%d], %s", evbase, errno, strerror(errno));
+                        FATAL_LOGGER(evbase->logger, "Looping evbase[%08x] error[%d], %s", 
+				evbase, errno, strerror(errno));
                 }
 		if(n <= 0 ) return ;
 		for(i = 0; i < n; i++)

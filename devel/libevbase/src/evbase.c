@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
-#include "log.h"
+#include "logger.h"
 #include "evbase.h"
 #ifdef HAVE_EVPORT
 #include "evport.h"
@@ -121,13 +121,13 @@ EVBASE *evbase_init()
 		evbase->clean 	=  evwin32_clean;
 		s = "Using WIN32 event mode";
 #endif
-		DEBUG_LOG(s);
+		fprintf(stdout, "%s\n", s);
 		//evbase->clean 	=  evbase_clean;
 		if(evbase->init == NULL || evbase->add == NULL || evbase->update == NULL 
 				|| evbase->del == NULL || evbase->loop == NULL || evbase->clean == NULL)
 		{
 			free(evbase); 
-			FATAL_LOG("Initialize evbase failed, %s", strerror(errno));
+			fprintf(stderr, "Initialize evbase failed, %s", strerror(errno));
 			evbase = NULL;
 		}
 		else
@@ -178,7 +178,8 @@ void event_add(EVENT *event, short flags)
 		if(event->ev_base && event->ev_base->update)
 		{
 			event->ev_base->update(event->ev_base, event);
-			DEBUG_LOG("Updated event[%x] to %d on %d", event, event->ev_flags, event->ev_fd);
+			DEBUG_LOGGER(event->ev_base->logger, "Updated event[%x] to %d on %d",
+				event, event->ev_flags, event->ev_fd);
 		}
 	}
 }
@@ -194,7 +195,8 @@ void event_del(EVENT *event, short flags)
 			if(event->ev_base && event->ev_base->update)
 			{
 				event->ev_base->update(event->ev_base, event);
-				DEBUG_LOG("Updated event[%x] to %d on %d", event, event->ev_flags, event->ev_fd);
+				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%x] to %d on %d",
+					event, event->ev_flags, event->ev_fd);
 			}
 
 		}
@@ -210,7 +212,8 @@ void event_destroy(EVENT *event)
                 if(event->ev_base && event->ev_base->del)
                 {
                         event->ev_base->del(event->ev_base, event);
-                        DEBUG_LOG("Destroy event[%x] on %d", event, event->ev_fd);
+                        DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%x] on %d",
+				event, event->ev_fd);
                 }
         }
 }
@@ -223,15 +226,8 @@ void event_active(EVENT *event, short ev_flags)
 	short e_flags = ev_flags;
 	if(event && event->ev_handler)
 	{
-		/*
-		if((e_flags & E_READ) 
-				&& recv(event->ev_fd, buf, n, MSG_PEEK) == 0 
-				&& recv(event->ev_fd, buf, n, MSG_OOB|MSG_PEEK ) == 0 )
-		{
-			e_flags ^= E_READ;
-			e_flags |= E_CLOSE;
-		}
-		*/
+		DEBUG_LOGGER(event->ev_base->logger, 
+			"Activing event[%d] on %d ", event->ev_fd, e_flags);
 		event->ev_handler(event->ev_fd, e_flags, event->ev_arg);	
 		if(!(event->ev_flags & E_PERSIST))
 		{

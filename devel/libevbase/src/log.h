@@ -10,7 +10,7 @@
 #endif
 #ifndef _LOG_H
 #define _LOG_H
-static char *ymonths[]= {
+static char *_ymonths[]= {
 	"Jan", "Feb", "Mar",
 	"Apr", "May", "Jun",
 	"Jul", "Aug", "Sep",
@@ -25,7 +25,7 @@ static char *ymonths[]= {
 	time(&timep); 									\
 	p = localtime(&timep);								\
 	fprintf(out, "[%02d/%s/%04d:%02d:%02d:%02d +%06u] #%u/%08x# %s::%d ",		\
-			p->tm_mday, ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,	\
+			p->tm_mday, _ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,	\
 			p->tm_min, p->tm_sec, (size_t)tv.tv_usec, 			\
 			(size_t )getpid(), (size_t )pthread_self(), __FILE__, __LINE__);\
 }
@@ -39,7 +39,7 @@ static char *ymonths[]= {
 	time(&timep); 									\
 	p = localtime(&timep);								\
 	fprintf(out, "[%02d/%s/%04d:%02d:%02d:%02d +%06u] #%u# %s::%d ",		\
-			p->tm_mday, ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,	\
+			p->tm_mday, _ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,	\
 			p->tm_min, p->tm_sec, (size_t)tv.tv_usec, 			\
 			(size_t)getpid(), __FILE__, __LINE__);				\
 }

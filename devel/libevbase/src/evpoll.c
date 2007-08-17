@@ -1,5 +1,5 @@
 #include "evpoll.h"
-#include "log.h"
+#include "logger.h"
 #include <errno.h>
 #ifdef HAVE_EVPOLL
 #include <stdlib.h>
@@ -48,7 +48,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
 			if(event->ev_fd > evbase->maxfd)
 				evbase->maxfd = event->ev_fd;
 			evbase->evlist[event->ev_fd] = event;	
-			DEBUG_LOG("Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
+			DEBUG_LOGGER(evbase->logger, "Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
 		}
 		return 0;
 	}
@@ -80,7 +80,8 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
                                 evbase->maxfd = event->ev_fd;
                         evbase->evlist[event->ev_fd] = event;
 			evbase->nfd++;
-                        DEBUG_LOG("Updated POLL event:%d on %d", event->ev_flags, event->ev_fd);
+                        DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
+				event->ev_flags, event->ev_fd);
 			return 0;
                 }
         }	
@@ -111,7 +112,8 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 		n = poll(evbase->ev_fds, evbase->maxfd + 1 , sec);		
 		if(n == -1)
                 {
-                        FATAL_LOG("Looping evbase[%08x] error[%d], %s", evbase, errno, strerror(errno));
+                        FATAL_LOGGER(evbase->logger, "Looping evbase[%08x] error[%d], %s", 
+				evbase, errno, strerror(errno));
                 }
 		if(n <= 0) return ;
 		//DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);

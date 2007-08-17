@@ -1,5 +1,5 @@
 #include "evepoll.h"
-#include "log.h"
+#include "logger.h"
 #include <errno.h>
 #ifdef HAVE_EVEPOLL
 #include <stdlib.h>
@@ -50,7 +50,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 		ep_event.events = ev_flags;
 		ep_event.data.ptr = (void *)event;
 		epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
-		DEBUG_LOG("Added event %d on %d", ev_flags, event->ev_fd);
+		DEBUG_LOGGER(evbase->logger, "Added event %d on %d", ev_flags, event->ev_fd);
 		if(event->ev_fd > evbase->maxfd)
                         evbase->maxfd = event->ev_fd;
                 evbase->evlist[event->ev_fd] = event;
@@ -128,23 +128,24 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 		n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd, timeout);
 		if(n == -1)
 		{
-			FATAL_LOG("Looping evbase[%08x] error[%d], %s", evbase, errno, strerror(errno));
+			FATAL_LOGGER(evbase->logger, "Looping evbase[%08x] error[%d], %s",
+				evbase, errno, strerror(errno));
 		}
 		if(n <= 0) return ;
-		DEBUG_LOG("Actived %d event in %d", n, evbase->maxfd);
+		DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n, evbase->maxfd);
 		for(i = 0; i < n; i++)
 		{
 			evp = &(((struct epoll_event *)evbase->evs)[i]);
 			ev = (EVENT *)evp->data.ptr;
 			if(ev == NULL)
 			{
-				FATAL_LOG("Invalid i:%d evp:%08x event:%08x",
+				FATAL_LOGGER(evbase->logger, "Invalid i:%d evp:%08x event:%08x",
 				i, evp, ev);
 				continue;
 			}
 			fd = ev->ev_fd;
 			flags = evp->events;
-			DEBUG_LOG("Activing i:%d evp:%08x ev:%08x fd:%d flags:%d",
+			DEBUG_LOGGER(evbase->logger, "Activing i:%d evp:%08x ev:%08x fd:%d flags:%d",
 				i, evp, ev, fd, flags);
 			//fd = evp->data.fd;
 			if(fd >= 0 && fd <= evbase->maxfd &&  evbase->evlist[fd] 
@@ -159,14 +160,14 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 					ev_flags |= E_READ;
 				if(flags & EPOLLOUT)
 					ev_flags |= E_WRITE;
-				DEBUG_LOG(
-				"Activing i:%d evp:%08x ev:%08x fd:%d ev_flags:%d", 
-                                i, evp, ev, fd, ev_flags);
+				DEBUG_LOGGER(evbase->logger,
+					"Activing i:%d evp:%08x ev:%08x fd:%d ev_flags:%d", 
+                                	i, evp, ev, fd, ev_flags);
 				if((ev_flags &= evbase->evlist[fd]->ev_flags))
 				{
-					DEBUG_LOG("Activing EV[%d] on %d", ev_flags, fd);
+					DEBUG_LOGGER(evbase->logger, "Activing EV[%d] on %d", ev_flags, fd);
 					evbase->evlist[fd]->active(evbase->evlist[fd], ev_flags);	
-					DEBUG_LOG("Actived EV[%d] on %d", ev_flags, fd);
+					DEBUG_LOGGER(evbase->logger, "Actived EV[%d] on %d", ev_flags, fd);
 				}
 			}
 		}

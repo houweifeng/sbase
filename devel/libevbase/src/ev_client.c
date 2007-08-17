@@ -13,6 +13,8 @@
 #include <netdb.h>
 #include "evbase.h"
 #include "log.h"
+#include "logger.h"
+
 #define SETRLIMIT(NAME, RLIM, rlim_set)\
 {\
         struct rlimit rlim;\
@@ -115,6 +117,7 @@ int main(int argc, char **argv)
         /* set evbase */
         if((evbase = evbase_init()))
 	{
+		evbase->logger = logger_init("/tmp/ev_client.log");
 		while((fd = socket(AF_INET, SOCK_STREAM, 0)) > 0 && fd < conn_num)
 		{
 			/* Connect */

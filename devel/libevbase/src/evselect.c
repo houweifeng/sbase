@@ -1,5 +1,5 @@
 #include "evselect.h"
-#include "log.h"
+#include "logger.h"
 #include <errno.h>
 #ifdef HAVE_EVSELECT
 #include <stdlib.h>
@@ -52,7 +52,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
 				evbase->maxfd = event->ev_fd;
 			evbase->evlist[event->ev_fd] = event;	
 			evbase->nfd++;
-			DEBUG_LOG("Added event[%x] %d on %d", event, ev_flags, event->ev_fd);
+			DEBUG_LOGGER(evbase->logger, "Added event[%x] %d on %d", event, ev_flags, event->ev_fd);
 			return 0;
 		}
 	}	
@@ -83,7 +83,8 @@ int evselect_update(EVBASE *evbase, EVENT *event)
                         if(event->ev_fd > evbase->maxfd)
                                 evbase->maxfd = event->ev_fd;
                         evbase->evlist[event->ev_fd] = event;
-                        DEBUG_LOG("Updated event[%x] %d on %d", event, ev_flags, event->ev_fd);
+                        DEBUG_LOGGER(evbase->logger, "Updated event[%x] %d on %d",
+				event, ev_flags, event->ev_fd);
                         return 0;
                 }
         }
