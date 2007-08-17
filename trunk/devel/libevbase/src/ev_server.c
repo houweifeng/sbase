@@ -13,6 +13,7 @@
 #include <netdb.h>
 #include "evbase.h"
 #include "log.h"
+#include "logger.h"
 #define SETRLIMIT(NAME, RLIM, rlim_set)\
 {\
         struct rlimit rlim;\
@@ -195,6 +196,7 @@ running:
         /* set evbase */
         if((evbase = evbase_init()))
         {
+		evbase->logger = logger_init("/tmp/ev_server.log");
                 if((event = ev_init()))
                 {
 			SHOW_LOG("Initialized event ");

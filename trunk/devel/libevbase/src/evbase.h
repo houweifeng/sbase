@@ -14,6 +14,7 @@ extern "C" {
 #define EV_MAX_FD	1024
 #define EV_USEC_SLEEP	100
 struct _EVENT;
+struct _LOGGER;
 #ifndef _TYPEDEF_EVBASE
 #define _TYPEDEF_EVBASE
 typedef struct _EVBASE
@@ -24,6 +25,7 @@ typedef struct _EVBASE
 	void *ev_changes;
 	void *evs;
 	int  efd;
+	struct _LOGGER *logger;
 	
 	int nfd;
 	int  maxfd;
