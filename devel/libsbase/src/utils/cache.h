@@ -202,6 +202,10 @@ int db_cache_get(DB_CACHE *cache, name *node, void **data)					\
 				(*data) = v.data;						\
 				ret = 0;							\
 			}									\
+			else									\
+			{									\
+				RB_REMOVE(base, &(cache->index), p);				\
+			}									\
 		}										\
 		CACHE_MUTEX_UNLOCK(cache->mutex);						\
 	}											\
