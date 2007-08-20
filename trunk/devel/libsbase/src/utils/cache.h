@@ -49,10 +49,15 @@ typedef struct _DB_CACHE									\
 	void    *mutex;										\
 	char	cachefile[FILE_MAX];								\
 	char	idxfile[FILE_MAX];								\
+	char	dbname[DB_NAME_MAX];								\
 	size_t	count ;										\
+	size_t  cache_size;									\
+	size_t  page_size;									\
+	FILE	*errout;									\
 	DB	*db;										\
 	RB_HEAD(base, _##name) index;								\
 												\
+	int  (*open)(struct _DB_CACHE *);							\
 	int  (*add)(struct _DB_CACHE *, name *, void *);					\
 	int  (*get)(struct _DB_CACHE *, name *, void **);					\
 	int  (*update)(struct _DB_CACHE *, name *, void *);					\
@@ -62,6 +67,7 @@ typedef struct _DB_CACHE									\
 	int  (*resume)(struct _DB_CACHE *);							\
 	int  (*dump)(struct _DB_CACHE *);							\
 	int  (*list)(struct _DB_CACHE *, FILE *);						\
+	int  (*reset)(struct _DB_CACHE *);							\
 	void (*clean)(struct _DB_CACHE **);							\
 }DB_CACHE;											\
 name *name##_INIT();                             						\
@@ -69,6 +75,8 @@ void  name##_CLEAN(name **);                 							\
 /* DB_CACHE Initialize */									\
 DB_CACHE *db_cache_init(const char *home, const char *db,					\
 	size_t page_size, size_t cache_size, FILE *);						\
+/* Open DB */											\
+int db_cache_open(DB_CACHE *);                                                             \
 /* Add key/value to DB_CACHE */									\
 int db_cache_add(DB_CACHE *, name *, void *);							\
 /* Get data */											\
@@ -87,6 +95,8 @@ int db_cache_resume(DB_CACHE *);								\
 int db_cache_dump(DB_CACHE *);									\
 /* List cache */										\
 int db_cache_list(DB_CACHE *, FILE *);								\
+/* Reset cache */									\
+int db_cache_reset(DB_CACHE *);					\
 /* Clean cache */										\
 void db_cache_clean(DB_CACHE **);								\
 /* NODE compare */  										\
@@ -116,6 +126,7 @@ DB_CACHE *db_cache_init(const char *home, const char *db,					\
 	if(cache)										\
 	{											\
 		RB_INIT(&(cache->index));							\
+		cache->open 	= db_cache_open;						\
 		cache->add 	= db_cache_add;							\
 		cache->get 	= db_cache_get;							\
 		cache->update 	= db_cache_update;						\
@@ -125,32 +136,53 @@ DB_CACHE *db_cache_init(const char *home, const char *db,					\
 		cache->resume 	= db_cache_resume;						\
 		cache->list 	= db_cache_list;						\
 		cache->dump 	= db_cache_dump;						\
+		cache->reset 	= db_cache_reset;						\
 		cache->clean 	= db_cache_clean;						\
 		CACHE_MUTEX_INIT(cache->mutex);							\
 		sprintf(cache->cachefile, "%s/%s%s", home,  db, CACHE_EXT);			\
 		sprintf(cache->idxfile, "%s/%s%s", home, db, IDX_EXT);				\
+		strcpy(cache->dbname, db);							\
+		cache->page_size = pagesize;							\
+		cache->cache_size = cachesize;							\
+		cache->errout	= errout;							\
+		if(cache->open(cache) != 0)							\
+			goto err_end;								\
+		return cache;									\
+	}											\
+err_end:											\
+	if(cache) free(cache);									\
+        return NULL;										\
+}												\
+int db_cache_open(DB_CACHE *cache)								\
+{												\
+	if(cache)										\
+	{											\
+		if(cache->db) cache->db->close(cache->db, 0);					\
 		/* Initialize db */								\
 		if(db_create(&(cache->db), NULL, 0) != 0 ) 					\
 		{										\
-			fprintf(errout, "Initialize database failed, %s", strerror(errno));	\
+			fprintf(cache->errout, 							\
+				"Initialize database failed, %s", strerror(errno));		\
 			goto err_end;								\
 		}										\
-		/* Set DB page size*/								\
-		cache->db->set_pagesize(cache->db, pagesize);					\
+		/* Set DB page size */								\
+		cache->db->set_pagesize(cache->db, cache->page_size);				\
+		/* Set DB cache size */								\
+		cache->db->set_cachesize(cache->db, 0, cache->cache_size, 1);			\
 		/* Open DB */									\
 		if(cache->db->open(cache->db, NULL, cache->cachefile,				\
 					NULL, DB_BTREE, DB_CREATE, 0644) != 0 )			\
 		{										\
-			fprintf(errout, "Open DATABASE:%s failed, %s",				\
+			fprintf(cache->errout, "Open DATABASE:%s failed, %s",			\
 					cache->cachefile, strerror(errno));			\
 			goto err_end;								\
 		}										\
-		return cache;									\
+		return 0;									\
 	}											\
-err_end:											\
+	err_end:										\
 	if(cache && cache->db) cache->db->close(cache->db, 0);					\
-	if(cache) free(cache);									\
-        return NULL;										\
+	cache->db = NULL;									\
+	return -1;										\
 }												\
 int db_cache_add(DB_CACHE *cache, name *s_node, void *data)					\
 {												\
@@ -250,8 +282,9 @@ int db_cache_destroy(DB_CACHE *cache)								\
 		cache->clearidx(cache);								\
 		CACHE_MUTEX_LOCK(cache->mutex);							\
 		ret |= truncate(cache->idxfile, 0); 						\
-		ret |= cache->db->truncate(cache->db, NULL, &n, 0); 				\
-		ret |= cache->db->sync(cache->db, 0);						\
+		ret |= cache->db->close(cache->db, 0);		\
+		ret |= truncate(cache->cachefile, 0); 						\
+		cache->db = NULL;\
 		CACHE_MUTEX_UNLOCK(cache->mutex);						\
 	}											\
 	return ret;										\
@@ -291,6 +324,7 @@ int db_cache_clearidx(DB_CACHE *cache)								\
 			RB_REMOVE(base, &(cache->index), p);					\
 			name##_CLEAN(&p);							\
 		}										\
+		cache->count = 0;								\
 		CACHE_MUTEX_UNLOCK(cache->mutex);						\
 	}											\
 	return 0;										\
@@ -382,6 +416,24 @@ int db_cache_list(DB_CACHE *cache, FILE *pout)							\
 		if(total) fprintf(pout, "TOTAL:%u SIZE:%u AVG:%u\n",				\
 			total, total_size, (total_size / total));				\
 	}											\
+}												\
+/* Reset cache */ 		\
+int  db_cache_reset(DB_CACHE *cache)								\
+{												\
+	int ret = 0;										\
+	int n = 0;										\
+	if(cache)										\
+	{											\
+		cache->clearidx(cache);								\
+		CACHE_MUTEX_LOCK(cache->mutex);							\
+		ret |= truncate(cache->idxfile, 0); 						\
+		ret |= cache->db->close(cache->db, 0);		\
+		ret |= truncate(cache->cachefile, 0); 						\
+		cache->db = NULL;\
+		ret |= cache->open(cache);\
+		CACHE_MUTEX_UNLOCK(cache->mutex);						\
+	}											\
+	return ret;										\
 }												\
 /* Clean cache */										\
 void  db_cache_clean(DB_CACHE **cache)								\
