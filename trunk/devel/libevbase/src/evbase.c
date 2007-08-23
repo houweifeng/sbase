@@ -55,6 +55,7 @@ EVBASE *evbase_init()
 		evbase->update 	=  evport_update;
 		evbase->del 	=  evport_del;
 		evbase->loop 	=  evport_loop;
+		evbase->reset 	=  evport_reset;
 		evbase->clean 	=  evport_clean;
 		s = "Using PORT event mode";
 #endif 
@@ -64,6 +65,7 @@ EVBASE *evbase_init()
 		evbase->update 	=  evselect_update;
 		evbase->del 	=  evselect_del;
 		evbase->loop 	=  evselect_loop;
+		evbase->reset 	=  evselect_reset;
 		evbase->clean 	=  evselect_clean;
 		s = "Using SELECT event mode";
 #endif 
@@ -73,6 +75,7 @@ EVBASE *evbase_init()
 		evbase->update 	=  evpoll_update;
 		evbase->del 	=  evpoll_del;
 		evbase->loop 	=  evpoll_loop;
+		evbase->reset 	=  evpoll_reset;
 		evbase->clean 	=  evpoll_clean;
 		s = "Using POLL event mode";
 #endif 
@@ -82,6 +85,7 @@ EVBASE *evbase_init()
 		evbase->update 	=  evrtsig_update;
 		evbase->del 	=  evrtsig_del;
 		evbase->loop 	=  evrtsig_loop;
+		evbase->reset 	=  evrtsig_reset;
 		evbase->clean	=  evrtsig_clean;
 		s = "Using SIGNAL event mode";
 #endif 
@@ -91,6 +95,7 @@ EVBASE *evbase_init()
 		evbase->update 	=  evepoll_update;
 		evbase->del 	=  evepoll_del;
 		evbase->loop 	=  evepoll_loop;
+		evbase->reset 	=  evepoll_reset;
 		evbase->clean 	=  evepoll_clean;
 		s = "Using EPOLL event mode";
 #endif 
@@ -100,6 +105,7 @@ EVBASE *evbase_init()
 		evbase->update 	=  evkqueue_update;
 		evbase->del 	=  evkqueue_del;
 		evbase->loop 	=  evkqueue_loop;
+		evbase->reset 	=  evkqueue_reset;
 		evbase->clean 	=  evkqueue_clean;
 		s = "Using KQUEUE event mode";
 #endif 
@@ -109,6 +115,7 @@ EVBASE *evbase_init()
 		evbase->update 	=  evdevpoll_update;
 		evbase->del 	=  evdevpoll_del;
 		evbase->loop 	=  evdevpoll_loop;
+		evbase->reset 	=  evdevpoll_reset;
 		evbase->clean 	=  evdevpoll_clean;
 		s = "Using DEVPOLL event mode";
 #endif 
@@ -118,13 +125,15 @@ EVBASE *evbase_init()
 		evbase->update 	=  evwin32_update;
 		evbase->del 	=  evwin32_del;
 		evbase->loop 	=  evwin32_loop;
+		evbase->reset 	=  evwin32_reset;
 		evbase->clean 	=  evwin32_clean;
 		s = "Using WIN32 event mode";
 #endif
 		fprintf(stdout, "%s\n", s);
 		//evbase->clean 	=  evbase_clean;
 		if(evbase->init == NULL || evbase->add == NULL || evbase->update == NULL 
-				|| evbase->del == NULL || evbase->loop == NULL || evbase->clean == NULL)
+				|| evbase->del == NULL || evbase->loop == NULL 
+				|| evbase->reset == NULL || evbase->clean == NULL)
 		{
 			free(evbase); 
 			fprintf(stderr, "Initialize evbase failed, %s", strerror(errno));

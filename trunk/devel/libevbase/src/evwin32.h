@@ -12,6 +12,8 @@ int evwin32_update(EVBASE *evbase, EVENT *event);
 int evwin32_del(EVBASE *evbase, EVENT *event);
 /* Loop evbase */
 void evwin32_loop(EVBASE *evbase, short, struct timeval *tv);
+/* Reset evbase */
+void evwin32_reset(EVBASE *evbase);
 /* Clean evbase */
 void evwin32_clean(EVBASE **evbase);
 #endif

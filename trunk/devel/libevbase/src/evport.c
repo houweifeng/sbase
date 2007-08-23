@@ -21,6 +21,10 @@ int evport_del(EVBASE *evbase, EVENT *event)
 void evport_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
 }
+/* Reset evbase */
+void evport_reset(EVBASE *evbase)
+{
+}
 /* Clean evbase */
 int evport_clean(EVBASE **evbase)
 {

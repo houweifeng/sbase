@@ -25,6 +25,7 @@ int evselect_init(EVBASE *evbase)
 			max_fd = rlim.rlim_cur;		
 		}
 		evbase->evlist = (EVENT **)calloc(max_fd, sizeof(EVENT *));	
+		evbase->allowed = max_fd;
 		return 0;
 	}
 	return -1;
@@ -138,6 +139,12 @@ void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
 			}			
 		}
 	}
+}
+
+/* Reset evbase */
+void evselect_reset(EVBASE *evbase)
+{
+	
 }
 
 /* Clean evbase */

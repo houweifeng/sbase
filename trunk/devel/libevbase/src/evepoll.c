@@ -21,6 +21,7 @@ int evepoll_init(EVBASE *evbase)
                 evbase->evlist  = (EVENT **)calloc(max_fd, sizeof(EVENT *));
 		evbase->efd 	= epoll_create(max_fd);
 		evbase->evs 	= calloc(max_fd, sizeof(struct epoll_event));
+		evbase->allowed = max_fd;
                 return 0;
         }
 }
@@ -173,6 +174,12 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 		}
 	}
 }
+
+/* Reset evbase */
+void evepoll_reset(EVBASE *evbase)
+{
+}
+
 /* Clean evbase */
 void evepoll_clean(EVBASE **evbase)
 {

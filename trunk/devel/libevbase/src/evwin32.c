@@ -20,6 +20,10 @@ int evwin32_del(EVBASE *evbase, EVENT *event)
 void evwin32_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
 }
+/* Reset evbase */
+void evwin32_reset(EVBASE *evbase)
+{
+}
 /* Clean evbase */
 void evwin32_clean(EVBASE **evbase)
 {

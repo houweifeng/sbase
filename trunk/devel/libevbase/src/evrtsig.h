@@ -12,6 +12,8 @@ int evrtsig_update(EVBASE *evbase, EVENT *event);
 int evrtsig_del(EVBASE *evbase, EVENT *event);
 /* Loop evbase */
 void evrtsig_loop(EVBASE *evbase, short, struct timeval *tv);
+/* Reset evbase */
+void evrtsig_reset(EVBASE *evbase);
 /* Clean evbase */
 void evrtsig_clean(EVBASE **evbase);
 #endif
