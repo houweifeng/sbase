@@ -21,6 +21,10 @@ int evdevpoll_del(EVBASE *evbase, EVENT *event)
 void evdevpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
 }
+/* Reset evbase */
+void evdevpoll_reset(EVBASE *evbase)
+{
+}
 /* Clean evbase */
 void evdevpoll_clean(EVBASE **evbase)
 {

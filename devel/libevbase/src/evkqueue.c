@@ -24,6 +24,7 @@ int evkqueue_init(EVBASE *evbase)
 		}
 		if((evbase->ev_changes	= calloc(max_fd, sizeof(struct kevent))) == NULL ) return -1;
 		if((evbase->evs		= calloc(max_fd, sizeof(struct kevent))) == NULL) return -1;
+		evbase->allowed = max_fd;
 		return 0;
 	}
 	return -1;
@@ -149,6 +150,11 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 					
 		}
 	}
+}
+
+/* Reset evbase */
+void evkqueue_reset(EVBASE *evbase)
+{
 }
 
 /* Clean evbase */

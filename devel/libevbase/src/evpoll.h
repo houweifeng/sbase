@@ -12,6 +12,8 @@ int evpoll_update(EVBASE *evbase, EVENT *event);
 int evpoll_del(EVBASE *evbase, EVENT *event);
 /* Loop evbase */
 void evpoll_loop(EVBASE *evbase, short, struct timeval *tv);
+/* Reset evbase */
+void evpoll_reset(EVBASE *evbase);
 /* Clean evbase */
 void evpoll_clean(EVBASE **evbase);
 #endif
