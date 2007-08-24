@@ -155,7 +155,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 				ev_flags = 0;
 				if(flags & EPOLLHUP )
 					flags |= (EPOLLIN | EPOLLOUT);
-				else if(evp->events & EPOLLERR )
+				else if(flags & EPOLLERR )
 					flags |= (EPOLLIN | EPOLLOUT);
 				if(flags & EPOLLIN)
 					ev_flags |= E_READ;
