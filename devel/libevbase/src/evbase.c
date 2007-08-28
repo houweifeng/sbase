@@ -223,6 +223,7 @@ void event_destroy(EVENT *event)
                         event->ev_base->del(event->ev_base, event);
                         DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%x] on %d",
 				event, event->ev_fd);
+			event->ev_base = NULL;
                 }
         }
 }
