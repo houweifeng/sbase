@@ -102,7 +102,7 @@ void procthread_run(void *arg)
 	{
 		pth->evbase->loop(pth->evbase, 0, NULL);
 		pth->running_once(pth);
-		usleep(pth->sleep_usec);
+		usleep(pth->service->sleep_usec);
 	}
 }
 
