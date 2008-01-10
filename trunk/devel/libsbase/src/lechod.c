@@ -98,6 +98,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->port = iniparser_getint(dict, "LECHOD:service_port", 80);
 	service->working_mode = iniparser_getint(dict, "LECHOD:working_mode", WORKING_PROC);
 	service->max_procthreads = iniparser_getint(dict, "LECHOD:max_procthreads", 1);
+	service->sleep_usec = iniparser_getint(dict, "LECHOD:sleep_usec", 100);
 	logfile = iniparser_getstr(dict, "LECHOD:logfile");
 	if(logfile == NULL)
 		logfile = LECHOD_LOG;
