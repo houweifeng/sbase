@@ -799,6 +799,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->working_mode = iniparser_getint(dict,
 		"LHTTPD:working_mode", WORKING_PROC);
 	service->max_procthreads = iniparser_getint(dict, "LHTTPD:max_procthreads", 1);
+	service->sleep_usec = iniparser_getint(dict, "LHTTPD:sleep_usec", 10);
 	logfile = iniparser_getstr(dict, "LHTTPD:logfile");
 	if(logfile == NULL)
 		logfile = LHTTPD_LOG;
