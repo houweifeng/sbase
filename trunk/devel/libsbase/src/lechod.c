@@ -9,6 +9,7 @@
 
 #define SBASE_LOG       "/tmp/sbase_access_log"
 #define LECHOD_LOG      "/tmp/lechod_access_log"
+#define LECHOD_EVLOG      "/tmp/lechod_evbase_log"
 SBASE *sbase = NULL;
 dictionary *dict = NULL;
 
@@ -53,6 +54,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	fprintf(stdout, "Parsing LOG[%s]...\n", logfile);
 	fprintf(stdout, "SBASE[%08x] sbase->evbase:%08x ...\n", sbase, sbase->evbase);
 	sbase->set_log(sbase, logfile);
+	if((logfile = iniparser_getstr(dict, "SBASE:evlogfile")) == NULL)
+	    sbase->set_evlog(sbase, logfile);
 	/* LECHOD */
 	fprintf(stdout, "Parsing LECHOD...\n");
 	if((service = service_init()) == NULL)
@@ -103,6 +106,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	if(logfile == NULL)
 		logfile = LECHOD_LOG;
 	service->logfile = logfile;
+	logfile = iniparser_getstr(dict, "LECHOD:evlogfile");
+	service->evlogfile = logfile;
 	service->max_connections = iniparser_getint(dict, "LECHOD:max_connections", MAX_CONNECTIONS);
 	service->packet_type = PACKET_DELIMITER;
 	service->packet_delimiter = iniparser_getstr(dict, "LECHOD:packet_delimiter");

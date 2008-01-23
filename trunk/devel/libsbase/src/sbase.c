@@ -11,6 +11,8 @@
 int sbase_add_service(struct _SBASE *, struct _SERVICE *);
 /* SBASE Initialize setting logger  */
 int sbase_set_log(struct _SBASE *sb, char *logfile);
+/* SBASE Initialize setting evbase logger  */
+int sbase_set_evlog(struct _SBASE *sb, char *evlogfile);
 /* Running as timer limit */
 int sbase_running(SBASE *sb, uint32_t seconds);
 /* Running once */
@@ -29,6 +31,7 @@ SBASE *sbase_init(int max_connections)
 		SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, n);
 		//sb->init        	= sbase_init;
 		sb->set_log		= sbase_set_log;
+		sb->set_evlog		= sbase_set_evlog;
 		sb->add_service        	= sbase_add_service;
 		sb->running       	= sbase_running;
 		sb->running_once	= sbase_running_once;
@@ -49,6 +52,18 @@ int sbase_set_log(struct _SBASE *sb, char *logfile)
 		if(sb->logger == NULL)
 			sb->logger = logger_init((char *)logfile);		
 	}		
+}
+
+/* SBASE Initialize setting evlogger  */
+int sbase_set_evlog(struct _SBASE *sb, char *evlogfile)
+{
+    if(sb)
+    {
+        if(sb->evlogger == NULL)
+            sb->evlogger = logger_init((char *)evlogfile);
+        if(sb->evbase)
+            sb->evbase->logger = sb->evlogger;
+    }
 }
 
 /* Add service */

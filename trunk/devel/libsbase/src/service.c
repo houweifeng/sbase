@@ -33,9 +33,14 @@ int service_set(SERVICE *service)
 		/* Setting logger */
 		if(service->logfile)
 		{
-			DEBUG_LOGGER(service->logger, "Setting service[%d] log to %s", service->name, service->logfile);
 			service->logger = logger_init(service->logfile);
+			DEBUG_LOGGER(service->logger, "Setting service[%d] log to %s", service->name, service->logfile);
 		}
+        if(service->evlogfile)
+        {
+			service->evlogger = logger_init(service->evlogfile);
+			DEBUG_LOGGER(service->logger, "Setting service[%d] evlog to %s", service->name, service->evlogfile);
+        }
 		/* INET setting  */
 		if((service->fd = socket(service->family, service->socket_type, 0)) <= 0 )
 		{
@@ -141,6 +146,7 @@ work_thread_init:
 			{
 				service->procthreads[i]->service = service;
 				service->procthreads[i]->logger = service->logger;
+				service->procthreads[i]->evbase->logger = service->evlogger;
 			}
 			else
 			{
@@ -259,31 +265,58 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 /* Terminate service */
 void service_terminate(SERVICE *service)
 {
-	if(service)
-	{
-		service->running_status = 0;	
-		if(service->working_mode == WORKING_PROC)
-		{
-			service->procthread->terminate(service->procthread);
-			shutdown(service->fd, SHUT_RDWR);
-			close(service->fd);
-			service->fd = -1;
-			return ;
-		}	
-	}	
+    int i = 0;
+    PROCTHREAD *pth = NULL;
+    if(service)
+    {
+        service->running_status = 0;	
+        if(service->working_mode == WORKING_PROC)
+        {
+            service->procthread->terminate(service->procthread);
+        }
+        else
+        {
+            for(i = 0; i < service->max_procthreads; i++)
+            {
+                pth = service->procthreads[i];
+                pth->terminate(pth);
+            }
+        }
+        shutdown(service->fd, SHUT_RDWR);
+        close(service->fd);
+        service->fd = -1;
+        return;
+    }
 }
 
 /* Clean service */
 void service_clean(SERVICE **service)
 {
-	if((*service))
-	{
-		if((*service)->working_mode == WORKING_PROC)
-                {
-                        (*service)->procthread->clean(&(*service)->procthread);
-			free((*service));
-			(*service) = NULL;
-			return ;
-                }	
-	}		
+    int i = 0;
+    if((*service))
+    {
+        if((*service)->working_mode == WORKING_PROC)
+        {
+            (*service)->procthread->clean(&(*service)->procthread);
+        }	
+        else
+        {
+             for(i = 0; i < (*service)->max_procthreads; i++)
+             {
+                 (*service)->procthreads[i]->clean(
+                         &((*service)->procthreads[i]));
+             }
+        }
+        if((*service)->logger) 
+            (*service)->logger->close(&(*service)->logger);
+        if((*service)->evlogger) 
+            (*service)->evlogger->close(&(*service)->evlogger);
+        if((*service)->event) 
+            (*service)->event->clean(&(*service)->event);
+        if((*service)->timer) 
+            (*service)->timer->clean(&((*service)->timer));
+        free((*service));
+        (*service) = NULL;
+
+    }		
 }
