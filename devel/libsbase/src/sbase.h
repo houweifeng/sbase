@@ -241,10 +241,12 @@ typedef struct _SBASE{
 	/* Global options */
 	struct _TIMER *timer;
 	struct _LOGGER *logger;
+	struct _LOGGER *evlogger;
 
         /* APIS */
         int  (*add_service)(struct _SBASE * , struct _SERVICE *);
 	int  (*set_log)(struct _SBASE * , char *);
+	int  (*set_evlog)(struct _SBASE * , char *);
 	int  (*running)(struct _SBASE *, uint32_t seconds);
 	void (*running_once)(struct _SBASE *);
         int  (*stop)(struct _SBASE * );
@@ -297,7 +299,9 @@ typedef struct _SERVICE
         /* Global options */
         struct _TIMER *timer;
         struct _LOGGER *logger;
-	char *logfile;
+	    char *logfile;
+        struct _LOGGER *evlogger;
+	    char *evlogfile;
 
         /* Running options */
         int      running_status;
