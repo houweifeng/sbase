@@ -54,7 +54,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	fprintf(stdout, "Parsing LOG[%s]...\n", logfile);
 	fprintf(stdout, "SBASE[%08x] sbase->evbase:%08x ...\n", sbase, sbase->evbase);
 	sbase->set_log(sbase, logfile);
-	if((logfile = iniparser_getstr(dict, "SBASE:evlogfile")) == NULL)
+	if((logfile = iniparser_getstr(dict, "SBASE:evlogfile")))
 	    sbase->set_evlog(sbase, logfile);
 	/* LECHOD */
 	fprintf(stdout, "Parsing LECHOD...\n");
