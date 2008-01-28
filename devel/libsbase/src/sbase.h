@@ -66,34 +66,6 @@ extern "C" {
 #define PACKET_ALL        (PACKET_CUSTOMIZED | PACKET_CERTAIN_LENGTH | PACKET_DELIMITER)
 #endif
 
-#ifndef SETRLIMIT
-#define SETRLIMIT(NAME, RLIM, rlim_set)\
-{\
-	struct rlimit rlim;\
-	rlim.rlim_cur = rlim_set;\
-	rlim.rlim_max = rlim_set;\
-	if(setrlimit(RLIM, (&rlim)) != 0) {\
-		fprintf(stderr, "setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s\n",\
-				NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
-		 _exit(-1);\
-	} else {\
-		fprintf(stdout, "setrlimit RLIM[%s] cur[%ld] max[%ld]\n",\
-				NAME, rlim.rlim_cur, rlim.rlim_max);\
-	}\
-}
-#define GETRLIMIT(NAME, RLIM)\
-{\
-	struct rlimit rlim;\
-	if(getrlimit(RLIM, &rlim) != 0 ) {\
-		fprintf(stderr, "getrlimit RLIM[%s] failed, %s\n",\
-				NAME, strerror(errno));\
-	} else {\
-		fprintf(stdout, "getrlimit RLIM[%s] cur[%ld] max[%ld]\n", \
-				NAME, rlim.rlim_cur, rlim.rlim_max);\
-	}\
-}
-#endif
-
 /* TYPES PREDEFINE */
 struct _SERVICE;
 struct _PROCTHREAD;
@@ -247,6 +219,7 @@ typedef struct _SBASE{
         int  (*add_service)(struct _SBASE * , struct _SERVICE *);
 	int  (*set_log)(struct _SBASE * , char *);
 	int  (*set_evlog)(struct _SBASE * , char *);
+    int  (*setrlimit)(struct _SBASE * , char *, int, int);
 	int  (*running)(struct _SBASE *, uint32_t seconds);
 	void (*running_once)(struct _SBASE *);
         int  (*stop)(struct _SBASE * );
@@ -390,7 +363,7 @@ PROCTHREAD *procthread_init();
 #define CONN_IO_TIMEOUT   100000u
 #define RECONNECT_MAX     10000
 #ifndef CONN_MAX
-#define CONN_MAX          131070
+#define CONN_MAX          65535
 #endif
 /* struct CONN */
 typedef struct _CONN

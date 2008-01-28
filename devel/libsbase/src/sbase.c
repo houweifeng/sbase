@@ -1,4 +1,5 @@
 #include <evbase.h>
+#include <sys/resource.h>
 #include "sbase.h"
 #include "timer.h"
 #include "logger.h"
@@ -13,6 +14,8 @@ int sbase_add_service(struct _SBASE *, struct _SERVICE *);
 int sbase_set_log(struct _SBASE *sb, char *logfile);
 /* SBASE Initialize setting evbase logger  */
 int sbase_set_evlog(struct _SBASE *sb, char *evlogfile);
+/* SBASE set max_connection */
+int sbase_setrlimit(struct _SBASE *sb, char *name, int rlimit, int nset);
 /* Running as timer limit */
 int sbase_running(SBASE *sb, uint32_t seconds);
 /* Running once */
@@ -21,17 +24,15 @@ int sbase_stop(struct _SBASE *);
 void sbase_clean(struct _SBASE **);
 
 /* Initialize struct sbase */
-SBASE *sbase_init(int max_connections)
+SBASE *sbase_init()
 {
 	int n = 0;
 	SBASE *sb = (SBASE *)calloc(1, sizeof(SBASE));	
 	if(sb)
 	{
-		n = (max_connections > CONN_MAX)? max_connections : CONN_MAX;
-		SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, n);
-		//sb->init        	= sbase_init;
 		sb->set_log		= sbase_set_log;
 		sb->set_evlog		= sbase_set_evlog;
+        sb->setrlimit  = sbase_setrlimit;
 		sb->add_service        	= sbase_add_service;
 		sb->running       	= sbase_running;
 		sb->running_once	= sbase_running_once;
@@ -64,6 +65,33 @@ int sbase_set_evlog(struct _SBASE *sb, char *evlogfile)
         if(sb->evbase)
             sb->evbase->logger = sb->evlogger;
     }
+}
+
+/* SBASE set max_connection */
+int sbase_setrlimit(struct _SBASE *sb, char *name, int rlimit, int nset)
+{
+    int ret = -1;
+    struct rlimit rlim;
+    if(sb)
+    {
+        if(getrlimit(rlimit, &rlim) == -1)
+            return -1;
+        if(rlim.rlim_cur > nset && rlim.rlim_max > nset)
+            return 0;
+        rlim.rlim_cur = nset;
+        rlim.rlim_max = nset;
+        if((ret = setrlimit(rlimit, &rlim)) == 0)
+        {
+            DEBUG_LOGGER(sb->logger, "setrlimit %s cur[%ld] max[%ld]", 
+                    name, rlim.rlim_cur, rlim.rlim_max);
+        }
+        else
+        {
+            FATAL_LOGGER(sb->logger, "setrlimit %s cur[%ld] max[%ld] failed, %s",
+                    name, rlim.rlim_cur, rlim.rlim_max, strerror(errno));
+        }
+    }
+    return ret;
 }
 
 /* Add service */
