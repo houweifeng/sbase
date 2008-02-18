@@ -199,5 +199,6 @@ int main(int argc, char **argv)
                 return -1;
         }
         fprintf(stdout, "Initialized successed\n");
-        sbase->running(sbase, 3600);
+        //sbase->running(sbase, 3600);
+        sbase->running(sbase, 0);
 }
