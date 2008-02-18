@@ -215,50 +215,50 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 	int port = 0;
 	int index = 0;
 	if(service)
-	{
-		/*Check Connections Count */
-		if(service->running_connections >= service->max_connections)
-		{
-			ERROR_LOGGER(service->logger, "Connections count[%d] reach max[%d]",
-				service->running_connections, service->max_connections);
-			shutdown(fd, SHUT_RDWR);
-			close(fd);
-			return ;
-		}
-		/* Initialize connection */
-		ip   = inet_ntoa(sa->sin_addr);
-		port = ntohs(sa->sin_port);
-		if((conn = conn_init(ip, port)))
-		{        
-			conn->fd = fd;
-			conn->logger = service->logger;
-			conn->packet_type = service->packet_type;
-			conn->packet_length = service->packet_length;
-			conn->packet_delimiter = service->packet_delimiter;
-			conn->packet_delimiter_length = service->packet_delimiter_length;
-			conn->buffer_size = service->buffer_size;
-			conn->cb_packet_reader = service->cb_packet_reader;
-			conn->cb_packet_handler = service->cb_packet_handler;
-			conn->cb_data_handler = service->cb_data_handler;
-			conn->cb_oob_handler = service->cb_oob_handler;
-		}
-		else return ;
-		/* Add connection for procthread */
-		if(service->working_mode == WORKING_PROC && service->procthread)
-		{
-			DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthread[%d]",
-                                conn->fd, conn->ip, conn->port, getpid());
-			return service->procthread->addconn(service->procthread, conn);
-		}
-		/* Add connection to procthread pool */
-		if(service->working_mode == WORKING_THREAD && service->procthreads)
-		{
-			index = fd % service->max_procthreads;
-			DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthreads[%d]",
-				conn->fd, conn->ip, conn->port, index);
-			return service->procthreads[index]->addconn(service->procthreads[index], conn);
-                }
-	}
+    {
+        /*Check Connections Count */
+        if(service->running_connections >= service->max_connections)
+        {
+            ERROR_LOGGER(service->logger, "Connections count[%d] reach max[%d]",
+                    service->running_connections, service->max_connections);
+            shutdown(fd, SHUT_RDWR);
+            close(fd);
+            return ;
+        }
+        /* Initialize connection */
+        ip   = inet_ntoa(sa->sin_addr);
+        port = ntohs(sa->sin_port);
+        if((conn = conn_init(ip, port)))
+        {        
+            conn->fd = fd;
+            conn->logger = service->logger;
+            conn->packet_type = service->packet_type;
+            conn->packet_length = service->packet_length;
+            conn->packet_delimiter = service->packet_delimiter;
+            conn->packet_delimiter_length = service->packet_delimiter_length;
+            conn->buffer_size = service->buffer_size;
+            conn->cb_packet_reader = service->cb_packet_reader;
+            conn->cb_packet_handler = service->cb_packet_handler;
+            conn->cb_data_handler = service->cb_data_handler;
+            conn->cb_oob_handler = service->cb_oob_handler;
+        }
+        else return ;
+        /* Add connection for procthread */
+        if(service->working_mode == WORKING_PROC && service->procthread)
+        {
+            DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthread[%d]",
+                    conn->fd, conn->ip, conn->port, getpid());
+            return service->procthread->addconn(service->procthread, conn);
+        }
+        /* Add connection to procthread pool */
+        if(service->working_mode == WORKING_THREAD && service->procthreads)
+        {
+            index = fd % service->max_procthreads;
+            DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthreads[%d]",
+                    conn->fd, conn->ip, conn->port, index);
+            return service->procthreads[index]->addconn(service->procthreads[index], conn);
+        }
+    }
 	return ;
 }
 

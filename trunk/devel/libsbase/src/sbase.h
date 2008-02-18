@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-    /* INET */
+/* INET */
 #ifndef TCP_T
 #define TCP_T SOCK_STREAM
 #endif
@@ -64,6 +64,10 @@ extern "C" {
 #define PACKET_CERTAIN_LENGTH	0x02 /* packet with certain length */
 #define PACKET_DELIMITER	0x04 /* packet spliting with delimiter */
 #define PACKET_ALL        (PACKET_CUSTOMIZED | PACKET_CERTAIN_LENGTH | PACKET_DELIMITER)
+#endif
+#ifndef S_SERVICE
+#define S_SERVICE 0
+#define C_SERVICE 1
 #endif
 
     /* TYPES PREDEFINE */
@@ -173,19 +177,20 @@ extern "C" {
     }
 #endif
 
-    /* Transaction state */
+/* Transaction state */
 #ifndef S_STATES
-#define S_STATE_READY		0x00
-#define S_STATE_READ_CHUNK	0x02
+#define S_STATE_READY		    0x00
+#define S_STATE_READ_CHUNK	    0x02
 #define S_STATE_WRITE_STATE     0x04
 #define S_STATE_PACKET_HANDLING	0x08
 #define S_STATE_DATA_HANDLING	0x10
-#define S_STATE_CLOSE		0x12
+#define S_STATE_REQ             0x12
+#define S_STATE_CLOSE		    0x64
 #define S_STATES	(S_STATE_READY & S_STATE_READ_CHUNK & S_STATE_WRITE_STATE \
-        S_STATE_PACKET_HANDLING & S_STATE_DATA_HANDLING & S_STATE_CLOSE )
+        S_STATE_PACKET_HANDLING & S_STATE_DATA_HANDLING & S_STATE_REQ & S_STATE_CLOSE )
 #endif
 
-    /* WORK TYPE */
+/* WORK TYPE */
 #define WORKING_PROC	0x00
 #define WORKING_THREAD	0x01
 
@@ -244,6 +249,9 @@ extern "C" {
         struct sockaddr_in sa;
         int backlog ;
 
+        /* Service option */
+        int service_type;
+
         /* Event options */
         EVBASE *evbase;
         EVENT  *event;
@@ -282,7 +290,7 @@ extern "C" {
         uint32_t sleep_usec;
         uint32_t conn_timeout;
 
-        /* Callback options */
+        /**************** Callback options for service *****************/
         /* Heartbeat Handler */
         void (*cb_heartbeat_handler)(void *arg);
         /* Read From Buffer and return packet length to get */
@@ -295,11 +303,18 @@ extern "C" {
         /* OOB Data Handler */
         void (*cb_oob_handler)(const struct _CONN *, const struct _BUFFER *oob);
 
+        /******************** Callback options for client *************/
+        void (*cb_job_complete)(void *arg, const struct _BUFFER *);
+
         /* Methods */
         void (*event_handler)(int, short, void*);
         int  (*set)(struct _SERVICE * );
         void (*run)(struct _SERVICE * );
         void (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
+        /******** Client methods *************/
+        void (*sendmessage)(struct _SERVICE *, char *message, int nmessage, void *handler);
+        void (*sendfile)(struct _SERVICE *, char *file, void *callback, void *handler);
+        /** terminate methods **/
         void (*terminate)(struct _SERVICE * );
         void (*clean)(struct _SERVICE ** );
     }SERVICE;
@@ -369,9 +384,9 @@ extern "C" {
     typedef struct _CONN
     {
         /* INET options */
-        char			ip[IP_MAX];
+        char		ip[IP_MAX];
         int			port;
-        struct			sockaddr_in sa;
+        struct		sockaddr_in sa;
         int			fd;
         /* Transaction option */
         int			s_id;
@@ -380,15 +395,15 @@ extern "C" {
 
         /* Packet options */
         int			packet_type;
-        int 			packet_length;
-        char 			*packet_delimiter;
-        int  			packet_delimiter_length;
-        uint32_t 		buffer_size;
+        int 		packet_length;
+        char 		*packet_delimiter;
+        int  		packet_delimiter_length;
+        uint32_t 	buffer_size;
         /* connection bytes stats */
-        uint64_t		recv_oob_total;
-        uint64_t		sent_oob_total;
-        uint64_t		recv_data_total;
-        uint64_t		sent_data_total;
+        uint64_t	recv_oob_total;
+        uint64_t	sent_oob_total;
+        uint64_t	recv_data_total;
+        uint64_t	sent_data_total;
 
         /* Global  options */
         //parent pointer 
@@ -428,7 +443,7 @@ extern "C" {
         void (*cb_oob_handler)(const struct _CONN *, const struct _BUFFER *oob);
 
         /* Methods */
-        int	  (*set)(struct _CONN *);
+        int	      (*set)(struct _CONN *);
         void	  (*event_handler)(int, short, void *);
         void      (*state_handler)(struct _CONN *);
         void      (*read_handler)(struct _CONN *);

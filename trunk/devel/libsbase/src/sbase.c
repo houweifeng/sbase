@@ -100,7 +100,8 @@ int sbase_add_service(struct _SBASE *sb, struct _SERVICE *service)
 	if(sb && service)
 	{
 		if(sb->services)
-			sb->services = (SERVICE **)realloc(sb->services, sizeof(SERVICE *) * (sb->running_services + 1));
+			sb->services = (SERVICE **)realloc(sb->services, 
+                    sizeof(SERVICE *) * (sb->running_services + 1));
 		else
 			sb->services = (SERVICE **)calloc(1, sizeof(SERVICE *));
 		if(sb->services)
