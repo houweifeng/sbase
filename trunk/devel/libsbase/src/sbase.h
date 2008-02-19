@@ -270,9 +270,8 @@ typedef struct _SERVICE
         int running_connections;
         int running_max_fd;
         struct _CONN **connections;
-
-        /* Client options */
-        int nconnections;
+        /* Client options ONLY */
+        int connections_limit;
 
         /* Packet options */
         int packet_type;
