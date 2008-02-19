@@ -370,11 +370,9 @@ PROCTHREAD *procthread_init();
 /* CONNECTION */
 #ifndef _TYPEDEF_CONN
 #define _TYPEDEF_CONN
-#define C_STATE_UNCONNECT 0x00
-#define C_STATE_CONNECTED 0x01
-#define C_STATE_FREE      0x02
-#define C_STATE_USING     0x04
-#define C_STATE_CLOSE     0x08
+#define C_STATE_FREE      0x00
+#define C_STATE_USING     0x02
+#define C_STATE_CLOSE     0x04
 #define IP_MAX            16
 #define CONN_NONBLOCK     1
 #define CONN_SLEEP_USEC	  100u
