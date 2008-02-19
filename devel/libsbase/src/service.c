@@ -191,7 +191,7 @@ work_thread_init:
 end:
         if(service->service_type == C_SERVICE)
         {
-            for(i = 0; i < service->nconnections; i++)
+            for(i = 0; i < service->connections_limit; i++)
             {
                 fd = socket(service->family, service->socket_type, 0);
                 if(fd <= 0 || connect(fd, (struct sockaddr *)&(service->sa), 
