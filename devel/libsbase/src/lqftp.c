@@ -96,6 +96,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		fprintf(stderr, "Initialize transport failed, %s", strerror(errno));
 		_exit(-1);
 	}
+    /* service type */
+    transport->service_type = iniparser_getint(dict, "TRANSPORT:service_type", 1);
 	/* INET protocol family */
 	n = iniparser_getint(dict, "TRANSPORT:inet_family", 0);
 	/* INET protocol family */
@@ -179,6 +181,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		fprintf(stderr, "Initialize serv failed, %s", strerror(errno));
 		_exit(-1);
 	}
+    /* service type */
+	serv->service_type = iniparser_getint(dict, "DAEMON:service_type", 0);
 	/* INET protocol family */
 	n = iniparser_getint(dict, "DAEMON:inet_family", 0);
 	/* INET protocol family */
