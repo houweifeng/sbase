@@ -52,7 +52,6 @@ int service_set(SERVICE *service)
         else
             goto client_setting;
 server_setting:
-        DEBUG_LOGGER(service->logger, "Setting server[%s]\n", service->name);
 		/* INET setting  */
 		if((service->fd = socket(service->family, service->socket_type, 0)) <= 0 )
 		{
@@ -96,8 +95,14 @@ server_setting:
 		return 0;
 client_setting:
         DEBUG_LOGGER(service->logger, "Setting client[%s]\n", service->name);
-        service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
-        service->sa.sin_port = htons(service->port);
+        /* INET setting  */
+		if((service->fd = socket(service->family, service->socket_type, 0)) <= 0 )
+		{
+			FATAL_LOGGER(service->logger, "Initialize socket failed, %s", strerror(errno));
+			return -1;
+		}
+		service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
+		service->sa.sin_port = htons(service->port); 
         return 0;
 	}
 	return -1;
@@ -342,7 +347,7 @@ CONN *service_getconn(SERVICE *service)
         {
             fd = socket(service->family, service->socket_type, 0);
             if(fd > 0 && connect(fd, (struct sockaddr *)&(service->sa),
-                        sizeof(struct sockaddr )))
+                        sizeof(struct sockaddr ) == 0))
                 service->addconn(service, fd, &(service->sa));
             if(fd < service->running_max_fd)
             {
