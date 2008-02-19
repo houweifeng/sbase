@@ -70,20 +70,20 @@ extern "C" {
 #define C_SERVICE 1
 #endif
 
-    /* TYPES PREDEFINE */
-    struct _SERVICE;
-    struct _PROCTHREAD;
-    struct _CONN;
-    struct _LOGGER;
-    struct _TIMER;
-    struct _BUFFER;
-    struct _QUEUE;
-    struct _CHUNK;
+/* TYPES PREDEFINE */
+struct _SERVICE;
+struct _PROCTHREAD;
+struct _CONN;
+struct _LOGGER;
+struct _TIMER;
+struct _BUFFER;
+struct _QUEUE;
+struct _CHUNK;
 
 #ifndef _TYPEDEF_BUFFER
 #define _TYPEDEF_BUFFER
-    typedef struct _BUFFER
-    {
+typedef struct _BUFFER
+{
         void *data;
         void *end;
         size_t size;
@@ -97,8 +97,7 @@ extern "C" {
         int 	(*del)(struct _BUFFER *, size_t);
         void 	(*reset)(struct _BUFFER *);
         void 	(*clean)(struct _BUFFER **);
-
-    }BUFFER;
+}BUFFER;
 
 #define BUFFER_VIEW(buf) \
     { \
@@ -120,7 +119,7 @@ extern "C" {
                     buf->reset, buf->clean); \
         } \
     }
-    struct _BUFFER *buffer_init();
+struct _BUFFER *buffer_init();
 #endif
 
     /* CHUNK */
@@ -129,8 +128,8 @@ extern "C" {
 #define MEM_CHUNK   0x02
 #define FILE_CHUNK  0x04
 #define ALL_CHUNK  (MEM_CHUNK | FILE_CHUNK)
-#define FILE_NAME_LIMIT 255 
-    typedef struct _CHUNK{
+#define FILE_NAME_LIMIT 255
+typedef struct _CHUNK{
         /* property */
         int id;
         int type;
@@ -150,10 +149,10 @@ extern "C" {
         int (*send)(struct _CHUNK *, int , size_t );
         void (*reset)(struct _CHUNK *); 
         void (*clean)(struct _CHUNK **); 
-    }CHUNK;
+}CHUNK;
 #define CHUNK_SIZE sizeof(CHUNK)
-    /* Initialize struct CHUNK */
-    struct _CHUNK *chunk_init();
+/* Initialize struct CHUNK */
+struct _CHUNK *chunk_init();
 #define CHUNK_VIEW(chunk) \
     { \
         if(chunk) \
@@ -196,7 +195,7 @@ extern "C" {
 
 #ifndef _TYPEDEF_SBASE
 #define _TYPEDEF_SBASE
-    typedef struct _SBASE{
+typedef struct _SBASE{
         /* PROCTHREAD */
         int 	working_mode ;
         int	max_procthreads;
@@ -237,8 +236,8 @@ extern "C" {
     /* SERVICE */
 #ifndef _TYPEDEF_SERVICE
 #define _TYPEDEF_SERVICE
-    typedef struct _SERVICE
-    {
+typedef struct _SERVICE
+{
         /* INET options */
         int socket_type;
         int family;
@@ -269,6 +268,11 @@ extern "C" {
         /* Connection options */
         int max_connections;
         int running_connections;
+        int running_max_fd;
+        struct _CONN **connections;
+
+        /* Client options */
+        int nconnections;
 
         /* Packet options */
         int packet_type;
@@ -312,21 +316,21 @@ extern "C" {
         void (*run)(struct _SERVICE * );
         void (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
         /******** Client methods *************/
-        void (*sendmessage)(struct _SERVICE *, char *message, int nmessage, void *handler);
-        void (*sendfile)(struct _SERVICE *, char *file, void *callback, void *handler);
+        void (*state_conns)(struct _SERVICE *);
+        struct _CONN *(*getconn)(struct _SERVICE *);
         /** terminate methods **/
         void (*terminate)(struct _SERVICE * );
         void (*clean)(struct _SERVICE ** );
-    }SERVICE;
-    /* Initialize service */
-    SERVICE *service_init();
+}SERVICE;
+/* Initialize service */
+SERVICE *service_init();
 #endif
 
     /* PROCTHREAD */
 #ifndef _TYPEDEF_PROCTHREAD
 #define _TYPEDEF_PROCTHREAD
-    typedef struct _PROCTHREAD
-    {
+typedef struct _PROCTHREAD
+{
         /* PROCTHREAD ID INDEX */
         int id;
         int index;
@@ -358,13 +362,13 @@ extern "C" {
         void (*terminate)(struct _PROCTHREAD*);
         void (*clean)(struct _PROCTHREAD**);
 
-    }PROCTHREAD;
-    /* Initialize procthread */
-    PROCTHREAD *procthread_init();
+}PROCTHREAD;
+/* Initialize procthread */
+PROCTHREAD *procthread_init();
 #endif
 
 
-    /* CONNECTION */
+/* CONNECTION */
 #ifndef _TYPEDEF_CONN
 #define _TYPEDEF_CONN
 #define C_STATE_UNCONNECT 0x00
@@ -380,9 +384,9 @@ extern "C" {
 #ifndef CONN_MAX
 #define CONN_MAX          65535
 #endif
-    /* struct CONN */
-    typedef struct _CONN
-    {
+/* struct CONN */
+typedef struct _CONN
+{
         /* INET options */
         char		ip[IP_MAX];
         int			port;
@@ -392,6 +396,9 @@ extern "C" {
         int			s_id;
         int			s_state;
         int			timeout;
+        /* Client options */
+        int         c_id;
+        int         c_state;
 
         /* Packet options */
         int			packet_type;
@@ -458,6 +465,7 @@ extern "C" {
         void      (*data_handler)(struct _CONN *);
         void      (*oob_handler)(struct _CONN *);
         void	  (*push_message)(struct _CONN *, int);
+        int       (*ready_request)(struct _CONN *);
         void      (*terminate)(struct _CONN *); 
         void      (*clean)(struct _CONN **);
     } CONN;

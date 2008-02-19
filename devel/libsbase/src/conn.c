@@ -8,23 +8,23 @@
 #include "conn.h"
 #include "chunk.h"
 #include "logger.h"
-#define CONN_CHECK_RET(conn, ret) \
-{ \
-        if(conn == NULL ) return ret; \
-        if(conn->s_state == S_STATE_CLOSE) return ret; \
+#define CONN_CHECK_RET(conn, ret)                                                       \
+{                                                                                       \
+        if(conn == NULL ) return ret;                                                   \
+        if(conn->s_state == S_STATE_CLOSE) return ret;                                  \
 }
-#define CONN_CHECK(conn) \
-{ \
-        if(conn == NULL) return ;\
-        if(conn->s_state == S_STATE_CLOSE) return ;\
+#define CONN_CHECK(conn)                                                                \
+{                                                                                       \
+        if(conn == NULL) return ;                                                       \
+        if(conn->s_state == S_STATE_CLOSE) return ;                                     \
 }
-#define CONN_TERMINATE(conn) \
-{ \
-	if(conn) \
-	{ \
-		conn->s_state = S_STATE_CLOSE; \
-		conn->push_message(conn, MESSAGE_QUIT); \
-	} \
+#define CONN_TERMINATE(conn)                                                            \
+{                                                                                       \
+	if(conn)                                                                            \
+	{                                                                                   \
+		conn->s_state = S_STATE_CLOSE;                                                  \
+		conn->push_message(conn, MESSAGE_QUIT);                                         \
+	}                                                                                   \
 }
 /* Initialize CONN */
 CONN *conn_init(char *ip, int port)
@@ -54,6 +54,7 @@ CONN *conn_init(char *ip, int port)
 		conn->push_file	= conn_push_file;
 		conn->data_handler	= conn_data_handler;
 		conn->push_message	= conn_push_message;
+        conn->ready_request = conn_ready_request;
 		conn->terminate 	= conn_terminate;
 		conn->clean 		= conn_clean;
 		strcpy(conn->ip, ip);
@@ -447,8 +448,8 @@ int conn_push_file(CONN *conn, char *filename,
 /* Data handler */
 void conn_data_handler(CONN *conn)
 {
-        /* Check connection and transaction state */
-        CONN_CHECK(conn);
+    /* Check connection and transaction state */
+    CONN_CHECK(conn);
 
 	if(conn && conn->cb_data_handler )
 	{
@@ -465,7 +466,7 @@ void conn_push_message(CONN *conn, int message_id)
 	if(conn)
 	{
 		//DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] on %s:%d via %d",
-				//messagelist[message_id], conn->message_queue, conn->ip, conn->port, conn->fd);
+		//messagelist[message_id], conn->message_queue, conn->ip, conn->port, conn->fd);
 
 		if((message_id & MESSAGE_ALL) && conn->message_queue && (msg = message_init()))
 		{
@@ -484,17 +485,33 @@ void conn_push_message(CONN *conn, int message_id)
 	}
 }
 
+/* Ready for request */
+int conn_ready_request(CONN *conn)
+{
+    /* Check connection and transaction state */
+    CONN_CHECK(conn);
+    if(conn)
+    {
+        if(conn->c_state == C_STATE_FREE) 
+        {
+            conn->c_state = C_STATE_USING;
+            return 0;
+        }
+    }
+    return -1;
+}
+
 /* Terminate connection  */
 void conn_terminate(CONN *conn)
 {
-        if(conn)
-        {
-		conn->event->destroy(conn->event);
-                shutdown(conn->fd, SHUT_RDWR);
-                close(conn->fd);
-                conn->fd = -1;
-        }
-	return ;
+    if(conn)
+    {
+        conn->event->destroy(conn->event);
+        shutdown(conn->fd, SHUT_RDWR);
+        close(conn->fd);
+        conn->fd = -1;
+    }
+    return ;
 }
 
 /* Clean Connection */

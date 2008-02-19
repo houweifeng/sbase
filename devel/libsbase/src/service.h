@@ -28,6 +28,10 @@ int service_set(SERVICE *);
 void service_run(SERVICE *);
 /* Add new conn */
 void service_addconn(SERVICE *, int , struct sockaddr_in *);
+/* check conns status */
+void service_state_conns(SERVICE *);
+/* get free connection */
+CONN *service_getconn(SERVICE *);
 /* Add connection */
 void service_addconnection(SERVICE *, CONN *);
 /* Terminate service */
