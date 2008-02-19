@@ -343,9 +343,9 @@ CONN *service_getconn(SERVICE *service)
         {
             fd = socket(service->family, service->socket_type, 0);
             if(fd > 0 && connect(fd, (struct sockaddr *)&(service->sa),
-                        sizeof(struct sockaddr ) == 0))
+                        sizeof(struct sockaddr )) == 0)
                 service->addconn(service, fd, &(service->sa));
-            if(fd < service->running_max_fd)
+            if(fd <= service->running_max_fd)
             {
                 conn = service->connections[fd];
                 conn->c_state = C_STATE_USING;
