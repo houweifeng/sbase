@@ -12,13 +12,15 @@ SERVICE *service_init()
 	if(service)
 	{
 		service->event_handler	= service_event_handler;
-		service->set		= service_set;
-		service->run		= service_run;
-		service->addconn	= service_addconn;
-		service->terminate	= service_terminate;
-		service->clean		= service_clean;
-		service->event 		= ev_init();
-		service->timer		= timer_init();
+		service->set		    = service_set;
+		service->run		    = service_run;
+		service->addconn	    = service_addconn;
+        service->state_conns    = service_state_conns;
+        service->getconn        = service_getconn;
+		service->terminate	    = service_terminate;
+		service->clean		    = service_clean;
+		service->event 		    = ev_init();
+		service->timer		    = timer_init();
 	}
 	return service;
 }
@@ -41,6 +43,15 @@ int service_set(SERVICE *service)
 			service->evlogger = logger_init(service->evlogfile);
 			DEBUG_LOGGER(service->logger, "Setting service[%d] evlog to %s", service->name, service->evlogfile);
         }
+        /* Initialize conns array */
+        if(service->max_connections > 0)
+            service->connections = (CONN **)calloc(service->max_connections, sizeof(CONN *));
+        /* setting as service type */
+        if(service->service_type == S_SERVICE)
+            goto server_setting;
+        else
+            goto client_setting;
+server_setting:
 		/* INET setting  */
 		if((service->fd = socket(service->family, service->socket_type, 0)) <= 0 )
 		{
@@ -53,7 +64,8 @@ int service_set(SERVICE *service)
 		setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR,
 				(char *)&opt, (socklen_t)sizeof(opt) );
 		//Bind 
-		if(bind(service->fd, (struct sockaddr *)&(service->sa), (socklen_t)sizeof(struct sockaddr)) != 0 )
+		if(bind(service->fd, (struct sockaddr *)&(service->sa), 
+                    (socklen_t)sizeof(struct sockaddr)) != 0 )
 		{
 			FATAL_LOGGER(service->logger, "Bind fd[%d] to %s:%d failed, %s",
 					service->fd, service->ip, service->port, strerror(errno));
@@ -81,6 +93,10 @@ int service_set(SERVICE *service)
 			service->evbase->add(service->evbase, service->event);
 		}
 		return 0;
+client_setting:
+        service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
+        service->sa.sin_port = htons(service->port);
+        return 0;
 	}
 	return -1;
 }
@@ -88,7 +104,7 @@ int service_set(SERVICE *service)
 /* Run service */
 void service_run(SERVICE *service)
 {
-	int i = 0;
+	int i = 0, fd = 0;
 #ifdef HAVE_PTHREAD
 	pthread_t procthread_id;
 #endif
@@ -129,7 +145,7 @@ work_proc_init:
 					strerror(errno));
 			exit(EXIT_FAILURE);
 		}	
-return ;
+        goto end;
 work_thread_init:
 		/* Initialize Threads */
 		service->procthreads = (PROCTHREAD **)calloc(service->max_procthreads,
@@ -170,7 +186,21 @@ work_thread_init:
 			}
 #endif
 		}	
-		return ;
+		goto end ;
+    /* client connection initialize */
+end:
+        if(service->service_type == C_SERVICE)
+        {
+            for(i = 0; i < service->nconnections; i++)
+            {
+                fd = socket(service->family, service->socket_type, 0);
+                if(fd <= 0 || connect(fd, (struct sockaddr *)&(service->sa), 
+                            sizeof(struct sockaddr )))
+                    break;
+                service->addconn(service, fd, &(service->sa));
+            }
+        }
+        return ; 
 	}
 }
 
@@ -243,6 +273,13 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             conn->cb_oob_handler = service->cb_oob_handler;
         }
         else return ;
+        /* handling conns and running_max_fd */
+        if(service->connections)
+        {
+            service->connections[fd] = conn;
+            if(fd > service->running_max_fd)
+                service->running_max_fd = fd;
+        }
         /* Add connection for procthread */
         if(service->working_mode == WORKING_PROC && service->procthread)
         {
@@ -260,6 +297,50 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
         }
     }
 	return ;
+}
+
+/* check conns status */
+void service_state_conns(SERVICE *service)
+{
+    if(service)
+    {
+    }
+}
+
+/* get free connection */
+CONN *service_getconn(SERVICE *service)
+{
+    int i = 0;
+    int fd = 0;
+    CONN *conn = NULL;
+    if(service)
+    {
+        //select free connection 
+        for( i = 0; i < service->running_max_fd; i++)
+        {
+            conn = service->connections[i];
+            if(conn && conn->c_state == C_STATE_FREE)
+            {
+                conn->c_state = C_STATE_USING;
+                break;
+            }
+            conn = NULL;
+        }
+        //create new connection 
+        if(conn == NULL)
+        {
+            fd = socket(service->family, service->socket_type, 0);
+            if(fd > 0 && connect(fd, (struct sockaddr *)&(service->sa),
+                        sizeof(struct sockaddr )))
+                service->addconn(service, fd, &(service->sa));
+            if(fd < service->running_max_fd)
+            {
+                conn = service->connections[fd];
+                conn->c_state = C_STATE_USING;
+            }
+        }
+    }
+    return conn;
 }
 
 /* Terminate service */
@@ -307,6 +388,11 @@ void service_clean(SERVICE **service)
                          &((*service)->procthreads[i]));
              }
         }
+        if((*service)->connections)
+        {
+            free((*service)->connections);
+            (*service)->connections = NULL;
+        }
         if((*service)->logger) 
             (*service)->logger->close(&(*service)->logger);
         if((*service)->evlogger) 
@@ -317,6 +403,5 @@ void service_clean(SERVICE **service)
             (*service)->timer->clean(&((*service)->timer));
         free((*service));
         (*service) = NULL;
-
     }		
 }

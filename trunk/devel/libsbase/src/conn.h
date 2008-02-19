@@ -46,6 +46,8 @@ int conn_push_file(struct _CONN *,  char *, uint64_t,  uint64_t);
 void conn_data_handler(struct _CONN *);
 /* Push message */
 void conn_push_message(struct _CONN *, int );
+/* Ready for request */
+int conn_ready_request(struct _CONN *);
 /* Terminate connection  */
 void conn_terminate(CONN *conn);
 /* Clean Connection */
