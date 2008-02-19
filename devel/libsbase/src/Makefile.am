@@ -35,8 +35,8 @@ lechod_SOURCES = lechod.c iniparser.c iniparser.h
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
 
-bin_PROGRAMS = lclient
-lclient_SOURCES = lclient.c iniparser.c iniparser.h
-lclient_LDADD = libsbase.la
-lclient_LDFLAGS = -static
+bin_PROGRAMS = lqftp
+lqftp_SOURCES = lqftp.c iniparser.c iniparser.h
+lqftp_LDADD = libsbase.la
+lqftp_LDFLAGS = -static
 

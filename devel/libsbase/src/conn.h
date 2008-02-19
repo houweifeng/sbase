@@ -48,6 +48,8 @@ void conn_data_handler(struct _CONN *);
 void conn_push_message(struct _CONN *, int );
 /* Ready for request */
 int conn_ready_request(struct _CONN *);
+/* complete job */
+void conn_complete_job(struct _CONN *);
 /* Terminate connection  */
 void conn_terminate(CONN *conn);
 /* Clean Connection */

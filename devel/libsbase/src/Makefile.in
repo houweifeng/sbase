@@ -34,7 +34,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = lclient$(EXEEXT)
+bin_PROGRAMS = lqftp$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -68,11 +68,11 @@ libsbase_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(libsbase_la_LDFLAGS) $(LDFLAGS) -o $@
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_lclient_OBJECTS = lclient.$(OBJEXT) iniparser.$(OBJEXT)
-lclient_OBJECTS = $(am_lclient_OBJECTS)
-lclient_DEPENDENCIES = libsbase.la
-lclient_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lclient_LDFLAGS) \
+am_lqftp_OBJECTS = lqftp.$(OBJEXT) iniparser.$(OBJEXT)
+lqftp_OBJECTS = $(am_lqftp_OBJECTS)
+lqftp_DEPENDENCIES = libsbase.la
+lqftp_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lqftp_LDFLAGS) \
 	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -86,8 +86,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libsbase_la_SOURCES) $(lclient_SOURCES)
-DIST_SOURCES = $(libsbase_la_SOURCES) $(lclient_SOURCES)
+SOURCES = $(libsbase_la_SOURCES) $(lqftp_SOURCES)
+DIST_SOURCES = $(libsbase_la_SOURCES) $(lqftp_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -233,9 +233,9 @@ include_HEADERS = sbase.h
 lechod_SOURCES = lechod.c iniparser.c iniparser.h
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
-lclient_SOURCES = lclient.c iniparser.c iniparser.h
-lclient_LDADD = libsbase.la
-lclient_LDFLAGS = -static
+lqftp_SOURCES = lqftp.c iniparser.c iniparser.h
+lqftp_LDADD = libsbase.la
+lqftp_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -326,9 +326,9 @@ clean-binPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
-lclient$(EXEEXT): $(lclient_OBJECTS) $(lclient_DEPENDENCIES) 
-	@rm -f lclient$(EXEEXT)
-	$(lclient_LINK) $(lclient_OBJECTS) $(lclient_LDADD) $(LIBS)
+lqftp$(EXEEXT): $(lqftp_OBJECTS) $(lqftp_DEPENDENCIES) 
+	@rm -f lqftp$(EXEEXT)
+	$(lqftp_LINK) $(lqftp_OBJECTS) $(lqftp_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -337,7 +337,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iniparser.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lclient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-buffer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-chunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
@@ -348,6 +347,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-sbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-service.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-timer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

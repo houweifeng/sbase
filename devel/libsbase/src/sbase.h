@@ -438,6 +438,8 @@ typedef struct _CONN
         EVENT			*event;
 
         /* Callback */
+        struct _CONN *callback_conn;
+
         /* Read From Buffer and return packet length to get */
         int (*cb_packet_reader)(const struct _CONN*, const struct _BUFFER *);
         /* Packet Handler */
@@ -465,6 +467,7 @@ typedef struct _CONN
         void      (*oob_handler)(struct _CONN *);
         void	  (*push_message)(struct _CONN *, int);
         int       (*ready_request)(struct _CONN *);
+        void      (*complete_job)(struct _CONN *);
         void      (*terminate)(struct _CONN *); 
         void      (*clean)(struct _CONN **);
     } CONN;
