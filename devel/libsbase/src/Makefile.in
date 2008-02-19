@@ -34,7 +34,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = lqftp$(EXEEXT)
+bin_PROGRAMS = lechod$(EXEEXT) lqftp$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -68,6 +68,12 @@ libsbase_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(libsbase_la_LDFLAGS) $(LDFLAGS) -o $@
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
+am_lechod_OBJECTS = lechod.$(OBJEXT) iniparser.$(OBJEXT)
+lechod_OBJECTS = $(am_lechod_OBJECTS)
+lechod_DEPENDENCIES = libsbase.la
+lechod_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lechod_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_lqftp_OBJECTS = lqftp.$(OBJEXT) iniparser.$(OBJEXT)
 lqftp_OBJECTS = $(am_lqftp_OBJECTS)
 lqftp_DEPENDENCIES = libsbase.la
@@ -86,8 +92,9 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libsbase_la_SOURCES) $(lqftp_SOURCES)
-DIST_SOURCES = $(libsbase_la_SOURCES) $(lqftp_SOURCES)
+SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) $(lqftp_SOURCES)
+DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
+	$(lqftp_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -326,6 +333,9 @@ clean-binPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
+lechod$(EXEEXT): $(lechod_OBJECTS) $(lechod_DEPENDENCIES) 
+	@rm -f lechod$(EXEEXT)
+	$(lechod_LINK) $(lechod_OBJECTS) $(lechod_LDADD) $(LIBS)
 lqftp$(EXEEXT): $(lqftp_OBJECTS) $(lqftp_DEPENDENCIES) 
 	@rm -f lqftp$(EXEEXT)
 	$(lqftp_LINK) $(lqftp_OBJECTS) $(lqftp_LDADD) $(LIBS)
@@ -337,6 +347,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iniparser.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-buffer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-chunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
