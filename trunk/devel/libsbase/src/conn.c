@@ -55,6 +55,7 @@ CONN *conn_init(char *ip, int port)
 		conn->data_handler	= conn_data_handler;
 		conn->push_message	= conn_push_message;
         conn->ready_request = conn_ready_request;
+        conn->complete_job  = conn_complete_job;
 		conn->terminate 	= conn_terminate;
 		conn->clean 		= conn_clean;
 		strcpy(conn->ip, ip);
@@ -499,6 +500,16 @@ int conn_ready_request(CONN *conn)
         }
     }
     return -1;
+}
+
+/* complete job */
+void conn_complete_job(CONN *conn)
+{
+    if(conn)
+    {
+        conn->c_state = C_STATE_FREE;
+        conn->callback_conn = NULL;
+    }
 }
 
 /* Terminate connection  */
