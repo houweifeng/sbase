@@ -260,7 +260,7 @@ op_md5sum:
         }
         if(access(fullpath, F_OK) == 0 )
         {
-            if(md5file(fullpath, &md5) == 0)
+            if(md5_file(fullpath, md5) == 0)
             {
                 memset(md5sum, 0, MD5SUM_SIZE);
                 p = md5sum;
