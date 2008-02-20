@@ -92,6 +92,7 @@ int pmkdir(char *path, int mode)
         {
             if(*p == '/')
             {
+                while(*p != '\0' && *p == '/' || *(p+1) == '/')++p;
                 *p = '\0';
                 memset(&st, 0, sizeof(struct stat));
                 ret = stat(fullpath, &st);
@@ -124,12 +125,12 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
         }
         np = NULL;
         //path
-        while(p < end && (*p != '\r' || *p != '\n' || *p != '/')) ++p;
+        while(p < end && *p != '\r' && *p != '\n' && *p != '/') ++p;
         memset(path, '\0', PATH_MAX_SIZE);
         if(*p == '/')
         {
             np = path;
-            while(p < end && *p != ' ' && (*p != '\r' || *p != '\n')) *np++ = *p++;
+            while(p < end && *p != ' ' && *p != '\r' && *p != '\n') *np++ = *p++;
         }
         while(p < end && *p != '\n')++p;
         //plist
