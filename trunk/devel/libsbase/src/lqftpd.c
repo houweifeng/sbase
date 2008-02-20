@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <sbase.h>
 #include "iniparser.h"
+#include "md5.h"
 #ifndef _CMD_DEF
 #define _CMD_DEF
 #define CMD_TRUNCATE    0
@@ -16,6 +17,7 @@
 #ifndef PATH_MAX_SIZE
 #define PATH_MAX_SIZE   1024
 #endif
+#define MD5SUM_SIZE    32
 static char *cmdlist[] = {"TRUNCATE", "PUT", "DEL", "MD5SUM"};
 #define CMD_NUM         4
 #define CMD_MAX_LEN     8
@@ -32,6 +34,7 @@ static char *md5sum_plist[] = {"md5"};
 #define RESP_BAD_REQ            "203 bad requestment\r\n\r\n"
 #define RESP_SERVER_ERROR       "205 service error\r\n\r\n"
 #define RESP_FILE_NOT_EXISTS    "207 file not exists\r\n\r\n"
+#define RESP_INVALID_MD5        "209 invalid md5\r\n\r\n"
 #define RESPONSE(conn, msg) conn->push_chunk((CONN *)conn, (void *)msg, strlen(msg));
 typedef struct _kitem
 {
@@ -120,6 +123,8 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0;
     kitem plist[PNUM_MAX];
     unsigned long long  offset = 0, size = 0;
+    unsigned char md5[_MD5_N];
+    char md5sum[MD5SUM_SIZE + 1], *pmd5sum = NULL;
     int fd = -1;
 
     if(conn)
@@ -234,6 +239,51 @@ op_del:
         return;
 
 op_md5sum:
+        if(nplist == 0)
+        {
+            RESPONSE(conn, RESP_NOT_IMPLEMENT);
+            return ;
+        }
+        pmd5sum = NULL;
+        for(i = 0; i < nplist; i++)
+        {
+            if(strncasecmp(plist[i].key, md5sum_plist[0],
+                        strlen(md5sum_plist[0])) == 0)
+            {
+                pmd5sum = plist[i].data;
+            }
+        }
+        if(pmd5sum == NULL)
+        {
+            RESPONSE(conn, RESP_BAD_REQ);
+            return ;
+        }
+        if(access(fullpath, F_OK) == 0 )
+        {
+            if(md5file(fullpath, &md5) == 0)
+            {
+                memset(md5sum, 0, MD5SUM_SIZE);
+                p = md5sum;
+                for(i = 0; i < _MD5_N; i++)
+                    p += sprintf(p, "%02x", md5[i]);
+                if(strncasecmp(md5sum, pmd5sum, (p - md5sum)) == 0)
+                {
+                    RESPONSE(conn, RESP_OK);
+                }
+                else
+                {
+                    RESPONSE(conn, RESP_INVALID_MD5);
+                }
+            }
+            else
+            {
+                RESPONSE(conn, RESP_SERVER_ERROR);
+            }
+        }
+        else
+        {
+            RESPONSE(conn, RESP_FILE_NOT_EXISTS);
+        }
         return;
     }
 }
