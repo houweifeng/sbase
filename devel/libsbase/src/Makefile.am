@@ -21,9 +21,7 @@ utils/timer.c \
 utils/timer.h 
 EXTRA_DIST = utils/tree.h \
 utils/cache.c \
-utils/cache.h \
-utils/md5.c \
-utils/md5.h 
+utils/cache.h 
 
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 libsbase_la_LDFLAGS = -levbase
@@ -39,8 +37,9 @@ lqftp_SOURCES = lqftp.c iniparser.c iniparser.h
 lqftp_LDADD = libsbase.la
 lqftp_LDFLAGS = -static
 
-lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h
-lqftpd_LDADD = libsbase.la
+lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h md5.c md5.h
+lqftpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
+lqftpd_LDADD = libsbase.la 
 lqftpd_LDFLAGS = -static
 
 
