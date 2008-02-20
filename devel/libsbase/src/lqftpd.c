@@ -27,10 +27,11 @@ static char *md5sum_plist[] = {"md5"};
 #define DEL_PNUM        0
 #define MD5SUM_PNUM     1
 #define PNUM_MAX        2
-#define RESP_OK             "200 OK\r\n\r\n"
-#define RESP_NOT_IMPLEMENT  "201 not implement\r\n\r\n"
-#define RESP_BAD_REQ        "203 bad requestment\r\n\r\n"
-#define RESP_SERVER_ERROR   "205 service error\r\n\r\n"
+#define RESP_OK                 "200 OK\r\n\r\n"
+#define RESP_NOT_IMPLEMENT      "201 not implement\r\n\r\n"
+#define RESP_BAD_REQ            "203 bad requestment\r\n\r\n"
+#define RESP_SERVER_ERROR       "205 service error\r\n\r\n"
+#define RESP_FILE_NOT_EXISTS    "207 file not exists\r\n\r\n"
 #define RESPONSE(conn, msg) conn->push_chunk((CONN *)conn, (void *)msg, strlen(msg));
 typedef struct _kitem
 {
@@ -215,6 +216,15 @@ op_put:
         return;
 
 op_del:
+        if(access(fullpath, F_OK) == 0 )
+        {
+            if(unlink(fullpath) == 0)
+                RESPONSE(conn, RESP_OK);
+            else 
+                RESPONSE(conn, RESP_SERVER_ERROR);
+        }
+        else
+            RESPONSE(conn, RESP_FILE_NOT_EXISTS);
         return;
 
 op_md5sum:
@@ -387,18 +397,18 @@ int main(int argc, char **argv)
 
 
 	if((sbase = sbase_init()) == NULL)
-        {
+    {
                 exit(EXIT_FAILURE);
                 return -1;
-        }
-        fprintf(stdout, "Initializing from configure file:%s\n", conf);
-        /* Initialize sbase */
-        if(sbase_initialize(sbase, conf) != 0 )
-        {
+    }
+    fprintf(stdout, "Initializing from configure file:%s\n", conf);
+    /* Initialize sbase */
+    if(sbase_initialize(sbase, conf) != 0 )
+    {
                 fprintf(stderr, "Initialize from configure file failed\n");
                 return -1;
-        }
-        fprintf(stdout, "Initialized successed\n");
-        //sbase->running(sbase, 3600);
-        sbase->running(sbase, 0);
+    }
+    fprintf(stdout, "Initialized successed\n");
+    //sbase->running(sbase, 3600);
+    sbase->running(sbase, 0);
 }
