@@ -296,6 +296,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->logfile = logfile;
 	logfile = iniparser_getstr(dict, "LQFTPD:evlogfile");
 	service->evlogfile = logfile;
+	document_root = iniparser_getstr(dict, "LQFTPD:server_root");
 	service->max_connections = iniparser_getint(dict, "LQFTPD:max_connections", MAX_CONNECTIONS);
 	service->packet_type = PACKET_DELIMITER;
 	service->packet_delimiter = iniparser_getstr(dict, "LQFTPD:packet_delimiter");
