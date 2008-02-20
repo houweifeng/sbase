@@ -219,12 +219,18 @@ op_del:
         if(access(fullpath, F_OK) == 0 )
         {
             if(unlink(fullpath) == 0)
+            {
                 RESPONSE(conn, RESP_OK);
+            }
             else 
+            {
                 RESPONSE(conn, RESP_SERVER_ERROR);
+            }
         }
         else
+        {
             RESPONSE(conn, RESP_FILE_NOT_EXISTS);
+        }
         return;
 
 op_md5sum:
