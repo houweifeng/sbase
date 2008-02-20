@@ -349,7 +349,7 @@ void conn_chunk_reader(CONN *conn)
 	int n = 0;
 
 	/* Check connection and transaction state */
-        CONN_CHECK(conn);
+    CONN_CHECK(conn);
 
 	if(conn && conn->chunk && conn->buffer)
 	{
