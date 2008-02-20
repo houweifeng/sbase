@@ -13,7 +13,9 @@
 #define CMD_PUT         1
 #define CMD_DEL         2
 #define CMD_MD5SUM      3
-#define PATH_MAX        1024
+#ifndef PATH_MAX_SIZE
+#define PATH_MAX_SIZE   1024
+#endif
 static char *cmdlist[] = {"TRUNCATE", "PUT", "DEL", "MD5SUM"};
 #define CMD_NUM         4
 #define CMD_MAX_LEN     8
@@ -78,7 +80,7 @@ int cb_packet_reader(const CONN *conn, const BUFFER *buffer)
 
 int pmkdir(char *path, int mode)
 {
-   char *p = NULL, fullpath[PATH_MAX];
+   char *p = NULL, fullpath[PATH_MAX_SIZE];
    int n = 0, ret = 0;
    struct stat st;
 
@@ -106,7 +108,7 @@ int pmkdir(char *path, int mode)
 
 void cb_packet_handler(const CONN *conn, const BUFFER *packet)
 {
-    char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX], fullpath[PATH_MAX];
+    char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0;
     kitem plist[PNUM_MAX];
     unsigned long long  offset = 0, size = 0;
@@ -123,7 +125,7 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
         np = NULL;
         //path
         while(p < end && (*p != '\r' || *p != '\n' || *p != '/')) ++p;
-        memset(path, '\0', PATH_MAX);
+        memset(path, '\0', PATH_MAX_SIZE);
         if(*p == '/')
         {
             np = path;
