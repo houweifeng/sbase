@@ -4,6 +4,7 @@
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
+#include <sys/stat.h>
 #include <sbase.h>
 #include "iniparser.h"
 #ifndef _CMD_DEF
@@ -23,10 +24,17 @@ static char *md5sum_plist[] = {"MD5"};
 #define PUT_PNUM        2
 #define DEL_PNUM        0
 #define MD5SUM_PNUM     1
+#define PNUM_MAX        2
 #define RESP_OK             "200 OK\r\n\r\n"
 #define RESP_NOT_IMPLEMENT  "201 not implement\r\n\r\n"
 #define RESP_BAD_REQ        "203 bad requestment\r\n\r\n"
-#define RESPONSE(conn, msg) conn->push_chunk(conn, msg, strlen(msg));
+#define RESP_SERVER_ERROR   "205 service error\r\n\r\n"
+#define RESPONSE(conn, msg) conn->push_chunk((CONN *)conn, (void *)msg, strlen(msg));
+typedef struct _kitem
+{
+    char *key;
+    char *data;
+}kitem;
 #endif
 #define SBASE_LOG       "/tmp/sbase_access_log"
 #define LQFTPD_LOG      "/tmp/lqftpd_access_log"
@@ -45,7 +53,7 @@ int cb_packet_reader(const CONN *conn, const BUFFER *buffer)
     n = 0;                                                                      \
     while(n < CMD_NUM)                                                          \
     {                                                                           \
-        if(strcasecmp(p, cmdlist[n], strlen(cmdlist[n])) == 0)                  \
+        if(strncasecmp(p, cmdlist[n], strlen(cmdlist[n])) == 0)                 \
         {                                                                       \
             cmdid = n;                                                          \
             break;                                                              \
@@ -53,11 +61,55 @@ int cb_packet_reader(const CONN *conn, const BUFFER *buffer)
         ++n;                                                                    \
     }                                                                           \
 }
+#define GET_PROPERTY(p, end, n, plist)                                          \
+{                                                                               \
+    n = 0;                                                                      \
+    while(p < end)                                                              \
+    {                                                                           \
+        while(p < end && *p == ' ') ++p;                                        \
+        plist[n].key = p;                                                       \
+        while(p < end && *p != ':') ++p;                                        \
+        while(p < end && *p == ' ') ++p;                                        \
+        plist[n].data = p;                                                      \
+        while(p < end && *p != '\n') ++p;                                       \
+        n++;                                                                    \
+    }                                                                           \
+}
+
+int pmkdir(char *path, int mode)
+{
+   char *p = NULL, fullpath[PATH_MAX];
+   int n = 0, ret = 0;
+   struct stat st;
+
+   if(path)
+   {
+        strcpy(fullpath, path);    
+        p = fullpath;
+        while(*p != '\0')
+        {
+            if(*p == '/')
+            {
+                *p = '\0';
+                memset(&st, 0, sizeof(struct stat));
+                ret = stat(fullpath, &st);
+                if(ret == 0 && !S_ISDIR(st.st_mode)) return -1;
+                if(ret != 0 && mkdir(fullpath, mode) != 0) return -1;
+                *p = '/';
+            }
+            ++p;
+        }
+        return 0;
+   }
+   return -1;
+}
 
 void cb_packet_handler(const CONN *conn, const BUFFER *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX], fullpath[PATH_MAX];
-    int n = 0, cmdid = -1, is_path_ok = 0;
+    int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0;
+    kitem plist[PNUM_MAX];
+    unsigned long long  offset = 0, size = 0;
 
     if(conn)
     {
@@ -78,19 +130,27 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
             while(p < end && *p != ' ' && (*p != '\r' || *p != '\n')) *np++ = *p++;
         }
         while(p < end && *p != '\n')++p;
+        //plist
+        memset(&plist, 0, sizeof(kitem) * PNUM_MAX);
+        GET_PROPERTY(p, end, nplist, plist);
         if((is_path_ok = strlen(path)) == 0) goto bad_req;
+        n = sprintf(fullpath, "%s/%s", document_root, path);
         switch(cmdid)
         {
             case -1:
                 goto not_implement;
                 break;
             case CMD_TRUNCATE :
+                goto op_truncate;
                 break;
             case CMD_PUT :
+                goto op_put;
                 break;
             case CMD_DEL :
+                goto op_del;
                 break;
             case CMD_MD5SUM :
+                goto op_md5sum;
                 break;
             default:
                 goto not_implement;
@@ -105,8 +165,39 @@ not_implement:
         return ;
 
 op_truncate:
-        return;
-
+        if(pmkdir(fullpath, 0755) != 0 )
+        {
+            RESPONSE(conn, RESP_SERVER_ERROR);
+            return ;
+        }
+        if(nplist == 0)
+        {
+                RESPONSE(conn, RESP_NOT_IMPLEMENT);
+                return ;
+        }    
+        size = 0;
+        for(i = 0; i < nplist; i++)
+        {
+            if(strncasecmp(plist[i].key, truncate_plist[0], 
+                        strlen(truncate_plist[0])) == 0)
+            {
+                size = atoll(plist[i].data); 
+            }
+        }
+        if(size == 0)
+        {
+            RESPONSE(conn, RESP_BAD_REQ);
+            return ;
+        }
+        if(truncate(fullpath, size) == 0)
+        {
+            RESPONSE(conn, RESP_OK);
+        }
+        else
+        {
+            RESPONSE(conn, RESP_SERVER_ERROR);
+        }
+    return;
 op_put:
         return;
 

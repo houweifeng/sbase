@@ -34,7 +34,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = lechod$(EXEEXT) lqftp$(EXEEXT)
+bin_PROGRAMS = lechod$(EXEEXT) lqftp$(EXEEXT) lqftpd$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -80,6 +80,12 @@ lqftp_DEPENDENCIES = libsbase.la
 lqftp_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lqftp_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_lqftpd_OBJECTS = lqftpd.$(OBJEXT) iniparser.$(OBJEXT)
+lqftpd_OBJECTS = $(am_lqftpd_OBJECTS)
+lqftpd_DEPENDENCIES = libsbase.la
+lqftpd_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lqftpd_LDFLAGS) \
+	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -92,9 +98,10 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) $(lqftp_SOURCES)
+SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) $(lqftp_SOURCES) \
+	$(lqftpd_SOURCES)
 DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
-	$(lqftp_SOURCES)
+	$(lqftp_SOURCES) $(lqftpd_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -243,6 +250,9 @@ lechod_LDFLAGS = -static
 lqftp_SOURCES = lqftp.c iniparser.c iniparser.h
 lqftp_LDADD = libsbase.la
 lqftp_LDFLAGS = -static
+lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h
+lqftpd_LDADD = libsbase.la
+lqftpd_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -339,6 +349,9 @@ lechod$(EXEEXT): $(lechod_OBJECTS) $(lechod_DEPENDENCIES)
 lqftp$(EXEEXT): $(lqftp_OBJECTS) $(lqftp_DEPENDENCIES) 
 	@rm -f lqftp$(EXEEXT)
 	$(lqftp_LINK) $(lqftp_OBJECTS) $(lqftp_LDADD) $(LIBS)
+lqftpd$(EXEEXT): $(lqftpd_OBJECTS) $(lqftpd_DEPENDENCIES) 
+	@rm -f lqftpd$(EXEEXT)
+	$(lqftpd_LINK) $(lqftpd_OBJECTS) $(lqftpd_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -359,6 +372,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-service.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-timer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
