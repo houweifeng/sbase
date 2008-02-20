@@ -19,9 +19,9 @@
 static char *cmdlist[] = {"TRUNCATE", "PUT", "DEL", "MD5SUM"};
 #define CMD_NUM         4
 #define CMD_MAX_LEN     8
-static char *truncate_plist[] = {"SIZE"};
-static char *put_plist[] = {"OFFSET", "SIZE"};
-static char *md5sum_plist[] = {"MD5"};
+static char *truncate_plist[] = {"size"};
+static char *put_plist[] = {"offset", "size"};
+static char *md5sum_plist[] = {"md5"};
 #define TRUNCATE_PNUM   1
 #define PUT_PNUM        2
 #define DEL_PNUM        0
@@ -72,37 +72,43 @@ int cb_packet_reader(const CONN *conn, const BUFFER *buffer)
         plist[n].key = p;                                                       \
         while(p < end && *p != ':') ++p;                                        \
         while(p < end && *p == ' ') ++p;                                        \
+        ++p;                                                                    \
         plist[n].data = p;                                                      \
         while(p < end && *p != '\n') ++p;                                       \
         n++;                                                                    \
+        if(*p == '\r' || *p == '\n')break;                                      \
     }                                                                           \
 }
 
 int pmkdir(char *path, int mode)
 {
    char *p = NULL, fullpath[PATH_MAX_SIZE];
-   int n = 0, ret = 0;
+   int n = 0, ret = 0, level = -1;
    struct stat st;
 
    if(path)
    {
-        strcpy(fullpath, path);    
-        p = fullpath;
-        while(*p != '\0')
-        {
-            if(*p == '/')
-            {
-                while(*p != '\0' && *p == '/' || *(p+1) == '/')++p;
-                *p = '\0';
-                memset(&st, 0, sizeof(struct stat));
-                ret = stat(fullpath, &st);
-                if(ret == 0 && !S_ISDIR(st.st_mode)) return -1;
-                if(ret != 0 && mkdir(fullpath, mode) != 0) return -1;
-                *p = '/';
-            }
-            ++p;
-        }
-        return 0;
+       strcpy(fullpath, path);    
+       p = fullpath;
+       while(*p != '\0')
+       {
+           if(*p == '/' ) 
+           {       
+               level++;
+               while(*p != '\0' && *p == '/' && *(p+1) == '/')++p;
+               if(level > 0)
+               {       
+                   *p = '\0'; 
+                   memset(&st, 0, sizeof(struct stat)); 
+                   ret = stat(fullpath, &st);
+                   if(ret == 0 && !S_ISDIR(st.st_mode)) return -1;
+                   if(ret != 0 && mkdir(fullpath, mode) != 0) return -1;
+                   *p = '/';
+               }       
+           }       
+           ++p;
+       }
+       return 0;
    }
    return -1;
 }
@@ -113,6 +119,7 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0;
     kitem plist[PNUM_MAX];
     unsigned long long  offset = 0, size = 0;
+    int fd = -1;
 
     if(conn)
     {
@@ -133,6 +140,7 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
             while(p < end && *p != ' ' && *p != '\r' && *p != '\n') *np++ = *p++;
         }
         while(p < end && *p != '\n')++p;
+        ++p;
         //plist
         memset(&plist, 0, sizeof(kitem) * PNUM_MAX);
         GET_PROPERTY(p, end, nplist, plist);
@@ -192,8 +200,10 @@ op_truncate:
             RESPONSE(conn, RESP_BAD_REQ);
             return ;
         }
-        if(truncate(fullpath, size) == 0)
+        if((fd = open(fullpath, O_CREAT|O_TRUNC|O_WRONLY, 0644)) > 0 
+                && ftruncate(fd, size) == 0)
         {
+            close(fd);
             RESPONSE(conn, RESP_OK);
         }
         else
