@@ -4,6 +4,7 @@
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
+#include <sys/stat.h>
 #include <sbase.h>
 #include "iniparser.h"
 char *cmdlist[] = {"put", "status"};
@@ -102,20 +103,24 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
             *np = '\0';
             if(n > 0 && (np - destfile) > 0) 
             {
-                if(stat(file, &st) == 0 
-                        && !S_ISDIR(st.st_mode)
-                        && st.st_size > 0)
+                if(stat(file, &st) == 0
+                   	&& !S_ISDIR(st.st_mode)
+                    && st.st_size > 0)
                 {
-                    n = sprintf(buf, "put %s\r\noffset: %llu \r\n size:%llu\r\n\r\n", 
+                    n = sprintf(buf, "put %s\r\noffset: %llu \r\nsize:%llu\r\n\r\n", 
                             destfile, 0 * 1llu, st.st_size * 1llu);
                     if((c_conn = transport->getconn(transport)))
                     {
                         c_conn->callback_conn = (CONN *)conn;
                     }
-                    conn->push_chunk((CONN *)conn, buf, n);
-                    conn->push_file((CONN *)conn, file, 0, st.st_size);
+                    c_conn->push_chunk((CONN *)c_conn, buf, n);
+                    c_conn->push_file((CONN *)c_conn, file, 0, st.st_size);
                     return ;
                 }
+				else
+				{
+					fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
+				}
             }
         }
         conn->push_chunk((CONN *)conn, (void *)RESP_BAD_REQ, strlen(RESP_BAD_REQ));

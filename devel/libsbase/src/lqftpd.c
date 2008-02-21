@@ -79,6 +79,7 @@ int cb_packet_reader(const CONN *conn, const BUFFER *buffer)
         ++p;                                                                    \
         plist[n].data = p;                                                      \
         while(p < end && *p != '\n') ++p;                                       \
+		++p;																	\
         n++;                                                                    \
         if(*p == '\r' || *p == '\n')break;                                      \
     }                                                                           \
@@ -124,7 +125,7 @@ int mod_file_size(char *file, unsigned long long size)
     int fd = -1;
     int ret = -1;
     
-    if(!access(file, F_OK))
+    if(access(file, F_OK) != 0)
     {
             if((fd = open(file, O_CREAT|O_WRONLY, 0644)) > 0)
             {
@@ -154,10 +155,14 @@ int truncate_file(char *file, unsigned long long size)
     int fd = -1;
     int ret = -1;
 
-    if(!access(file, F_OK))
+    if(access(file, F_OK) != 0)
     {
-        if((fd = open(file, O_CREAT|O_WRONLY, 0644)) > 0) close(fd);
+        if((fd = open(file, O_CREAT|O_RDONLY, 0644)) > 0) 
+			close(fd);
+		else
+			fprintf(stderr, "open %s failed, %s\n", file, strerror(errno));
     }
+	fprintf(stdout, "truncate %s size %llu\n", file, size);
     return truncate(file, size);
 }
 
@@ -196,7 +201,7 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
         memset(&plist, 0, sizeof(kitem) * PNUM_MAX);
         GET_PROPERTY(p, end, nplist, plist);
         if((is_path_ok = strlen(path)) == 0) goto bad_req;
-        n = sprintf(fullpath, "%s/%s", document_root, path);
+        n = sprintf(fullpath, "%s%s", document_root, path);
         switch(cmdid)
         {
             case -1:
@@ -272,23 +277,24 @@ op_put:
         size = 0;
         for(i = 0; i < nplist; i++)
         {
-            if(strncasecmp(plist[i].key, truncate_plist[0], 
-                        strlen(truncate_plist[0])) == 0)
+            if(strncasecmp(plist[i].key, put_plist[0], strlen(put_plist[0])) == 0)
             {
                 is_valid_offset = 1;
                 offset = atoll(plist[i].data); 
             }
-            if(strncasecmp(plist[i].key, truncate_plist[1], 
-                        strlen(truncate_plist[1])) == 0)
+			else if(strncasecmp(plist[i].key, put_plist[1], strlen(put_plist[1])) == 0)
             {
                 size = atoll(plist[i].data); 
             }
+			//fprintf(stdout, "%s %s", plist[i].key, plist[i].data);
         }
+		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
         if(size == 0 || is_valid_offset == 0)
         {
             RESPONSE(conn, RESP_BAD_REQ);
             return ;
         }
+		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
         //check file size 
         if(mod_file_size(fullpath, offset + size) != 0)
         {
@@ -298,8 +304,8 @@ op_put:
         {
             conn->recv_file((CONN *)conn, fullpath, offset, size);
         }
+		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
         return;
-
 op_del:
         if(access(fullpath, F_OK) == 0 )
         {
