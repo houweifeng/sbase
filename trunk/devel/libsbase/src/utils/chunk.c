@@ -108,7 +108,7 @@ int chk_fill(CHUNK *chunk, void *data, size_t len)
 		case FILE_CHUNK :
 			{
 				if( chunk->file.fd < 0 
-						|| (chunk->file.fd = open(chunk->file.name,
+						&& (chunk->file.fd = open(chunk->file.name,
 								O_CREAT |O_RDWR, 0644)) < 0 )
 				{
 					n = -1;
