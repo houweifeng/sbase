@@ -394,9 +394,9 @@ void conn_recv_file(CONN *conn, char *filename,
 
         if(conn && conn->chunk)
         {
-                conn->chunk->set(conn->chunk, conn->s_id, MEM_CHUNK, filename, offset, size);
-		conn->s_state = S_STATE_READ_CHUNK;
-		conn->chunk_reader(conn);
+            conn->chunk->set(conn->chunk, conn->s_id, FILE_CHUNK, filename, offset, size);
+            conn->s_state = S_STATE_READ_CHUNK;
+            conn->chunk_reader(conn);
         } 
 }
 
