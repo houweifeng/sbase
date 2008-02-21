@@ -117,15 +117,60 @@ int pmkdir(char *path, int mode)
    return -1;
 }
 
+//check file size and resize it 
+int mod_file_size(char *file, unsigned long long size)
+{
+    struct stat st;
+    int fd = -1;
+    int ret = -1;
+    
+    if(!access(file, F_OK))
+    {
+            if((fd = open(file, O_CREAT|O_WRONLY, 0644)) > 0)
+            {
+                ret = ftruncate(fd, size);
+                close(fd);
+            }
+            else ret = -1;
+    }
+    else
+    {
+        if((ret = stat(file, &st)) == 0)
+        {
+            if(!S_ISREG(st.st_mode)) ret = -1;
+            else if(st.st_size >= size) ret = 0;
+            else
+            {
+                ret = truncate(file, size);
+            }
+        }
+    }
+    return ret;
+}
+
+//truncate file 
+int truncate_file(char *file, unsigned long long size)
+{
+    int fd = -1;
+    int ret = -1;
+
+    if(!access(file, F_OK))
+    {
+        if((fd = open(file, O_CREAT|O_WRONLY, 0644)) > 0) close(fd);
+    }
+    return truncate(file, size);
+}
+
 void cb_packet_handler(const CONN *conn, const BUFFER *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
-    int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0;
+    int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0, is_valid_offset = 0;
     kitem plist[PNUM_MAX];
     unsigned long long  offset = 0, size = 0;
     unsigned char md5[_MD5_N];
     char md5sum[MD5SUM_SIZE + 1], *pmd5sum = NULL;
     int fd = -1;
+    struct stat st;
 
     if(conn)
     {
@@ -206,10 +251,9 @@ op_truncate:
             RESPONSE(conn, RESP_BAD_REQ);
             return ;
         }
-        if((fd = open(fullpath, O_CREAT|O_TRUNC|O_WRONLY, 0644)) > 0 
-                && ftruncate(fd, size) == 0)
+
+        if(truncate_file(fullpath, size) == 0)
         {
-            close(fd);
             RESPONSE(conn, RESP_OK);
         }
         else
@@ -217,7 +261,43 @@ op_truncate:
             RESPONSE(conn, RESP_SERVER_ERROR);
         }
     return;
+
 op_put:
+        if(nplist == 0)
+        {
+                RESPONSE(conn, RESP_NOT_IMPLEMENT);
+                return ;
+        }    
+        offset = 0;
+        size = 0;
+        for(i = 0; i < nplist; i++)
+        {
+            if(strncasecmp(plist[i].key, truncate_plist[0], 
+                        strlen(truncate_plist[0])) == 0)
+            {
+                is_valid_offset = 1;
+                offset = atoll(plist[i].data); 
+            }
+            if(strncasecmp(plist[i].key, truncate_plist[1], 
+                        strlen(truncate_plist[1])) == 0)
+            {
+                size = atoll(plist[i].data); 
+            }
+        }
+        if(size == 0 || is_valid_offset == 0)
+        {
+            RESPONSE(conn, RESP_BAD_REQ);
+            return ;
+        }
+        //check file size 
+        if(mod_file_size(fullpath, offset + size) != 0)
+        {
+            RESPONSE(conn, RESP_SERVER_ERROR);
+        }
+        else
+        {
+            conn->recv_file((CONN *)conn, fullpath, offset, size);
+        }
         return;
 
 op_del:
@@ -290,6 +370,10 @@ op_md5sum:
 
 void cb_data_handler(const CONN *conn, const BUFFER *packet, const CHUNK *chunk, const BUFFER *cache)
 {
+    if(conn)
+    {
+        RESPONSE(conn, RESP_OK);
+    }
 }
 
 void cb_oob_handler(const CONN *conn, const BUFFER *oob)

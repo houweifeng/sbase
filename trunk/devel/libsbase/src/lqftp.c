@@ -6,7 +6,28 @@
 #include <locale.h>
 #include <sbase.h>
 #include "iniparser.h"
+char *cmdlist[] = {"put", "status"};
+#define     CMD_NUM     2
+#define     CMD_PUT     0
+#define     CMD_STATUS  1
+#ifndef     PATH_MAX_SIZE
+#define     PATH_MAX_SIZE   256
+#endif
+#ifndef     BUF_SIZE
+#define     BUF_SIZE      65536
+#endif
+#define     RESP_BAD_REQ  "207 bad requestment\r\n\r\n"
+typedef struct _task
+{
+    int taskid;
+    int time;
+    int nretry;
+    int status;
 
+    char file[PATH_MAX_SIZE];
+    char dest_file[PATH_MAX_SIZE];
+    int  nblock;
+}task;
 #define SBASE_LOG       "/tmp/sbase_access_log"
 #define LQFTP_LOG      "/tmp/lqftp_access_log"
 #define LQFTP_EVLOG      "/tmp/lqftp_evbase_log"
@@ -20,7 +41,7 @@ int cb_transport_packet_reader(const CONN *conn, const BUFFER *buffer)
 }
 
 void cb_transport_packet_handler(const CONN *conn, const BUFFER *packet)
-{
+{        
     if(conn)
     {
         if(conn->callback_conn)
@@ -45,14 +66,59 @@ int cb_serv_packet_reader(const CONN *conn, const BUFFER *buffer)
 
 void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
 {
+
+    char *p = NULL, *end = NULL, *np = NULL;
+    char file[PATH_MAX_SIZE], destfile[PATH_MAX_SIZE], buf[BUF_SIZE];
+    int cmdid = -1;
+    int i = 0, n = 0;
+    struct stat st;
     CONN *c_conn = NULL;
+
     if(conn)
     {
-        if((c_conn = transport->getconn(transport)))
+        p = (char *)packet->data;
+        end = (char *)packet->end;
+        while(p < end && *p == ' ') ++p;
+        for(i = 0; i < CMD_NUM; i++)
         {
-            c_conn->callback_conn = (CONN *)conn;
-            c_conn->push_chunk(c_conn, ((BUFFER *)packet)->data, packet->size);
+            if(strncasecmp(p, cmdlist[i], strlen(cmdlist[i])) == 0)
+            {
+                cmdid = i;
+                break;
+            }
         }
+        if(cmdid == CMD_PUT)
+        {
+            while(p < end && *p != ' ' )++p;
+            while(p < end && *p == ' ')++p;
+            np = file;
+            while(p < end && *p != ' ' && *p != '\r' && *p != '\n')*np++ = *p++;
+            while(p < end && *p == ' ')++p;
+            *np = '\0';
+            n = np - file;
+
+            np = destfile;
+            while(p < end && *p != ' ' && *p != '\r' && *p != '\n')*np++ = *p++;
+            *np = '\0';
+            if(n > 0 && (np - destfile) > 0) 
+            {
+                if(stat(file, &st) == 0 
+                        && !S_ISDIR(st.st_mode)
+                        && st.st_size > 0)
+                {
+                    n = sprintf(buf, "put %s\r\noffset: %llu \r\n size:%llu\r\n\r\n", 
+                            destfile, 0 * 1llu, st.st_size * 1llu);
+                    if((c_conn = transport->getconn(transport)))
+                    {
+                        c_conn->callback_conn = (CONN *)conn;
+                    }
+                    conn->push_chunk((CONN *)conn, buf, n);
+                    conn->push_file((CONN *)conn, file, 0, st.st_size);
+                    return ;
+                }
+            }
+        }
+        conn->push_chunk((CONN *)conn, (void *)RESP_BAD_REQ, strlen(RESP_BAD_REQ));
     }
 }
 
