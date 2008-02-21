@@ -120,7 +120,8 @@ int chk_fill(CHUNK *chunk, void *data, size_t len)
 					CLOSE_FD(chunk->file.fd);
 					break;
 				}
-				if((n = write(chunk->file.fd, data, len) ) > 0 )
+				size = (chunk->len > len)? len : chunk->len;
+				if((n = write(chunk->file.fd, data, size) ) > 0 )
 				{
 					chunk->offset += n * 1llu;
 					chunk->len  -= n * 1llu;
