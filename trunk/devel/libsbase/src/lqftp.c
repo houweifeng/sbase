@@ -244,7 +244,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	transport->cb_oob_handler = &cb_transport_oob_handler;
 	/* server */
 	fprintf(stdout, "Parsing for transport...\n");
-	sbase->add_service(sbase, transport);
 
     /* DAEMON */
     if((serv = service_init()) == NULL)
@@ -327,7 +326,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	serv->cb_oob_handler = &cb_serv_oob_handler;
 	/* server */
 	fprintf(stdout, "Parsing for daemon...\n");
-	return sbase->add_service(sbase, serv);
+	return (sbase->add_service(sbase, serv) | sbase->add_service(sbase, transport));
 }
 
 static void cb_stop(int sig){
