@@ -37,7 +37,7 @@ lqftp_SOURCES = lqftp.c iniparser.c iniparser.h
 lqftp_LDADD = libsbase.la
 lqftp_LDFLAGS = -static
 
-lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h utils/md5.c utils/md5.h
+lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h utils/md5.c utils/md5.h task.c task.h
 lqftpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 lqftpd_LDADD = libsbase.la 
 lqftpd_LDFLAGS = -static
