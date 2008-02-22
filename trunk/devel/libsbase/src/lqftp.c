@@ -18,9 +18,23 @@ char *cmdlist[] = {"put", "status"};
 #define     BUF_SIZE      65536
 #endif
 #define     RESP_BAD_REQ  "207 bad requestment\r\n\r\n"
-typedef struct _task
+#define SBASE_LOG       "/tmp/sbase_access_log"
+#define LQFTP_LOG      "/tmp/lqftp_access_log"
+#define LQFTP_EVLOG      "/tmp/lqftp_evbase_log"
+static SBASE *sbase = NULL;
+static SERVICE *transport = NULL;
+static SERVICE *serv = NULL;
+static dictionary *dict = NULL;
+static struct _TASKTABLE *tasktable = NULL;
+
+#define TASK_STATUS_WAIT        0x00
+#define TASK_STATUS_OVER        0x01
+#define TASK_STATUS_TIMEOUT     0x02
+#define TASK_STATUS_DISCARD     0x04
+
+typedef struct _TASK
 {
-    int taskid;
+    int id;
     int time;
     int nretry;
     int status;
@@ -28,14 +42,115 @@ typedef struct _task
     char file[PATH_MAX_SIZE];
     char dest_file[PATH_MAX_SIZE];
     int  nblock;
-}task;
-#define SBASE_LOG       "/tmp/sbase_access_log"
-#define LQFTP_LOG      "/tmp/lqftp_access_log"
-#define LQFTP_EVLOG      "/tmp/lqftp_evbase_log"
-SBASE *sbase = NULL;
-SERVICE *transport = NULL;
-SERVICE *serv = NULL;
-dictionary *dict = NULL;
+}TASK;
+
+typedef struct _TASKTABLE
+{
+    TASK **table;
+    int ntask;
+    char taskfile[PATH_MAX_SIZE];
+    
+    int     (*add)(struct _TASKTABLE *, char *file, char *destfile);
+    int     (*discard)(struct _TASKTABLE *, int taskid);
+    int     (*dump)(struct _TASKTABLE *);
+
+    void    (*clean)(struct _TASKTABLE **);
+
+}TASKTABLE;
+
+/* add file transmssion task to tasktable */
+int tasktable_add(TASKTABLE *tasktable, char *file, char *destfile)
+{
+    int taskid = -1;
+    TASK *task = NULL;
+
+    if(tasktable)
+    {
+        if((task = (TASK *)calloc(1, sizeof(TASK))))    
+        {
+            tasktable->table = (TASK *)realloc(tasktable->table, 
+                    (tasktable->ntask + 1)* sizeof(TASK *));
+            if(tasktable->table)
+            {
+                taskid = tasktable->ntask;
+                strcpy(task->file, file);
+                strcpy(task->destfile, destfile);
+                task->id = taskid;
+                task->status = TASK_STATUS_WAIT;
+                tasktable->table[taskid] = task;
+                tasktable->ntask++;
+            }
+        }
+        tasktable->dump(tasktable);
+    }
+    return taskid;
+}
+
+/* discard task */
+int tasktable_discard(TASKTABLE *tasktable, int taskid)
+{
+    int ret = -1;
+    if(tasktable && tasktable->table)
+    {
+        if(taskid < tasktable->ntask && tasktable->table[taskid])
+        {
+            tasktable->table[taskid]->status = TASK_STATUS_DISCARD;   
+            tasktable->dump(tasktable);
+            ret = 0;
+        }
+    }
+    return -1;
+}
+
+/* dump tasktable to file */
+int tasktable_dump(TASKTABLE *tasktable)
+{
+    char taskfile_back[PATH_MAX_SIZE];
+    int fd = 0;
+    int i = 0;
+
+    if(tasktable && tasktable->ntask)
+    {
+        sprintf(taskfile_back, "%s.bak", tasktable->taskfile);
+        if(rename(tasktable->taskfile, taskfile_back) == 0)
+        {
+            if((fd = open(tasktable->taskfile, O_CREAT|O_WRONLY, 0644)) > 0)
+            {
+                for(i = 0; i < tasktable->ntask; i++) 
+                {
+                    if(tasktable->table[i])
+                        write(fd, tasktable->table[i], sizeof(TASK));
+                }
+                close(fd);
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+/* resume */
+int tasktable_resume(TASKTABLE *tasktable)
+{
+    int fd = -1;
+    TASK task, *ptask = NULL;
+
+    if(tasktable)
+    {
+        if((fd = open(tasktable->taskfile, O_RDONLY)) > 0)
+        {
+            while(read(fd, &task, sizeof(TASK)) > 0)
+            {
+                 
+            }
+            close(fd);
+        }
+    }
+}
+
+/* Initialize tasktable */
+TASKTABLE *tasktable_init();
+
 
 int cb_transport_packet_reader(const CONN *conn, const BUFFER *buffer)
 {
