@@ -396,6 +396,7 @@ typedef struct _CONN
         /* Client options */
         int         c_id;
         int         c_state;
+        int         index;
 
         /* Packet options */
         int			packet_type;
