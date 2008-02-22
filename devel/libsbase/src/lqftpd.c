@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
@@ -49,6 +50,21 @@ char *document_root = NULL;
 SBASE *sbase = NULL;
 dictionary *dict = NULL;
 SERVICE *lqftpd = NULL;
+
+/* Convert String to unsigned long long int */
+uint64_t str2llu(char *str)
+{
+    char *s = str;
+    uint64_t llu  = 0ll;
+    uint64_t n = 1ll;
+    while( *s >= '0' && *s <= '9'){s++;}
+    while(s > str)
+    {
+        llu += ((*--s) - 48) * n;
+        n *= 10ll;
+    }
+    return llu;
+}
 
 int cb_packet_reader(const CONN *conn, const BUFFER *buffer)
 {
@@ -171,7 +187,7 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0, is_valid_offset = 0;
     kitem plist[PNUM_MAX];
-    unsigned long long  offset = 0, size = 0;
+    uint64_t  offset = 0, size = 0;
     unsigned char md5[_MD5_N];
     char md5sum[MD5SUM_SIZE + 1], *pmd5sum = NULL;
     int fd = -1;
@@ -248,7 +264,7 @@ op_truncate:
             if(strncasecmp(plist[i].key, truncate_plist[0], 
                         strlen(truncate_plist[0])) == 0)
             {
-                size = atoll(plist[i].data); 
+                size = str2llu(plist[i].data); 
             }
         }
         if(size == 0)
@@ -280,11 +296,11 @@ op_put:
             if(strncasecmp(plist[i].key, put_plist[0], strlen(put_plist[0])) == 0)
             {
                 is_valid_offset = 1;
-                offset = atoll(plist[i].data); 
+                offset = str2llu(plist[i].data); 
             }
 			else if(strncasecmp(plist[i].key, put_plist[1], strlen(put_plist[1])) == 0)
             {
-                size = atoll(plist[i].data); 
+                size = str2llu(plist[i].data); 
             }
 			//fprintf(stdout, "%s %s", plist[i].key, plist[i].data);
         }
