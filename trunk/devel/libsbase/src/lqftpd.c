@@ -311,7 +311,8 @@ op_put:
         }
 		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
         //check file size 
-        if(mod_file_size(fullpath, offset + size) != 0)
+        if(pmkdir(fullpath, 0755) != 0 
+                || mod_file_size(fullpath, offset + size) != 0)
         {
             RESPONSE(conn, RESP_SERVER_ERROR);
         }
