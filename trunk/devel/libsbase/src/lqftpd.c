@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdint.h>
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
@@ -52,12 +51,12 @@ dictionary *dict = NULL;
 SERVICE *lqftpd = NULL;
 
 /* Convert String to unsigned long long int */
-uint64_t str2llu(char *str)
+unsigned long long str2llu(char *str)
 {
     char *s = str;
-    uint64_t llu  = 0ll;
-    uint64_t n = 1ll;
-    while( *s >= '0' && *s <= '9'){s++;}
+    unsigned long long  llu  = 0ll;
+    unsigned long long  n = 1ll;
+    while( *s >= '0' && *s <= '9')s++;
     while(s > str)
     {
         llu += ((*--s) - 48) * n;
@@ -187,7 +186,7 @@ void cb_packet_handler(const CONN *conn, const BUFFER *packet)
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0, is_valid_offset = 0;
     kitem plist[PNUM_MAX];
-    uint64_t  offset = 0, size = 0;
+    unsigned long long  offset = 0llu, size = 0llu;
     unsigned char md5[_MD5_N];
     char md5sum[MD5SUM_SIZE + 1], *pmd5sum = NULL;
     int fd = -1;
@@ -258,7 +257,7 @@ op_truncate:
                 RESPONSE(conn, RESP_NOT_IMPLEMENT);
                 return ;
         }    
-        size = 0;
+        size = 0llu;
         for(i = 0; i < nplist; i++)
         {
             if(strncasecmp(plist[i].key, truncate_plist[0], 
@@ -267,7 +266,7 @@ op_truncate:
                 size = str2llu(plist[i].data); 
             }
         }
-        if(size == 0)
+        if(size == 0llu)
         {
             RESPONSE(conn, RESP_BAD_REQ);
             return ;
@@ -289,8 +288,8 @@ op_put:
                 RESPONSE(conn, RESP_NOT_IMPLEMENT);
                 return ;
         }    
-        offset = 0;
-        size = 0;
+        offset = 0llu;
+        size = 0llu;
         for(i = 0; i < nplist; i++)
         {
             if(strncasecmp(plist[i].key, put_plist[0], strlen(put_plist[0])) == 0)
@@ -305,7 +304,7 @@ op_put:
 			//fprintf(stdout, "%s %s", plist[i].key, plist[i].data);
         }
 		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
-        if(size == 0 || is_valid_offset == 0)
+        if(size == 0llu || is_valid_offset == 0llu)
         {
             RESPONSE(conn, RESP_BAD_REQ);
             return ;
