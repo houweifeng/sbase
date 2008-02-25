@@ -8,16 +8,10 @@
 #include <sbase.h>
 #include "iniparser.h"
 #include "md5.h"
-#ifndef _CMD_DEF
-#define _CMD_DEF
-#define CMD_TRUNCATE    0
-#define CMD_PUT         1
-#define CMD_DEL         2
-#define CMD_MD5SUM      3
-#ifndef PATH_MAX_SIZE
-#define PATH_MAX_SIZE   1024
-#endif
-#define MD5SUM_SIZE    32
+#include "basedef.h"
+
+#ifndef LQFTPD_DEF
+#define LQFTPD_DEF
 static char *cmdlist[] = {"TRUNCATE", "PUT", "DEL", "MD5SUM"};
 #define CMD_NUM         4
 #define CMD_MAX_LEN     8
@@ -41,10 +35,10 @@ typedef struct _kitem
     char *key;
     char *data;
 }kitem;
-#endif
 #define SBASE_LOG       "/tmp/sbase_access_log"
 #define LQFTPD_LOG      "/tmp/lqftpd_access_log"
 #define LQFTPD_EVLOG      "/tmp/lqftpd_evbase_log"
+#endif
 char *document_root = NULL;
 SBASE *sbase = NULL;
 dictionary *dict = NULL;

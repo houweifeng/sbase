@@ -8,14 +8,11 @@
 #include <sbase.h>
 #include "iniparser.h"
 #include "task.h"
-
+#include "basedef.h"
 char *cmdlist[] = {"put", "status"};
-#define     CMD_NUM     2
-#define     CMD_PUT     0
-#define     CMD_STATUS  1
-#ifndef     PATH_MAX_SIZE
-#define     PATH_MAX_SIZE   256
-#endif
+#define     OP_NUM          2
+#define     OP_PUT          0
+#define     OP_STATUS       1
 #ifndef     BUF_SIZE
 #define     BUF_SIZE      65536
 #endif
@@ -62,8 +59,11 @@ static TASKTABLE *tasktable = NULL;
 //error handler for cstate
 void cb_transport_error_handler(const CONN *conn)
 {
+    int blockid = -1;
     if(conn)
     {
+        blockid = conn->c_id;
+        tasktable->update_status(tasktable, blockid, BLOCK_STATUS_ERROR);
         conn->over_cstate((CONN *)conn);
     }
 }
@@ -77,28 +77,26 @@ void cb_transport_packet_handler(const CONN *conn, const BUFFER *packet)
 {        
     char *p = NULL, *end = NULL;
     int respid = -1, n = 0;
-    int taskid = -1;
+    int blockid = -1;
+    int status = BLOCK_STATUS_ERROR;
 
     if(conn)
     {
         p = (char *)packet->data;
         end = (char *)packet->end;
         GET_RESPID(p, end, n, respid);
-        conn->over_cstate((CONN *)conn);
+        blockid = conn->c_id;
         switch(respid)
         {
             case RESP_OK_ID:
-                taskid = conn->c_id;
-                if(taskid >= 0 
-                        && taskid < tasktable->ntask
-                        && tasktable->table[taskid] )
-                {
-                    tasktable->table[taskid]->status = TASK_STATUS_OVER;
-                }
+                status = BLOCK_STATUS_OVER;
                 break;
             default:
+                status = BLOCK_STATUS_ERROR; 
                 break;
         }
+        tasktable->update_status(tasktable, blockid, status);
+        conn->over_cstate((CONN *)conn);
     }
 }
 
@@ -115,6 +113,7 @@ void cb_serv_heartbeat_handler(void *arg)
 {
     int taskid = 0;
     TASK *task = NULL;
+    TBLOCK *block = NULL;
     struct stat st;
     CONN *c_conn = NULL;
     char buf[BUF_SIZE];
@@ -130,21 +129,47 @@ void cb_serv_heartbeat_handler(void *arg)
         while(taskid < tasktable->ntask)
         {
             if(tasktable->table 
-                    && tasktable->table[taskid]
-                    && tasktable->table[taskid]->status != TASK_STATUS_OVER)
+                    && (task = tasktable->table[taskid])
+                    && task->status != TASK_STATUS_OVER)
             {
-                tasktable->running_task_id = taskid;
-                tasktable->table[taskid]->nretry++;
-                if((c_conn = transport->getconn(transport)))
+                if(tasktable->status == NULL)
                 {
-                    c_conn->c_id = taskid;
-                    if(stat(tasktable->table[taskid]->file, &st) == 0 && st.st_size > 0) 
+                    tasktable->running_task_id = taskid;
+                    tasktable->ready(tasktable, taskid);
+                }
+                task = tasktable->table[taskid];
+                tasktable->table[taskid]->nretry++;
+
+                while((c_conn = transport->getconn(transport)))
+                {
+                    if((block = tasktable->pop_block(tasktable)))
                     {
-                        n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
-                                tasktable->table[taskid]->destfile, 0 * 1llu, st.st_size); 
-                        c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
-                        c_conn->push_file((CONN *)c_conn, 
-                                tasktable->table[taskid]->file, 0, st.st_size);
+                        c_conn->c_id = block->id;
+                        if(block->cmdid == CMD_PUT)
+                        {
+                            if(stat(tasktable->table[taskid]->file, &st) == 0 && st.st_size > 0) 
+                            {
+                                n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
+                                        tasktable->table[taskid]->destfile, 
+                                        block->offset, block->size); 
+                                c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
+                                c_conn->push_file((CONN *)c_conn, 
+                                        tasktable->table[taskid]->file, 
+                                        block->offset, block->size);
+                            }
+                        }
+                        if(block->cmdid == CMD_MD5SUM)
+                        {
+                            tasktable->md5sum(tasktable, taskid);
+                            n = sprintf(buf, "md5sum %s\r\nmd5:%s\r\n\r\n", 
+                                    tasktable->table[taskid]->destfile,
+                                    tasktable->table[taskid]->md5); 
+                            c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
+                        }
+                    }
+                    else
+                    {
+                        c_conn->over_cstate((CONN *)c_conn);
                     }
                 }
                 break;
@@ -173,7 +198,7 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
         p = (char *)packet->data;
         end = (char *)packet->end;
         while(p < end && *p == ' ') ++p;
-        for(i = 0; i < CMD_NUM; i++)
+        for(i = 0; i < OP_NUM; i++)
         {
             if(strncasecmp(p, cmdlist[i], strlen(cmdlist[i])) == 0)
             {
@@ -181,7 +206,7 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
                 break;
             }
         }
-        if(cmdid == CMD_PUT)
+        if(cmdid == OP_PUT)
         {
             while(p < end && *p != ' ' )++p;
             while(p < end && *p == ' ')++p;
@@ -198,7 +223,7 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
             {
                 if((taskid = tasktable->add(tasktable, file, destfile)) >= 0)
                 {
-                    n = printf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
+                    n = sprintf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
                     conn->push_chunk((CONN *)conn, (void *)buf, n);
                     return;
                 }
@@ -206,7 +231,7 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
             }
             return ;
         }
-        if(cmdid == CMD_STATUS)
+        if(cmdid == OP_STATUS)
         {
             while(p < end && *p != ' ' )++p;
             while(p < end && *p == ' ')++p;
