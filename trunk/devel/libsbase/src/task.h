@@ -43,11 +43,11 @@ typedef struct _TASKTABLE
     TASK*   (*pop)(struct _TASKTABLE *);
     int     (*discard)(struct _TASKTABLE *, int taskid);
     int     (*dump)(struct _TASKTABLE *);
-    int     (*resume)(struct _TASKTABLE *);
+    int     (*resume_task)(struct _TASKTABLE *);
     void    (*clean)(struct _TASKTABLE **);
 
 }TASKTABLE;
 
 /* Initialize tasktable */
-TASKTABLE *tasktable_init(char *taskfile);
+TASKTABLE *tasktable_init(char *taskfile, char *statusfile);
 #endif

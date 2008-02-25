@@ -72,7 +72,7 @@ int tasktable_dump(TASKTABLE *tasktable)
 }
 
 /* resume */
-int tasktable_resume(TASKTABLE *tasktable)
+int tasktable_resume_task(TASKTABLE *tasktable)
 {
     int ntask = 0;
     int fd = -1, ret = -1;
@@ -115,7 +115,7 @@ void tasktable_clean(TASKTABLE **tasktable)
     }
 }
 /* Initialize tasktable */
-TASKTABLE *tasktable_init(char *taskfile)
+TASKTABLE *tasktable_init(char *taskfile, char *statusfile)
 {
     TASKTABLE *tasktable = NULL;
 
@@ -124,11 +124,12 @@ TASKTABLE *tasktable_init(char *taskfile)
         tasktable->add          = tasktable_add;
         tasktable->discard      = tasktable_discard;
         tasktable->dump         = tasktable_dump;
-        tasktable->resume       = tasktable_resume;
+        tasktable->resume_task  = tasktable_resume_task;
         tasktable->clean        = tasktable_clean;
         strcpy(tasktable->taskfile, taskfile);
-        tasktable->resume(tasktable);
+        tasktable->resume_task(tasktable);
+        strcpy(tasktable->statusfile, statusfile);
+        //tasktable->resume_task(tasktable);
     }
     return tasktable;
 }
-
