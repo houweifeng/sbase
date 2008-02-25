@@ -111,7 +111,7 @@ void cb_transport_oob_handler(const CONN *conn, const BUFFER *oob)
 {
 }
 
-int cb_serv_heartbeat_handler(void *arg)
+void cb_serv_heartbeat_handler(void *arg)
 {
     int taskid = 0;
     TASK *task = NULL;
@@ -153,6 +153,7 @@ int cb_serv_heartbeat_handler(void *arg)
         }
         //if task is running then log TIMEOUT
     }
+    return  ;
 }
 
 int cb_serv_packet_reader(const CONN *conn, const BUFFER *buffer)
@@ -203,6 +204,7 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
                 }
 					//fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
             }
+            return ;
         }
         if(cmdid == CMD_STATUS)
         {
@@ -242,7 +244,7 @@ void cb_serv_oob_handler(const CONN *conn, const BUFFER *oob)
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-	char *logfile = NULL, *s = NULL, *p = NULL;
+	char *logfile = NULL, *s = NULL, *p = NULL, *taskfile = NULL, *statusfile = NULL;
 	int n = 0;
 	if((dict = iniparser_new(conf)) == NULL)
 	{
@@ -394,6 +396,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	serv->port = iniparser_getint(dict, "DAEMON:service_port", 80);
 	serv->max_procthreads = iniparser_getint(dict, "DAEMON:max_procthreads", 1);
 	serv->sleep_usec = iniparser_getint(dict, "DAEMON:sleep_usec", 100);
+	serv->heartbeat_interval = iniparser_getint(dict, "DAEMON:heartbeat_interval", 1000000);
 	logfile = iniparser_getstr(dict, "DAEMON:logfile");
 	if(logfile == NULL)
 		logfile = LQFTP_LOG;
@@ -427,6 +430,15 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	serv->cb_packet_handler = &cb_serv_packet_handler;
 	serv->cb_data_handler = &cb_serv_data_handler;
 	serv->cb_oob_handler = &cb_serv_oob_handler;
+	serv->cb_heartbeat_handler = &cb_serv_heartbeat_handler;
+   
+    taskfile = iniparser_getstr(dict, "DAEMON:taskfile");
+    statusfile = iniparser_getstr(dict, "DAEMON:statusfile");
+    if((tasktable = tasktable_init(taskfile, statusfile)) == NULL)
+    {
+        fprintf(stderr, "Initialize tasktable failed, %s\n", strerror(errno));
+        return -1;
+    }
 	/* server */
 	fprintf(stdout, "Parsing for daemon...\n");
 	return (sbase->add_service(sbase, serv) | sbase->add_service(sbase, transport));
@@ -477,7 +489,6 @@ int main(int argc, char **argv)
 			_exit(EXIT_SUCCESS);
 			break;
 	}
-
 
 	if((sbase = sbase_init()) == NULL)
         {
