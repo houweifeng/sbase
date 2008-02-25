@@ -15,8 +15,8 @@ int tasktable_add(TASKTABLE *tasktable, char *file, char *destfile)
     {
         if((task = (TASK *)calloc(1, sizeof(TASK))))    
         {
-            tasktable->table = (TASK *)realloc(tasktable->table, 
-                    (tasktable->ntask + 1)* sizeof(TASK *));
+            tasktable->table = (TASK **)realloc(tasktable->table, 
+                    (tasktable->ntask + 1) * sizeof(TASK *));
             if(tasktable->table)
             {
                 taskid = tasktable->ntask;

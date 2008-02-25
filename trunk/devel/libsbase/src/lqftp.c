@@ -19,18 +19,55 @@ char *cmdlist[] = {"put", "status"};
 #ifndef     BUF_SIZE
 #define     BUF_SIZE      65536
 #endif
-#define     RESP_BAD_REQ  "207 bad requestment\r\n\r\n"
-#define SBASE_LOG       "/tmp/sbase_access_log"
-#define LQFTP_LOG      "/tmp/lqftp_access_log"
-#define LQFTP_EVLOG      "/tmp/lqftp_evbase_log"
+/**** lqftpd response ID *****/
+int  resplist[] = {200, 201, 203, 205, 207, 209};
+#define RESP_NUM                    6
+#define RESP_OK_ID                  0
+#define RESP_NOT_IMPLEMENT_ID       1
+#define RESP_BAD_REQ_ID             2
+#define RESP_SERVER_ERROR_ID        3
+#define RESP_FILE_NOT_EXISTS_ID     4
+#define RESOP_INVALID_MD5_ID        5
+/**** lqftp response ID *****/
+#define     RESP_OK_CODE                300
+#define     RESP_FILE_NOT_EXIST_CODE    301
+#define     RESP_INVALID_TASK_CODE      303
+#define     RESP_BAD_REQ                "307 bad requestment\r\n\r\n"
+#define     SBASE_LOG                   "/tmp/sbase_access_log"
+#define     LQFTP_LOG                   "/tmp/lqftp_access_log"
+#define     LQFTP_EVLOG                 "/tmp/lqftp_evbase_log"
 static SBASE *sbase = NULL;
 static SERVICE *transport = NULL;
 static SERVICE *serv = NULL;
 static dictionary *dict = NULL;
 static TASKTABLE *tasktable = NULL;
-
+#define GET_RESPID(p, end, n, respid)                                               \
+{                                                                                   \
+    respid = -1;                                                                    \
+    while(p < end && (*p == ' ' || *p == '\t'))++p;                                 \
+    respid = atoi(p);                                                               \
+    n = 0;                                                                          \
+    while(n < RESP_NUM)                                                             \
+    {                                                                               \
+        if(resplist[n] == respid)                                                   \
+        {                                                                           \
+            respid = n;                                                             \
+            break;                                                                  \
+        }                                                                           \
+        ++n;                                                                        \
+    }                                                                               \
+}
 
 //functions
+//error handler for cstate
+void cb_transport_error_handler(const CONN *conn)
+{
+    if(conn)
+    {
+        conn->over_cstate((CONN *)conn);
+    }
+}
+
 //
 int cb_transport_packet_reader(const CONN *conn, const BUFFER *buffer)
 {
@@ -38,12 +75,30 @@ int cb_transport_packet_reader(const CONN *conn, const BUFFER *buffer)
 
 void cb_transport_packet_handler(const CONN *conn, const BUFFER *packet)
 {        
+    char *p = NULL, *end = NULL;
+    int respid = -1, n = 0;
+    int taskid = -1;
+
     if(conn)
     {
-        if(conn->callback_conn)
-            conn->callback_conn->push_chunk((CONN *)conn->callback_conn, 
-                    ((BUFFER *)packet)->data, packet->size);
-        conn->complete_job((CONN *)conn);
+        p = (char *)packet->data;
+        end = (char *)packet->end;
+        GET_RESPID(p, end, n, respid);
+        conn->over_cstate((CONN *)conn);
+        switch(respid)
+        {
+            case RESP_OK_ID:
+                taskid = conn->c_id;
+                if(taskid >= 0 
+                        && taskid < tasktable->ntask
+                        && tasktable->table[taskid] )
+                {
+                    tasktable->table[taskid]->status = TASK_STATUS_OVER;
+                }
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -56,19 +111,61 @@ void cb_transport_oob_handler(const CONN *conn, const BUFFER *oob)
 {
 }
 
+int cb_serv_heartbeat_handler(void *arg)
+{
+    int taskid = 0;
+    TASK *task = NULL;
+    struct stat st;
+    CONN *c_conn = NULL;
+    char buf[BUF_SIZE];
+    int n = 0;
+
+    if(serv && transport && tasktable)
+    {
+        //check and start new task
+        taskid = tasktable->running_task_id;
+        if(taskid == -1)
+            taskid = tasktable->running_task_id = 0;    
+
+        while(taskid < tasktable->ntask)
+        {
+            if(tasktable->table 
+                    && tasktable->table[taskid]
+                    && tasktable->table[taskid]->status != TASK_STATUS_OVER)
+            {
+                tasktable->running_task_id = taskid;
+                tasktable->table[taskid]->nretry++;
+                if((c_conn = transport->getconn(transport)))
+                {
+                    c_conn->c_id = taskid;
+                    if(stat(tasktable->table[taskid]->file, &st) == 0 && st.st_size > 0) 
+                    {
+                        n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
+                                tasktable->table[taskid]->destfile, 0 * 1llu, st.st_size); 
+                        c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
+                        c_conn->push_file((CONN *)c_conn, 
+                                tasktable->table[taskid]->file, 0, st.st_size);
+                    }
+                }
+                break;
+            }
+            ++taskid;
+        }
+        //if task is running then log TIMEOUT
+    }
+}
+
 int cb_serv_packet_reader(const CONN *conn, const BUFFER *buffer)
 {
 }
 
 void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
 {
-
     char *p = NULL, *end = NULL, *np = NULL;
     char file[PATH_MAX_SIZE], destfile[PATH_MAX_SIZE], buf[BUF_SIZE];
     int cmdid = -1;
     int i = 0, n = 0;
-    struct stat st;
-    CONN *c_conn = NULL;
+    int taskid = -1;
 
     if(conn)
     {
@@ -98,28 +195,39 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
             *np = '\0';
             if(n > 0 && (np - destfile) > 0) 
             {
-                if(stat(file, &st) == 0
-                   	&& !S_ISDIR(st.st_mode)
-                    && st.st_size > 0)
+                if((taskid = tasktable->add(tasktable, file, destfile)) >= 0)
                 {
-                    n = sprintf(buf, "put %s\r\noffset: %llu \r\nsize:%llu\r\n\r\n", 
-                            destfile, 0 * 1llu, st.st_size * 1llu);
-                    if((c_conn = transport->getconn(transport)))
-                    {
-                        c_conn->callback_conn = (CONN *)conn;
-                    }
-                    c_conn->push_chunk((CONN *)c_conn, buf, n);
-                    c_conn->push_file((CONN *)c_conn, file, 0, st.st_size);
-                    return ;
+                    n = printf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
+                    conn->push_chunk((CONN *)conn, (void *)buf, n);
+                    return;
                 }
-				else
-				{
-					fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
-				}
+					//fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
             }
+        }
+        if(cmdid == CMD_STATUS)
+        {
+            while(p < end && *p != ' ' )++p;
+            while(p < end && *p == ' ')++p;
+            taskid = atoi(p);
+            if(taskid >= 0 && taskid < tasktable->ntask)
+            {
+                n = sprintf(buf, "%d OK\r\ntaskid:%d\r\nstatus:%d\r\n"
+                                 "timeout:%d(seconds)\r\nretry:%d\r\n\r\n", 
+                                 RESP_OK_CODE, taskid, tasktable->table[taskid]->status,
+                                 tasktable->table[taskid]->timeout, 
+                                 tasktable->table[taskid]->nretry);
+                conn->push_chunk((CONN *)conn, (void *)buf, n);
+            }
+            else
+            {
+                n = sprintf(buf, "%d invalid taskid %d\r\n\r\n", RESP_INVALID_TASK_CODE, taskid);
+                conn->push_chunk((CONN *)conn, (void *)buf, n);
+            }
+            return;
         }
         conn->push_chunk((CONN *)conn, (void *)RESP_BAD_REQ, strlen(RESP_BAD_REQ));
     }
+    return ;
 }
 
 void cb_serv_data_handler(const CONN *conn, const BUFFER *packet, 

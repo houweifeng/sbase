@@ -70,8 +70,9 @@ void timer_sample(TIMER *timer)
 }
 
 /* Check timer and Run callback */
-void timer_check(TIMER *timer, uint32_t interval)
+int timer_check(TIMER *timer, uint32_t interval)
 {
+    int ret = -1;
 	uint64_t n = 0llu;
 	if(timer)
 	{
@@ -80,21 +81,21 @@ void timer_check(TIMER *timer, uint32_t interval)
 #endif
                 gettimeofday(&(timer->tv), NULL);       
                 n = (timer->tv.tv_sec * 1000000llu + timer->tv.tv_usec);
-                if( (n - timer->last_usec) >= interval  && timer->callback)
+                if( (n - timer->last_usec) >= interval)
                 {
-                        timer->callback();
+                        ret = 0;
                         timer->last_sec_used    = timer->tv.tv_sec - timer->last_sec;
                         timer->last_usec_used   = n - timer->last_usec;
                         timer->last_sec         = timer->tv.tv_sec;
                         timer->last_usec        = n;
                         timer->sec_used         = timer->tv.tv_sec - timer->start_sec;
                         timer->usec_used        = timer->last_usec - timer->start_usec;
-
                 }
 #ifdef HAVE_PTHREAD
                 if(timer->mutex) pthread_mutex_unlock((pthread_mutex_t *)timer->mutex);
 #endif
 	}
+    return ret;
 }
 
 /* Clean Timer */
@@ -128,11 +129,14 @@ int main()
 	int i = 10000;
 	uint32_t interval = 10000000u;
 	TIMER *timer = timer_init();
-	timer->callback = &heartbeat;
+	//timer->callback = &heartbeat;
 	
 	while (i--)
 	{
-		timer->check(timer, interval);
+		if(timer->check(timer, interval) == 0)
+        {
+            heartbeat();
+        }
 		usleep(1000);
 	}	
 	timer->clean(&timer);

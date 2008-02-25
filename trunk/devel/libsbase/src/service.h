@@ -32,6 +32,8 @@ void service_addconn(SERVICE *, int , struct sockaddr_in *);
 void service_state_conns(SERVICE *);
 /* get free connection */
 CONN *service_getconn(SERVICE *);
+/* active hearbeat handler */
+void service_active_heartbeat(SERVICE *);
 /* Add connection */
 void service_addconnection(SERVICE *, CONN *);
 /* Terminate service */

@@ -11,16 +11,17 @@ SERVICE *service_init()
 	SERVICE *service = (SERVICE *)calloc(1, sizeof(SERVICE));
 	if(service)
 	{
-		service->event_handler	= service_event_handler;
-		service->set		    = service_set;
-		service->run		    = service_run;
-		service->addconn	    = service_addconn;
-        service->state_conns    = service_state_conns;
-        service->getconn        = service_getconn;
-		service->terminate	    = service_terminate;
-		service->clean		    = service_clean;
-		service->event 		    = ev_init();
-		service->timer		    = timer_init();
+		service->event_handler	    = service_event_handler;
+		service->set		        = service_set;
+		service->run		        = service_run;
+		service->addconn	        = service_addconn;
+        service->state_conns        = service_state_conns;
+        service->getconn            = service_getconn;
+        service->active_heartbeat    = service_active_heartbeat;
+		service->terminate	        = service_terminate;
+		service->clean		        = service_clean;
+		service->event 		        = ev_init();
+		service->timer		        = timer_init();
 	}
 	return service;
 }
@@ -283,6 +284,7 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             conn->cb_packet_handler = service->cb_packet_handler;
             conn->cb_data_handler = service->cb_data_handler;
             conn->cb_oob_handler = service->cb_oob_handler;
+            conn->cb_error_handler = service->cb_error_handler;
         }
         else return ;
         /* handling conns and running_max_fd */
@@ -309,6 +311,20 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
         }
     }
 	return ;
+}
+
+/* check service hearbeat handler */
+void service_active_heartbeat(SERVICE *service)
+{
+    if(service)
+    {
+        if(service->timer && service->timer->check)
+        {
+            if(service->timer->check(service->timer, service->heartbeat_interval) == 0)
+                service->cb_heartbeat_handler(service->cb_heartbeat_arg);
+        }
+    }
+    return ;
 }
 
 /* check conns status */

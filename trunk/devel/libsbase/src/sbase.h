@@ -290,12 +290,15 @@ typedef struct _SERVICE
         /* Running options */
         int      running_status;
         uint32_t heartbeat_interval;
+        void     *cb_heartbeat_arg;
         uint32_t sleep_usec;
         uint32_t conn_timeout;
 
         /**************** Callback options for service *****************/
         /* Heartbeat Handler */
         void (*cb_heartbeat_handler)(void *arg);
+        /* error handler */
+        void (*cb_error_handler)(const struct _CONN*);
         /* Read From Buffer and return packet length to get */
         int (*cb_packet_reader)(const struct _CONN*, const struct _BUFFER *);
         /* Packet Handler */
@@ -306,14 +309,12 @@ typedef struct _SERVICE
         /* OOB Data Handler */
         void (*cb_oob_handler)(const struct _CONN *, const struct _BUFFER *oob);
 
-        /******************** Callback options for client *************/
-        void (*cb_job_complete)(void *arg, const struct _BUFFER *);
-
         /* Methods */
         void (*event_handler)(int, short, void*);
         int  (*set)(struct _SERVICE * );
         void (*run)(struct _SERVICE * );
         void (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
+        void (*active_heartbeat)(struct _SERVICE *);
         /******** Client methods *************/
         void (*state_conns)(struct _SERVICE *);
         struct _CONN *(*getconn)(struct _SERVICE *);
@@ -414,13 +415,13 @@ typedef struct _CONN
         //parent pointer 
         void			*parent;
         //message queue 
-        struct _QUEUE           *message_queue;
+        struct _QUEUE       *message_queue;
         //buffer 
         struct _BUFFER		*buffer;
         //OOB 
-        struct _BUFFER          *oob;
+        struct _BUFFER      *oob;
         //cache
-        struct _BUFFER          *cache;
+        struct _BUFFER      *cache;
         //packet 
         struct _BUFFER		*packet;
         // chunk 
@@ -428,9 +429,9 @@ typedef struct _CONN
         // send queue 
         struct _QUEUE		*send_queue;
         // Logger
-        struct _LOGGER          *logger;
+        struct _LOGGER      *logger;
         // Timer
-        struct _TIMER           *timer;
+        struct _TIMER       *timer;
 
         /* Event options */
         EVBASE 			*evbase;
@@ -439,6 +440,8 @@ typedef struct _CONN
         /* Callback */
         struct _CONN *callback_conn;
 
+        /* error handler */
+        void (*cb_error_handler)(const struct _CONN *);
         /* Read From Buffer and return packet length to get */
         int (*cb_packet_reader)(const struct _CONN*, const struct _BUFFER *);
         /* Packet Handler */
@@ -465,8 +468,8 @@ typedef struct _CONN
         void      (*data_handler)(struct _CONN *);
         void      (*oob_handler)(struct _CONN *);
         void	  (*push_message)(struct _CONN *, int);
-        int       (*ready_request)(struct _CONN *);
-        void      (*complete_job)(struct _CONN *);
+        void      (*start_cstate)(struct _CONN *);
+        void      (*over_cstate)(struct _CONN *);
         void      (*terminate)(struct _CONN *); 
         void      (*clean)(struct _CONN **);
     } CONN;

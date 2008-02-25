@@ -15,22 +15,32 @@
 typedef struct _TASK
 {
     int id;
-    int time;
+    int timeout;
     int nretry;
     int status;
+    int method_id;
 
     char file[PATH_MAX_SIZE];
     char destfile[PATH_MAX_SIZE];
     int  nblock;
 }TASK;
-
+typedef struct _TBLOCK
+{
+    int id;
+    int status;
+    unsigned long long offset;
+    unsigned long long size;
+}TBLOCK;
 typedef struct _TASKTABLE
 {
     TASK **table;
     int ntask;
     char taskfile[PATH_MAX_SIZE];
+    int running_task_id;
+    char statusfile[PATH_MAX_SIZE];
     
     int     (*add)(struct _TASKTABLE *, char *file, char *destfile);
+    TASK*   (*pop)(struct _TASKTABLE *);
     int     (*discard)(struct _TASKTABLE *, int taskid);
     int     (*dump)(struct _TASKTABLE *);
     int     (*resume)(struct _TASKTABLE *);
