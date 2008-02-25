@@ -54,8 +54,8 @@ CONN *conn_init(char *ip, int port)
 		conn->push_file	        = conn_push_file;
 		conn->data_handler	    = conn_data_handler;
 		conn->push_message	    = conn_push_message;
-        conn->ready_request     = conn_ready_request;
-        conn->complete_job      = conn_complete_job;
+        conn->start_cstate      = conn_start_cstate;
+        conn->over_cstate       = conn_over_cstate;
 		conn->terminate 	    = conn_terminate;
 		conn->clean 		    = conn_clean;
 		strcpy(conn->ip, ip);
@@ -486,8 +486,8 @@ void conn_push_message(CONN *conn, int message_id)
 	}
 }
 
-/* Ready for request */
-int conn_ready_request(CONN *conn)
+/* Start cstate */
+void conn_start_cstate(CONN *conn)
 {
     /* Check connection and transaction state */
     CONN_CHECK(conn);
@@ -496,14 +496,14 @@ int conn_ready_request(CONN *conn)
         if(conn->c_state == C_STATE_FREE) 
         {
             conn->c_state = C_STATE_USING;
-            return 0;
+            return ;
         }
     }
-    return -1;
+    return ;
 }
 
-/* complete job */
-void conn_complete_job(CONN *conn)
+/* Over cstate */
+void conn_over_cstate(CONN *conn)
 {
     if(conn)
     {
@@ -517,6 +517,10 @@ void conn_terminate(CONN *conn)
 {
     if(conn)
     {
+        if(conn->c_state == C_STATE_USING)
+        {
+           conn->cb_error_handler(conn); 
+        }
         conn->event->destroy(conn->event);
         shutdown(conn->fd, SHUT_RDWR);
         close(conn->fd);

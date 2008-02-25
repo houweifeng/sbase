@@ -125,6 +125,25 @@ int sbase_add_service(struct _SBASE *sb, struct _SERVICE *service)
 	}
 	return -1;
 }
+/* heartbeat */
+int sbase_active_heartbeat(struct _SBASE *sb)
+{
+    int i = 0;
+    SERVICE *service = NULL;
+
+    if(sb)
+    {
+        for(i = 0; i < sb->running_services; i++)
+        {
+            if((service = sb->services[i]) && service->cb_heartbeat_handler)
+            {
+               service->active_heartbeat(service); 
+            }
+        }
+
+    }
+    return ;
+}
 
 /* Running SBASE */
 int sbase_running(struct _SBASE *sb, uint32_t seconds)
@@ -187,6 +206,7 @@ running:
 							sb->stop(sb);
 					}
 					sb->evbase->loop(sb->evbase, 0, NULL);
+                    sbase_active_heartbeat(sb);
 					usleep(sb->sleep_usec);
 				}
 			}
@@ -195,6 +215,7 @@ running:
 				while(sb->running_status)
 				{
 					sb->evbase->loop(sb->evbase, 0, NULL);
+                    sbase_active_heartbeat(sb);
 					usleep(sb->sleep_usec);
 				}
 			}
@@ -216,6 +237,7 @@ running:
 					}
 					sb->evbase->loop(sb->evbase, 0, NULL);
 					sb->running_once(sb);
+                    sbase_active_heartbeat(sb);
 					usleep(sb->sleep_usec);
 				}
 			}
@@ -225,6 +247,7 @@ running:
 				{
 					sb->evbase->loop(sb->evbase, 0, NULL);
 					sb->running_once(sb);
+                    sbase_active_heartbeat(sb);
 					usleep(sb->sleep_usec);
 				}
 			}

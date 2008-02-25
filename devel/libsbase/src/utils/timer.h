@@ -31,7 +31,7 @@ typedef struct _TIMER
 	void *mutex;
 
 	void (*reset)(struct _TIMER *);
-	void (*check)(struct _TIMER *, uint32_t );
+	int  (*check)(struct _TIMER *, uint32_t );
 	void (*sample)(struct _TIMER *);
 	void (*clean)(struct _TIMER **);
 	void (*callback)(void);
@@ -43,7 +43,7 @@ TIMER *timer_init();
 /* Reset timer */
 void timer_reset(TIMER *);
 /* Check timer and Run callback */
-void timer_check(TIMER *, uint32_t );
+int timer_check(TIMER *, uint32_t );
 /* TIMER  gettime */
 void timer_sample(TIMER *);
 /* Clean Timer */
