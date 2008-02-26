@@ -294,6 +294,9 @@ typedef struct _SERVICE
         uint32_t sleep_usec;
         uint32_t conn_timeout;
 
+		/* mutext lock */
+		void *mutex;
+
         /**************** Callback options for service *****************/
         /* Heartbeat Handler */
         void (*cb_heartbeat_handler)(void *arg);
@@ -319,6 +322,8 @@ typedef struct _SERVICE
         void (*state_conns)(struct _SERVICE *);
         struct _CONN *(*newconn)(struct _SERVICE *);
         struct _CONN *(*getconn)(struct _SERVICE *);
+		void (*pushconn)(struct _SERVICE *, struct _CONN *);
+		void (*popconn)(struct _SERVICE *, int );
         /** terminate methods **/
         void (*terminate)(struct _SERVICE * );
         void (*clean)(struct _SERVICE ** );

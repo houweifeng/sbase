@@ -272,6 +272,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
 {
 	char *logfile = NULL, *s = NULL, *p = NULL, *taskfile = NULL, *statusfile = NULL;
 	int n = 0;
+	int ret = 0;
+
 	if((dict = iniparser_new(conf)) == NULL)
 	{
 		fprintf(stderr, "Initializing conf:%s failed, %s\n", conf, strerror(errno));
@@ -466,8 +468,17 @@ int sbase_initialize(SBASE *sbase, char *conf)
         return -1;
     }
 	/* server */
-	fprintf(stdout, "Parsing for daemon...\n");
-	return (sbase->add_service(sbase, serv) | sbase->add_service(sbase, transport));
+	if((ret = sbase->add_service(sbase, serv)) != 0)
+	{
+		fprintf(stderr, "Initiailize service[%s] failed, %s\n", serv->name, strerror(errno));
+		return ret;
+	}
+	if((ret = sbase->add_service(sbase, transport)) != 0)
+	{
+		fprintf(stderr, "Initiailize service[%s] failed, %s\n", transport->name, strerror(errno));
+		return ret;
+	}
+	return 0;
 }
 
 static void cb_stop(int sig){

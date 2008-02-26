@@ -7,6 +7,7 @@ sbase.c \
 sbase.h \
 service.c \
 service.h \
+mutex.h \
 utils/buffer.c \
 utils/buffer.h \
 utils/chunk.c \
