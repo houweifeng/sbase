@@ -321,6 +321,7 @@ void service_active_heartbeat(SERVICE *service)
 		{
 			if(service->cb_heartbeat_handler)
 			{
+				DEBUG_LOGGER(service->logger, "Heartbeat %llu in service[%s]", service->nheartbeat++, service->name);
 				service->cb_heartbeat_handler(service->cb_heartbeat_arg);
 			}
 			if(service->service_type == C_SERVICE)

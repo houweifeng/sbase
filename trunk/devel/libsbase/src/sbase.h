@@ -289,6 +289,7 @@ typedef struct _SERVICE
 
         /* Running options */
         int      running_status;
+		unsigned long long nheartbeat;
         uint32_t heartbeat_interval;
         void     *cb_heartbeat_arg;
         uint32_t sleep_usec;
