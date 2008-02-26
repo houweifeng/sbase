@@ -328,14 +328,18 @@ void service_active_heartbeat(SERVICE *service)
 {
     if(service)
     {
-        if(service->timer && service->timer->check)
-        {
-            if(service->cb_heartbeat_handler 
-					&& service->timer->check(service->timer, service->heartbeat_interval) == 0)
-                service->cb_heartbeat_handler(service->cb_heartbeat_arg);
-			//check connections
+		if(service->heartbeat_interval > 0
+			&& service->timer && service->timer->check
+			&& service->timer->check(service->timer, service->heartbeat_interval) == 0 )
+		{
+			if(service->cb_heartbeat_handler)
+			{
+				service->cb_heartbeat_handler(service->cb_heartbeat_arg);
+			}
 			if(service->service_type == C_SERVICE)
+			{
 				service->state_conns(service);
+			}
         }
     }
     return ;
@@ -351,7 +355,10 @@ void service_state_conns(SERVICE *service)
 		{
 			num = service->connections_limit - service->running_connections;
 			while(i++ < num)
-				if(service->newconn(service) == NULL)break;
+			{
+				if(service->newconn(service) == NULL)
+					break;
+			}
 		}
     }
 }
