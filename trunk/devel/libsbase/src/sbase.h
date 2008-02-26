@@ -313,10 +313,11 @@ typedef struct _SERVICE
         void (*event_handler)(int, short, void*);
         int  (*set)(struct _SERVICE * );
         void (*run)(struct _SERVICE * );
-        void (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
+        struct _CONN* (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
         void (*active_heartbeat)(struct _SERVICE *);
         /******** Client methods *************/
         void (*state_conns)(struct _SERVICE *);
+        struct _CONN *(*newconn)(struct _SERVICE *);
         struct _CONN *(*getconn)(struct _SERVICE *);
         /** terminate methods **/
         void (*terminate)(struct _SERVICE * );

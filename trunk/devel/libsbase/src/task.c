@@ -91,9 +91,11 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
                 if(size < TBLOCK_SIZE * 1llu)
                     tasktable->status[i].size   = size;
                 size -= tasktable->status[i].size;
+				offset += tasktable->status[i].size;
                 tasktable->status[i].cmdid      = CMD_PUT;
                 tasktable->status[i].id   = i++;
             }
+			//last block for md5sum
             tasktable->status[i].cmdid = CMD_MD5SUM;
             tasktable->dump_status(tasktable);
             return 0;
@@ -187,7 +189,7 @@ int tasktable_dump_status(TASKTABLE *tasktable)
     int i = 0;
     int fd = 0;
 
-    if(tasktable && tasktable->status && (taskid = tasktable->running_task_id) > 0)
+    if(tasktable && tasktable->status && (taskid = tasktable->running_task_id) >= 0)
     {
         if((fd = open(tasktable->statusfile, O_CREAT|O_WRONLY, 0644)) > 0)
         {
@@ -250,11 +252,16 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable)
                 }
                 if(tasktable->status[i].cmdid == CMD_MD5SUM && n > 0)
                     break;
-                tasktable->status[i].status = BLOCK_STATUS_WORKING;
-                block =  &(tasktable->status[i]);
-                break;
+				else
+				{
+                	tasktable->status[i].status = BLOCK_STATUS_WORKING;
+                	block =  &(tasktable->status[i]);
+                	break;
+				}
             }
         }
+		//if(block)fprintf(stdout, "%d:block:%08x:%llu:%llu\n", i, block, block->offset, block->size);
+		//else fprintf(stdout, "no block\n");
     }
     return block;
 }
@@ -290,6 +297,7 @@ void tasktable_free_status(TASKTABLE *tasktable)
             free(tasktable->status);
         tasktable->status = NULL;
         tasktable->nblock = 0;
+		unlink(tasktable->statusfile);
     }
 }
 

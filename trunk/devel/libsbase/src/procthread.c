@@ -166,12 +166,8 @@ void procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 	if(pth && pth->connections && conn && conn->fd < pth->service->max_connections && conn->fd > 0  )
 	{
 		pth->connections[conn->fd] = NULL;
-        pth->service->connections[conn->fd] = NULL;
+        pth->service->connections[conn->index] = NULL;
 		pth->service->running_connections--;
-        if(conn->fd >= pth->service->running_max_fd)
-        {
-            pth->service->running_max_fd = conn->fd - 1;
-        }
 		conn->terminate(conn);	
 		conn->clean(&conn);
 	}

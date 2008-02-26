@@ -16,6 +16,7 @@ SERVICE *service_init()
 		service->run		        = service_run;
 		service->addconn	        = service_addconn;
         service->state_conns        = service_state_conns;
+        service->newconn            = service_newconn;
         service->getconn            = service_getconn;
         service->active_heartbeat    = service_active_heartbeat;
 		service->terminate	        = service_terminate;
@@ -238,7 +239,8 @@ void service_event_handler(int event_fd, short event, void *arg)
 			{
 				DEBUG_LOGGER(service->logger, "Accept new connection[%d] from %s:%d",
 					fd, inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port));			
-				return service->addconn(service, fd, &rsa);
+				service->addconn(service, fd, &rsa);
+				return ;
 			}
 			else
 			{
@@ -251,7 +253,7 @@ void service_event_handler(int event_fd, short event, void *arg)
 }
 
 /* Add new conn */
-void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
+CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
 {
 	CONN *conn = NULL;
 	char *ip = NULL;
@@ -266,7 +268,7 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
                     service->running_connections, service->max_connections);
             shutdown(fd, SHUT_RDWR);
             close(fd);
-            return ;
+            return conn;
         }
         /* Initialize connection */
         ip   = inet_ntoa(sa->sin_addr);
@@ -286,20 +288,25 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             conn->cb_oob_handler = service->cb_oob_handler;
             conn->cb_error_handler = service->cb_error_handler;
         }
-        else return ;
+        else return conn;
         /* handling conns and running_max_fd */
         if(service->connections)
         {
-            service->connections[fd] = conn;
-            if(fd > service->running_max_fd)
-                service->running_max_fd = fd;
+			index = 0;
+			while(index < service->max_connections)
+			{
+            	if(service->connections[index]) service->connections[index] = conn;
+				conn->index = index;
+				++index;
+			}
         }
         /* Add connection for procthread */
         if(service->working_mode == WORKING_PROC && service->procthread)
         {
             DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthread[%d]",
                     conn->fd, conn->ip, conn->port, getpid());
-            return service->procthread->addconn(service->procthread, conn);
+            service->procthread->addconn(service->procthread, conn);
+			return conn;
         }
         /* Add connection to procthread pool */
         if(service->working_mode == WORKING_THREAD && service->procthreads)
@@ -307,10 +314,11 @@ void  service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             index = fd % service->max_procthreads;
             DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthreads[%d]",
                     conn->fd, conn->ip, conn->port, index);
-            return service->procthreads[index]->addconn(service->procthreads[index], conn);
+            service->procthreads[index]->addconn(service->procthreads[index], conn);
+			return conn;
         }
     }
-	return ;
+	return conn;
 }
 
 /* check service hearbeat handler */
@@ -322,6 +330,9 @@ void service_active_heartbeat(SERVICE *service)
         {
             if(service->timer->check(service->timer, service->heartbeat_interval) == 0)
                 service->cb_heartbeat_handler(service->cb_heartbeat_arg);
+			//check connections
+			if(service->service_type == C_SERVICE)
+				service->state_conns(service);
         }
     }
     return ;
@@ -330,9 +341,33 @@ void service_active_heartbeat(SERVICE *service)
 /* check conns status */
 void service_state_conns(SERVICE *service)
 {
+	int i = 0, num = 0;
     if(service)
     {
+		if(service->running_connections < service->running_procthreads)
+		{
+			num = service->max_connections - service->running_connections;
+			while(i++ < num)
+				service->newconn(service);
+		}
     }
+}
+
+/* NEW connection for client mode */
+CONN *service_newconn(SERVICE *service)
+{
+	CONN *conn = NULL;
+	int fd = 0;
+	if(service)
+	{
+		fd = socket(service->family, service->socket_type, 0);
+		if(fd > 0 && connect(fd, (struct sockaddr *)&(service->sa),
+					sizeof(struct sockaddr )) == 0)
+		{
+			conn = service->addconn(service, fd, &(service->sa));
+		}
+	}
+	return conn;
 }
 
 /* get free connection */
@@ -344,7 +379,7 @@ CONN *service_getconn(SERVICE *service)
     if(service)
     {
         //select free connection 
-        for( i = 0; i < service->running_max_fd; i++)
+        for( i = 0; i < service->max_connections; i++)
         {
             conn = service->connections[i];
             if(conn && conn->c_state == C_STATE_FREE)
@@ -355,17 +390,9 @@ CONN *service_getconn(SERVICE *service)
             conn = NULL;
         }
         //create new connection 
-        if(conn == NULL)
+        if(conn == NULL && (conn = service->newconn(service)))
         {
-            fd = socket(service->family, service->socket_type, 0);
-            if(fd > 0 && connect(fd, (struct sockaddr *)&(service->sa),
-                        sizeof(struct sockaddr )) == 0)
-                service->addconn(service, fd, &(service->sa));
-            if(fd <= service->running_max_fd)
-            {
-                conn = service->connections[fd];
-                conn->c_state = C_STATE_USING;
-            }
+             conn->c_state = C_STATE_USING;
         }
     }
     return conn;
