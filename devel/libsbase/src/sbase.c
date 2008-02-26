@@ -135,7 +135,7 @@ int sbase_active_heartbeat(struct _SBASE *sb)
     {
         for(i = 0; i < sb->running_services; i++)
         {
-            if((service = sb->services[i]) && service->cb_heartbeat_handler)
+            if((service = sb->services[i]))
             {
                service->active_heartbeat(service); 
             }

@@ -170,6 +170,7 @@ void cb_serv_heartbeat_handler(void *arg)
                     else
                     {
                         c_conn->over_cstate((CONN *)c_conn);
+						break;
                     }
                 }
                 break;

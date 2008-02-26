@@ -27,11 +27,13 @@ int service_set(SERVICE *);
 /* Run service */
 void service_run(SERVICE *);
 /* Add new conn */
-void service_addconn(SERVICE *, int , struct sockaddr_in *);
+CONN *service_addconn(SERVICE *, int , struct sockaddr_in *);
 /* check conns status */
 void service_state_conns(SERVICE *);
 /* get free connection */
 CONN *service_getconn(SERVICE *);
+/* new connections */
+CONN *service_newconn(SERVICE *);
 /* active hearbeat handler */
 void service_active_heartbeat(SERVICE *);
 /* Add connection */
