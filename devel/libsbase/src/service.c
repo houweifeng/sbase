@@ -288,15 +288,20 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
         else return conn;
         /* handling conns and running_max_fd */
         if(service->connections)
-        {
+		{
 			index = 0;
 			while(index < service->max_connections)
 			{
-            	if(service->connections[index]) service->connections[index] = conn;
-				conn->index = index;
+				if(service->connections[index] == NULL)
+				{
+					service->connections[index] = conn;
+					conn->index = index;
+					break;
+				}
 				++index;
 			}
-        }
+
+		}
         /* Add connection for procthread */
         if(service->working_mode == WORKING_PROC && service->procthread)
         {
