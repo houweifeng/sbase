@@ -9,6 +9,7 @@
 #include "iniparser.h"
 #include "task.h"
 #include "basedef.h"
+#include "logger.h"
 char *cmdlist[] = {"put", "status"};
 #define     OP_NUM          2
 #define     OP_PUT          0
@@ -38,6 +39,7 @@ static SERVICE *transport = NULL;
 static SERVICE *serv = NULL;
 static dictionary *dict = NULL;
 static TASKTABLE *tasktable = NULL;
+static LOGGER *daemon_logger = NULL;
 #define GET_RESPID(p, end, n, respid)                                               \
 {                                                                                   \
     respid = -1;                                                                    \
@@ -64,6 +66,7 @@ void cb_transport_error_handler(const CONN *conn)
     {
         blockid = conn->c_id;
         tasktable->update_status(tasktable, blockid, BLOCK_STATUS_ERROR);
+		ERROR_LOGGER(daemon_logger, "action failed on %d blockid:%d", conn->fd, conn->c_id);
         conn->over_cstate((CONN *)conn);
     }
 }
@@ -96,6 +99,8 @@ void cb_transport_packet_handler(const CONN *conn, const BUFFER *packet)
                 break;
         }
         tasktable->update_status(tasktable, blockid, status);
+		DEBUG_LOGGER(daemon_logger, "action over on %d blockid:%d status:%d", 
+				conn->fd, conn->c_id, status);
         conn->over_cstate((CONN *)conn);
     }
 }
@@ -125,23 +130,27 @@ void cb_serv_heartbeat_handler(void *arg)
         taskid = tasktable->running_task_id;
         if(taskid == -1)
             taskid = tasktable->running_task_id = 0;    
-
         while(taskid < tasktable->ntask)
         {
             if(tasktable->table 
                     && (task = tasktable->table[taskid])
                     && task->status != TASK_STATUS_OVER)
             {
+				//DEBUG_LOGGER(daemon_logger, "picking task[%08x] id:%d status:%d",
+				//		task, task->id, task->status);
                 if(tasktable->status == NULL)
                 {
                     tasktable->running_task_id = taskid;
                     tasktable->ready(tasktable, taskid);
                 }
                 task = tasktable->table[taskid];
+				DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
+				tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
                 tasktable->table[taskid]->nretry++;
-
                 while((c_conn = transport->getconn(transport)))
                 {
+				DEBUG_LOGGER(daemon_logger, "get connection[%08x][%d][%d]", 
+						c_conn, c_conn->fd, c_conn->index);
                     if((block = tasktable->pop_block(tasktable)))
                     {
                         c_conn->c_id = block->id;
@@ -150,8 +159,9 @@ void cb_serv_heartbeat_handler(void *arg)
                             if(stat(tasktable->table[taskid]->file, &st) == 0 && st.st_size > 0) 
                             {
                                 n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
-                                        tasktable->table[taskid]->destfile, 
-                                        block->offset, block->size); 
+                                        task->destfile, block->offset, block->size); 
+								DEBUG_LOGGER(daemon_logger, "put %s offset:%llusize:%llu",
+                                        task->destfile, block->offset, block->size); 
                                 c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                                 c_conn->push_file((CONN *)c_conn, 
                                         tasktable->table[taskid]->file, 
@@ -460,14 +470,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	serv->cb_oob_handler = &cb_serv_oob_handler;
 	serv->cb_heartbeat_handler = &cb_serv_heartbeat_handler;
    
-    taskfile = iniparser_getstr(dict, "DAEMON:taskfile");
-    statusfile = iniparser_getstr(dict, "DAEMON:statusfile");
-    if((tasktable = tasktable_init(taskfile, statusfile)) == NULL)
-    {
-        fprintf(stderr, "Initialize tasktable failed, %s\n", strerror(errno));
-        return -1;
-    }
-	/* server */
+    /* server */
 	if((ret = sbase->add_service(sbase, serv)) != 0)
 	{
 		fprintf(stderr, "Initiailize service[%s] failed, %s\n", serv->name, strerror(errno));
@@ -478,6 +481,15 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		fprintf(stderr, "Initiailize service[%s] failed, %s\n", transport->name, strerror(errno));
 		return ret;
 	}
+	taskfile = iniparser_getstr(dict, "DAEMON:taskfile");
+    statusfile = iniparser_getstr(dict, "DAEMON:statusfile");
+    if((tasktable = tasktable_init(taskfile, statusfile)) == NULL)
+    {
+        fprintf(stderr, "Initialize tasktable failed, %s\n", strerror(errno));
+        return -1;
+    }
+	//logger 
+	daemon_logger = logger_init(iniparser_getstr(dict, "DAEMON:access_log"));
 	return 0;
 }
 

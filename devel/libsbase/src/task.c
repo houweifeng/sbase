@@ -214,7 +214,7 @@ int tasktable_resume_status(TASKTABLE *tasktable)
 
     if(tasktable)
     {
-        if((fd = open(tasktable->statusfile, O_RDONLY)))  
+        if((fd = open(tasktable->statusfile, O_RDONLY)) > 0)  
         {
             read(fd, &(tasktable->running_task_id), sizeof(int));
             read(fd, &(tasktable->nblock), sizeof(int));
@@ -271,7 +271,8 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status)
 {
     int taskid = -1;
     if(tasktable && blockid >= 0 
-            && blockid < tasktable->nblock)
+            && blockid < tasktable->nblock
+			&& tasktable->status[blockid].status != BLOCK_STATUS_OVER)
     {
         tasktable->status[blockid].status = status;
         if(blockid == (tasktable->nblock - 1) 

@@ -75,6 +75,7 @@ ERROR:
 		return NULL;	
 	}
 }
+
 /* Initialize setting  */
 int conn_set(CONN *conn)
 {
@@ -130,12 +131,12 @@ void conn_event_handler(int event_fd, short event, void *arg)
                         }
 			if(event & E_READ)
 			{
-				DEBUG_LOGGER(conn->logger, "E_READ:%d", E_READ);
+				DEBUG_LOGGER(conn->logger, "E_READ:%d on %d", E_READ, event_fd);
 				conn->read_handler(conn);
 			}
 			if(event & E_WRITE)
 			{
-				DEBUG_LOGGER(conn->logger, "E_WRITE:%d", E_WRITE);
+				DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d", E_WRITE, event_fd);
 				conn->write_handler(conn);
 			} 
 		}	
@@ -232,10 +233,12 @@ void conn_write_handler(CONN *conn)
 			if( (n = cp->send(cp, conn->fd, conn->buffer_size)) > 0 )
 			{
 				conn->sent_data_total += n;
-				DEBUG_LOGGER(conn->logger, "Sent %d byte(s) total %llu to %s:%d via %d leave %llu ",
-						n, conn->sent_data_total, conn->ip, conn->port, conn->fd, cp->len);
+				DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %llu) "
+						"to %s:%d via %d leave %llu",
+						n, conn->sent_data_total, conn->ip, 
+						conn->port, conn->fd, cp->len);
 				/* CONN TIMER sample */
-                        	if(conn->timer) conn->timer->sample(conn->timer);
+                if(conn->timer) conn->timer->sample(conn->timer);
 				if(cp->len <= 0 )
 				{
 					cp = (CHUNK *)conn->send_queue->pop(conn->send_queue);	
@@ -441,8 +444,8 @@ int conn_push_file(CONN *conn, char *filename,
 		if(conn->send_queue->total > 0 ) 
 			conn->event->add(conn->event, E_WRITE);	
 		DEBUG_LOGGER(conn->logger, 
-			"Pushed file\"%s\" [%llu][%llu] to send_queue on %s:%d via %d\n",
-			filename, offset, size, conn->ip, conn->port, conn->fd);
+			"Pushed file\"%s\" [%llu][%llu] to send_queue (total %d) on %s:%d via %d\n",
+			filename, offset, size, conn->send_queue->total, conn->ip, conn->port, conn->fd);
 	}
 }
 
@@ -489,6 +492,7 @@ void conn_push_message(CONN *conn, int message_id)
 /* Start cstate */
 void conn_start_cstate(CONN *conn)
 {
+	CHUNK *cp = NULL;
     /* Check connection and transaction state */
     CONN_CHECK(conn);
     if(conn)
@@ -496,6 +500,16 @@ void conn_start_cstate(CONN *conn)
         if(conn->c_state == C_STATE_FREE) 
         {
             conn->c_state = C_STATE_USING;
+			while(conn->send_queue->total > 0 )
+			{
+				cp = (CHUNK *)conn->send_queue->pop(conn->send_queue);
+				if(cp) cp->clean(&(cp));
+			}
+			conn->packet->reset(conn->packet);	
+			conn->cache->reset(conn->cache);	
+			conn->buffer->reset(conn->buffer);	
+			conn->oob->reset(conn->oob);	
+			conn->chunk->reset(conn->chunk);	
             return ;
         }
     }
