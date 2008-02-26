@@ -18,11 +18,14 @@ SERVICE *service_init()
         service->state_conns        = service_state_conns;
         service->newconn            = service_newconn;
         service->getconn            = service_getconn;
+        service->pushconn           = service_pushconn;
+        service->popconn            = service_popconn;
         service->active_heartbeat    = service_active_heartbeat;
 		service->terminate	        = service_terminate;
 		service->clean		        = service_clean;
 		service->event 		        = ev_init();
 		service->timer		        = timer_init();
+		MUTEX_INIT(service->mutex);
 	}
 	return service;
 }
@@ -286,22 +289,6 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             conn->cb_error_handler = service->cb_error_handler;
         }
         else return conn;
-        /* handling conns and running_max_fd */
-        if(service->connections)
-		{
-			index = 0;
-			while(index < service->max_connections)
-			{
-				if(service->connections[index] == NULL)
-				{
-					service->connections[index] = conn;
-					conn->index = index;
-					break;
-				}
-				++index;
-			}
-
-		}
         /* Add connection for procthread */
         if(service->working_mode == WORKING_PROC && service->procthread)
         {
@@ -358,6 +345,7 @@ void service_state_conns(SERVICE *service)
 			{
 				if(service->newconn(service) == NULL)
 					break;
+				
 			}
 		}
     }
@@ -367,7 +355,7 @@ void service_state_conns(SERVICE *service)
 CONN *service_newconn(SERVICE *service)
 {
 	CONN *conn = NULL;
-	int fd = 0;
+	int fd = 0, i = 0;
 	if(service)
 	{
 		fd = socket(service->family, service->socket_type, 0);
@@ -375,9 +363,49 @@ CONN *service_newconn(SERVICE *service)
 					sizeof(struct sockaddr )) == 0)
 		{
 			conn = service->addconn(service, fd, &(service->sa));
+			
 		}
 	}
 	return conn;
+}
+
+/* POP connections from connections pool */
+void service_popconn(SERVICE *service, int index)
+{
+	if(service)
+	{
+		MUTEX_LOCK(service->mutex);
+		if(service->connections && index >= 0)
+		{
+			service->connections[index] = NULL;
+			service->running_connections--;
+		}
+		MUTEX_UNLOCK(service->mutex);
+	}
+	return ;
+}
+
+/* PUSH connections to connections pool */
+void service_pushconn(SERVICE *service, CONN *conn)
+{
+	int i = 0;
+	if(service && conn)
+	{
+		MUTEX_LOCK(service->mutex);
+		while(i < service->max_connections && service->connections)
+		{
+			if(service->connections[i] == NULL)
+			{
+				service->connections[i] = conn;
+				conn->index = i;
+				service->running_connections++;
+				break;
+			}
+			i++;
+		}
+		MUTEX_UNLOCK(service->mutex);
+	}
+	return ;
 }
 
 /* get free connection */
@@ -466,6 +494,8 @@ void service_clean(SERVICE **service)
             (*service)->event->clean(&(*service)->event);
         if((*service)->timer) 
             (*service)->timer->clean(&((*service)->timer));
+		if((*service)->mutex)
+			MUTEX_DESTROY((*service)->mutex);
         free((*service));
         (*service) = NULL;
     }		

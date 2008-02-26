@@ -13,6 +13,7 @@
 #include <pthread.h>
 #endif
 #include "sbase.h"
+#include "mutex.h"
 
 #ifndef _SERVICE_H
 #define _SERVICE_H
@@ -34,6 +35,10 @@ void service_state_conns(SERVICE *);
 CONN *service_getconn(SERVICE *);
 /* new connections */
 CONN *service_newconn(SERVICE *);
+/* POP connections from connections pool */
+void service_popconn(SERVICE *service, int index);
+/* PUSH connections to connections pool */
+void service_pushconn(SERVICE *service, CONN *conn);
 /* active hearbeat handler */
 void service_active_heartbeat(SERVICE *);
 /* Add connection */

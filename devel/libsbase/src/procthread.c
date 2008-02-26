@@ -135,8 +135,7 @@ void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 			pth->connections = (CONN **)calloc(pth->service->max_connections, sizeof(CONN *));
 		if(pth->connections == NULL && conn->fd <= 0 )
 			return ;
-		if(pth->service->running_connections < pth->service->max_connections 
-			&& conn->fd < pth->service->max_connections)
+		if(conn->fd < pth->service->max_connections)
 		{
 			/* Add event to evbase */
 			conn->evbase = pth->evbase;
@@ -148,7 +147,7 @@ void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 					conn->fd, conn->ip, conn->port, strerror(errno));
 			}
 			pth->connections[conn->fd] = conn;
-			pth->service->running_connections++;
+			pth->service->pushconn(pth->service, conn);
 			DEBUG_LOGGER(pth->logger, "Added connection[%d] %s:%d to procthread[%d] total %d",
 				 conn->fd, conn->ip, conn->port, pth->index, pth->service->running_connections);
 		}
@@ -166,8 +165,7 @@ void procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 	if(pth && pth->connections && conn && conn->fd < pth->service->max_connections && conn->fd > 0  )
 	{
 		pth->connections[conn->fd] = NULL;
-        pth->service->connections[conn->index] = NULL;
-		pth->service->running_connections--;
+        pth->service->popconn(pth->service, conn->index);
 		conn->terminate(conn);	
 		conn->clean(&conn);
 	}
