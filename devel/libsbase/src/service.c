@@ -198,11 +198,8 @@ end:
         {
             for(i = 0; i < service->connections_limit; i++)
             {
-                fd = socket(service->family, service->socket_type, 0);
-                if(fd > 0 && connect(fd, (struct sockaddr *)&(service->sa), 
-                            sizeof(struct sockaddr )) == 0)
-                {
-                    service->addconn(service, fd, &(service->sa));
+				if(service->newconn(service))
+				{
                     DEBUG_LOGGER(service->logger, "Connected to %s:%d via %d",
                             service->ip, service->port, fd);
                 }
@@ -210,7 +207,7 @@ end:
                 {
                     ERROR_LOGGER(service->logger, "Connectting to %s:%d via %d failed, %s",
                             service->ip, service->port, fd, strerror(errno));
-                    close(fd);
+					break;
                 }
             }
         }
@@ -328,7 +325,8 @@ void service_active_heartbeat(SERVICE *service)
     {
         if(service->timer && service->timer->check)
         {
-            if(service->timer->check(service->timer, service->heartbeat_interval) == 0)
+            if(service->cb_heartbeat_handler 
+					&& service->timer->check(service->timer, service->heartbeat_interval) == 0)
                 service->cb_heartbeat_handler(service->cb_heartbeat_arg);
 			//check connections
 			if(service->service_type == C_SERVICE)
@@ -344,11 +342,11 @@ void service_state_conns(SERVICE *service)
 	int i = 0, num = 0;
     if(service)
     {
-		if(service->running_connections < service->running_procthreads)
+		if(service->running_connections < service->connections_limit)
 		{
-			num = service->max_connections - service->running_connections;
+			num = service->connections_limit - service->running_connections;
 			while(i++ < num)
-				service->newconn(service);
+				if(service->newconn(service) == NULL)break;
 		}
     }
 }
