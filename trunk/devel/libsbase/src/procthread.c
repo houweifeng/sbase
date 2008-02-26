@@ -149,8 +149,8 @@ void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 			}
 			pth->connections[conn->fd] = conn;
 			pth->service->running_connections++;
-			DEBUG_LOGGER(pth->logger, "Added connection[%d] %s:%d to procthread[%d]",
-				 conn->fd, conn->ip, conn->port, pth->index);
+			DEBUG_LOGGER(pth->logger, "Added connection[%d] %s:%d to procthread[%d] total %d",
+				 conn->fd, conn->ip, conn->port, pth->index, pth->service->running_connections);
 		}
 		else
 		{
