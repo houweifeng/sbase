@@ -142,14 +142,14 @@ int chk_fill(CHUNK *chunk, void *data, size_t len)
 int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 {
 	int n = 0, len = 0;
-	size_t m_size;
+	size_t m_size = 0;
 	void *data = NULL;
 	void *buf = NULL;
 
 	if(chunk == NULL ) return -1;
-	if(chunk->len <= 0 ) return -1;
+	if(chunk->len <= 0llu ) return -1;
 #ifdef HAVE_PTHREAD
-        if(chunk->mutex) pthread_mutex_lock((pthread_mutex_t *)chunk->mutex);
+	if(chunk->mutex) pthread_mutex_lock((pthread_mutex_t *)chunk->mutex);
 #endif
 	switch(chunk->type)	
 	{
@@ -178,17 +178,17 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 					}
 				}
 				if(lseek(chunk->file.fd, (off_t) chunk->offset, SEEK_SET) == -1)
-                                {
-                                        n = -1;
-                                        fprintf(stderr, "LSEEK %u failed, %s\n",
-                                                         chunk->offset, strerror(errno));
-                                        goto end;
-                                }
+				{
+					n = -1;
+					fprintf(stderr, "LSEEK %u failed, %s\n",
+							chunk->offset, strerror(errno));
+					goto end;
+				}
+				m_size = (chunk->len > (buf_size * 1llu))
+					? buf_size : ((chunk->len) * 1u);
 #ifdef _USE_MMAP
-				m_size = (chunk->len > buf_size)
-					 ? buf_size : (size_t)(chunk->len);
 				if( (data = mmap(NULL, m_size, PROT_READ, MAP_PRIVATE,
-						chunk->file.fd, 0)) == MAP_FAILED)
+								chunk->file.fd, 0)) == MAP_FAILED)
 				{
 					n = -1;
 					fprintf(stderr, "MMAP %d size:%u failed, %s\n",
@@ -201,7 +201,7 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 				{
 					n = -1;
 					fprintf(stderr, "READ %d failed, %s\n", 
-						chunk->file.fd, strerror(errno));
+							chunk->file.fd, strerror(errno));
 					goto end;
 				}
 				else
@@ -213,7 +213,7 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 				{
 					n = -1;
 					fprintf(stderr, "WRITE %d failed, %s\n",
-                                                chunk->file.fd, strerror(errno));
+							chunk->file.fd, strerror(errno));
 					goto end;
 				}
 				else
@@ -222,7 +222,7 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 					chunk->len  -= n * 1llu;
 				}
 #ifdef _USE_MMAP
-					munmap(data, m_size);
+				munmap(data, m_size);
 #endif
 end:
 				{
@@ -235,7 +235,7 @@ end:
 			return n = -1;
 	}
 #ifdef HAVE_PTHREAD
-                if(chunk->mutex) pthread_mutex_unlock((pthread_mutex_t *)chunk->mutex);
+	if(chunk->mutex) pthread_mutex_unlock((pthread_mutex_t *)chunk->mutex);
 #endif
 
 	return n;
