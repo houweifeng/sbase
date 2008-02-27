@@ -150,6 +150,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
             kqev->flags = EV_DELETE;
             kqev->udata = (void *)event;
             DEBUG_LOGGER(evbase->logger, "del EVFILT_READ[%d] on %d", kqev->filter, kqev->ident);
+            kevent(evbase->efd, kqev, 1, NULL, 0, NULL);
         }
         if(event->ev_flags & E_WRITE)
         {
@@ -158,6 +159,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
             kqev->flags = EV_DELETE;
             kqev->udata = (void *)event;
             DEBUG_LOGGER(evbase->logger, "del EVFILT_WRITE[%d] on %d", kqev->filter, kqev->ident);
+            kevent(evbase->efd, kqev, 1, NULL, 0, NULL);
         }
         if(event->ev_fd >= evbase->maxfd)
             evbase->maxfd = event->ev_fd - 1;
