@@ -42,6 +42,15 @@ void event_active(EVENT *event, short ev_flags);
 void event_destroy(EVENT *event);
 /* Clean event */
 void event_clean(EVENT **event);
+/* set logfile */
+void evbase_set_logfile(EVBASE *evbase, char *file)
+{
+    if(evbase)
+    {
+        evbase->logger = (LOGGER *)logger_init(file);
+    }
+    return ;
+}
 /* Initialize evbase */
 EVBASE *evbase_init()
 {
@@ -49,6 +58,7 @@ EVBASE *evbase_init()
 	char *s = NULL;
 	if(evbase)
 	{
+        evbase->set_logfile = evbase_set_logfile;
 #ifdef HAVE_EVPORT
 		evbase->init 	=  evport_init;
 		evbase->add 	=  evport_add;
@@ -133,15 +143,12 @@ EVBASE *evbase_init()
 		//evbase->clean 	=  evbase_clean;
 		if(evbase->init == NULL || evbase->add == NULL || evbase->update == NULL 
 				|| evbase->del == NULL || evbase->loop == NULL 
-				|| evbase->reset == NULL || evbase->clean == NULL)
+				|| evbase->reset == NULL || evbase->clean == NULL
+                ||  evbase->init(evbase) != 0)
 		{
 			free(evbase); 
 			fprintf(stderr, "Initialize evbase failed, %s", strerror(errno));
 			evbase = NULL;
-		}
-		else
-		{
-			evbase->init(evbase);
 		}
 	}
 	return evbase;
@@ -159,6 +166,7 @@ EVENT *ev_init()
 		event->active	= event_active;
 		event->destroy	= event_destroy;
 		event->clean	= event_clean;
+        event->index    = -1;
 	}
 	return event;
 }
@@ -187,7 +195,8 @@ void event_add(EVENT *event, short flags)
 		if(event->ev_base && event->ev_base->update)
 		{
 			event->ev_base->update(event->ev_base, event);
-			DEBUG_LOGGER(event->ev_base->logger, "Updated event[%x] to %d on %d",
+			DEBUG_LOGGER(event->ev_base->logger, 
+                    "Updated event[%x] to %d on %d",
 				event, event->ev_flags, event->ev_fd);
 		}
 	}

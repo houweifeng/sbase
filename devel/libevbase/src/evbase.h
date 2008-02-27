@@ -14,7 +14,6 @@ extern "C" {
 #define EV_MAX_FD	1024
 #define EV_USEC_SLEEP	100
 struct _EVENT;
-struct _LOGGER;
 #ifndef _TYPEDEF_EVBASE
 #define _TYPEDEF_EVBASE
 typedef struct _EVBASE
@@ -25,17 +24,19 @@ typedef struct _EVBASE
 	void *ev_changes;
 	void *evs;
 	int  efd;
-	struct _LOGGER *logger;
+	void *logger;
 	
 	int nfd;
+    int nevent;
 	int  maxfd;
 	struct _EVENT **evlist;
 	int usec_sleep ;
 	int allowed;
 	int state;
 
-	int	(*init)(struct _EVBASE *);
-	int	(*add)(struct _EVBASE *, struct _EVENT*);
+    void    (*set_logfile)(struct _EVBASE *, char *logfile);
+	int	    (*init)(struct _EVBASE *);
+	int	    (*add)(struct _EVBASE *, struct _EVENT*);
 	int 	(*update)(struct _EVBASE *, struct _EVENT*);
 	int 	(*del)(struct _EVBASE *, struct _EVENT*);
 	void	(*loop)(struct _EVBASE *, short , struct timeval *tv);
@@ -48,6 +49,7 @@ EVBASE *evbase_init();
 #define _TYPEDEF_EVENT
 typedef struct _EVENT
 {
+    int index;
 	struct timeval tv;
 	short ev_flags;
 	int ev_fd;
