@@ -9,6 +9,7 @@
 #include "iniparser.h"
 #include "md5.h"
 #include "basedef.h"
+#include "logger.h"
 
 #ifndef LQFTPD_DEF
 #define LQFTPD_DEF
@@ -39,7 +40,11 @@ typedef struct _kitem
 #define LQFTPD_LOG      "/tmp/lqftpd_access_log"
 #define LQFTPD_EVLOG      "/tmp/lqftpd_evbase_log"
 #endif
-char *document_root = NULL;
+static char *access_log  = "/tmp/lqftpd_access.log";
+static char *histlist = "/tmp/hist.list";
+static char *filelist = "/tmp/file.list";
+static char *document_root = NULL;
+static LOGGER *lqftpd_logger = NULL;
 SBASE *sbase = NULL;
 dictionary *dict = NULL;
 SERVICE *lqftpd = NULL;
@@ -175,6 +180,40 @@ int truncate_file(char *file, unsigned long long size)
     return truncate(file, size);
 }
 
+//append file to filelist
+int append_to_filelist(char *file)
+{
+	int fd = 0;
+	char *lineend = "\r\n";
+	int n = 0;
+
+	if(access(histlist, F_OK) != 0)
+		pmkdir(histlist, 0755);
+	if((fd = open(histlist, O_CREAT|O_APPEND|O_RDWR, 0644)) > 0)
+	{
+		n = write(fd, file, strlen(file));	
+		n += write(fd, lineend, strlen(lineend));	
+		if(n < 0)
+		{
+			ERROR_LOGGER(lqftpd_logger, "writting to file %s failed, %s", histlist, strerror(errno))
+		}
+		close(fd);
+	}
+		
+	if(access(filelist, F_OK) != 0)
+		pmkdir(filelist, 0755);
+	if((fd = open(filelist, O_CREAT|O_APPEND|O_RDWR, 0644)) > 0)
+	{
+		n =  write(fd, file, strlen(file));	
+		n += write(fd, lineend, strlen(lineend));	
+		if(n < 0)
+		{
+			ERROR_LOGGER(lqftpd_logger, "writting to file %s failed, %s", filelist, strerror(errno))
+		}
+		close(fd);
+	}
+}
+
 void cb_packet_handler(const CONN *conn, const BUFFER *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
@@ -300,14 +339,17 @@ op_put:
 		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
         if(size == 0llu || is_valid_offset == 0llu)
         {
+			ERROR_LOGGER(lqftpd_logger, "put %s, invalid request", fullpath);
             RESPONSE(conn, RESP_BAD_REQ);
             return ;
         }
+		DEBUG_LOGGER(lqftpd_logger, "put %s offset:%llu size:%llu", fullpath, offset, size);
 		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
         //check file size 
         if(pmkdir(fullpath, 0755) != 0 
                 || mod_file_size(fullpath, offset + size) != 0)
         {
+			ERROR_LOGGER(lqftpd_logger, "put %s, mkdir and mod_file_size() failed, %s", fullpath, strerror(errno));
             RESPONSE(conn, RESP_SERVER_ERROR);
         }
         else
@@ -322,15 +364,18 @@ op_del:
             if(unlink(fullpath) == 0)
             {
                 RESPONSE(conn, RESP_OK);
+				DEBUG_LOGGER(lqftpd_logger, "del %s", fullpath);
             }
             else 
             {
                 RESPONSE(conn, RESP_SERVER_ERROR);
+				ERROR_LOGGER(lqftpd_logger, "del %s failed, %s", fullpath, strerror(errno));
             }
         }
         else
         {
             RESPONSE(conn, RESP_FILE_NOT_EXISTS);
+			ERROR_LOGGER(lqftpd_logger, "del %s ,file not exists", fullpath);
         }
         return;
 
@@ -364,21 +409,27 @@ op_md5sum:
                     p += sprintf(p, "%02x", md5[i]);
                 if(strncasecmp(md5sum, pmd5sum, (p - md5sum)) == 0)
                 {
+					append_to_filelist(fullpath);
                     RESPONSE(conn, RESP_OK);
+					DEBUG_LOGGER(lqftpd_logger, "md5sum %s[%s]", fullpath, md5sum);
                 }
                 else
                 {
+					pmd5sum[MD5SUM_SIZE] = '\0';
                     RESPONSE(conn, RESP_INVALID_MD5);
+					DEBUG_LOGGER(lqftpd_logger, "md5sum %s[%s] invalid [%s]", fullpath, md5sum, pmd5sum);
                 }
             }
             else
             {
                 RESPONSE(conn, RESP_SERVER_ERROR);
+				ERROR_LOGGER(lqftpd_logger, "md5sum %s failed, %s", fullpath, strerror(errno));
             }
         }
         else
         {
             RESPONSE(conn, RESP_FILE_NOT_EXISTS);
+			ERROR_LOGGER(lqftpd_logger, "md5sum %s ,file not exists", fullpath);
         }
         return;
     }
@@ -474,6 +525,13 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	logfile = iniparser_getstr(dict, "LQFTPD:evlogfile");
 	service->evlogfile = logfile;
 	document_root = iniparser_getstr(dict, "LQFTPD:server_root");
+	histlist = iniparser_getstr(dict, "LQFTPD:histlist");
+	filelist = iniparser_getstr(dict, "LQFTPD:filelist");
+	if(iniparser_getstr(dict, "LQFTPD:access_log"))
+	{
+		access_log = iniparser_getstr(dict, "LQFTPD:access_log");
+	}
+	lqftpd_logger = logger_init(access_log);
 	service->max_connections = iniparser_getint(dict, "LQFTPD:max_connections", MAX_CONNECTIONS);
 	service->packet_type = PACKET_DELIMITER;
 	service->packet_delimiter = iniparser_getstr(dict, "LQFTPD:packet_delimiter");

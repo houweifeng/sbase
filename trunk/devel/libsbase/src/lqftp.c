@@ -352,6 +352,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	transport->port = iniparser_getint(dict, "TRANSPORT:service_port", 80);
 	transport->max_procthreads = iniparser_getint(dict, "TRANSPORT:max_procthreads", 1);
 	transport->sleep_usec = iniparser_getint(dict, "TRANSPORT:sleep_usec", 100);
+	transport->heartbeat_interval = iniparser_getint(dict, "TRANSPORT:heartbeat_interval", 20000000);
     /* connections number */
 	transport->connections_limit = iniparser_getint(dict, "TRANSPORT:connections_limit", 32);
 	logfile = iniparser_getstr(dict, "TRANSPORT:logfile");
