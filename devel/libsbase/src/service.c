@@ -342,6 +342,8 @@ void service_state_conns(SERVICE *service)
     {
 		if(service->running_connections < service->connections_limit)
 		{
+			DEBUG_LOGGER(service->logger, "check connections now[%d] limit[%d] states on service[%s]", 
+						service->running_connections, service->connections_limit,service->name);
 			num = service->connections_limit - service->running_connections;
 			while(i++ < num)
 			{
