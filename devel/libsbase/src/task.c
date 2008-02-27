@@ -96,6 +96,9 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
                 tasktable->status[i].id   = i++;
             }
 			//last block for md5sum
+            tasktable->status[i].offset = 0llu;
+            tasktable->status[i].size = st.st_size * 1llu;
+            tasktable->status[i].id = i;
             tasktable->status[i].cmdid = CMD_MD5SUM;
             tasktable->dump_status(tasktable);
             return 0;
@@ -276,12 +279,18 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status)
     {
         tasktable->status[blockid].status = status;
         if(blockid == (tasktable->nblock - 1) 
-                && status == BLOCK_STATUS_OVER
                 && tasktable->status[blockid].cmdid == CMD_MD5SUM)
         {
-            taskid = tasktable->running_task_id;
-            tasktable->table[taskid]->status = TASK_STATUS_OVER;
-            tasktable->free_status(tasktable);
+            if(status == BLOCK_STATUS_OVER)
+			{
+            	taskid = tasktable->running_task_id;
+            	tasktable->table[taskid]->status = TASK_STATUS_OVER;
+            	tasktable->free_status(tasktable);
+				tasktable->running_task_id++;
+			}
+			{
+				tasktable->free_status(tasktable);
+			}
         }
         else
             tasktable->dump_status(tasktable);
