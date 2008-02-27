@@ -8,6 +8,6 @@
 #define PATH_MAX_SIZE   256
 #endif
 #define MD5SUM_SIZE    32
-#define TBLOCK_SIZE    65536
+#define TBLOCK_SIZE    2097152
 #endif
 
