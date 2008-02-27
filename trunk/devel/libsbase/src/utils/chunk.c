@@ -196,8 +196,8 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 					goto end;
 				}
 #else
-				data = buf = (void *)calloc(1, buf_size);
-				if(( len = read(chunk->file.fd, data, buf_size)) < 0 )
+				data = buf = (void *)calloc(1, m_size);
+				if(( len = read(chunk->file.fd, data, m_size)) < 0 )
 				{
 					n = -1;
 					fprintf(stderr, "READ %d failed, %s\n", 

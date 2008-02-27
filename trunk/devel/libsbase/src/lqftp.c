@@ -89,6 +89,7 @@ void cb_transport_packet_handler(const CONN *conn, const BUFFER *packet)
         end = (char *)packet->end;
         GET_RESPID(p, end, n, respid);
         blockid = conn->c_id;
+        conn->over_cstate((CONN *)conn);
         switch(respid)
         {
             case RESP_OK_ID:
@@ -96,12 +97,12 @@ void cb_transport_packet_handler(const CONN *conn, const BUFFER *packet)
                 break;
             default:
                 status = BLOCK_STATUS_ERROR; 
+				conn->close((CONN *)conn);
                 break;
         }
         tasktable->update_status(tasktable, blockid, status);
 		DEBUG_LOGGER(daemon_logger, "action over on %d blockid:%d status:%d", 
 				conn->fd, conn->c_id, status);
-        conn->over_cstate((CONN *)conn);
     }
 }
 
@@ -143,13 +144,12 @@ void cb_serv_heartbeat_handler(void *arg)
                     tasktable->running_task_id = taskid;
                     tasktable->ready(tasktable, taskid);
                 }
-                task = tasktable->table[taskid];
 				DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
 				tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
-                tasktable->table[taskid]->nretry++;
+                task->nretry++;
                 while((c_conn = transport->getconn(transport)))
                 {
-				DEBUG_LOGGER(daemon_logger, "get connection[%08x][%d][%d]", 
+					DEBUG_LOGGER(daemon_logger, "get connection[%08x][%d][%d]", 
 						c_conn, c_conn->fd, c_conn->index);
                     if((block = tasktable->pop_block(tasktable)))
                     {
@@ -160,8 +160,8 @@ void cb_serv_heartbeat_handler(void *arg)
                             {
                                 n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
                                         task->destfile, block->offset, block->size); 
-								DEBUG_LOGGER(daemon_logger, "put %s offset:%llusize:%llu",
-                                        task->destfile, block->offset, block->size); 
+								DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
+                                        task->destfile, block->offset, block->size, c_conn->fd); 
                                 c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                                 c_conn->push_file((CONN *)c_conn, 
                                         tasktable->table[taskid]->file, 
@@ -174,6 +174,8 @@ void cb_serv_heartbeat_handler(void *arg)
                             n = sprintf(buf, "md5sum %s\r\nmd5:%s\r\n\r\n", 
                                     tasktable->table[taskid]->destfile,
                                     tasktable->table[taskid]->md5); 
+							DEBUG_LOGGER(daemon_logger, "md5sum %s[%s] on %d",
+									    task->destfile, tasktable->table[taskid]->md5, c_conn->fd);
                             c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                         }
                     }

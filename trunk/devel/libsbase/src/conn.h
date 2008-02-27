@@ -52,6 +52,8 @@ void conn_start_cstate(struct _CONN *);
 void conn_over_cstate(struct _CONN *);
 /* Terminate connection  */
 void conn_terminate(CONN *conn);
+/* Close conneciton */
+void conn_close(CONN *conn);
 /* Clean Connection */
 void conn_clean(CONN **conn);
 

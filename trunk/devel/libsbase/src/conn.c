@@ -56,6 +56,7 @@ CONN *conn_init(char *ip, int port)
 		conn->push_message	    = conn_push_message;
         conn->start_cstate      = conn_start_cstate;
         conn->over_cstate       = conn_over_cstate;
+		conn->close 	    	= conn_close;
 		conn->terminate 	    = conn_terminate;
 		conn->clean 		    = conn_clean;
 		strcpy(conn->ip, ip);
@@ -230,16 +231,16 @@ void conn_write_handler(CONN *conn)
 		cp = (CHUNK *)conn->send_queue->head(conn->send_queue);
 		if(cp)
 		{
-			if( (n = cp->send(cp, conn->fd, conn->buffer_size)) > 0 )
+			if((n = cp->send(cp, conn->fd, conn->buffer_size)) > 0)
 			{
-				conn->sent_data_total += n;
+				conn->sent_data_total += n * 1llu;
 				DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %llu) "
 						"to %s:%d via %d leave %llu",
 						n, conn->sent_data_total, conn->ip, 
 						conn->port, conn->fd, cp->len);
 				/* CONN TIMER sample */
                 if(conn->timer) conn->timer->sample(conn->timer);
-				if(cp->len <= 0 )
+				if(cp->len <= 0llu )
 				{
 					cp = (CHUNK *)conn->send_queue->pop(conn->send_queue);	
 					DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it", cp);
@@ -249,9 +250,9 @@ void conn_write_handler(CONN *conn)
 			else
 			{
 				FATAL_LOGGER(conn->logger, "Sending data to %s:%d via %d failed, %s",
-					conn->ip, conn->port, conn->fd, strerror(errno));
+						conn->ip, conn->port, conn->fd, strerror(errno));
 				/* Terminate connection */
-                        	CONN_TERMINATE(conn);
+				CONN_TERMINATE(conn);
 			}
 		}
 		if(conn->send_queue->total <= 0)
@@ -526,6 +527,11 @@ void conn_over_cstate(CONN *conn)
     }
 }
 
+/* Close connection */
+void conn_close(CONN *conn)
+{
+	CONN_TERMINATE(conn);
+}
 /* Terminate connection  */
 void conn_terminate(CONN *conn)
 {

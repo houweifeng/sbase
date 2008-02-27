@@ -418,22 +418,19 @@ CONN *service_getconn(SERVICE *service)
     CONN *conn = NULL;
     if(service)
     {
+		MUTEX_LOCK(service->mutex);
         //select free connection 
         for( i = 0; i < service->max_connections; i++)
         {
             conn = service->connections[i];
             if(conn && conn->c_state == C_STATE_FREE)
             {
-                conn->c_state = C_STATE_USING;
+				conn->start_cstate(conn);
                 break;
             }
             conn = NULL;
         }
-        //create new connection 
-        if(conn == NULL && (conn = service->newconn(service)))
-        {
-             conn->c_state = C_STATE_USING;
-        }
+		MUTEX_UNLOCK(service->mutex);
     }
     return conn;
 }

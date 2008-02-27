@@ -477,6 +477,7 @@ typedef struct _CONN
         void	  (*push_message)(struct _CONN *, int);
         void      (*start_cstate)(struct _CONN *);
         void      (*over_cstate)(struct _CONN *);
+        void      (*close)(struct _CONN *); 
         void      (*terminate)(struct _CONN *); 
         void      (*clean)(struct _CONN **);
     } CONN;
