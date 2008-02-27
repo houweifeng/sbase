@@ -9,21 +9,21 @@
 /* Initialize evepoll  */
 int evepoll_init(EVBASE *evbase)
 {
-	 struct rlimit rlim;
-        int max_fd = EV_MAX_FD;
-        if(evbase)
+    struct rlimit rlim;
+    int max_fd = EV_MAX_FD;
+    if(evbase)
+    {
+        if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
+                && rlim.rlim_cur != RLIM_INFINITY )
         {
-                if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
-                        && rlim.rlim_cur != RLIM_INFINITY )
-                {
-                        max_fd = rlim.rlim_cur;
-                }
-                evbase->evlist  = (EVENT **)calloc(max_fd, sizeof(EVENT *));
-		evbase->efd 	= epoll_create(max_fd);
-		evbase->evs 	= calloc(max_fd, sizeof(struct epoll_event));
-		evbase->allowed = max_fd;
-                return 0;
+            max_fd = rlim.rlim_cur;
         }
+        evbase->evlist  = (EVENT **)calloc(max_fd, sizeof(EVENT *));
+        evbase->efd 	= epoll_create(max_fd);
+        evbase->evs 	= calloc(max_fd, sizeof(struct epoll_event));
+        evbase->allowed = max_fd;
+        return 0;
+    }
 }
 
 /* Add new event to evbase */
@@ -70,51 +70,52 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 /* Update event in evbase */
 int evepoll_update(EVBASE *evbase, EVENT *event)
 {
-        int op = 0;
-        struct epoll_event ep_event = {0, {0}};
-        int ev_flags = 0;
-        if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd )
+    int op = 0;
+    struct epoll_event ep_event = {0, {0}};
+    int ev_flags = 0;
+    if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd )
+    {
+        if(event->ev_flags & E_READ)
         {
-                if(event->ev_flags & E_READ)
-                {
-                        ev_flags |= EPOLLIN;
-                }
-                if(event->ev_flags & E_WRITE)
-                {
-                        ev_flags |= EPOLLOUT;
-                }
-		op = EPOLL_CTL_MOD;
-		if(ev_flags)
-		{
-                	if(evbase->evlist[event->ev_fd] == NULL)
-				op = EPOLL_CTL_ADD;
-			ep_event.data.fd = event->ev_fd;
-			ep_event.events = ev_flags;
-			ep_event.data.ptr = (void *)event;
-			epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
-		}
-                return 0;
+            ev_flags |= EPOLLIN;
         }
-        return -1;	
+        if(event->ev_flags & E_WRITE)
+        {
+            ev_flags |= EPOLLOUT;
+        }
+        op = EPOLL_CTL_MOD;
+        if(ev_flags)
+        {
+            if(evbase->evlist[event->ev_fd] == NULL)
+                op = EPOLL_CTL_ADD;
+            ep_event.data.fd = event->ev_fd;
+            ep_event.events = ev_flags;
+            ep_event.data.ptr = (void *)event;
+            epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
+        }
+        evbase->evlist[event->ev_fd] = event;
+        return 0;
+    }
+    return -1;	
 }
 
 /* Delete event from evbase */
 int evepoll_del(EVBASE *evbase, EVENT *event)
 {
-	struct epoll_event ep_event = {0, {0}};
-	if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
-	{
-		ep_event.data.fd = event->ev_fd;
-                ep_event.events = 0;
-                ep_event.data.ptr = (void *)event;
-		epoll_ctl(evbase->efd, EPOLL_CTL_DEL, event->ev_fd, &ep_event);
-		if(event->ev_fd >= evbase->maxfd)
-                        evbase->maxfd = event->ev_fd - 1;
-                evbase->evlist[event->ev_fd] = NULL;
-		evbase->nfd--;
-		return 0;
-	}
-	return -1;
+    struct epoll_event ep_event = {0, {0}};
+    if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
+    {
+        ep_event.data.fd = event->ev_fd;
+        ep_event.events = 0;
+        ep_event.data.ptr = (void *)event;
+        epoll_ctl(evbase->efd, EPOLL_CTL_DEL, event->ev_fd, &ep_event);
+        if(event->ev_fd >= evbase->maxfd)
+            evbase->maxfd = event->ev_fd - 1;
+        evbase->evlist[event->ev_fd] = NULL;
+        evbase->nfd--;
+        return 0;
+    }
+    return -1;
 }
 
 /* Loop evbase */

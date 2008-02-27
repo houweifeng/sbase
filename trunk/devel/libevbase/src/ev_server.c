@@ -22,13 +22,12 @@
         if(setrlimit(RLIM, (&rlim)) != 0) {\
                 FATAL_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
-                 _exit(-1);\
         } else {\
                 SHOW_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
         }\
 }
-#define CONN_MAX 131070
+#define CONN_MAX 65536
 #define BUF_SIZE 128
 int max_connections = 0;
 int connections = 0;
@@ -122,95 +121,95 @@ void ev_handler(int fd, short ev_flags, void *arg)
 
 int main(int argc, char **argv)
 {
-	int port = 0;
-	int connection_limit = 0;
-	int fd = 0;
-	struct sockaddr_in sa;	
-	socklen_t sa_len;
-	int opt = 1;
-	int i = 0;
-	int nprocess = 0;
-	pid_t pid ;
-	EVENT  *event = NULL;
-	if(argc < 4)
-	{
-		fprintf(stderr, "Usage:%s port connection_limit process_limit\n", argv[0]);	
-		_exit(-1);
-	}	
-	port = atoi(argv[1]);
-	connection_limit = atoi(argv[2]);
-	nprocess = atoi(argv[3]);
-	max_connections = (connection_limit > 0) ? connection_limit : CONN_MAX;
-	/* Set resource limit */
-	SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
-	/* Initialize global vars */
-	memset(events, 0, sizeof(EVENT *) * CONN_MAX);
-	/* Initialize inet */ 
-	lfd = socket(AF_INET, SOCK_STREAM, 0);
-        setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
-                        (char *)&opt, (socklen_t) sizeof(opt) );
-	memset(&sa, 0, sizeof(struct sockaddr_in));	
-	sa.sin_family = AF_INET;
-	sa.sin_addr.s_addr = INADDR_ANY;
-	sa.sin_port = htons(port);
-	sa_len = sizeof(struct sockaddr);
-	/* Bind */
-	if(bind(lfd, (struct sockaddr *)&sa, sa_len ) != 0 )
+    int port = 0;
+    int connection_limit = 0;
+    int fd = 0;
+    struct sockaddr_in sa;	
+    socklen_t sa_len;
+    int opt = 1;
+    int i = 0;
+    int nprocess = 0;
+    pid_t pid ;
+    EVENT  *event = NULL;
+    if(argc < 4)
+    {
+        fprintf(stderr, "Usage:%s port connection_limit process_limit\n", argv[0]);	
+        _exit(-1);
+    }	
+    port = atoi(argv[1]);
+    connection_limit = atoi(argv[2]);
+    nprocess = atoi(argv[3]);
+    max_connections = (connection_limit > 0) ? connection_limit : CONN_MAX;
+    /* Set resource limit */
+    SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
+    /* Initialize global vars */
+    memset(events, 0, sizeof(EVENT *) * CONN_MAX);
+    /* Initialize inet */ 
+    lfd = socket(AF_INET, SOCK_STREAM, 0);
+    setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
+            (char *)&opt, (socklen_t) sizeof(opt) );
+    memset(&sa, 0, sizeof(struct sockaddr_in));	
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = INADDR_ANY;
+    sa.sin_port = htons(port);
+    sa_len = sizeof(struct sockaddr);
+    /* Bind */
+    if(bind(lfd, (struct sockaddr *)&sa, sa_len ) != 0 )
+    {
+        SHOW_LOG("Binding failed, %s", strerror(errno));
+        return ;
+    }
+    /* set FD NON-BLOCK */
+    if(fcntl(lfd, F_SETFL, O_NONBLOCK) != 0 )
+    {
+        SHOW_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
+        return ;
+    }
+    /* Listen */
+    if(listen(lfd, CONN_MAX) != 0 )
+    {
+        SHOW_LOG("Listening  failed, %s", strerror(errno));
+        return ;
+    }
+    SHOW_LOG("Initialize evbase ");
+    for(i = 0; i < nprocess; i++)
+    {
+        pid = fork();
+        switch (pid)
         {
-                SHOW_LOG("Binding failed, %s", strerror(errno));
-                return ;
+            case -1:
+                exit(EXIT_FAILURE);
+                break;
+            case 0: //child process
+                if(setsid() == -1)
+                    exit(EXIT_FAILURE);
+                goto running;
+                break;
+            default://parent
+                continue;
+                break;
         }
-	/* set FD NON-BLOCK */
-	if(fcntl(lfd, F_SETFL, O_NONBLOCK) != 0 )
-        {
-                SHOW_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
-                return ;
-        }
-	/* Listen */
-	if(listen(lfd, CONN_MAX) != 0 )
-        {
-                SHOW_LOG("Listening  failed, %s", strerror(errno));
-                return ;
-        }
-	SHOW_LOG("Initialize evbase ");
-	for(i = 0; i < nprocess; i++)
-	{
-		pid = fork();
-		switch (pid)
-		{
-			case -1:
-				exit(EXIT_FAILURE);
-				break;
-			case 0: //child process
-				if(setsid() == -1)
-					exit(EXIT_FAILURE);
-				goto running;
-				break;
-			default://parent
-				continue;
-				break;
-		}
-	}
-	return 0;
+    }
+    return 0;
 running:
-        /* set evbase */
-        if((evbase = evbase_init()))
+    /* set evbase */
+    if((evbase = evbase_init()))
+    {
+        evbase->set_logfile(evbase, "/tmp/ev_server.log");
+        if((event = ev_init()))
         {
-		evbase->logger = logger_init("/tmp/ev_server.log");
-                if((event = ev_init()))
-                {
-			SHOW_LOG("Initialized event ");
-                        event->set(event, lfd, E_READ|E_PERSIST, (void *)event, &ev_handler);
-                        evbase->add(evbase, event);
-                        while(1)
-                        {
-                                evbase->loop(evbase, 0, NULL);
-                                usleep(10);
-                        }
-                }
-                else
-                {
-                        evbase->clean(&evbase);
-                }
+            SHOW_LOG("Initialized event ");
+            event->set(event, lfd, E_READ|E_PERSIST, (void *)event, &ev_handler);
+            evbase->add(evbase, event);
+            while(1)
+            {
+                evbase->loop(evbase, 0, NULL);
+                usleep(10);
+            }
         }
+        else
+        {
+            evbase->clean(&evbase);
+        }
+    }
 }
