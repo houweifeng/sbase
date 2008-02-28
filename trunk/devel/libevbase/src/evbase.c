@@ -166,7 +166,6 @@ EVENT *ev_init()
 		event->active	= event_active;
 		event->destroy	= event_destroy;
 		event->clean	= event_clean;
-        event->index    = -1;
 	}
 	return event;
 }

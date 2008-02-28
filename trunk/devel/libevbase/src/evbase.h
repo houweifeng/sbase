@@ -49,7 +49,6 @@ EVBASE *evbase_init();
 #define _TYPEDEF_EVENT
 typedef struct _EVENT
 {
-    int index;
 	struct timeval tv;
 	short ev_flags;
 	int ev_fd;

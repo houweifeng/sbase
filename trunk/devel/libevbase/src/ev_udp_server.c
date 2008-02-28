@@ -22,7 +22,6 @@
         if(setrlimit(RLIM, (&rlim)) != 0) {\
                 FATAL_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
-                 _exit(-1);\
         } else {\
                 SHOW_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
                                 NAME, rlim.rlim_cur, rlim.rlim_max);\
