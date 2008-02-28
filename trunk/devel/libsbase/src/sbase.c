@@ -263,7 +263,7 @@ void sbase_running_once(SBASE *sb)
     PROCTHREAD *pth = NULL;
     if(sb)
     {
-        msg = POP_QUEUE(sb->message_queue);
+        msg = (MESSAGE *)POP_QUEUE(sb->message_queue);
         if(msg)
         {
             DEBUG_LOGGER(sb->logger, "Got message[%08x] id[%d] handler[%08x] parent[%08x]",

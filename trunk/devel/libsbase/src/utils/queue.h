@@ -74,7 +74,7 @@ void queue_clean(QUEUE **);
 #define POP_QUEUE(pq) ((QUEUE *)pq)->pop((QUEUE *)pq)
 #define PUSH_QUEUE(pq, data) ((QUEUE *)pq)->push((QUEUE *)pq, data)
 #define TAIL_QUEUE(pq) ((QUEUE *)pq)->tail((QUEUE *)pq)
-#define HEAD_QUEUE(pq) ((QUEUE *)pq)->tail((QUEUE *)pq)
+#define HEAD_QUEUE(pq) ((QUEUE *)pq)->head((QUEUE *)pq)
 #define TOTAL_QUEUE(pq) ((QUEUE *)pq)->total
 #define CLEAN_QUEUE(pq) ((QUEUE *)pq)->clean((QUEUE **)&(pq))
 #ifdef __cplusplus
