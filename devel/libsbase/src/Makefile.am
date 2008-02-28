@@ -29,20 +29,7 @@ libsbase_la_LDFLAGS = -levbase
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = sbase.h
 
-bin_PROGRAMS = lechod lqftp lqftpd 
+bin_PROGRAMS = lechod
 lechod_SOURCES = lechod.c iniparser.c iniparser.h
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
-
-lqftp_SOURCES = lqftp.c iniparser.c iniparser.h task.c task.h \
-				utils/md5.c utils/md5.h basedef.h utils/logger.h utils/logger.c
-lqftp_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
-lqftp_LDADD = libsbase.la
-lqftp_LDFLAGS = -static
-
-lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h utils/md5.c utils/md5.h basedef.h
-lqftpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
-lqftpd_LDADD = libsbase.la 
-lqftpd_LDFLAGS = -static
-
-
