@@ -239,11 +239,11 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
                 if((taskid = tasktable->add(tasktable, file, destfile)) >= 0)
                 {
                     n = sprintf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
-                    fprintf(stdout, "conn:%08x %08x\n", conn, conn->push_chunk);
-                    //conn->push_chunk(conn, (void *)buf, n);
+                    //fprintf(stdout, "conn:%08x %08x\n", conn, conn->push_chunk);
+                    conn->push_chunk(conn, (void *)buf, n);
                     return;
                 }
-				//fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
+		//fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
             }
             return ;
         }
