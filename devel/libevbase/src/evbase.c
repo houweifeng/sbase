@@ -195,7 +195,7 @@ void event_add(EVENT *event, short flags)
 		{
 			event->ev_base->update(event->ev_base, event);
 			DEBUG_LOGGER(event->ev_base->logger, 
-                    "Updated event[%x] to %d on %d",
+                    "Updated event[%08x] to %d on %d",
 				event, event->ev_flags, event->ev_fd);
 		}
 	}
@@ -212,7 +212,7 @@ void event_del(EVENT *event, short flags)
 			if(event->ev_base && event->ev_base->update)
 			{
 				event->ev_base->update(event->ev_base, event);
-				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%x] to %d on %d",
+				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%08x] to %d on %d",
 					event, event->ev_flags, event->ev_fd);
 			}
 
@@ -229,7 +229,7 @@ void event_destroy(EVENT *event)
                 if(event->ev_base && event->ev_base->del)
                 {
                         event->ev_base->del(event->ev_base, event);
-                        DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%x] on %d",
+                        DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%08x] on %d",
 				event, event->ev_fd);
 			event->ev_base = NULL;
                 }
