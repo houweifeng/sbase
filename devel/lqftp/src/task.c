@@ -69,8 +69,8 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
                 && stat(task->file, &st) == 0
           )
         {
-            nblock = (st.st_size / TBLOCK_SIZE);
-            if((st.st_size % TBLOCK_SIZE) != 0) ++nblock;
+            nblock = (st.st_size / global_tblock_size);
+            if((st.st_size % global_tblock_size) != 0) ++nblock;
             //for md5sum
             ++nblock;
             if((tasktable->status = (TBLOCK *)realloc(
@@ -87,8 +87,8 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
             while(size > 0llu )
             {
                 tasktable->status[i].offset     = offset * 1llu;
-                tasktable->status[i].size       = TBLOCK_SIZE * 1llu;
-                if(size < TBLOCK_SIZE * 1llu)
+                tasktable->status[i].size       = global_tblock_size * 1llu;
+                if(size < global_tblock_size * 1llu)
                     tasktable->status[i].size   = size;
                 size -= tasktable->status[i].size;
 				offset += tasktable->status[i].size;
