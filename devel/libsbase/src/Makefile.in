@@ -34,7 +34,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = lechod$(EXEEXT) lqftp$(EXEEXT) lqftpd$(EXEEXT)
+bin_PROGRAMS = lechod$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -74,20 +74,6 @@ lechod_DEPENDENCIES = libsbase.la
 lechod_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lechod_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am_lqftp_OBJECTS = lqftp-lqftp.$(OBJEXT) lqftp-iniparser.$(OBJEXT) \
-	lqftp-task.$(OBJEXT) lqftp-md5.$(OBJEXT)
-lqftp_OBJECTS = $(am_lqftp_OBJECTS)
-lqftp_DEPENDENCIES = libsbase.la
-lqftp_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lqftp_LDFLAGS) \
-	$(LDFLAGS) -o $@
-am_lqftpd_OBJECTS = lqftpd-lqftpd.$(OBJEXT) lqftpd-iniparser.$(OBJEXT) \
-	lqftpd-md5.$(OBJEXT)
-lqftpd_OBJECTS = $(am_lqftpd_OBJECTS)
-lqftpd_DEPENDENCIES = libsbase.la
-lqftpd_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lqftpd_LDFLAGS) \
-	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -100,10 +86,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) $(lqftp_SOURCES) \
-	$(lqftpd_SOURCES)
-DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
-	$(lqftp_SOURCES) $(lqftpd_SOURCES)
+SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES)
+DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -223,6 +207,7 @@ sbase.c \
 sbase.h \
 service.c \
 service.h \
+mutex.h \
 utils/buffer.c \
 utils/buffer.h \
 utils/chunk.c \
@@ -247,14 +232,6 @@ include_HEADERS = sbase.h
 lechod_SOURCES = lechod.c iniparser.c iniparser.h
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
-lqftp_SOURCES = lqftp.c iniparser.c iniparser.h task.c task.h utils/md5.c utils/md5.h basedef.h
-lqftp_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
-lqftp_LDADD = libsbase.la
-lqftp_LDFLAGS = -static
-lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h utils/md5.c utils/md5.h basedef.h
-lqftpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
-lqftpd_LDADD = libsbase.la 
-lqftpd_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -348,12 +325,6 @@ clean-binPROGRAMS:
 lechod$(EXEEXT): $(lechod_OBJECTS) $(lechod_DEPENDENCIES) 
 	@rm -f lechod$(EXEEXT)
 	$(lechod_LINK) $(lechod_OBJECTS) $(lechod_LDADD) $(LIBS)
-lqftp$(EXEEXT): $(lqftp_OBJECTS) $(lqftp_DEPENDENCIES) 
-	@rm -f lqftp$(EXEEXT)
-	$(lqftp_LINK) $(lqftp_OBJECTS) $(lqftp_LDADD) $(LIBS)
-lqftpd$(EXEEXT): $(lqftpd_OBJECTS) $(lqftpd_DEPENDENCIES) 
-	@rm -f lqftpd$(EXEEXT)
-	$(lqftpd_LINK) $(lqftpd_OBJECTS) $(lqftpd_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -373,13 +344,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-sbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-service.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-timer.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-iniparser.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-lqftp.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-md5.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-task.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-iniparser.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-lqftpd.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-md5.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -471,104 +435,6 @@ libsbase_la-timer.lo: utils/timer.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/timer.c' object='libsbase_la-timer.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-timer.lo `test -f 'utils/timer.c' || echo '$(srcdir)/'`utils/timer.c
-
-lqftp-lqftp.o: lqftp.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-lqftp.o -MD -MP -MF $(DEPDIR)/lqftp-lqftp.Tpo -c -o lqftp-lqftp.o `test -f 'lqftp.c' || echo '$(srcdir)/'`lqftp.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftp-lqftp.Tpo $(DEPDIR)/lqftp-lqftp.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lqftp.c' object='lqftp-lqftp.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-lqftp.o `test -f 'lqftp.c' || echo '$(srcdir)/'`lqftp.c
-
-lqftp-lqftp.obj: lqftp.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-lqftp.obj -MD -MP -MF $(DEPDIR)/lqftp-lqftp.Tpo -c -o lqftp-lqftp.obj `if test -f 'lqftp.c'; then $(CYGPATH_W) 'lqftp.c'; else $(CYGPATH_W) '$(srcdir)/lqftp.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftp-lqftp.Tpo $(DEPDIR)/lqftp-lqftp.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lqftp.c' object='lqftp-lqftp.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-lqftp.obj `if test -f 'lqftp.c'; then $(CYGPATH_W) 'lqftp.c'; else $(CYGPATH_W) '$(srcdir)/lqftp.c'; fi`
-
-lqftp-iniparser.o: iniparser.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-iniparser.o -MD -MP -MF $(DEPDIR)/lqftp-iniparser.Tpo -c -o lqftp-iniparser.o `test -f 'iniparser.c' || echo '$(srcdir)/'`iniparser.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftp-iniparser.Tpo $(DEPDIR)/lqftp-iniparser.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='iniparser.c' object='lqftp-iniparser.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-iniparser.o `test -f 'iniparser.c' || echo '$(srcdir)/'`iniparser.c
-
-lqftp-iniparser.obj: iniparser.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-iniparser.obj -MD -MP -MF $(DEPDIR)/lqftp-iniparser.Tpo -c -o lqftp-iniparser.obj `if test -f 'iniparser.c'; then $(CYGPATH_W) 'iniparser.c'; else $(CYGPATH_W) '$(srcdir)/iniparser.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftp-iniparser.Tpo $(DEPDIR)/lqftp-iniparser.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='iniparser.c' object='lqftp-iniparser.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-iniparser.obj `if test -f 'iniparser.c'; then $(CYGPATH_W) 'iniparser.c'; else $(CYGPATH_W) '$(srcdir)/iniparser.c'; fi`
-
-lqftp-task.o: task.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-task.o -MD -MP -MF $(DEPDIR)/lqftp-task.Tpo -c -o lqftp-task.o `test -f 'task.c' || echo '$(srcdir)/'`task.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftp-task.Tpo $(DEPDIR)/lqftp-task.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='task.c' object='lqftp-task.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-task.o `test -f 'task.c' || echo '$(srcdir)/'`task.c
-
-lqftp-task.obj: task.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-task.obj -MD -MP -MF $(DEPDIR)/lqftp-task.Tpo -c -o lqftp-task.obj `if test -f 'task.c'; then $(CYGPATH_W) 'task.c'; else $(CYGPATH_W) '$(srcdir)/task.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftp-task.Tpo $(DEPDIR)/lqftp-task.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='task.c' object='lqftp-task.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-task.obj `if test -f 'task.c'; then $(CYGPATH_W) 'task.c'; else $(CYGPATH_W) '$(srcdir)/task.c'; fi`
-
-lqftp-md5.o: utils/md5.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-md5.o -MD -MP -MF $(DEPDIR)/lqftp-md5.Tpo -c -o lqftp-md5.o `test -f 'utils/md5.c' || echo '$(srcdir)/'`utils/md5.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftp-md5.Tpo $(DEPDIR)/lqftp-md5.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/md5.c' object='lqftp-md5.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-md5.o `test -f 'utils/md5.c' || echo '$(srcdir)/'`utils/md5.c
-
-lqftp-md5.obj: utils/md5.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-md5.obj -MD -MP -MF $(DEPDIR)/lqftp-md5.Tpo -c -o lqftp-md5.obj `if test -f 'utils/md5.c'; then $(CYGPATH_W) 'utils/md5.c'; else $(CYGPATH_W) '$(srcdir)/utils/md5.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftp-md5.Tpo $(DEPDIR)/lqftp-md5.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/md5.c' object='lqftp-md5.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-md5.obj `if test -f 'utils/md5.c'; then $(CYGPATH_W) 'utils/md5.c'; else $(CYGPATH_W) '$(srcdir)/utils/md5.c'; fi`
-
-lqftpd-lqftpd.o: lqftpd.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-lqftpd.o -MD -MP -MF $(DEPDIR)/lqftpd-lqftpd.Tpo -c -o lqftpd-lqftpd.o `test -f 'lqftpd.c' || echo '$(srcdir)/'`lqftpd.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftpd-lqftpd.Tpo $(DEPDIR)/lqftpd-lqftpd.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lqftpd.c' object='lqftpd-lqftpd.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-lqftpd.o `test -f 'lqftpd.c' || echo '$(srcdir)/'`lqftpd.c
-
-lqftpd-lqftpd.obj: lqftpd.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-lqftpd.obj -MD -MP -MF $(DEPDIR)/lqftpd-lqftpd.Tpo -c -o lqftpd-lqftpd.obj `if test -f 'lqftpd.c'; then $(CYGPATH_W) 'lqftpd.c'; else $(CYGPATH_W) '$(srcdir)/lqftpd.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftpd-lqftpd.Tpo $(DEPDIR)/lqftpd-lqftpd.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lqftpd.c' object='lqftpd-lqftpd.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-lqftpd.obj `if test -f 'lqftpd.c'; then $(CYGPATH_W) 'lqftpd.c'; else $(CYGPATH_W) '$(srcdir)/lqftpd.c'; fi`
-
-lqftpd-iniparser.o: iniparser.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-iniparser.o -MD -MP -MF $(DEPDIR)/lqftpd-iniparser.Tpo -c -o lqftpd-iniparser.o `test -f 'iniparser.c' || echo '$(srcdir)/'`iniparser.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftpd-iniparser.Tpo $(DEPDIR)/lqftpd-iniparser.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='iniparser.c' object='lqftpd-iniparser.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-iniparser.o `test -f 'iniparser.c' || echo '$(srcdir)/'`iniparser.c
-
-lqftpd-iniparser.obj: iniparser.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-iniparser.obj -MD -MP -MF $(DEPDIR)/lqftpd-iniparser.Tpo -c -o lqftpd-iniparser.obj `if test -f 'iniparser.c'; then $(CYGPATH_W) 'iniparser.c'; else $(CYGPATH_W) '$(srcdir)/iniparser.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftpd-iniparser.Tpo $(DEPDIR)/lqftpd-iniparser.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='iniparser.c' object='lqftpd-iniparser.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-iniparser.obj `if test -f 'iniparser.c'; then $(CYGPATH_W) 'iniparser.c'; else $(CYGPATH_W) '$(srcdir)/iniparser.c'; fi`
-
-lqftpd-md5.o: utils/md5.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-md5.o -MD -MP -MF $(DEPDIR)/lqftpd-md5.Tpo -c -o lqftpd-md5.o `test -f 'utils/md5.c' || echo '$(srcdir)/'`utils/md5.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftpd-md5.Tpo $(DEPDIR)/lqftpd-md5.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/md5.c' object='lqftpd-md5.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-md5.o `test -f 'utils/md5.c' || echo '$(srcdir)/'`utils/md5.c
-
-lqftpd-md5.obj: utils/md5.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-md5.obj -MD -MP -MF $(DEPDIR)/lqftpd-md5.Tpo -c -o lqftpd-md5.obj `if test -f 'utils/md5.c'; then $(CYGPATH_W) 'utils/md5.c'; else $(CYGPATH_W) '$(srcdir)/utils/md5.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/lqftpd-md5.Tpo $(DEPDIR)/lqftpd-md5.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/md5.c' object='lqftpd-md5.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-md5.obj `if test -f 'utils/md5.c'; then $(CYGPATH_W) 'utils/md5.c'; else $(CYGPATH_W) '$(srcdir)/utils/md5.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
