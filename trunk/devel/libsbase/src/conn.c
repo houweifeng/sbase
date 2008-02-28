@@ -285,7 +285,7 @@ int conn_packet_reader(CONN *conn)
 		/* Read packet with customized function from user */
 		if(conn->packet_type == PACKET_CUSTOMIZED && conn->cb_packet_reader)
 		{
-			len = conn->cb_packet_reader(conn, (const BUFFER *) conn->buffer);	
+			len = conn->cb_packet_reader(conn,  conn->buffer);	
 			DEBUG_LOGGER(conn->logger, 
 					"Reading packet with customized function[%08x] length[%d] on %s:%d via %d",
 					conn->cb_packet_reader, len, conn->ip, conn->port, conn->fd);
@@ -344,7 +344,7 @@ void conn_packet_handler(CONN *conn)
 	{
 		DEBUG_LOGGER(conn->logger, "Handling packet with customized function[%08x] on %s:%d via %d",
 			conn->cb_packet_handler,  conn->ip, conn->port, conn->fd);
-		return conn->cb_packet_handler(conn, (const BUFFER *)conn->packet);
+		return conn->cb_packet_handler(conn, conn->packet);
 	}
 }
 
@@ -409,12 +409,12 @@ void conn_recv_file(CONN *conn, char *filename,
 int conn_push_chunk(CONN *conn, void *data, size_t size)
 {
 	CHUNK *cp = NULL;
-        /* Check connection and transaction state */
-        CONN_CHECK_RET(conn, -1);
+    /* Check connection and transaction state */
+    CONN_CHECK_RET(conn, -1);
 
 	if(conn && conn->send_queue && data)
 	{
-		if((cp = TAIL_QUEUE(conn->send_queue)) && cp->type == MEM_CHUNK)
+		if((cp = (CHUNK *)TAIL_QUEUE(conn->send_queue)) && cp->type == MEM_CHUNK)
 		{
 			cp->append(cp, data, size);
 		}

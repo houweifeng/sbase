@@ -59,7 +59,7 @@ unsigned long long str2llu(char *str)
     return llu;
 }
 
-int cb_packet_reader(const CONN *conn, const BUFFER *buffer)
+int cb_packet_reader(CONN *conn, BUFFER *buffer)
 {
 }
 
@@ -175,7 +175,7 @@ int truncate_file(char *file, unsigned long long size)
     return truncate(file, size);
 }
 
-void cb_packet_handler(const CONN *conn, const BUFFER *packet)
+void cb_packet_handler(CONN *conn, BUFFER *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0, is_valid_offset = 0;
@@ -384,7 +384,7 @@ op_md5sum:
     }
 }
 
-void cb_data_handler(const CONN *conn, const BUFFER *packet, const CHUNK *chunk, const BUFFER *cache)
+void cb_data_handler(CONN *conn, BUFFER *packet, CHUNK *chunk, BUFFER *cache)
 {
     if(conn)
     {
@@ -392,7 +392,7 @@ void cb_data_handler(const CONN *conn, const BUFFER *packet, const CHUNK *chunk,
     }
 }
 
-void cb_oob_handler(const CONN *conn, const BUFFER *oob)
+void cb_oob_handler(CONN *conn, BUFFER *oob)
 {
 }
 

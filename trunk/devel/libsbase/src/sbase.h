@@ -299,16 +299,16 @@ typedef struct _SERVICE
         /* Heartbeat Handler */
         void (*cb_heartbeat_handler)(void *arg);
         /* error handler */
-        void (*cb_error_handler)(const struct _CONN*);
+        void (*cb_error_handler)(struct _CONN*);
         /* Read From Buffer and return packet length to get */
-        int (*cb_packet_reader)(const struct _CONN*, const struct _BUFFER *);
+        int (*cb_packet_reader)(struct _CONN*, struct _BUFFER *);
         /* Packet Handler */
-        void (*cb_packet_handler)(const struct _CONN*, const struct _BUFFER *);
+        void (*cb_packet_handler)(struct _CONN*, struct _BUFFER *);
         /* Data Handler */
-        void (*cb_data_handler)(const struct _CONN*, const struct _BUFFER *,
-                const struct _CHUNK *, const struct _BUFFER *);
+        void (*cb_data_handler)(struct _CONN*, struct _BUFFER *,
+                struct _CHUNK *, struct _BUFFER *);
         /* OOB Data Handler */
-        void (*cb_oob_handler)(const struct _CONN *, const struct _BUFFER *oob);
+        void (*cb_oob_handler)(struct _CONN *, struct _BUFFER *oob);
 
         /* Methods */
         void (*event_handler)(int, short, void*);
@@ -445,16 +445,16 @@ typedef struct _CONN
         struct _CONN *callback_conn;
 
         /* error handler */
-        void (*cb_error_handler)(const struct _CONN *);
+        void (*cb_error_handler)(struct _CONN *);
         /* Read From Buffer and return packet length to get */
-        int (*cb_packet_reader)(const struct _CONN*, const struct _BUFFER *);
+        int (*cb_packet_reader)(struct _CONN*, struct _BUFFER *);
         /* Packet Handler */
-        void (*cb_packet_handler)(const struct _CONN*, const struct _BUFFER *);
+        void (*cb_packet_handler)(struct _CONN*, struct _BUFFER *);
         /* Data Handler */
-        void (*cb_data_handler)(const struct _CONN*, const struct _BUFFER *,
-                const struct _CHUNK *, const struct _BUFFER *);
+        void (*cb_data_handler)(struct _CONN*, struct _BUFFER *,
+                struct _CHUNK *, struct _BUFFER *);
         /* OOB Data Handler */
-        void (*cb_oob_handler)(const struct _CONN *, const struct _BUFFER *oob);
+        void (*cb_oob_handler)(struct _CONN *, struct _BUFFER *oob);
 
         /* Methods */
         int	      (*set)(struct _CONN *);

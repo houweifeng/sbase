@@ -13,21 +13,21 @@
 SBASE *sbase = NULL;
 dictionary *dict = NULL;
 
-int cb_packet_reader(const CONN *conn, const BUFFER *buffer)
+int cb_packet_reader(CONN *conn, BUFFER *buffer)
 {
 }
 
-void cb_packet_handler(const CONN *conn, const BUFFER *packet)
+void cb_packet_handler(CONN *conn, BUFFER *packet)
 {
 	if(conn)
 		conn->push_chunk((CONN *)conn, ((BUFFER *)packet)->data, packet->size);
 }
 
-void cb_data_handler(const CONN *conn, const BUFFER *packet, const CHUNK *chunk, const BUFFER *cache)
+void cb_data_handler(CONN *conn, BUFFER *packet, CHUNK *chunk, BUFFER *cache)
 {
 }
 
-void cb_oob_handler(const CONN *conn, const BUFFER *oob)
+void cb_oob_handler(CONN *conn, BUFFER *oob)
 {
 }
 

@@ -59,7 +59,7 @@ static LOGGER *daemon_logger = NULL;
 
 //functions
 //error handler for cstate
-void cb_transport_error_handler(const CONN *conn)
+void cb_transport_error_handler(CONN *conn)
 {
     int blockid = -1;
     if(conn)
@@ -73,11 +73,11 @@ void cb_transport_error_handler(const CONN *conn)
 }
 
 //
-int cb_transport_packet_reader(const CONN *conn, const BUFFER *buffer)
+int cb_transport_packet_reader(CONN *conn, BUFFER *buffer)
 {
 }
 
-void cb_transport_packet_handler(const CONN *conn, const BUFFER *packet)
+void cb_transport_packet_handler(CONN *conn, BUFFER *packet)
 {        
     char *p = NULL, *end = NULL;
     int respid = -1, n = 0;
@@ -107,12 +107,12 @@ void cb_transport_packet_handler(const CONN *conn, const BUFFER *packet)
     }
 }
 
-void cb_transport_data_handler(const CONN *conn, const BUFFER *packet, 
-        const CHUNK *chunk, const BUFFER *cache)
+void cb_transport_data_handler(CONN *conn, BUFFER *packet, 
+        CHUNK *chunk, BUFFER *cache)
 {
 }
 
-void cb_transport_oob_handler(const CONN *conn, const BUFFER *oob)
+void cb_transport_oob_handler(CONN *conn, BUFFER *oob)
 {
 }
 
@@ -195,11 +195,11 @@ void cb_serv_heartbeat_handler(void *arg)
     return  ;
 }
 
-int cb_serv_packet_reader(const CONN *conn, const BUFFER *buffer)
+int cb_serv_packet_reader(CONN *conn, BUFFER *buffer)
 {
 }
 
-void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
+void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL;
     char file[PATH_MAX_SIZE], destfile[PATH_MAX_SIZE], buf[BUF_SIZE];
@@ -233,15 +233,17 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
             np = destfile;
             while(p < end && *p != ' ' && *p != '\r' && *p != '\n')*np++ = *p++;
             *np = '\0';
+
             if(n > 0 && (np - destfile) > 0) 
             {
                 if((taskid = tasktable->add(tasktable, file, destfile)) >= 0)
                 {
                     n = sprintf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
-                    conn->push_chunk((CONN *)conn, (void *)buf, n);
+                    fprintf(stdout, "conn:%08x %08x\n", conn, conn->push_chunk);
+                    //conn->push_chunk(conn, (void *)buf, n);
                     return;
                 }
-					//fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
+				//fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
             }
             return ;
         }
@@ -271,12 +273,12 @@ void cb_serv_packet_handler(const CONN *conn, const BUFFER *packet)
     return ;
 }
 
-void cb_serv_data_handler(const CONN *conn, const BUFFER *packet, 
-        const CHUNK *chunk, const BUFFER *cache)
+void cb_serv_data_handler(CONN *conn, BUFFER *packet, 
+        CHUNK *chunk, BUFFER *cache)
 {
 }
 
-void cb_serv_oob_handler(const CONN *conn, const BUFFER *oob)
+void cb_serv_oob_handler(CONN *conn, BUFFER *oob)
 {
 }
 
