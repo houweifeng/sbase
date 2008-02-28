@@ -68,7 +68,7 @@ void logger_close(LOGGER **);
 {                                                                                           \
     if(log){((LOGGER *)log)->add((LOGGER *)log, __FILE__, __LINE__, __FATAL__,format);}     \
 }                                                                                       
-
+#define CLOSE_LOGGER(logger) ((LOGGER *)logger)->close((LOGGER **)&logger)
 #ifdef __cplusplus
  }
 #endif
