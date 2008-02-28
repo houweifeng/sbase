@@ -37,7 +37,7 @@ void procthread_running_once(PROCTHREAD *pth)
 	PROCTHREAD *parent = NULL;
 	if(pth)
 	{
-		msg = POP_QUEUE(pth->message_queue);
+		msg = (MESSAGE *)POP_QUEUE(pth->message_queue);
 		if(msg)
 		{
 			DEBUG_LOGGER(pth->logger, "Got message[%08x] id[%d] handler[%08x] parent[%08x]",
@@ -58,7 +58,7 @@ void procthread_running_once(PROCTHREAD *pth)
 				goto next;
 			}
 			DEBUG_LOGGER(pth->logger, "Got message[%s] On service[%s] procthread[%08x] connection[%d] %s:%d",
-					messagelist[msg->msg_id], pth->service->name, pth, conn->fd, conn->ip, conn->port);
+				messagelist[msg->msg_id], pth->service->name, pth, conn->fd, conn->ip, conn->port);
 			switch(msg->msg_id)
 			{
 				/* NEW connection */

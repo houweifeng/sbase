@@ -243,7 +243,8 @@ void conn_write_handler(CONN *conn)
 				if(cp->len <= 0llu )
 				{
 					cp = (CHUNK *)POP_QUEUE(conn->send_queue);	
-					DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it", cp);
+					DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it leave %d", 
+                            cp, TOTAL_QUEUE(conn->send_queue));
 					if(cp) cp->clean(&cp);
 				}
 			}
@@ -538,10 +539,12 @@ void conn_terminate(CONN *conn)
 {
     if(conn)
     {
-        if(conn->c_state == C_STATE_USING)
+        if(conn->c_state == C_STATE_USING && conn->cb_error_handler)
         {
-           conn->cb_error_handler(conn); 
+            DEBUG_LOGGER(conn->logger, "error handler on %d cid:%d", conn->fd, conn->c_id);
+            conn->cb_error_handler(conn); 
         }
+        DEBUG_LOGGER(conn->logger, "terminateing connecion[%d] %s:%d", conn->fd, conn->ip, conn->port);
         conn->event->destroy(conn->event);
         shutdown(conn->fd, SHUT_RDWR);
         close(conn->fd);
