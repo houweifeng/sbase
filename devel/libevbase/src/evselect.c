@@ -152,11 +152,12 @@ void evselect_clean(EVBASE **evbase)
 {
         if(*evbase)
         {
+                if((*evbase)->logger)CLOSE_LOGGER((*evbase)->logger);
                 if((*evbase)->evlist)free((*evbase)->evlist);
                 if((*evbase)->ev_fds)free((*evbase)->ev_fds);
                 if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
                 if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
-		free(*evbase);
+		        free(*evbase);
                 (*evbase) = NULL;
         }
 }
