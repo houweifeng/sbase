@@ -1,0 +1,41 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ(2.59)
+AC_INIT(lqftp, 0.0.1, [SounOS@gmail.com])
+AM_INIT_AUTOMAKE
+AC_CONFIG_SRCDIR([src/basedef.h])
+AC_CONFIG_HEADER([config.h])
+
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_INSTALL
+AM_PROG_CC_C_O
+
+# Checks for libraries.
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS([fcntl.h locale.h stdint.h stdlib.h string.h sys/time.h unistd.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+AC_STRUCT_TM
+AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
+
+# Checks for library functions.
+AC_FUNC_FORK
+AC_FUNC_REALLOC
+AC_TYPE_SIGNAL
+AC_FUNC_STAT
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS([ftruncate gettimeofday memset mkdir setlocale strchr strdup strerror strncasecmp])
+
+AC_CONFIG_FILES([Makefile
+                 doc/Makefile
+                 src/Makefile])
+AC_OUTPUT
