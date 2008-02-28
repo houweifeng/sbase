@@ -9,5 +9,6 @@
 #endif
 #define MD5SUM_SIZE    32
 #define TBLOCK_SIZE    2097152
+static global_tblock_size = 2097152;
 #endif
 

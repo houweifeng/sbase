@@ -65,6 +65,7 @@ void cb_transport_error_handler(const CONN *conn)
     if(conn)
     {
         blockid = conn->c_id;
+		ERROR_LOGGER(daemon_logger, "action failed on %d blockid:%d", conn->fd, conn->c_id);
         tasktable->update_status(tasktable, blockid, BLOCK_STATUS_ERROR);
 		ERROR_LOGGER(daemon_logger, "action failed on %d blockid:%d", conn->fd, conn->c_id);
         conn->over_cstate((CONN *)conn);
@@ -285,6 +286,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	char *logfile = NULL, *s = NULL, *p = NULL, *taskfile = NULL, *statusfile = NULL;
 	int n = 0;
 	int ret = 0;
+    int block_size = 0;
 
 	if((dict = iniparser_new(conf)) == NULL)
 	{
@@ -387,6 +389,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	transport->cb_packet_handler = &cb_transport_packet_handler;
 	transport->cb_data_handler = &cb_transport_data_handler;
 	transport->cb_oob_handler = &cb_transport_oob_handler;
+	transport->cb_error_handler = &cb_transport_error_handler;
 	/* server */
 	fprintf(stdout, "Parsing for transport...\n");
 
@@ -471,6 +474,10 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	serv->cb_data_handler = &cb_serv_data_handler;
 	serv->cb_oob_handler = &cb_serv_oob_handler;
 	serv->cb_heartbeat_handler = &cb_serv_heartbeat_handler;
+    /* task block size declare in basedef.h */
+    block_size = iniparser_getint(dict, "DAEMON:buffer_size", 0); 
+    if(block_size > 0)
+        global_tblock_size = block_size;
    
     /* server */
 	if((ret = sbase->add_service(sbase, serv)) != 0)
