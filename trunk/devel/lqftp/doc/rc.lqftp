@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# LQFTP:
+#
+# chkconfig:	2345 90 65
+# description:  LQFTP
+#
+#
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+#[ -r /etc/sysconfig/lqftp ] && . /etc/sysconfig/lqftp
+LQFTPARGS=" -c /usr/local/etc/lqftp.ini > /tmp/lqftp.log 2>&1 "
+
+start() 
+{
+        echo -n $"Starting lqftp: "
+        daemon /usr/local/bin/lqftp $LQFTPARGS
+
+	touch /var/lock/subsys/lqftp
+        echo
+}
+
+stop() 
+{
+        echo -n $"Shutting down lqftp: "
+	killproc lqftp
+
+	rm -f  /var/lock/subsys/lqftp
+        echo
+}
+
+[ -f /usr/local/bin/lqftp ] || exit 0
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+        ;;
+  stop)
+	stop
+        ;;
+  restart|reload)
+	stop
+	start
+	;;
+  condrestart)
+	[ -e /var/lock/subsys/lqftp ] && (stop; start)
+	;;
+  status)
+  	status hidd
+	;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|reload|condrestart}"
+        exit 1
+esac
+
+exit 0
