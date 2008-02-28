@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# LQFTPD:
+#
+# chkconfig:	2345 90 63
+# description:  LQFTPD
+#
+#
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+#[ -r /etc/sysconfig/lqftpd ] && . /etc/sysconfig/lqftpd
+LQFTPDARGS=" -c /usr/local/etc/lqftpd.ini > /tmp/lqftpd.log 2>&1 "
+
+start() 
+{
+        echo -n $"Starting lqftpd: "
+        daemon /usr/local/bin/lqftpd $LQFTPDARGS
+
+	touch /var/lock/subsys/lqftpd
+        echo
+}
+
+stop() 
+{
+        echo -n $"Shutting down lqftpd: "
+	killproc lqftpd
+
+	rm -f  /var/lock/subsys/lqftpd
+        echo
+}
+
+[ -f /usr/local/bin/lqftpd ] || exit 0
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+        ;;
+  stop)
+	stop
+        ;;
+  restart|reload)
+	stop
+	start
+	;;
+  condrestart)
+	[ -e /var/lock/subsys/lqftpd ] && (stop; start)
+	;;
+  status)
+  	status hidd
+	;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|reload|condrestart}"
+        exit 1
+esac
+
+exit 0
