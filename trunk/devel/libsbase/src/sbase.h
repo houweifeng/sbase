@@ -74,10 +74,7 @@ extern "C" {
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
-struct _LOGGER;
-struct _TIMER;
 struct _BUFFER;
-struct _QUEUE;
 struct _CHUNK;
 
 #ifndef _TYPEDEF_BUFFER
@@ -208,16 +205,16 @@ typedef struct _SBASE{
         EVBASE *evbase;
 
         /* Message Queue options for WORKING_PROC_MODE */
-        struct _QUEUE *message_queue;
+        void  *message_queue;
 
         /* Running options */
         int running_status;
         uint32_t sleep_usec;
 
         /* Global options */
-        struct _TIMER *timer;
-        struct _LOGGER *logger;
-        struct _LOGGER *evlogger;
+        void *timer;
+        void *logger;
+        void *evlogger;
 
         /* APIS */
         int  (*add_service)(struct _SBASE * , struct _SERVICE *);
@@ -256,7 +253,7 @@ typedef struct _SERVICE
         EVENT  *event;
 
         /* Message Queue options for WORKING_PROC_MODE */
-        struct _QUEUE *message_queue;
+        void  *message_queue;
 
         /* Prothread options */
         int working_mode;
@@ -281,10 +278,10 @@ typedef struct _SERVICE
         uint32_t buffer_size;
 
         /* Global options */
-        struct _TIMER *timer;
-        struct _LOGGER *logger;
+        void *timer;
+        void *logger;
         char *logfile;
-        struct _LOGGER *evlogger;
+        void *evlogger;
         char *evlogfile;
 
         /* Running options */
@@ -352,13 +349,13 @@ typedef struct _PROCTHREAD
         uint32_t                sleep_usec;
 
         /* MESSAGE QUEUE OPTIONS */
-        struct _QUEUE		*message_queue;
+        void 		*message_queue;
 
         /* Timer options */
-        struct _TIMER		*timer;
+        void 		*timer;
 
         /* Logger option */
-        struct _LOGGER		*logger;
+        void 		*logger;
 
         /* Methods */
         void (*run)(void *);
@@ -422,7 +419,7 @@ typedef struct _CONN
         //parent pointer 
         void			*parent;
         //message queue 
-        struct _QUEUE       *message_queue;
+        void        *message_queue;
         //buffer 
         struct _BUFFER		*buffer;
         //OOB 
@@ -434,11 +431,11 @@ typedef struct _CONN
         // chunk 
         struct _CHUNK		*chunk;
         // send queue 
-        struct _QUEUE		*send_queue;
+        void 		*send_queue;
         // Logger
-        struct _LOGGER      *logger;
+        void       *logger;
         // Timer
-        struct _TIMER       *timer;
+        void        *timer;
 
         /* Event options */
         EVBASE 			*evbase;

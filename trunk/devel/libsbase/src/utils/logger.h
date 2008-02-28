@@ -51,10 +51,24 @@ LOGGER *logger_init(char *logfile);
 void logger_add(LOGGER *, char *, int, int, char *format,...);
 /* Close log */
 void logger_close(LOGGER **);
-#define DEBUG_LOGGER(log, format...)if(log){log->add(log, __FILE__, __LINE__, __DEBUG__,format);}
-#define WARN_LOGGER(log, format...)if(log){log->add(log, __FILE__, __LINE__, __WARN__,format);}
-#define ERROR_LOGGER(log, format...)if(log){log->add(log, __FILE__, __LINE__, __ERROR__,format);}
-#define FATAL_LOGGER(log, format...)if(log){log->add(log, __FILE__, __LINE__, __FATAL__,format);}
+
+#define DEBUG_LOGGER(log, format...)                                                        \
+{                                                                                           \
+    if(log){((LOGGER *)log)->add((LOGGER *)log, __FILE__, __LINE__, __DEBUG__,format);}     \
+}                                                                                       
+#define WARN_LOGGER(log, format...)                                                         \
+{                                                                                           \
+    if(log){((LOGGER *)log)->add((LOGGER *)log, __FILE__, __LINE__, __WARN__,format);}      \
+}                                                                                       
+#define ERROR_LOGGER(log, format...)                                                        \
+{                                                                                           \
+    if(log){((LOGGER *)log)->add((LOGGER *)log, __FILE__, __LINE__, __ERROR__,format);}     \
+}                                                                                       
+#define FATAL_LOGGER(log, format...)                                                        \
+{                                                                                           \
+    if(log){((LOGGER *)log)->add((LOGGER *)log, __FILE__, __LINE__, __FATAL__,format);}     \
+}                                                                                       
+#define CLOSE_LOGGER(logger) ((LOGGER *)logger)->close((LOGGER **)&logger)
 
 #ifdef __cplusplus
  }

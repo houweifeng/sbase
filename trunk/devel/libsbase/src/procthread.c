@@ -16,8 +16,8 @@ PROCTHREAD *procthread_init()
 	{
 		pth->evbase 			= evbase_init();		
 		pth->message_queue		= queue_init();
-		pth->timer			= timer_init();
-		pth->run			= procthread_run;
+		pth->timer			    = timer_init();
+		pth->run			    = procthread_run;
 		pth->running_once		= procthread_running_once;
 		pth->addconn			= procthread_addconn;
 		pth->add_connection		= procthread_add_connection;
@@ -37,7 +37,7 @@ void procthread_running_once(PROCTHREAD *pth)
 	PROCTHREAD *parent = NULL;
 	if(pth)
 	{
-		msg = pth->message_queue->pop(pth->message_queue);
+		msg = POP_QUEUE(pth->message_queue);
 		if(msg)
 		{
 			DEBUG_LOGGER(pth->logger, "Got message[%08x] id[%d] handler[%08x] parent[%08x]",
@@ -119,9 +119,9 @@ void procthread_addconn(PROCTHREAD *pth, CONN *conn)
 			msg->fd = conn->fd;
 			msg->handler = conn;
 			msg->parent  = (void *)pth;
-			pth->message_queue->push(pth->message_queue, msg);
+			PUSH_QUEUE(pth->message_queue, msg);
 			DEBUG_LOGGER(pth->logger, "Added message for NEW_SESSION[%d] %s:%d total %d",
-				conn->fd, conn->ip, conn->port, pth->message_queue->total);
+				conn->fd, conn->ip, conn->port, ((QUEUE *)pth->message_queue)->total);
 		}
 	}	
 }
@@ -213,21 +213,20 @@ void procthread_clean(PROCTHREAD **pth)
 		}
 		/* Clean message queue */
 		if((*pth)->message_queue && (*pth)->message_queue != (*pth)->service->message_queue)
-		{
-			while((*pth)->message_queue->total > 0 )
-			{
-				msg = (*pth)->message_queue->pop((*pth)->message_queue);	
-				if(msg) msg->clean(&msg);
-			}	
-			(*pth)->message_queue->clean(&((*pth)->message_queue));	
-		}
+        {
+            while((msg = (MESSAGE *)POP_QUEUE((*pth)->message_queue)))	
+            {
+                if(msg) msg->clean(&msg);
+            }
+            CLEAN_QUEUE((*pth)->message_queue);
+        }
 		/* Clean Event base */
 		if( (*pth)->evbase && (*pth)->evbase != (*pth)->service->evbase)
 		{
 			(*pth)->evbase->clean(&((*pth)->evbase));
 		}
 		/* Clean Timer */
-		if((*pth)->timer) (*pth)->timer->clean(&((*pth)->timer));
+		if((*pth)->timer) CLEAN_TIMER((*pth)->timer);
 		(*pth) = NULL;
 	}	
 }

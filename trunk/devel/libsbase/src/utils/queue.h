@@ -71,95 +71,12 @@ void queue_clean(QUEUE **);
 	}	 \
 } 
 
-#define QUEUE_INIT() \
-{ \
-	QUEUE *queue = (QUEUE *)calloc(1, sizeof(QUEUE)); \
-	if(queue) \
-	{ \
-		queue->push	= queue_push; \
-		queue->pop		= queue_pop; \
-		queue->head	= queue_head; \
-		queue->tail	= queue_tail; \
-		queue->clean	= queue_clean; \
-		 \
-	} \
-	return(queue); \
-} 
-#define QUEUE_PUSH(queue, data) \
-{ \
-	if(queue) \
-	{ \
-		if(queue->last) \
-		{ \
-			queue->last->next = (QUEUE_ELEM *)calloc(1, sizeof(QUEUE_ELEM)); \
-			queue->last = queue->last->next; \
-		}	 \
-		else \
-		{ \
-			queue->last = (QUEUE_ELEM *)calloc(1, sizeof(QUEUE_ELEM)); \
-			if(queue->first == NULL) queue->first = queue->last; \
-		} \
-		queue->last->data = data; \
-		queue->total++; \
-	}	 \
-} 
-#define QUEUE_POP(queue) \
-{ \
-	void *p = NULL; \
-	QUEUE_ELEM *elem = NULL; \
-	if(queue) \
-	{ \
-		if(queue->first) \
-		{ \
-			elem = queue->fist; \
-			if(queue->fist == queue->last)  \
-			{ \
-				queue->fist = queue->last = NULL; \
-			} \
-			else \
-			{ \
-				queue->first = queue->first->next; \
-			} \
-			p = elem->data; \
-			free(elem); \
-		} \
-	} \
-	return(p);\
-} 
-#define QUEUE_HEAD(queue) \
-{ \
-	void *p = NULL; \
-	if(queue && queue->fist) \
-	{ \
-		 p = queue->fist->data; \
-	} \
-	return(p); \
-} 
-#define QUEUE_TAIL(queue) \
-{ \
-        void *p = NULL; \
-        if(queue && queue->last) \
-        { \
-                 p = queue->last->data; \
-        } \
-        return(p); \
-} 
-#define QUEUE_CLEAN(queue) \
-{ \
-	QUEUE_ELEM *elem = NULL, p = NULL; \
-	if(queue) \
-	{ \
-		p = elem = queue->first; \
-		while(elem != queue_last->last) \
-		{ \
-			elem = elem->next; \
-			free(p);	 \
-			p = elem; \
-		}					 \
-		free(queue); \
-	} \
-}
-
+#define POP_QUEUE(pq) ((QUEUE *)pq)->pop((QUEUE *)pq)
+#define PUSH_QUEUE(pq, data) ((QUEUE *)pq)->push((QUEUE *)pq, data)
+#define TAIL_QUEUE(pq) ((QUEUE *)pq)->tail((QUEUE *)pq)
+#define HEAD_QUEUE(pq) ((QUEUE *)pq)->tail((QUEUE *)pq)
+#define TOTAL_QUEUE(pq) ((QUEUE *)pq)->total
+#define CLEAN_QUEUE(pq) ((QUEUE *)pq)->clean((QUEUE **)&(pq))
 #ifdef __cplusplus
  }
 #endif

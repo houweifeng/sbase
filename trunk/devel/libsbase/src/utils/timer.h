@@ -85,6 +85,13 @@ void timer_clean(TIMER **);
 				_timer->clean); \
 	} \
 }
+#define PTIMER(timer) ((TIMER *)timer)
+#define CLEAN_TIMER(timer) ((TIMER *)timer)->clean((TIMER **)&timer)
+#define RESET_TIMER(timer) ((TIMER *)timer)->reset((TIMER *)timer)
+#define SAMPLE_TIMER(timer) ((TIMER *)timer)->reset((TIMER *)timer)
+#define CHECK_TIMER(timer, interval) ((TIMER *)timer)->check((TIMER *)timer, interval)
+#define LAST_SEC_TIMER(timer) ((TIMER *)timer)->last_sec
+#define LAST_USEC_TIMER(timer) ((TIMER *)timer)->last_usec
 
 #ifdef __cplusplus
  }
