@@ -138,7 +138,7 @@ work_proc_init:
 			service->procthread->evbase = service->evbase;
 			if(service->message_queue && service->procthread->message_queue)
 			{
-				service->procthread->message_queue->clean(&(service->procthread->message_queue));
+				CLEAN_QUEUE(service->procthread->message_queue);
 				service->procthread->message_queue = service->message_queue;
 				DEBUG_LOGGER(service->logger, 
 				 "Replaced procthread[%08x]->message_queue with service[%08x]->message_queue[%08x]",
@@ -316,8 +316,8 @@ void service_active_heartbeat(SERVICE *service)
     if(service)
     {
 		if(service->heartbeat_interval > 0
-			&& service->timer && service->timer->check
-			&& service->timer->check(service->timer, service->heartbeat_interval) == 0 )
+			&& service->timer && ((TIMER *)service->timer)->check
+			&& CHECK_TIMER(service->timer, service->heartbeat_interval) == 0 )
 		{
 			if(service->cb_heartbeat_handler)
 			{
@@ -342,8 +342,6 @@ void service_state_conns(SERVICE *service)
     {
 		if(service->running_connections < service->connections_limit)
 		{
-			DEBUG_LOGGER(service->logger, "check connections now[%d] limit[%d] states on service[%s]", 
-						service->running_connections, service->connections_limit,service->name);
 			num = service->connections_limit - service->running_connections;
 			while(i++ < num)
 			{
@@ -488,13 +486,13 @@ void service_clean(SERVICE **service)
             (*service)->connections = NULL;
         }
         if((*service)->logger) 
-            (*service)->logger->close(&(*service)->logger);
+            CLOSE_LOGGER((*service)->logger);
         if((*service)->evlogger) 
-            (*service)->evlogger->close(&(*service)->evlogger);
+            CLOSE_LOGGER((*service)->evlogger);
         if((*service)->event) 
             (*service)->event->clean(&(*service)->event);
         if((*service)->timer) 
-            (*service)->timer->clean(&((*service)->timer));
+            CLEAN_TIMER((*service)->timer);
 		if((*service)->mutex)
 			MUTEX_DESTROY((*service)->mutex);
         free((*service));
