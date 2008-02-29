@@ -61,6 +61,7 @@ typedef struct _EVENT
 {
 	struct timeval tv;
 	short ev_flags;
+	short old_ev_flags;
 	int ev_fd;
 	void *ev_arg;
 	struct _EVBASE *ev_base;

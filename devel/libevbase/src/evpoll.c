@@ -29,7 +29,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
 {
     struct pollfd *ev = NULL;
     short ev_flags = 0;
-    if(evbase && event && event->ev_fd > 0 && evbase->ev_fds && evbase->evlist)
+    if(evbase && event && event->ev_fd >= 0 && evbase->ev_fds && evbase->evlist)
     {
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
@@ -49,6 +49,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             if(event->ev_fd > evbase->maxfd)
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
+            evbase->nfd++;
             DEBUG_LOGGER(evbase->logger, "Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
         }
         return 0;
@@ -60,7 +61,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
 {
     struct pollfd *ev = NULL;
     short ev_flags = 0;
-    if(evbase && event && evbase->ev_fds && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
+    if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
@@ -80,7 +81,6 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
             if(event->ev_fd > evbase->maxfd)
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;
-            evbase->nfd++;
             DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
                     event->ev_flags, event->ev_fd);
             return 0;
@@ -91,7 +91,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
 /* Delete event from evbase */
 int evpoll_del(EVBASE *evbase, EVENT *event)
 {
-    if(evbase && event && evbase->ev_fds && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
+    if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
         if(event->ev_fd >= evbase->maxfd)
@@ -118,8 +118,8 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                     evbase, errno, strerror(errno));
         }
         if(n <= 0) return ;
-        //DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
-        for(; i <= evbase->maxfd; i++)
+        DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->maxfd + 1);
+        for(i = 0; i <= evbase->maxfd; i++)
         {
             ev = &(((struct pollfd *)evbase->ev_fds)[i]);
             if(evbase->evlist[i] && ev->fd > 0)

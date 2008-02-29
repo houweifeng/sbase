@@ -34,12 +34,12 @@ int evselect_init(EVBASE *evbase)
 int evselect_add(EVBASE *evbase, EVENT *event)
 {
     short ev_flags = 0;
-    if(evbase && event && event->ev_fd > 0)
+    if(evbase && event && event->ev_fd >= 0)
     {
         event->ev_base = evbase;
-        if( evbase->ev_read_fds && (event->ev_flags & E_READ))
+        if(evbase->ev_read_fds && (event->ev_flags & E_READ))
         {
-            FD_SET(event->ev_fd, (fd_set *)evbase->ev_read_fds);	
+            FD_SET(event->ev_fd, (fd_set *)evbase->ev_read_fds);
             ev_flags |= E_READ;
         }
         if(evbase->ev_read_fds && (event->ev_flags & E_WRITE))
@@ -53,41 +53,52 @@ int evselect_add(EVBASE *evbase, EVENT *event)
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
             evbase->nfd++;
-            DEBUG_LOGGER(evbase->logger, "Added event[%x] %d on %d", event, ev_flags, event->ev_fd);
+            DEBUG_LOGGER(evbase->logger, "Added event[%x] flags[%d] on fd[%d]", 
+                    event, ev_flags, event->ev_fd);
             return 0;
         }
     }	
     return -1;
 }
+
 /* Update event in evbase */
 int evselect_update(EVBASE *evbase, EVENT *event)
 {
-    short ev_flags = 0;
+    short ev_flags = 0, add_ev_flags = 0, del_ev_flags = 0;
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
-        if(evbase->ev_read_fds) 
-            FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
-        if(evbase->ev_write_fds) 
-            FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
-        if(event->ev_flags & E_READ)
+        ev_flags = (event->ev_flags ^ event->old_ev_flags);
+        add_ev_flags = (event->ev_flags & ev_flags);
+        del_ev_flags = (event->old_ev_flags & ev_flags);
+
+        if(add_ev_flags & E_READ)
         {
             FD_SET(event->ev_fd, (fd_set *)evbase->ev_read_fds);
             ev_flags |= E_READ;
+            DEBUG_LOGGER(evbase->logger, "Added EV_READ on fd[%d]", event->ev_fd);
         }
-        if(event->ev_flags & E_WRITE)
+        if(del_ev_flags & E_READ)
+        {
+            FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
+            DEBUG_LOGGER(evbase->logger, "Deleted EV_READ on fd[%d]", event->ev_fd);
+        }
+        if(add_ev_flags & E_WRITE)
         {
             FD_SET(event->ev_fd, (fd_set *)evbase->ev_write_fds);
             ev_flags |= E_WRITE;
+            DEBUG_LOGGER(evbase->logger, "Added EV_WRITE on fd[%d]", event->ev_fd);
         }
-        if(ev_flags)
+        if(del_ev_flags & E_WRITE)
         {
-            if(event->ev_fd > evbase->maxfd)
-                evbase->maxfd = event->ev_fd;
-            evbase->evlist[event->ev_fd] = event;
-            DEBUG_LOGGER(evbase->logger, "Updated event[%x] %d on %d",
-                    event, ev_flags, event->ev_fd);
-            return 0;
+            FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
+            DEBUG_LOGGER(evbase->logger, "Deleted EV_WRITE on fd[%d]", event->ev_fd);
         }
+        if(event->ev_fd > evbase->maxfd)
+            evbase->maxfd = event->ev_fd;
+        evbase->evlist[event->ev_fd] = event;
+        DEBUG_LOGGER(evbase->logger, "Updated event[%08x] flags[%d] on fd[%d]",
+                event, event->ev_flags, event->ev_fd);
+        return 0;
     }
     return -1;
 }
@@ -97,9 +108,15 @@ int evselect_del(EVBASE *evbase, EVENT *event)
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
         if(evbase->ev_read_fds)
+        {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
+        }
         if(evbase->ev_write_fds)
+        {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
+        }
+        DEBUG_LOGGER(evbase->logger, "Deleted event[%08x] flags[%d] on fd[%d]",
+                event, event->ev_flags, event->ev_fd);
         if(event->ev_fd >= evbase->maxfd)
             evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;	
@@ -116,9 +133,10 @@ void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
     short ev_flags = 0;
     if(evbase && evbase->nfd  > 0)
     {
-        n = select(evbase->maxfd + 1, (fd_set *)evbase->ev_read_fds, (fd_set *)evbase->ev_write_fds, NULL, tv);
+        n = select(evbase->maxfd + 1, (fd_set *)evbase->ev_read_fds, 
+                (fd_set *)evbase->ev_write_fds, NULL, tv);
         if(n <= 0) return ;
-        //DEBUG_LOG("Actived %d event in %d", n,  evbase->maxfd + 1);
+        DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->maxfd + 1);
         for(i = 0; i <= evbase->maxfd; ++i)
         {
             if(evbase->evlist[i])

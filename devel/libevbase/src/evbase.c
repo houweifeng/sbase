@@ -73,7 +73,7 @@ int evbase_set_evops(EVBASE *evbase, int evopid)
     {
         if(evopid >= 0 && evopid < EOP_LIMIT && evops[evopid].name != NULL)
         {
-            evbase->reset(evbase);
+            if(evbase->reset)evbase->reset(evbase);
             if(evops[evopid].init) evbase->init = evops[evopid].init;
             if(evops[evopid].add) evbase->add = evops[evopid].add;
             if(evops[evopid].update) evbase->update = evops[evopid].update;
@@ -190,14 +190,11 @@ EVBASE *evbase_init()
         evbase->set_logfile = evbase_set_logfile;
         evbase->set_evops   = evbase_set_evops;
         //evbase->clean 	=  evbase_clean;
-        if(evops_default == -1 || evbase->init == NULL 
-                || evbase->add == NULL || evbase->update == NULL 
-                || evbase->del == NULL || evbase->loop == NULL 
-                || evbase->reset == NULL || evbase->clean == NULL
-                || evbase->set_evops(evbase, evops_default) == -1)
+        if(evops_default == -1 || evbase->set_evops(evbase, evops_default) == -1)
         {
             free(evbase); 
-            fprintf(stderr, "Initialize evbase failed, %s", strerror(errno));
+            fprintf(stderr, "Initialize evbase to default[%d] failed, %s\n", 
+                    evops_default, strerror(errno));
             evbase = NULL;
         }
     }
@@ -240,12 +237,13 @@ void event_add(EVENT *event, short flags)
 {
 	if(event)
 	{
+        event->old_ev_flags = event->ev_flags;
 		event->ev_flags |= flags;
 		if(event->ev_base && event->ev_base->update)
 		{
 			event->ev_base->update(event->ev_base, event);
 			DEBUG_LOGGER(event->ev_base->logger, 
-                    "Updated event[%08x] to %d on %d",
+                    "Added event[%08x] flags[%d] on fd[%d]",
 				event, event->ev_flags, event->ev_fd);
 		}
 	}
@@ -258,11 +256,12 @@ void event_del(EVENT *event, short flags)
 	{
 		if(event->ev_flags & flags)
 		{
+            event->old_ev_flags = event->ev_flags;
 			event->ev_flags ^= flags;
 			if(event->ev_base && event->ev_base->update)
 			{
 				event->ev_base->update(event->ev_base, event);
-				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%08x] to %d on %d",
+				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%08x] flags[%d] on fd[%d]",
 					event, event->ev_flags, event->ev_fd);
 			}
 
@@ -273,17 +272,17 @@ void event_del(EVENT *event, short flags)
 /* Destroy event */
 void event_destroy(EVENT *event)
 {
-        if(event)
+    if(event)
+    {
+        event->ev_flags = 0;
+        if(event->ev_base && event->ev_base->del)
         {
-                event->ev_flags = 0;
-                if(event->ev_base && event->ev_base->del)
-                {
-                        event->ev_base->del(event->ev_base, event);
-                        DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%08x] on %d",
-				event, event->ev_fd);
-			event->ev_base = NULL;
-                }
+            event->ev_base->del(event->ev_base, event);
+            DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%08x] on fd[%d]",
+                    event, event->ev_fd);
+            event->ev_base = NULL;
         }
+    }
 }
 
 /* Active event */
@@ -295,7 +294,7 @@ void event_active(EVENT *event, short ev_flags)
 	if(event && event->ev_handler)
 	{
 		DEBUG_LOGGER(event->ev_base->logger, 
-			"Activing event[%d] on %d ", event->ev_fd, e_flags);
+			"Activing event[%d] on fd[%d]", e_flags, event->ev_fd);
 		event->ev_handler(event->ev_fd, e_flags, event->ev_arg);	
 		if(!(event->ev_flags & E_PERSIST))
 		{
