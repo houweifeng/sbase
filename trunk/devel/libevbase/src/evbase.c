@@ -294,7 +294,7 @@ void event_active(EVENT *event, short ev_flags)
 	if(event && event->ev_handler)
 	{
 		DEBUG_LOGGER(event->ev_base->logger, 
-			"Activing event[%d] on fd[%d]", e_flags, event->ev_fd);
+			"Activing event[%08x] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
 		event->ev_handler(event->ev_fd, e_flags, event->ev_arg);	
 		if(!(event->ev_flags & E_PERSIST))
 		{
