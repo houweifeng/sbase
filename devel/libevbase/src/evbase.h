@@ -13,6 +13,16 @@ extern "C" {
 #define E_PERSIST	0x08
 #define EV_MAX_FD	1024
 #define EV_USEC_SLEEP	100
+/*event operating */
+#define EOP_PORT        0x00
+#define EOP_SELECT      0x01
+#define EOP_POLL        0x02
+#define EOP_RTSIG       0x03
+#define EOP_EPOLL       0x04
+#define EOP_KQUEUE      0x05
+#define EOP_DEVPOLL     0x06
+#define EOP_WIN32       0x07
+#define EOP_LIMIT       8
 struct _EVENT;
 #ifndef _TYPEDEF_EVBASE
 #define _TYPEDEF_EVBASE
@@ -21,11 +31,10 @@ typedef struct _EVBASE
 	void *ev_read_fds;
 	void *ev_write_fds;
 	void *ev_fds;
-	void *ev_changes;
 	void *evs;
 	int  efd;
 	void *logger;
-	
+
 	int nfd;
     int nevent;
 	int  maxfd;
@@ -35,6 +44,7 @@ typedef struct _EVBASE
 	int state;
 
     void    (*set_logfile)(struct _EVBASE *, char *logfile);
+    int     (*set_evops)(struct _EVBASE *, int evopid);
 	int	    (*init)(struct _EVBASE *);
 	int	    (*add)(struct _EVBASE *, struct _EVENT*);
 	int 	(*update)(struct _EVBASE *, struct _EVENT*);
