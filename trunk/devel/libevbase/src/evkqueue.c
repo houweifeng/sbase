@@ -45,7 +45,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             memset(&kqev, 0, sizeof(struct kevent));
             kqev.ident  = event->ev_fd;
             kqev.filter = EVFILT_READ;
-            kqev.flags  = EV_ADD;	
+            kqev.flags  = EV_ADD|EV_CLEAR;	
             kqev.udata  = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
@@ -56,7 +56,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             memset(&kqev, 0, sizeof(struct kevent));
             kqev.ident     = event->ev_fd;
             kqev.filter    = EVFILT_WRITE;
-            kqev.flags     = EV_ADD;
+            kqev.flags     = EV_ADD|EV_CLEAR;
             kqev.udata     = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
@@ -83,18 +83,18 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             memset(&kqev, 0, sizeof(struct kevent));
             kqev.ident      = event->ev_fd;
             kqev.filter     = EVFILT_READ;
-            kqev.flags      = EV_ADD;
+            kqev.flags      = EV_ADD|EV_CLEAR;
             kqev.udata      = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
             DEBUG_LOGGER(evbase->logger, "update EVFILT_READ[%d] on %d", kqev.filter, kqev.ident);
         }
-            memset(&kqev, 0, sizeof(struct kevent));
         if(event->ev_flags & E_WRITE)
         {
+            memset(&kqev, 0, sizeof(struct kevent));
             kqev.ident      = event->ev_fd;
             kqev.filter     = EVFILT_WRITE;
-            kqev.flags      = EV_ADD;
+            kqev.flags      = EV_ADD|EV_CLEAR;
             kqev.udata      = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
@@ -181,6 +181,34 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 /* Reset evbase */
 void evkqueue_reset(EVBASE *evbase)
 {
+    if(evbase)
+    {
+        if(evbase->ev_fds)
+        {
+            free(evbase->ev_fds);
+            evbase->ev_fds = NULL;
+        }
+        if(evbase->ev_read_fds)
+        {
+            free(evbase->ev_read_fds);
+            evbase->ev_read_fds = NULL;
+        }
+        if(evbase->ev_write_fds)
+        {
+            free(evbase->ev_write_fds);
+            evbase->ev_write_fds = NULL;
+        }
+        if(evbase->evs)
+        {
+            free(evbase->evs);
+            evbase->evs = NULL;
+        }
+        evbase->nfd = 0;
+        evbase->maxfd = 0;
+        evbase->nevent = 0;
+        evbase->allowed = 0;
+        close(evbase->efd);
+    }
 }
 
 /* Clean evbase */
@@ -194,7 +222,6 @@ void evkqueue_clean(EVBASE **evbase)
         if((*evbase)->ev_fds)free((*evbase)->ev_fds);
         if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
         if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
-        if((*evbase)->ev_changes)free((*evbase)->ev_changes);
         free(*evbase);
         (*evbase) = NULL;
     }	

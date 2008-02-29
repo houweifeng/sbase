@@ -30,6 +30,20 @@
 #ifdef WIN32
 #include "evwin32.h"
 #endif
+
+typedef struct _EVOPS
+{
+    char    *name ;
+    int     (*init)(struct _EVBASE *);
+    int     (*add)(struct _EVBASE *, struct _EVENT*);
+    int     (*update)(struct _EVBASE *, struct _EVENT*);
+    int     (*del)(struct _EVBASE *, struct _EVENT*);
+    void    (*loop)(struct _EVBASE *, short , struct timeval *tv);
+    void    (*reset)(struct _EVBASE *);
+    void    (*clean)(struct _EVBASE **);
+}EVOPS;
+static EVOPS evops[EOP_LIMIT] = {0};
+static int evops_default =      -1;
 /* Set event */
 void event_set(EVENT *event, int fd, short flags, void *arg, void *handler);
 /* Add event */
@@ -42,6 +56,7 @@ void event_active(EVENT *event, short ev_flags);
 void event_destroy(EVENT *event);
 /* Clean event */
 void event_clean(EVENT **event);
+
 /* set logfile */
 void evbase_set_logfile(EVBASE *evbase, char *file)
 {
@@ -51,106 +66,141 @@ void evbase_set_logfile(EVBASE *evbase, char *file)
     }
     return ;
 }
+/* set event operating */
+int evbase_set_evops(EVBASE *evbase, int evopid)
+{
+    if(evbase)
+    {
+        if(evopid >= 0 && evopid < EOP_LIMIT && evops[evopid].name != NULL)
+        {
+            evbase->reset(evbase);
+            if(evops[evopid].init) evbase->init = evops[evopid].init;
+            if(evops[evopid].add) evbase->add = evops[evopid].add;
+            if(evops[evopid].update) evbase->update = evops[evopid].update;
+            if(evops[evopid].del) evbase->del = evops[evopid].del;
+            if(evops[evopid].loop) evbase->loop = evops[evopid].loop;
+            if(evops[evopid].reset) evbase->reset = evops[evopid].reset;
+            if(evops[evopid].clean) evbase->clean = evops[evopid].clean;
+            if(evbase->init(evbase) == -1)
+                evbase->set_evops(evbase, evops_default);
+            DEBUG_LOGGER(evbase->logger, "Set event to [%s]", evops[evopid].name);
+            return 0;
+        }
+    }
+    return -1;
+}
+
 /* Initialize evbase */
 EVBASE *evbase_init()
 {
 	EVBASE *evbase = (EVBASE *)calloc(1, sizeof(EVBASE));	
 	char *s = NULL;
 	if(evbase)
-	{
-        evbase->set_logfile = evbase_set_logfile;
+    {
 #ifdef HAVE_EVPORT
-		evbase->init 	=  evport_init;
-		evbase->add 	=  evport_add;
-		evbase->update 	=  evport_update;
-		evbase->del 	=  evport_del;
-		evbase->loop 	=  evport_loop;
-		evbase->reset 	=  evport_reset;
-		evbase->clean 	=  evport_clean;
-		s = "Using PORT event mode";
-#endif 
-#ifdef HAVE_EVSELECT
-		evbase->init 	=  evselect_init;
-		evbase->add 	=  evselect_add;
-		evbase->update 	=  evselect_update;
-		evbase->del 	=  evselect_del;
-		evbase->loop 	=  evselect_loop;
-		evbase->reset 	=  evselect_reset;
-		evbase->clean 	=  evselect_clean;
-		s = "Using SELECT event mode";
-#endif 
-#ifdef HAVE_EVPOLL
-		evbase->init 	=  evpoll_init;
-		evbase->add 	=  evpoll_add;
-		evbase->update 	=  evpoll_update;
-		evbase->del 	=  evpoll_del;
-		evbase->loop 	=  evpoll_loop;
-		evbase->reset 	=  evpoll_reset;
-		evbase->clean 	=  evpoll_clean;
-		s = "Using POLL event mode";
-#endif 
-#ifdef N_HAVE_EVRTSIG
-		evbase->init 	=  evrtsig_init;
-		evbase->add 	=  evrtsig_add;
-		evbase->update 	=  evrtsig_update;
-		evbase->del 	=  evrtsig_del;
-		evbase->loop 	=  evrtsig_loop;
-		evbase->reset 	=  evrtsig_reset;
-		evbase->clean	=  evrtsig_clean;
-		s = "Using SIGNAL event mode";
-#endif 
-#ifdef HAVE_EVEPOLL
-		evbase->init 	=  evepoll_init;
-		evbase->add 	=  evepoll_add;
-		evbase->update 	=  evepoll_update;
-		evbase->del 	=  evepoll_del;
-		evbase->loop 	=  evepoll_loop;
-		evbase->reset 	=  evepoll_reset;
-		evbase->clean 	=  evepoll_clean;
-		s = "Using EPOLL event mode";
-#endif 
-#ifdef HAVE_EVKQUEUE
-		evbase->init 	=  evkqueue_init;
-		evbase->add 	=  evkqueue_add;
-		evbase->update 	=  evkqueue_update;
-		evbase->del 	=  evkqueue_del;
-		evbase->loop 	=  evkqueue_loop;
-		evbase->reset 	=  evkqueue_reset;
-		evbase->clean 	=  evkqueue_clean;
-		s = "Using KQUEUE event mode";
-#endif 
-#ifdef HAVE_EVDEVPOLL
-		evbase->init 	=  evdevpoll_init;
-		evbase->add 	=  evdevpoll_add;
-		evbase->update 	=  evdevpoll_update;
-		evbase->del 	=  evdevpoll_del;
-		evbase->loop 	=  evdevpoll_loop;
-		evbase->reset 	=  evdevpoll_reset;
-		evbase->clean 	=  evdevpoll_clean;
-		s = "Using DEVPOLL event mode";
-#endif 
-#ifdef WIN32
-		evbase->init 	=  evwin32_init;
-		evbase->add 	=  evwin32_add;
-		evbase->update 	=  evwin32_update;
-		evbase->del 	=  evwin32_del;
-		evbase->loop 	=  evwin32_loop;
-		evbase->reset 	=  evwin32_reset;
-		evbase->clean 	=  evwin32_clean;
-		s = "Using WIN32 event mode";
+        evops_default = EOP_PORT;
+        evops[EOP_PORT].name = "PORT";
+        evops[EOP_PORT].init      = evport_init;
+        evops[EOP_PORT].add       = evport_add;
+        evops[EOP_PORT].update    = evport_update;
+        evops[EOP_PORT].del       = evport_del;
+        evops[EOP_PORT].loop      = evport_loop;
+        evops[EOP_PORT].reset     = evport_reset;
+        evops[EOP_PORT].clean     = evport_clean;
 #endif
-		fprintf(stdout, "%s\n", s);
-		//evbase->clean 	=  evbase_clean;
-		if(evbase->init == NULL || evbase->add == NULL || evbase->update == NULL 
-				|| evbase->del == NULL || evbase->loop == NULL 
-				|| evbase->reset == NULL || evbase->clean == NULL
-                ||  evbase->init(evbase) != 0)
-		{
-			free(evbase); 
-			fprintf(stderr, "Initialize evbase failed, %s", strerror(errno));
-			evbase = NULL;
-		}
-	}
+#ifdef HAVE_EVSELECT
+        evops_default = EOP_SELECT;
+        evops[EOP_SELECT].name    = "SELECT";
+        evops[EOP_SELECT].init    = evselect_init;
+        evops[EOP_SELECT].add     = evselect_add;
+        evops[EOP_SELECT].update  = evselect_update;
+        evops[EOP_SELECT].del     = evselect_del;
+        evops[EOP_SELECT].loop    = evselect_loop;
+        evops[EOP_SELECT].reset   = evselect_reset;
+        evops[EOP_SELECT].clean   = evselect_clean;
+#endif
+#ifdef HAVE_EVPOLL
+        evops_default = EOP_POLL;
+        evops[EOP_POLL].name      = "POLL";
+        evops[EOP_POLL].init      = evpoll_init;
+        evops[EOP_POLL].add       = evpoll_add;
+        evops[EOP_POLL].update    = evpoll_update;
+        evops[EOP_POLL].del       = evpoll_del;
+        evops[EOP_POLL].loop      = evpoll_loop;
+        evops[EOP_POLL].reset     = evpoll_reset;
+        evops[EOP_POLL].clean     = evpoll_clean;
+#endif
+#ifdef HAVE_EVRTSIG
+        evops_default = EOP_RTSIG;
+        evops[EOP_RTSIG].name     = "RTSIG" ;
+        evops[EOP_RTSIG].init     = evrtsig_init;
+        evops[EOP_RTSIG].add      = evrtsig_add;
+        evops[EOP_RTSIG].update   = evrtsig_update;
+        evops[EOP_RTSIG].del      = evrtsig_del;
+        evops[EOP_RTSIG].loop     = evrtsig_loop;
+        evops[EOP_RTSIG].reset    = evrtsig_reset;
+        evops[EOP_RTSIG].clean    = evrtsig_clean;
+#endif
+#ifdef HAVE_EVEPOLL
+        evops_default = EOP_EPOLL;
+        evops[EOP_EPOLL].name     = "EPOLL";
+        evops[EOP_EPOLL].init     = evepoll_init;
+        evops[EOP_EPOLL].add      = evepoll_add;
+        evops[EOP_EPOLL].update   = evepoll_update;
+        evops[EOP_EPOLL].del      = evepoll_del;
+        evops[EOP_EPOLL].loop     = evepoll_loop;
+        evops[EOP_EPOLL].reset    = evepoll_reset;
+        evops[EOP_EPOLL].clean    = evepoll_clean;
+#endif
+#ifdef HAVE_EVKQUEUE
+        evops_default = EOP_KQUEUE;
+        evops[EOP_KQUEUE].name    = "KQUEUE";
+        evops[EOP_KQUEUE].init    = evkqueue_init;
+        evops[EOP_KQUEUE].add     = evkqueue_add;
+        evops[EOP_KQUEUE].update  = evkqueue_update;
+        evops[EOP_KQUEUE].del     = evkqueue_del;
+        evops[EOP_KQUEUE].loop    = evkqueue_loop;
+        evops[EOP_KQUEUE].reset   = evkqueue_reset;
+        evops[EOP_KQUEUE].clean   = evkqueue_clean;
+#endif
+#ifdef HAVE_EVDEVPOLL
+        evops_default = EOP_DEVPOLL;
+        evops[EOP_DEVPOLL].name   = "/dev/poll";
+        evops[EOP_DEVPOLL].init   = evdevpoll_init;
+        evops[EOP_DEVPOLL].add    = evdevpoll_add;
+        evops[EOP_DEVPOLL].update = evdevpoll_update;
+        evops[EOP_DEVPOLL].del    = evdevpoll_del;
+        evops[EOP_DEVPOLL].loop   = evdevpoll_loop;
+        evops[EOP_DEVPOLL].reset  = evdevpoll_reset;
+        evops[EOP_DEVPOLL].clean  = evdevpoll_clean;
+#endif
+#ifdef WIN32
+        evops_default = EOP_WIN32;
+        evops[EOP_WIN32].name     = "WIN32";
+        evops[EOP_WIN32].init     = evwin32_init;
+        evops[EOP_WIN32].add      = evwin32_add;
+        evops[EOP_WIN32].update   = evwin32_update;
+        evops[EOP_WIN32].del      = evwin32_del;
+        evops[EOP_WIN32].loop     = evwin32_loop;
+        evops[EOP_WIN32].reset    = evwin32_reset;
+        evops[EOP_WIN32].clean    = evwin32_clean;
+#endif
+
+
+        evbase->set_logfile = evbase_set_logfile;
+        evbase->set_evops   = evbase_set_evops;
+        //evbase->clean 	=  evbase_clean;
+        if(evops_default == -1 || evbase->init == NULL 
+                || evbase->add == NULL || evbase->update == NULL 
+                || evbase->del == NULL || evbase->loop == NULL 
+                || evbase->reset == NULL || evbase->clean == NULL
+                || evbase->set_evops(evbase, evops_default) == -1)
+        {
+            free(evbase); 
+            fprintf(stderr, "Initialize evbase failed, %s", strerror(errno));
+            evbase = NULL;
+        }
+    }
 	return evbase;
 }
 

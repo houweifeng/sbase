@@ -189,13 +189,34 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 /* Reset evbase */
 void evepoll_reset(EVBASE *evbase)
 {
-	int i = 0;
-	if(evbase)
-	{
-		memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
-		close(evbase->efd);
-                memset(evbase->evs, 0, evbase->allowed * sizeof(struct epoll_event));
-	}	
+    if(evbase)
+    {
+        if(evbase->ev_fds)
+        {
+            free(evbase->ev_fds);
+            evbase->ev_fds = NULL;
+        }
+        if(evbase->ev_read_fds)
+        {
+            free(evbase->ev_read_fds);
+            evbase->ev_read_fds = NULL;
+        }
+        if(evbase->ev_write_fds)
+        {
+            free(evbase->ev_write_fds);
+            evbase->ev_write_fds = NULL;
+        }
+        if(evbase->evs)
+        {
+            free(evbase->evs);
+            evbase->evs = NULL;
+        }
+        evbase->nfd = 0;
+        evbase->maxfd = 0;
+        evbase->nevent = 0;
+        evbase->allowed = 0;
+        close(evbase->efd);
+    }
 }
 
 /* Clean evbase */
