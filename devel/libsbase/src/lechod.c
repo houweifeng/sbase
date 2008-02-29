@@ -19,7 +19,7 @@ int cb_packet_reader(CONN *conn, BUFFER *buffer)
 
 void cb_packet_handler(CONN *conn, BUFFER *packet)
 {
-	if(conn)
+	if(conn && conn->push_chunk)
 		conn->push_chunk((CONN *)conn, ((BUFFER *)packet)->data, packet->size);
 }
 
