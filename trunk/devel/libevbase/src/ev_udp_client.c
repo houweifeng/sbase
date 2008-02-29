@@ -14,25 +14,39 @@
 #include "evbase.h"
 #include "log.h"
 #include "logger.h"
-
-#define SETRLIMIT(NAME, RLIM, rlim_set)\
-{\
-        struct rlimit rlim;\
-        rlim.rlim_cur = rlim_set;\
-        rlim.rlim_max = rlim_set;\
-        if(setrlimit(RLIM, (&rlim)) != 0) {\
-                FATAL_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld] failed, %s",\
-                                NAME, rlim.rlim_cur, rlim.rlim_max, strerror(errno));\
-        } else {\
-                SHOW_LOG("setrlimit RLIM[%s] cur[%ld] max[%ld]",\
-                                NAME, rlim.rlim_cur, rlim.rlim_max);\
-        }\
-}
-#define CONN_MAX 65535
+#define CONN_MAX 10240
 #define BUF_SIZE 128
 EVBASE *evbase = NULL;
 char buffer[CONN_MAX][BUF_SIZE];
 EVENT *events[CONN_MAX];
+
+int setrlimiter(char *name, int rlimit, int nset)
+{
+    int ret = -1;
+    struct rlimit rlim;
+    if(name)
+    {
+        if(getrlimit(rlimit, &rlim) == -1)
+            return -1;
+        if(rlim.rlim_cur > nset && rlim.rlim_max > nset)
+            return 0;
+        rlim.rlim_cur = nset;
+        rlim.rlim_max = nset;
+        if((ret = setrlimit(rlimit, &rlim)) == 0)
+        {
+            fprintf(stdout, "setrlimit %s cur[%ld] max[%ld]\n",
+                    name, rlim.rlim_cur, rlim.rlim_max);
+            return 0;
+        }
+        else
+        {
+            fprintf(stderr, "setrlimit %s cur[%ld] max[%ld] failed, %s\n",
+                    name, rlim.rlim_cur, rlim.rlim_max, strerror(errno));
+        }
+    }
+    return ret;
+}
+
 void ev_handler(int fd, short ev_flags, void *arg)
 {
 	int n = 0;
@@ -106,7 +120,7 @@ int main(int argc, char **argv)
 	port = atoi(argv[2]);
 	conn_num = atoi(argv[3]);
 	/* Set resource limit */
-	SETRLIMIT("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
+	setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
 	/* Initialize global vars */
 	memset(events, 0, sizeof(EVENT *) * CONN_MAX);
 	/* Initialize inet */ 
