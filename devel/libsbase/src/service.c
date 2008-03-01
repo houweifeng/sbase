@@ -332,8 +332,8 @@ void service_active_heartbeat(SERVICE *service)
 			}
 			if(service->service_type == C_SERVICE)
 			{
-				//DEBUG_LOGGER(service->logger, "Heartbeat %llu in service[%s]", 
-				 //service->nheartbeat++, service->name);
+				//DEBUG_LOGGER(service->logger, "Heartbeat %llu service[%s] check connection state", 
+				// service->nheartbeat++, service->name);
 				service->state_conns(service);
 			}
         }
