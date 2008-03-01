@@ -166,7 +166,7 @@ void conn_read_handler(CONN *conn)
 	int n = 0;
 	BUFFER *buf = NULL ;
 	char *tmp = NULL;
-	int nbuf = BUF_SIZE;
+	int nbuf = SB_BUF_SIZE;
 		
 	/* Check connection and transaction state  */
 	CONN_CHECK(conn);
