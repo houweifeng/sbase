@@ -34,9 +34,9 @@ extern "C" {
 #ifndef DGRAM_SIZE 	
 #define DGRAM_SIZE 1024 
 #endif
-#ifndef BUF_SIZE
+#ifndef SB_BUF_SIZE
     /* 1M = 0x100000 */
-#define	BUF_SIZE   0x100000 
+#define	SB_BUF_SIZE   0x100000 
 #endif
 #ifndef MAX_CONNECTIONS
 #define MAX_CONNECTIONS 	65535
