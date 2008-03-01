@@ -14,8 +14,8 @@ static char *cmdlist[] = {"put", "status"};
 #define     OP_NUM          2
 #define     OP_PUT          0
 #define     OP_STATUS       1
-#ifndef     BUF_SIZE
-#define     BUF_SIZE      65536
+#ifndef     SBUF_SIZE
+#define     SBUF_SIZE      65536
 #endif
 /**** lqftpd response ID *****/
 static int  resplist[] = {200, 201, 203, 205, 207, 209};
@@ -123,7 +123,7 @@ void cb_serv_heartbeat_handler(void *arg)
     TBLOCK *block = NULL;
     struct stat st;
     CONN *c_conn = NULL;
-    char buf[BUF_SIZE];
+    char buf[SBUF_SIZE];
     int n = 0;
 
     if(serv && transport && tasktable)
@@ -202,7 +202,7 @@ int cb_serv_packet_reader(CONN *conn, BUFFER *buffer)
 void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL;
-    char file[PATH_MAX_SIZE], destfile[PATH_MAX_SIZE], buf[BUF_SIZE];
+    char file[PATH_MAX_SIZE], destfile[PATH_MAX_SIZE], buf[SBUF_SIZE];
     int cmdid = -1;
     int i = 0, n = 0;
     int taskid = -1;
@@ -386,7 +386,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	}
 	*s++ = 0;
 	transport->packet_delimiter_length = strlen(transport->packet_delimiter);
-	transport->buffer_size = iniparser_getint(dict, "TRANSPORT:buffer_size", BUF_SIZE);
+	transport->buffer_size = iniparser_getint(dict, "TRANSPORT:buffer_size", SB_BUF_SIZE);
 	transport->cb_packet_reader = &cb_transport_packet_reader;
 	transport->cb_packet_handler = &cb_transport_packet_handler;
 	transport->cb_data_handler = &cb_transport_data_handler;
@@ -470,7 +470,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	}
 	*s++ = 0;
 	serv->packet_delimiter_length = strlen(serv->packet_delimiter);
-	serv->buffer_size = iniparser_getint(dict, "DAEMON:buffer_size", BUF_SIZE);
+	serv->buffer_size = iniparser_getint(dict, "DAEMON:buffer_size", SB_BUF_SIZE);
 	serv->cb_packet_reader = &cb_serv_packet_reader;
 	serv->cb_packet_handler = &cb_serv_packet_handler;
 	serv->cb_data_handler = &cb_serv_data_handler;
