@@ -315,8 +315,13 @@ void service_active_heartbeat(SERVICE *service)
 {
     if(service)
     {
+
+	//	DEBUG_LOGGER(service->logger, "Heartbeat %llu in service[%s] "
+      //          "interval:%d timer:%08x timer->check:%08x", 
+		//		 service->nheartbeat++, service->name, service->heartbeat_interval,
+          //       service->timer, ((TIMER *)service->timer)->check);
 		if(service->heartbeat_interval > 0
-			&& service->timer && ((TIMER *)service->timer)->check
+			&& service->timer && ((TIMER *)(service->timer))->check
 			&& CHECK_TIMER(service->timer, service->heartbeat_interval) == 0 )
 		{
 			if(service->cb_heartbeat_handler)
@@ -327,6 +332,8 @@ void service_active_heartbeat(SERVICE *service)
 			}
 			if(service->service_type == C_SERVICE)
 			{
+				//DEBUG_LOGGER(service->logger, "Heartbeat %llu in service[%s]", 
+				 //service->nheartbeat++, service->name);
 				service->state_conns(service);
 			}
         }
@@ -343,6 +350,8 @@ void service_state_conns(SERVICE *service)
 		if(service->running_connections < service->connections_limit)
 		{
 			num = service->connections_limit - service->running_connections;
+            DEBUG_LOGGER(service->logger, "Ready for adding %d connections(running_connections:%d)",
+                    num, service->running_connections);
 			while(i++ < num)
 			{
 				if(service->newconn(service) == NULL)
@@ -379,6 +388,9 @@ void service_popconn(SERVICE *service, int index)
 		MUTEX_LOCK(service->mutex);
 		if(service->connections && index >= 0)
 		{
+            DEBUG_LOGGER(service->logger, "Pop connection[%d] %s:%d index[%d]", 
+                service->connections[index]->fd, service->connections[index]->ip,
+                service->connections[index]->port, index);
 			service->connections[index] = NULL;
 			service->running_connections--;
 		}
@@ -405,6 +417,8 @@ void service_pushconn(SERVICE *service, CONN *conn)
 			}
 			i++;
 		}
+        DEBUG_LOGGER(service->logger, "Pushed connection[%d] %s:%d to index[%d]", 
+                conn->fd, conn->ip, conn->port, conn->index);
 		MUTEX_UNLOCK(service->mutex);
 	}
 	return ;
