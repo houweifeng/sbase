@@ -5,6 +5,9 @@
 #include <string.h>
 #include <sys/types.h>
 #include <fcntl.h>
+//32768=32K 65536=64K 131072=128K 262144=256K 524288=512K 786432=768K 
+////1048576=1M  2097152=2M 4194304=4M 8388608 = 8M 16777216=16M  33554432=32M
+#define  MD5_BUF_SIZE   524288
 /* Initialize */
 void md5_init(MD5_CTX *context)
 {
@@ -54,7 +57,7 @@ void md5_final(MD5_CTX *context)
 				: (_MD5_SET_N + _MD5_BLOCK_N - index); 
 		md5_update(context, PADDING, npad);	
 		md5_update(context, bits, _MD5_BITS_N);
-		ENCODE(context->digest, context->state, _MD5_N);		
+		ENCODE(context->digest, context->state, MD5_LEN);		
 	}
 }
 
@@ -65,7 +68,7 @@ void md5(unsigned char *data, u_int32_t ndata, unsigned char *digest)
         md5_init(&ctx);
         md5_update(&ctx, data, ndata);
         md5_final(&ctx);
-        memcpy(digest, ctx.digest, _MD5_N);
+        memcpy(digest, ctx.digest, MD5_LEN);
 }
 
 
@@ -75,24 +78,23 @@ int md5_file(const char *file, unsigned char *digest)
 //32768=32K 65536=64K 131072=128K 262144=256K 524288=512K 786432=768K 
 //1048576=1M  2097152=2M 4194304=4M 8388608 = 8M 16777216=16M  33554432=32M
 	MD5_CTX ctx;
-	u_int32_t nbuf = 8388608;
-	unsigned char buf[nbuf];
+	unsigned char buf[MD5_BUF_SIZE];
 	int fd = 0, n = 0;
 	struct stat st;
 	if(file && stat(file, &st) == 0 && S_ISREG(st.st_mode) )
 	{
 		if((fd = open(file, O_RDONLY)) > 0)	
-		{
-			md5_init(&ctx);
-			while(( n = read(fd, buf, nbuf)) > 0)
-			{
-				md5_update(&ctx, buf, (u_int32_t)n);	
-			}
-			close(fd);
-			md5_final(&ctx);
-        		memcpy(digest, ctx.digest, _MD5_N);
-			return 0;
-		}
+        {
+            md5_init(&ctx);
+            while(( n = read(fd, buf, MD5_BUF_SIZE)) > 0)
+            {
+                md5_update(&ctx, buf, (u_int32_t)n);	
+            }
+            md5_final(&ctx);
+            memcpy(digest, ctx.digest, MD5_LEN);
+            close(fd);
+            return 0;
+        }
 	}
 	return -1;
 }
@@ -101,7 +103,7 @@ int md5_file(const char *file, unsigned char *digest)
 int main(int argc, char **argv)
 {
 	int i = 0, j = 0;
-	unsigned char digest[_MD5_N];
+	unsigned char digest[MD5_LEN];
 	if(argc < 2)
 	{
 		fprintf(stderr, "Usage:%s string1 string2 ...\n", argv[0]);	
@@ -121,7 +123,7 @@ int main(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	int i = 0, j = 0;
-	unsigned char digest[_MD5_N];
+	unsigned char digest[MD5_LEN];
 	if(argc < 2)
 	{
 		fprintf(stderr, "Usage:%s file1 file2 ...\n", argv[0]);	

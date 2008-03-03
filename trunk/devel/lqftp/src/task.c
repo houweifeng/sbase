@@ -110,7 +110,7 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
 /* md5sum */
 int tasktable_md5sum(TASKTABLE *tasktable, int taskid)
 {
-    unsigned char md5str[_MD5_N];
+    unsigned char md5str[MD5_LEN];
     int i = 0;
     char *p = NULL, *file = NULL;
 
@@ -121,7 +121,7 @@ int tasktable_md5sum(TASKTABLE *tasktable, int taskid)
             && md5_file(tasktable->table[taskid]->file, md5str) == 0)
     {
         p = tasktable->table[taskid]->md5;
-        for(i = 0; i < _MD5_N; i++)
+        for(i = 0; i < MD5_LEN; i++)
         {
             p += sprintf(p, "%02x", md5str[i]);
         }
