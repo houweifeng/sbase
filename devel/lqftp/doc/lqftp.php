@@ -233,7 +233,7 @@ if($lqftp->is_connected)
                    else
                    {
                        $log = "$taskid [put $file $destfile]\n";
-                       error_log($log, 3, $statusfile);
+                       error_log($log, 3, $statuslist);
                        echo $log;
                    }
                 }
