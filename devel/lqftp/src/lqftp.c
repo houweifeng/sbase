@@ -189,7 +189,7 @@ void cb_serv_heartbeat_handler(void *arg)
                     }
                     else
                     {
-                        DEBUG_LOGGER(daemon_logger, "Completed all blocks and over cstate on %d",
+                        DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
                                 c_conn->fd);
                         c_conn->over_cstate((CONN *)c_conn);
 						break;
