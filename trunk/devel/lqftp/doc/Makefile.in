@@ -117,7 +117,7 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-EXTRA_DIST = rc.lqftp  rc.lqftp.ini rc.lqftpd rc.lqftpd.ini setup.sh
+EXTRA_DIST = rc.lqftp  rc.lqftp.ini rc.lqftpd rc.lqftpd.ini lqftp.php setup.sh
 all: all-am
 
 .SUFFIXES:
