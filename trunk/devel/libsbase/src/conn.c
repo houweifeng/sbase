@@ -544,8 +544,9 @@ void conn_terminate(CONN *conn)
             DEBUG_LOGGER(conn->logger, "error handler on %d cid:%d", conn->fd, conn->c_id);
             conn->cb_error_handler(conn); 
         }
-        DEBUG_LOGGER(conn->logger, "terminateing connecion[%d] %s:%d", conn->fd, conn->ip, conn->port);
         conn->event->destroy(conn->event);
+        DEBUG_LOGGER(conn->logger, "terminateing connecion[%d] %s:%d", 
+                conn->fd, conn->ip, conn->port);
         shutdown(conn->fd, SHUT_RDWR);
         close(conn->fd);
         conn->fd = -1;
