@@ -9,6 +9,7 @@
 #include "iniparser.h"
 #include "md5.h"
 #include "basedef.h"
+#include "logger.h"
 
 #ifndef LQFTPD_DEF
 #define LQFTPD_DEF
@@ -39,10 +40,13 @@ typedef struct _kitem
 #define LQFTPD_LOG      "/tmp/lqftpd_access_log"
 #define LQFTPD_EVLOG      "/tmp/lqftpd_evbase_log"
 #endif
+LOGGER *lqftpd_logger = NULL;
 char *document_root = NULL;
 SBASE *sbase = NULL;
 dictionary *dict = NULL;
 SERVICE *lqftpd = NULL;
+char *histlist = "/tmp/hist.list";
+char *qlist = "/tmp/q.list";
 
 /* Convert String to unsigned long long int */
 unsigned long long str2llu(char *str)
@@ -127,6 +131,30 @@ int pmkdir(char *path, int mode)
    return -1;
 }
 
+//log completed file 
+int log_task(char *file)
+{
+    int fd = -1;
+    char *line_end = "\r\n";
+
+    if(qlist == NULL || histlist == NULL) return -1;
+    if(access(qlist, F_OK) != 0) pmkdir(qlist, 0755);
+    if(access(histlist, F_OK) != 0) pmkdir(histlist, 0755);
+    if((fd = open(qlist, O_CREAT|O_APPEND|O_RDWR, 0644)) > 0) 
+    {
+        write(fd, file, strlen(file));
+        write(fd, line_end, strlen(line_end));
+        close(fd);
+    }
+    if((fd = open(histlist, O_CREAT|O_APPEND|O_RDWR, 0644)) > 0) 
+    {
+        write(fd, file, strlen(file));
+        write(fd, line_end, strlen(line_end));
+        close(fd);
+    }
+    return 0;
+}
+
 //check file size and resize it 
 int mod_file_size(char *file, unsigned long long size)
 {
@@ -182,9 +210,10 @@ void cb_packet_handler(CONN *conn, BUFFER *packet)
     kitem plist[PNUM_MAX];
     unsigned long long  offset = 0llu, size = 0llu;
     unsigned char md5[MD5_LEN];
-    char md5sum[MD5SUM_SIZE + 1], *pmd5sum = NULL;
+    char md5sum[MD5SUM_SIZE + 1], pmd5sum[MD5SUM_SIZE + 1];
     int fd = -1;
     struct stat st;
+    int is_md5sum = 0;
 
     if(conn)
     {
@@ -243,6 +272,7 @@ not_implement:
 op_truncate:
         if(pmkdir(fullpath, 0755) != 0 )
         {
+            ERROR_LOGGER(lqftpd_logger, "Pmkdir %s failed, %s", fullpath, strerror(errno));
             RESPONSE(conn, RESP_SERVER_ERROR);
             return ;
         }
@@ -268,10 +298,12 @@ op_truncate:
 
         if(truncate_file(fullpath, size) == 0)
         {
+            DEBUG_LOGGER(lqftpd_logger, "truncate file %s size:%llu", fullpath, size);
             RESPONSE(conn, RESP_OK);
         }
         else
         {
+            ERROR_LOGGER(lqftpd_logger, "Truncate %s failed, %s", fullpath, strerror(errno));
             RESPONSE(conn, RESP_SERVER_ERROR);
         }
     return;
@@ -308,6 +340,7 @@ op_put:
         if(pmkdir(fullpath, 0755) != 0 
                 || mod_file_size(fullpath, offset + size) != 0)
         {
+            ERROR_LOGGER(lqftpd_logger, "Truncate %s failed, %s", fullpath, strerror(errno));
             RESPONSE(conn, RESP_SERVER_ERROR);
         }
         else
@@ -321,10 +354,12 @@ op_del:
         {
             if(unlink(fullpath) == 0)
             {
+                DEBUG_LOGGER(lqftpd_logger, "deleted File %s", fullpath);
                 RESPONSE(conn, RESP_OK);
             }
             else 
             {
+                DEBUG_LOGGER(lqftpd_logger, "delete File %s failed, %s", fullpath, strerror(errno));
                 RESPONSE(conn, RESP_SERVER_ERROR);
             }
         }
@@ -340,16 +375,17 @@ op_md5sum:
             RESPONSE(conn, RESP_NOT_IMPLEMENT);
             return ;
         }
-        pmd5sum = NULL;
+        memset(pmd5sum, 0, MD5SUM_SIZE);
         for(i = 0; i < nplist; i++)
         {
             if(strncasecmp(plist[i].key, md5sum_plist[0],
                         strlen(md5sum_plist[0])) == 0)
             {
-                pmd5sum = plist[i].data;
+                memcpy(pmd5sum, plist[i].data, MD5SUM_SIZE);
+                is_md5sum = 1;
             }
         }
-        if(pmd5sum == NULL)
+        if(is_md5sum)
         {
             RESPONSE(conn, RESP_BAD_REQ);
             return ;
@@ -362,22 +398,27 @@ op_md5sum:
                 p = md5sum;
                 for(i = 0; i < MD5_LEN; i++)
                     p += sprintf(p, "%02x", md5[i]);
-                if(strncasecmp(md5sum, pmd5sum, (p - md5sum)) == 0)
+                if(strncasecmp(md5sum, pmd5sum, MD5SUM_SIZE) == 0)
                 {
+                    log_task(fullpath);
                     RESPONSE(conn, RESP_OK);
                 }
                 else
                 {
+                    ERROR_LOGGER(lqftpd_logger, "md5sum file[%s][%s] invalid pmd5sum[%s]", 
+                            fullpath, md5sum, pmd5sum);
                     RESPONSE(conn, RESP_INVALID_MD5);
                 }
             }
             else
             {
+                ERROR_LOGGER(lqftpd_logger, "md5sum file %s failed, %s", fullpath, strerror(errno));
                 RESPONSE(conn, RESP_SERVER_ERROR);
             }
         }
         else
         {
+            ERROR_LOGGER(lqftpd_logger, "File %s is not exists", fullpath);
             RESPONSE(conn, RESP_FILE_NOT_EXISTS);
         }
         return;
@@ -472,8 +513,13 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		logfile = LQFTPD_LOG;
 	service->logfile = logfile;
 	logfile = iniparser_getstr(dict, "LQFTPD:evlogfile");
+    lqftpd_logger = logger_init(iniparser_getstr(dict, "LQFTPD:access_log"));
 	service->evlogfile = logfile;
 	document_root = iniparser_getstr(dict, "LQFTPD:server_root");
+    if( (p = iniparser_getstr(dict, "LQFTPD:histlist")))
+        histlist = p;
+    if((p = iniparser_getstr(dict, "LQFTPD:qlist")))
+        qlist = p;
 	service->max_connections = iniparser_getint(dict, "LQFTPD:max_connections", MAX_CONNECTIONS);
 	service->packet_type = PACKET_DELIMITER;
 	service->packet_delimiter = iniparser_getstr(dict, "LQFTPD:packet_delimiter");

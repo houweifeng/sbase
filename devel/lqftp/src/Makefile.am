@@ -5,7 +5,7 @@ lqftp_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 lqftp_LDFLAGS = -lsbase
 
 lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h utils/md5.c utils/md5.h basedef.h \
-				 utils/timer.c utils/timer.h
+				 utils/timer.c utils/timer.h utils/logger.h utils/logger.c
 lqftpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 lqftpd_LDFLAGS = -lsbase
 
