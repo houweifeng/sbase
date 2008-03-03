@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define _MD5_N 16
+#define MD5_LEN 16
 #define _MD5_BLOCK_N 64
 #define _MD5_SET_N  56
 #define _MD5_BITS_N  8
@@ -14,7 +14,7 @@ typedef struct _MD5_CTX
 {
 	u_int32_t state[4];
 	u_int32_t total[2];
-	unsigned char digest[_MD5_N];
+	unsigned char digest[MD5_LEN];
 	unsigned char buf[_MD5_BLOCK_N];		
 }MD5_CTX;
 /* Initialize */
@@ -32,14 +32,14 @@ int md5_file(const char *file, unsigned char *digest);
         md5_init(&ctx);							\
         md5_update(&ctx, _data, _ndata);				\
         md5_final(&ctx);						\
-        memcpy(md, ctx.digest, _MD5_N);					\
+        memcpy(md, ctx.digest, MD5_LEN);					\
 }
 #define MD5OUT(md, out)							\
 {									\
 	int i = 0;							\
 	do{								\
 		fprintf(out, "%02x", md[i++]);				\
-	}while(i < _MD5_N);						\
+	}while(i < MD5_LEN);						\
 }
 #define MEMCPY(dstptr, srcptr, n) 					\
 {									\
@@ -120,7 +120,7 @@ static unsigned char PADDING[] = {
 }
 #define MD5_CALCULATE(ctx, block, nblock) 				\
 { 									\
-	u_int32_t x[_MD5_N]; 						\
+	u_int32_t x[MD5_LEN]; 						\
 	u_int32_t a = ctx->state[0], b = ctx->state[1],  		\
 		  c = ctx->state[2], d = ctx->state[3]; 		\
 	DECODE(x, block, nblock); 					\

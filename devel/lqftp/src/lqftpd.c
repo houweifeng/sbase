@@ -181,7 +181,7 @@ void cb_packet_handler(CONN *conn, BUFFER *packet)
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0, is_valid_offset = 0;
     kitem plist[PNUM_MAX];
     unsigned long long  offset = 0llu, size = 0llu;
-    unsigned char md5[_MD5_N];
+    unsigned char md5[MD5_LEN];
     char md5sum[MD5SUM_SIZE + 1], *pmd5sum = NULL;
     int fd = -1;
     struct stat st;
@@ -360,7 +360,7 @@ op_md5sum:
             {
                 memset(md5sum, 0, MD5SUM_SIZE);
                 p = md5sum;
-                for(i = 0; i < _MD5_N; i++)
+                for(i = 0; i < MD5_LEN; i++)
                     p += sprintf(p, "%02x", md5[i]);
                 if(strncasecmp(md5sum, pmd5sum, (p - md5sum)) == 0)
                 {

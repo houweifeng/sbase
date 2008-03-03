@@ -148,9 +148,9 @@ void cb_serv_heartbeat_handler(void *arg)
 				DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
 				tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
                 task->nretry++;
-                while((c_conn = transport->getconn(transport)))
+                while(tasktable->status && (c_conn = transport->getconn(transport)))
                 {
-					DEBUG_LOGGER(daemon_logger, "get connection[%08x][%d][%d]", 
+					DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
 						c_conn, c_conn->fd, c_conn->index);
                     if((block = tasktable->pop_block(tasktable)))
                     {
@@ -159,6 +159,7 @@ void cb_serv_heartbeat_handler(void *arg)
                         {
                             if(stat(tasktable->table[taskid]->file, &st) == 0 && st.st_size > 0) 
                             {
+                                DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_PUT", block->id);
                                 n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
                                         task->destfile, block->offset, block->size); 
 								DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
@@ -168,13 +169,19 @@ void cb_serv_heartbeat_handler(void *arg)
                                         tasktable->table[taskid]->file, 
                                         block->offset, block->size);
                             }
+                            else
+                            {
+                                c_conn->over_cstate(c_conn);
+                            }
                         }
                         if(block->cmdid == CMD_MD5SUM)
                         {
                             tasktable->md5sum(tasktable, taskid);
+                            //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
                             n = sprintf(buf, "md5sum %s\r\nmd5:%s\r\n\r\n", 
                                     tasktable->table[taskid]->destfile,
                                     tasktable->table[taskid]->md5); 
+                            //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
 							DEBUG_LOGGER(daemon_logger, "md5sum %s[%s] on %d",
 									    task->destfile, tasktable->table[taskid]->md5, c_conn->fd);
                             c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
@@ -182,6 +189,8 @@ void cb_serv_heartbeat_handler(void *arg)
                     }
                     else
                     {
+                        DEBUG_LOGGER(daemon_logger, "Completed all blocks and over cstate on %d",
+                                c_conn->fd);
                         c_conn->over_cstate((CONN *)c_conn);
 						break;
                     }
@@ -245,7 +254,6 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
                 }
 		//fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
             }
-            return ;
         }
         if(cmdid == OP_STATUS)
         {
@@ -260,14 +268,16 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
                                  tasktable->table[taskid]->timeout, 
                                  tasktable->table[taskid]->nretry);
                 conn->push_chunk((CONN *)conn, (void *)buf, n);
+                return;
             }
             else
             {
                 n = sprintf(buf, "%d invalid taskid %d\r\n\r\n", RESP_INVALID_TASK_CODE, taskid);
                 conn->push_chunk((CONN *)conn, (void *)buf, n);
+                return;
             }
-            return;
         }
+bad_req_err:
         conn->push_chunk((CONN *)conn, (void *)RESP_BAD_REQ, strlen(RESP_BAD_REQ));
     }
     return ;
