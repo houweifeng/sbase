@@ -56,7 +56,8 @@ am_lqftp_OBJECTS = lqftp-lqftp.$(OBJEXT) lqftp-iniparser.$(OBJEXT) \
 lqftp_OBJECTS = $(am_lqftp_OBJECTS)
 lqftp_LDADD = $(LDADD)
 am_lqftpd_OBJECTS = lqftpd-lqftpd.$(OBJEXT) lqftpd-iniparser.$(OBJEXT) \
-	lqftpd-md5.$(OBJEXT) lqftpd-timer.$(OBJEXT)
+	lqftpd-md5.$(OBJEXT) lqftpd-timer.$(OBJEXT) \
+	lqftpd-logger.$(OBJEXT)
 lqftpd_OBJECTS = $(am_lqftpd_OBJECTS)
 lqftpd_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
@@ -148,7 +149,7 @@ lqftp_SOURCES = lqftp.c iniparser.c iniparser.h task.c task.h \
 lqftp_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 lqftp_LDFLAGS = -lsbase
 lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h utils/md5.c utils/md5.h basedef.h \
-				 utils/timer.c utils/timer.h
+				 utils/timer.c utils/timer.h utils/logger.h utils/logger.c
 
 lqftpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 lqftpd_LDFLAGS = -lsbase
@@ -227,6 +228,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-md5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-task.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-iniparser.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-logger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-lqftpd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-md5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-timer.Po@am__quote@
@@ -370,6 +372,20 @@ lqftpd-timer.obj: utils/timer.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/timer.c' object='lqftpd-timer.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-timer.obj `if test -f 'utils/timer.c'; then $(CYGPATH_W) 'utils/timer.c'; else $(CYGPATH_W) '$(srcdir)/utils/timer.c'; fi`
+
+lqftpd-logger.o: utils/logger.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-logger.o -MD -MP -MF "$(DEPDIR)/lqftpd-logger.Tpo" -c -o lqftpd-logger.o `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lqftpd-logger.Tpo" "$(DEPDIR)/lqftpd-logger.Po"; else rm -f "$(DEPDIR)/lqftpd-logger.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='lqftpd-logger.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-logger.o `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c
+
+lqftpd-logger.obj: utils/logger.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-logger.obj -MD -MP -MF "$(DEPDIR)/lqftpd-logger.Tpo" -c -o lqftpd-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lqftpd-logger.Tpo" "$(DEPDIR)/lqftpd-logger.Po"; else rm -f "$(DEPDIR)/lqftpd-logger.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='lqftpd-logger.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`
 uninstall-info-am:
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)

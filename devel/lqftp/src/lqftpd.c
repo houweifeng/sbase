@@ -372,21 +372,22 @@ op_del:
 op_md5sum:
         if(nplist == 0)
         {
+            ERROR_LOGGER(lqftpd_logger, "md5sum %s with bad request", fullpath); 
             RESPONSE(conn, RESP_NOT_IMPLEMENT);
             return ;
         }
         memset(pmd5sum, 0, MD5SUM_SIZE);
         for(i = 0; i < nplist; i++)
         {
-            if(strncasecmp(plist[i].key, md5sum_plist[0],
-                        strlen(md5sum_plist[0])) == 0)
+            if(strncasecmp(plist[i].key, md5sum_plist[0], strlen(md5sum_plist[0])) == 0)
             {
                 memcpy(pmd5sum, plist[i].data, MD5SUM_SIZE);
                 is_md5sum = 1;
             }
         }
-        if(is_md5sum)
+        if(is_md5sum == 0)
         {
+            ERROR_LOGGER(lqftpd_logger, "md5sum %s with bad request", fullpath); 
             RESPONSE(conn, RESP_BAD_REQ);
             return ;
         }
@@ -513,7 +514,11 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		logfile = LQFTPD_LOG;
 	service->logfile = logfile;
 	logfile = iniparser_getstr(dict, "LQFTPD:evlogfile");
-    lqftpd_logger = logger_init(iniparser_getstr(dict, "LQFTPD:access_log"));
+    if((p = iniparser_getstr(dict, "LQFTPD:access_log")))
+    {
+        lqftpd_logger = logger_init(p);
+        DEBUG_LOGGER(lqftpd_logger, "Initialize logger %s", p);
+    }
 	service->evlogfile = logfile;
 	document_root = iniparser_getstr(dict, "LQFTPD:server_root");
     if( (p = iniparser_getstr(dict, "LQFTPD:histlist")))
