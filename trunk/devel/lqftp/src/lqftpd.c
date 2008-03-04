@@ -10,6 +10,7 @@
 #include "md5.h"
 #include "basedef.h"
 #include "logger.h"
+#include "common.h"
 
 #ifndef LQFTPD_DEF
 #define LQFTPD_DEF
@@ -47,21 +48,6 @@ dictionary *dict = NULL;
 SERVICE *lqftpd = NULL;
 char *histlist = "/tmp/hist.list";
 char *qlist = "/tmp/q.list";
-
-/* Convert String to unsigned long long int */
-unsigned long long str2llu(char *str)
-{
-    char *s = str;
-    unsigned long long  llu  = 0ll;
-    unsigned long long  n = 1ll;
-    while( *s >= '0' && *s <= '9')s++;
-    while(s > str)
-    {
-        llu += ((*--s) - 48) * n;
-        n *= 10ll;
-    }
-    return llu;
-}
 
 int cb_packet_reader(CONN *conn, BUFFER *buffer)
 {
@@ -239,6 +225,7 @@ void cb_packet_handler(CONN *conn, BUFFER *packet)
         memset(&plist, 0, sizeof(kitem) * PNUM_MAX);
         GET_PROPERTY(p, end, nplist, plist);
         if((is_path_ok = strlen(path)) == 0) goto bad_req;
+        urldecode(path);
         n = sprintf(fullpath, "%s%s", document_root, path);
         switch(cmdid)
         {

@@ -10,6 +10,8 @@
 #include "task.h"
 #include "basedef.h"
 #include "logger.h"
+#include "common.h"
+
 static char *cmdlist[] = {"put", "status"};
 #define     OP_NUM          2
 #define     OP_PUT          0
@@ -138,20 +140,30 @@ void cb_serv_heartbeat_handler(void *arg)
                     && (task = tasktable->table[taskid])
                     && task->status != TASK_STATUS_OVER)
             {
-				//DEBUG_LOGGER(daemon_logger, "picking task[%08x] id:%d status:%d",
-				//		task, task->id, task->status);
+                //DEBUG_LOGGER(daemon_logger, "picking task[%08x] id:%d status:%d",
+                //		task, task->id, task->status);
                 if(tasktable->status == NULL)
                 {
                     tasktable->running_task_id = taskid;
-                    tasktable->ready(tasktable, taskid);
+                    if(tasktable->ready(tasktable, taskid) == 0)
+                    {
+                        DEBUG_LOGGER(daemon_logger, "Ready for handling task[%d] file[%s]", 
+                                taskid, task->file);
+                    }
+                    else 
+                    {
+                        ERROR_LOGGER(daemon_logger, "Ready for handling task[%d][%s] failed, %s",
+                                taskid, task->file, strerror(errno));
+                        break;
+                    }
                 }
-				DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
-				tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
+                DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
+                        tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
                 task->nretry++;
                 while(tasktable->status && (c_conn = transport->getconn(transport)))
                 {
-					DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
-						c_conn, c_conn->fd, c_conn->index);
+                    DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
+                            c_conn, c_conn->fd, c_conn->index);
                     if((block = tasktable->pop_block(tasktable)))
                     {
                         c_conn->c_id = block->id;
@@ -162,7 +174,7 @@ void cb_serv_heartbeat_handler(void *arg)
                                 DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_PUT", block->id);
                                 n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
                                         task->destfile, block->offset, block->size); 
-								DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
+                                DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
                                         task->destfile, block->offset, block->size, c_conn->fd); 
                                 c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                                 c_conn->push_file((CONN *)c_conn, 
@@ -182,8 +194,8 @@ void cb_serv_heartbeat_handler(void *arg)
                                     tasktable->table[taskid]->destfile,
                                     tasktable->table[taskid]->md5); 
                             //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
-							DEBUG_LOGGER(daemon_logger, "md5sum %s[%s] on %d",
-									    task->destfile, tasktable->table[taskid]->md5, c_conn->fd);
+                            DEBUG_LOGGER(daemon_logger, "md5sum %s[%s] on %d",
+                                    task->destfile, tasktable->table[taskid]->md5, c_conn->fd);
                             c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                         }
                     }
@@ -192,7 +204,7 @@ void cb_serv_heartbeat_handler(void *arg)
                         DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
                                 c_conn->fd);
                         c_conn->over_cstate((CONN *)c_conn);
-						break;
+                        break;
                     }
                 }
                 break;
@@ -245,6 +257,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
 
             if(n > 0 && (np - destfile) > 0) 
             {
+                urldecode(file);
                 if((taskid = tasktable->add(tasktable, file, destfile)) >= 0)
                 {
                     n = sprintf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
