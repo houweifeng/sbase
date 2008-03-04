@@ -69,7 +69,7 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
                 && stat(task->file, &st) == 0
           )
         {
-            fprintf(stdout, "%s\n", task->file);
+            //fprintf(stdout, "%s\n", task->file);
             nblock = (st.st_size / global_tblock_size);
             if((st.st_size % global_tblock_size) != 0) ++nblock;
             //for md5sum
