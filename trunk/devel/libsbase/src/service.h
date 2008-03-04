@@ -34,7 +34,7 @@ void service_state_conns(SERVICE *);
 /* get free connection */
 CONN *service_getconn(SERVICE *);
 /* new connections */
-CONN *service_newconn(SERVICE *);
+CONN *service_newconn(SERVICE *, char *, int);
 /* POP connections from connections pool */
 void service_popconn(SERVICE *service, int index);
 /* PUSH connections to connections pool */

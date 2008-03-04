@@ -66,7 +66,7 @@ CONN *conn_init(char *ip, int port)
 			conn->sa.sin_addr.s_addr     = INADDR_ANY;
 		else 
 			conn->sa.sin_addr.s_addr     = inet_addr(ip);
-		conn->sa.sin_port            = htons(conn->port);
+		    conn->sa.sin_port            = htons(conn->port);
 	}
 	return conn;
 ERROR:

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "common.h"
 /* Convert String to unsigned long long int */
@@ -32,7 +33,8 @@ char hex2int(unsigned char hex)
 
 
 void urlencode(unsigned char *s, unsigned char *t) {
-    unsigned char *p, *tp;
+    unsigned char *p = NULL, *tp = NULL;
+    int n = 0;
     if(t == NULL) return ;
     tp = t;
     for(p = s; *p; p++)
@@ -42,8 +44,7 @@ void urlencode(unsigned char *s, unsigned char *t) {
                 (*p > 'Z' && *p < '_') ||
                 (*p > '_' && *p < 'a') ||
                 (*p > 'z' && *p < 0xA1)) {
-            sprintf(tp, "%%%02X", *p);
-            tp += 3;
+            tp += sprintf((char *)tp, "%%%02X", (*p));
         } else {
             *tp = *p;
             tp++;

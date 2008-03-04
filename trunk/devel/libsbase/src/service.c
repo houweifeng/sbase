@@ -201,7 +201,7 @@ end:
         {
             for(i = 0; i < service->connections_limit; i++)
             {
-				if(service->newconn(service))
+				if(service->newconn(service, NULL, -1))
 				{
                     DEBUG_LOGGER(service->logger, "Connected to %s:%d via %d",
                             service->ip, service->port, fd);
@@ -354,7 +354,7 @@ void service_state_conns(SERVICE *service)
                     num, service->running_connections);
 			while(i++ < num)
 			{
-				if(service->newconn(service) == NULL)
+				if(service->newconn(service, NULL, -1) == NULL)
 					break;
 				
 			}
@@ -363,21 +363,37 @@ void service_state_conns(SERVICE *service)
 }
 
 /* NEW connection for client mode */
-CONN *service_newconn(SERVICE *service)
+CONN *service_newconn(SERVICE *service, char *ip, int port)
 {
-	CONN *conn = NULL;
-	int fd = 0, i = 0;
-	if(service)
-	{
-		fd = socket(service->family, service->socket_type, 0);
-		if(fd > 0 && connect(fd, (struct sockaddr *)&(service->sa),
-					sizeof(struct sockaddr )) == 0)
-		{
-			conn = service->addconn(service, fd, &(service->sa));
-			
-		}
-	}
-	return conn;
+    CONN *conn = NULL;
+    struct sockaddr_in sa, *psa = NULL;
+    int fd = 0, i = 0;
+
+    if(service)
+    {
+        if(ip && port > 0)
+        {
+            sa.sin_family = service->family;
+            sa.sin_addr.s_addr = inet_addr(ip);
+            sa.sin_port = htons(port);
+            psa = &sa;
+        }
+        else
+        {
+            psa = &(service->sa);
+        }
+        fd = socket(service->family, service->socket_type, 0);
+        if(fd > 0 && connect(fd, (struct sockaddr *)psa, sizeof(struct sockaddr )) == 0)
+        {
+            conn = service->addconn(service, fd, &(service->sa));
+        }
+        else
+        {
+            ERROR_LOGGER(service->logger, "Connectting to %s:%d via %d failed, %s",
+                    inet_ntoa(psa->sin_addr), ntohs(psa->sin_port), fd, strerror(errno));
+        }
+    }
+    return conn;
 }
 
 /* POP connections from connections pool */
