@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 define(CALL_TIMEOUT, 200000);
 define(SOCK_END, "\r\n\r\n");
@@ -222,7 +223,7 @@ if($lqftp->is_connected)
         {
             while(($line = rtrim(fgets($fp, 8192))))
             {
-                if(($arr = explode(" ", $line)))
+                if(($arr = explode("\t", $line)))
                 {
                    $file = $arr[0]; 
                    $destfile = $arr[1]; 
@@ -232,7 +233,7 @@ if($lqftp->is_connected)
                    }
                    else
                    {
-                       $log = "$taskid [put $file $destfile]\n";
+                       $log = "$taskid\t[put $file $destfile]\n";
                        error_log($log, 3, $statuslist);
                        echo $log;
                    }
@@ -250,7 +251,7 @@ if($lqftp->is_connected)
         {
             while(($line = fgets($fp, 8192)))
             {
-                $taskid = substr($line, 0, strpos($line, " "));
+                $taskid = substr($line, 0, strpos($line, "\t"));
                 $status = $lqftp->status($taskid);
                 if(is_array($status))
                 {
