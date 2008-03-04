@@ -51,13 +51,13 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_lqftp_OBJECTS = lqftp-lqftp.$(OBJEXT) lqftp-iniparser.$(OBJEXT) \
-	lqftp-task.$(OBJEXT) lqftp-md5.$(OBJEXT) \
-	lqftp-logger.$(OBJEXT)
+	lqftp-task.$(OBJEXT) lqftp-common.$(OBJEXT) \
+	lqftp-md5.$(OBJEXT) lqftp-logger.$(OBJEXT)
 lqftp_OBJECTS = $(am_lqftp_OBJECTS)
 lqftp_LDADD = $(LDADD)
 am_lqftpd_OBJECTS = lqftpd-lqftpd.$(OBJEXT) lqftpd-iniparser.$(OBJEXT) \
 	lqftpd-md5.$(OBJEXT) lqftpd-timer.$(OBJEXT) \
-	lqftpd-logger.$(OBJEXT)
+	lqftpd-logger.$(OBJEXT) lqftpd-common.$(OBJEXT)
 lqftpd_OBJECTS = $(am_lqftpd_OBJECTS)
 lqftpd_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
@@ -143,13 +143,13 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-lqftp_SOURCES = lqftp.c iniparser.c iniparser.h task.c task.h \
+lqftp_SOURCES = lqftp.c iniparser.c iniparser.h task.c task.h common.h common.c \
 				utils/md5.c utils/md5.h basedef.h utils/logger.h utils/logger.c
 
 lqftp_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 lqftp_LDFLAGS = -lsbase
 lqftpd_SOURCES = lqftpd.c iniparser.c iniparser.h utils/md5.c utils/md5.h basedef.h \
-				 utils/timer.c utils/timer.h utils/logger.h utils/logger.c
+				 utils/timer.c utils/timer.h utils/logger.h utils/logger.c common.h common.c
 
 lqftpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 lqftpd_LDFLAGS = -lsbase
@@ -222,11 +222,13 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-iniparser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-logger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-lqftp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-md5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftp-task.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-iniparser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-logger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lqftpd-lqftpd.Po@am__quote@
@@ -288,6 +290,20 @@ lqftp-task.obj: task.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='task.c' object='lqftp-task.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-task.obj `if test -f 'task.c'; then $(CYGPATH_W) 'task.c'; else $(CYGPATH_W) '$(srcdir)/task.c'; fi`
+
+lqftp-common.o: common.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-common.o -MD -MP -MF "$(DEPDIR)/lqftp-common.Tpo" -c -o lqftp-common.o `test -f 'common.c' || echo '$(srcdir)/'`common.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lqftp-common.Tpo" "$(DEPDIR)/lqftp-common.Po"; else rm -f "$(DEPDIR)/lqftp-common.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='common.c' object='lqftp-common.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-common.o `test -f 'common.c' || echo '$(srcdir)/'`common.c
+
+lqftp-common.obj: common.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-common.obj -MD -MP -MF "$(DEPDIR)/lqftp-common.Tpo" -c -o lqftp-common.obj `if test -f 'common.c'; then $(CYGPATH_W) 'common.c'; else $(CYGPATH_W) '$(srcdir)/common.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lqftp-common.Tpo" "$(DEPDIR)/lqftp-common.Po"; else rm -f "$(DEPDIR)/lqftp-common.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='common.c' object='lqftp-common.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftp-common.obj `if test -f 'common.c'; then $(CYGPATH_W) 'common.c'; else $(CYGPATH_W) '$(srcdir)/common.c'; fi`
 
 lqftp-md5.o: utils/md5.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftp_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftp-md5.o -MD -MP -MF "$(DEPDIR)/lqftp-md5.Tpo" -c -o lqftp-md5.o `test -f 'utils/md5.c' || echo '$(srcdir)/'`utils/md5.c; \
@@ -386,6 +402,20 @@ lqftpd-logger.obj: utils/logger.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='lqftpd-logger.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`
+
+lqftpd-common.o: common.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-common.o -MD -MP -MF "$(DEPDIR)/lqftpd-common.Tpo" -c -o lqftpd-common.o `test -f 'common.c' || echo '$(srcdir)/'`common.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lqftpd-common.Tpo" "$(DEPDIR)/lqftpd-common.Po"; else rm -f "$(DEPDIR)/lqftpd-common.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='common.c' object='lqftpd-common.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-common.o `test -f 'common.c' || echo '$(srcdir)/'`common.c
+
+lqftpd-common.obj: common.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lqftpd-common.obj -MD -MP -MF "$(DEPDIR)/lqftpd-common.Tpo" -c -o lqftpd-common.obj `if test -f 'common.c'; then $(CYGPATH_W) 'common.c'; else $(CYGPATH_W) '$(srcdir)/common.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lqftpd-common.Tpo" "$(DEPDIR)/lqftpd-common.Po"; else rm -f "$(DEPDIR)/lqftpd-common.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='common.c' object='lqftpd-common.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lqftpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lqftpd-common.obj `if test -f 'common.c'; then $(CYGPATH_W) 'common.c'; else $(CYGPATH_W) '$(srcdir)/common.c'; fi`
 uninstall-info-am:
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
