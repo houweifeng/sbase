@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 #include "logger.h"
 
 /* Initialize LOGGER */
@@ -52,20 +54,11 @@ void logger_add(LOGGER *logger, char *__file__, int __line__, int __level__, cha
 			gettimeofday(&tv, NULL); 
 			time(&timep); 
 			p = localtime(&timep); 
-#ifdef HAVE_PTHREAD
 			n = sprintf(s, 
 					"[%02d/%s/%04d:%02d:%02d:%02d +%06u] [%u/%08x] #%s::%d# \"%s:", 
 					p->tm_mday, ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,  
 					p->tm_min, p->tm_sec, (size_t)tv.tv_usec, (size_t)getpid(), 
-					(size_t)pthread_self(), __file__, __line__, 
-					_logger_level_s[__level__]); 
-#else 
-			n = sprintf(s,  
-					"[%02d/%s/%04d:%02d:%02d:%02d +%06u] [%u] #%s::%d# \"%s:", 
-					p->tm_mday, ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour, 
-					p->tm_min, p->tm_sec, (size_t)tv.tv_usec, (size_t)getpid(),  
-					__file__, __line__, _logger_level_s[__level__]);
-#endif 
+					THREADID(), __file__, __line__, _logger_level_s[__level__]); 
 			s += n;
 			va_start(ap, format);
 			n = vsprintf(s, format, ap);
