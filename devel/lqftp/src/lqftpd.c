@@ -212,13 +212,11 @@ void cb_packet_handler(CONN *conn, BUFFER *packet)
         }
         np = NULL;
         //path
-        while(p < end && *p != '\r' && *p != '\n' && *p != '/') ++p;
+        while(p < end && *p != '\r' && *p != '\n' && *p != ' ') ++p;
+        while(p < end && *p != '\r' && *p != '\n' && *p == ' ') ++p;
         memset(path, '\0', PATH_MAX_SIZE);
-        if(*p == '/')
-        {
-            np = path;
-            while(p < end && *p != ' ' && *p != '\r' && *p != '\n') *np++ = *p++;
-        }
+        np = path;
+        while(p < end && *p != ' ' && *p != '\r' && *p != '\n') *np++ = *p++;
         while(p < end && *p != '\n')++p;
         ++p;
         //plist
