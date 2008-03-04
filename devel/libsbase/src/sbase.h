@@ -318,7 +318,7 @@ typedef struct _SERVICE
         void (*active_heartbeat)(struct _SERVICE *);
         /******** Client methods *************/
         void (*state_conns)(struct _SERVICE *);
-        struct _CONN *(*newconn)(struct _SERVICE *);
+        struct _CONN *(*newconn)(struct _SERVICE *, char *, int);
         struct _CONN *(*getconn)(struct _SERVICE *);
 		void (*pushconn)(struct _SERVICE *, struct _CONN *);
 		void (*popconn)(struct _SERVICE *, int );

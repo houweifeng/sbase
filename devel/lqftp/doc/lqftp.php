@@ -52,9 +52,9 @@ class CLQFTP
     function add($file, $destfile)
     {
         $taskid = -1;
-        if($file && $destfile && file_exists($file))
+        if($file && $destfile)
         {
-            $req = "put $file $destfile\r\n";
+            $req = "put ".urlencode($file)." ".urlencode($destfile)."\r\n";
             $resp = $this->query($req, strlen($req), CALL_TIMEOUT); 
             if($resp != FALSE)
             {
@@ -171,7 +171,7 @@ if($_SERVER['argc'] < 2)
     exit;
 }
 $op = $_SERVER['argv'][1];
-$lqftp = new CLQFTP();
+$lqftp = new CLQFTP('192.168.5.191', 63800);
 if($lqftp->is_connected)
 {
     //add new task 
