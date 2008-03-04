@@ -1,4 +1,4 @@
-EXTRA_DIST= rc.lhttpd  rc.lhttpd.ini setup.sh \
+EXTRA_DIST= rc.lhttpd  rc.lhttpd.ini setup.sh rfc2616-zh_CN.html \
 rfc2616/index.html \
 rfc2616/rfc2616.html \
 rfc2616/rfc2616-sec10.html \
