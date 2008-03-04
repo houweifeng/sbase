@@ -93,7 +93,7 @@ fi
 havepthread=no
 AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
 if test "$havepthread" = "yes" ; then
-        CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
+        CPPFLAGS="${CPPFLAGS} -D_HAVE_PTHREAD"
         LDFLAGS="${LDFLAGS} -lpthread"
 fi
 
