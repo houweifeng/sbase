@@ -73,7 +73,7 @@ void timer_sample(TIMER *timer)
 int timer_check(TIMER *timer, uint32_t interval)
 {
     int ret = -1;
-	uint64_t n = 0llu;
+	unsigned long long  n = 0llu;
 	if(timer)
 	{
 #ifdef HAVE_PTHREAD

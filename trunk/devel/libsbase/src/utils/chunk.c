@@ -22,7 +22,7 @@ CHUNK *chunk_init()
 }
 
 /* Initialzie CHUNK */
-int chk_set(CHUNK *chunk, int id, int type, char *filename, uint64_t offset, uint64_t len)
+int chk_set(CHUNK *chunk, int id, int type, char *filename, unsigned long long  offset, unsigned long long  len)
 {
 	if(chunk)
 	{	

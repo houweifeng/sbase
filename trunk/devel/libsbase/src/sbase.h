@@ -3,7 +3,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -135,12 +134,12 @@ typedef struct _CHUNK{
             int   fd ;
             char  name[FILE_NAME_LIMIT + 1];
         } file;
-        uint64_t offset;
-        uint64_t len;
+        unsigned long long  offset;
+        unsigned long long  len;
         void *mutex;
 
         /* method */
-        int (*set)(struct _CHUNK *, int , int , char *, uint64_t, uint64_t);
+        int (*set)(struct _CHUNK *, int , int , char *, unsigned long long , unsigned long long );
         int (*append)(struct _CHUNK *, void *, size_t); 
         int (*fill)(struct _CHUNK *, void *, size_t); 
         int (*send)(struct _CHUNK *, int , size_t );
@@ -410,10 +409,10 @@ typedef struct _CONN
         int  		packet_delimiter_length;
         uint32_t 	buffer_size;
         /* connection bytes stats */
-        uint64_t	recv_oob_total;
-        uint64_t	sent_oob_total;
-        uint64_t	recv_data_total;
-        uint64_t	sent_data_total;
+        unsigned long long 	recv_oob_total;
+        unsigned long long 	sent_oob_total;
+        unsigned long long 	recv_data_total;
+        unsigned long long 	sent_data_total;
 
         /* Global  options */
         //parent pointer 
@@ -466,9 +465,9 @@ typedef struct _CONN
         void      (*packet_handler)(struct _CONN *);
         void      (*chunk_reader)(struct _CONN *);
         void      (*recv_chunk)(struct _CONN *, size_t);
-        void      (*recv_file)(struct _CONN *, char *, uint64_t, uint64_t);
+        void      (*recv_file)(struct _CONN *, char *, unsigned long long , unsigned long long );
         int       (*push_chunk)(struct _CONN *, void *, size_t);
-        int       (*push_file)(struct _CONN *, char *, uint64_t, uint64_t);
+        int       (*push_file)(struct _CONN *, char *, unsigned long long , unsigned long long );
         void      (*data_handler)(struct _CONN *);
         void      (*oob_handler)(struct _CONN *);
         void	  (*push_message)(struct _CONN *, int);
