@@ -214,7 +214,7 @@ void cb_serv_heartbeat_handler(void *arg)
                     else
                     {
                         //DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
-                          //      c_conn->fd);
+                         //       c_conn->fd);
                         c_conn->over_cstate((CONN *)c_conn);
                         goto end;
                     }
@@ -518,12 +518,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	serv->cb_data_handler = &cb_serv_data_handler;
 	serv->cb_oob_handler = &cb_serv_oob_handler;
 	serv->cb_heartbeat_handler = &cb_serv_heartbeat_handler;
-    /* task block size declare in basedef.h */
-    block_size = iniparser_getint(dict, "DAEMON:buffer_size", 0); 
-    if(block_size > 0)
-        global_tblock_size = block_size;
-   
-    /* server */
+        /* server */
 	if((ret = sbase->add_service(sbase, serv)) != 0)
 	{
 		fprintf(stderr, "Initiailize service[%s] failed, %s\n", serv->name, strerror(errno));
@@ -547,6 +542,12 @@ int sbase_initialize(SBASE *sbase, char *conf)
         fprintf(stderr, "Initialize tasktable failed, %s\n", strerror(errno));
         return -1;
     }
+    /* task block size declare in basedef.h */
+    block_size = iniparser_getint(dict, "DAEMON:block_size", 0); 
+    if(block_size > 0)
+        tasktable->block_size = block_size;
+    else
+        tasktable->block_size = TBLOCK_SIZE;
 	//logger 
 	daemon_logger = logger_init(iniparser_getstr(dict, "DAEMON:access_log"));
 	return 0;
