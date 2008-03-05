@@ -9,6 +9,7 @@
 #define BLOCK_STATUS_WORKING    0x01
 #define BLOCK_STATUS_ERROR      0x02
 #define BLOCK_STATUS_OVER       0x04
+#define BLOCK_STATUS_TIMEOUT    0x08
 
 #define TASK_STATUS_WAIT        0x00
 #define TASK_STATUS_OVER        0x01
@@ -31,6 +32,8 @@ typedef struct _TBLOCK
     int id;
     int cmdid;
     int status;
+    int sid;
+    unsigned long long times;
     unsigned long long offset;
     unsigned long long size;
 }TBLOCK;
@@ -44,17 +47,19 @@ typedef struct _TASKTABLE
     TBLOCK *status;
     int  nblock;
     char statusfile[PATH_MAX_SIZE];
+    void *mutex;
     
     int     (*add)(struct _TASKTABLE *, char *file, char *destfile);
     int     (*ready)(struct _TASKTABLE *, int taskid);
+    int     (*check_timeout)(struct _TASKTABLE *, unsigned long long );
     int     (*md5sum)(struct _TASKTABLE *, int taskid);
     int     (*discard)(struct _TASKTABLE *, int taskid);
     int     (*dump_task)(struct _TASKTABLE *);
     int     (*resume_task)(struct _TASKTABLE *);
     int     (*dump_status)(struct _TASKTABLE *);
     int     (*resume_status)(struct _TASKTABLE *);
-    TBLOCK  *(*pop_block)(struct _TASKTABLE *);
-    void    (*update_status)(struct _TASKTABLE *, int , int);
+    TBLOCK  *(*pop_block)(struct _TASKTABLE *, int);
+    void    (*update_status)(struct _TASKTABLE *, int , int, int);
     void    (*free_status)(struct _TASKTABLE *);
     void    (*clean)(struct _TASKTABLE **);
 

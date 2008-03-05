@@ -1,6 +1,6 @@
 bin_PROGRAMS = lqftp lqftpd 
 lqftp_SOURCES = lqftp.c iniparser.c iniparser.h task.c task.h common.h common.c \
-				utils/md5.c utils/md5.h basedef.h utils/logger.h utils/logger.c
+				utils/md5.c utils/md5.h basedef.h utils/logger.h utils/logger.c utils/mutex.h
 lqftp_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 lqftp_LDFLAGS = -lsbase
 

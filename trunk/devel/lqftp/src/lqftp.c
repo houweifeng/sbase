@@ -42,6 +42,8 @@ SERVICE *serv = NULL;
 static dictionary *dict = NULL;
 static TASKTABLE *tasktable = NULL;
 static LOGGER *daemon_logger = NULL;
+static unsigned long long global_timeout_times = 60000000llu;
+
 #define GET_RESPID(p, end, n, respid)                                               \
 {                                                                                   \
     respid = -1;                                                                    \
@@ -68,7 +70,7 @@ void cb_transport_error_handler(CONN *conn)
     {
         blockid = conn->c_id;
 		ERROR_LOGGER(daemon_logger, "action failed on %d blockid:%d", conn->fd, conn->c_id);
-        tasktable->update_status(tasktable, blockid, BLOCK_STATUS_ERROR);
+        tasktable->update_status(tasktable, blockid, BLOCK_STATUS_ERROR, conn->fd);
 		ERROR_LOGGER(daemon_logger, "action failed on %d blockid:%d", conn->fd, conn->c_id);
         conn->over_cstate((CONN *)conn);
     }
@@ -103,7 +105,7 @@ void cb_transport_packet_handler(CONN *conn, BUFFER *packet)
 				conn->close((CONN *)conn);
                 break;
         }
-        tasktable->update_status(tasktable, blockid, status);
+        tasktable->update_status(tasktable, blockid, status, conn->fd);
 		DEBUG_LOGGER(daemon_logger, "action over on %d blockid:%d status:%d", 
 				conn->fd, conn->c_id, status);
     }
@@ -162,10 +164,11 @@ void cb_serv_heartbeat_handler(void *arg)
                 task->nretry++;
                 while(tasktable->status && (c_conn = transport->getconn(transport)))
                 {
-                    DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
-                            c_conn, c_conn->fd, c_conn->index);
-                    if((block = tasktable->pop_block(tasktable)))
+                    if((block = tasktable->pop_block(tasktable, c_conn->fd)))
                     {
+                        DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
+                            c_conn, c_conn->fd, c_conn->index);
+                        //transaction confirm
                         c_conn->c_id = block->id;
                         if(block->cmdid == CMD_PUT)
                         {
@@ -209,6 +212,11 @@ void cb_serv_heartbeat_handler(void *arg)
                 break;
             }
             ++taskid;
+        }
+        if((n = tasktable->check_timeout(tasktable, global_timeout_times)) > 0)
+        {
+            DEBUG_LOGGER(daemon_logger, "%d block is TIMEOUT on task:%d",
+                    n, tasktable->running_task_id);
         }
         //if task is running then log TIMEOUT
     }
@@ -516,8 +524,14 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		fprintf(stderr, "Initiailize service[%s] failed, %s\n", transport->name, strerror(errno));
 		return ret;
 	}
+    //task and block status file
 	taskfile = iniparser_getstr(dict, "DAEMON:taskfile");
     statusfile = iniparser_getstr(dict, "DAEMON:statusfile");
+    //timeout
+    if((p = iniparser_getstr(dict, "DAEMON:timeout")))
+    {
+        global_timeout_times = str2llu(p);
+    }
     if((tasktable = tasktable_init(taskfile, statusfile)) == NULL)
     {
         fprintf(stderr, "Initialize tasktable failed, %s\n", strerror(errno));
