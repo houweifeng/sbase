@@ -493,11 +493,11 @@ void conn_push_message(CONN *conn, int message_id)
 }
 
 /* Start cstate */
-void conn_start_cstate(CONN *conn)
+int conn_start_cstate(CONN *conn)
 {
 	CHUNK *cp = NULL;
     /* Check connection and transaction state */
-    CONN_CHECK(conn);
+    CONN_CHECK_RET(conn, -1);
     if(conn)
     {
         if(conn->c_state == C_STATE_FREE) 
@@ -513,10 +513,10 @@ void conn_start_cstate(CONN *conn)
 			conn->buffer->reset(conn->buffer);	
 			conn->oob->reset(conn->oob);	
 			conn->chunk->reset(conn->chunk);	
-            return ;
+            return 0;
         }
     }
-    return ;
+    return -1;
 }
 
 /* Over cstate */

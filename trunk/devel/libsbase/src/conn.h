@@ -47,7 +47,7 @@ void conn_data_handler(struct _CONN *);
 /* Push message */
 void conn_push_message(struct _CONN *, int );
 /* start cstate on conn */
-void conn_start_cstate(struct _CONN *);
+int conn_start_cstate(struct _CONN *);
 /* over  cstate on conn */
 void conn_over_cstate(struct _CONN *);
 /* Terminate connection  */
