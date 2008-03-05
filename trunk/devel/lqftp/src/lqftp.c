@@ -159,8 +159,8 @@ void cb_serv_heartbeat_handler(void *arg)
                         break;
                     }
                 }
-                DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
-                        tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
+                //DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
+                  //      tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
                 task->nretry++;
                 while(tasktable->status && (c_conn = transport->getconn(transport)))
                 {
@@ -170,6 +170,16 @@ void cb_serv_heartbeat_handler(void *arg)
                             c_conn, c_conn->fd, c_conn->index);
                         //transaction confirm
                         c_conn->c_id = block->id;
+                        if(block->cmdid == CMD_TRUNCATE)
+                        {
+                            DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_TRNCATE %s", 
+                                    block->id, task->destfile);
+                            n = sprintf(buf, "truncate %s\r\nsize:%llu\r\n\r\n",
+                                    task->destfile, block->size); 
+                            DEBUG_LOGGER(daemon_logger, "truncate %s offset:%llu size:%llu on %d",
+                                    task->destfile, block->offset, block->size, c_conn->fd); 
+                            c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
+                        }
                         if(block->cmdid == CMD_PUT)
                         {
                             if(stat(tasktable->table[taskid]->file, &st) == 0 && st.st_size > 0) 
@@ -203,8 +213,8 @@ void cb_serv_heartbeat_handler(void *arg)
                     }
                     else
                     {
-                        DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
-                                c_conn->fd);
+                        //DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
+                          //      c_conn->fd);
                         c_conn->over_cstate((CONN *)c_conn);
                         goto end;
                     }

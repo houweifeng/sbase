@@ -80,6 +80,8 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
             //fprintf(stdout, "%s\n", task->file);
             nblock = (st.st_size / global_tblock_size);
             if((st.st_size % global_tblock_size) != 0) ++nblock;
+            //for truncate 
+            ++nblock;
             //for md5sum
             ++nblock;
             if((tasktable->status = (TBLOCK *)realloc(
@@ -93,6 +95,13 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
             memset(tasktable->status, 0, sizeof(TBLOCK) * nblock);
             size = st.st_size * 1llu;
             i = 0;
+            //for truncate 
+            tasktable->status[i].offset = 0llu;
+            tasktable->status[i].size = st.st_size * 1llu;
+            tasktable->status[i].id = i;
+            tasktable->status[i].cmdid = CMD_TRUNCATE;
+            i++;
+            //for block list
             offset = 0llu;
             while(size > 0llu )
             {
