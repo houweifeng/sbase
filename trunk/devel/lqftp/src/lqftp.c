@@ -177,8 +177,7 @@ void cb_serv_heartbeat_handler(void *arg)
                                 DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
                                         task->destfile, block->offset, block->size, c_conn->fd); 
                                 c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
-                                c_conn->push_file((CONN *)c_conn, 
-                                        tasktable->table[taskid]->file, 
+                                c_conn->push_file((CONN *)c_conn, tasktable->table[taskid]->file, 
                                         block->offset, block->size);
                             }
                             else
@@ -204,7 +203,7 @@ void cb_serv_heartbeat_handler(void *arg)
                         DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
                                 c_conn->fd);
                         c_conn->over_cstate((CONN *)c_conn);
-                        break;
+                        goto end;
                     }
                 }
                 break;
@@ -213,6 +212,7 @@ void cb_serv_heartbeat_handler(void *arg)
         }
         //if task is running then log TIMEOUT
     }
+end:
     return  ;
 }
 
