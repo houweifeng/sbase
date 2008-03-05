@@ -453,9 +453,8 @@ CONN *service_getconn(SERVICE *service)
         for( i = 0; i < service->max_connections; i++)
         {
             conn = service->connections[i];
-            if(conn && conn->c_state == C_STATE_FREE)
+            if(conn && conn->start_cstate(conn) == 0)
             {
-				conn->start_cstate(conn);
                 break;
             }
             conn = NULL;
