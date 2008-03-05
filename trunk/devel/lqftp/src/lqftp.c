@@ -149,6 +149,9 @@ void cb_serv_heartbeat_handler(void *arg)
                     tasktable->running_task_id = taskid;
                     if(tasktable->ready(tasktable, taskid) == 0)
                     {
+                        task->nretry++;
+                        DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
+                            tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
                         DEBUG_LOGGER(daemon_logger, "Ready for handling task[%d] file[%s]", 
                                 taskid, task->file);
                     }
@@ -159,9 +162,6 @@ void cb_serv_heartbeat_handler(void *arg)
                         break;
                     }
                 }
-                //DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
-                  //      tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
-                task->nretry++;
                 while(tasktable->status && (c_conn = transport->getconn(transport)))
                 {
                     if((block = tasktable->pop_block(tasktable, c_conn->fd)))

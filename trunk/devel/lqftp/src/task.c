@@ -277,7 +277,7 @@ int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
         for(i = 0; i < tasktable->nblock; i++)  
         {
             if(tasktable->status[i].status == BLOCK_STATUS_WORKING
-                    && (tasktable->status[i].times - times) >= timeout) 
+                    && (times - tasktable->status[i].times) >= timeout) 
             {
                 tasktable->status[i].status = BLOCK_STATUS_TIMEOUT;
                 tasktable->status[i].sid    = -1;
