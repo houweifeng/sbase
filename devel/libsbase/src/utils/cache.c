@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 	char buf[nbuf];
 	char *p = (char *)calloc(1, BUF_SIZE);
 	int np = 0;
-	uint64_t total = 0, md5_total = 0;
+	unsigned long long  total = 0, md5_total = 0;
 	int n = 0;
 	int fd = 0;
 

@@ -42,12 +42,12 @@ typedef struct _CHUNK{
                 int   fd ;
                 char  name[FILE_NAME_LIMIT + 1];
         } file;
-        uint64_t offset;
-        uint64_t len;
+        unsigned long long  offset;
+        unsigned long long  len;
 	void *mutex;
 
         /* method */
-        int (*set)(struct _CHUNK *, int , int , char *, uint64_t, uint64_t);
+        int (*set)(struct _CHUNK *, int , int , char *, unsigned long long , unsigned long long );
         int (*append)(struct _CHUNK *, void *, size_t); 
         int (*fill)(struct _CHUNK *, void *, size_t); 
         int (*send)(struct _CHUNK *, int , size_t );
@@ -81,7 +81,7 @@ struct _CHUNK *chunk_init();
 #endif
 
 /* Initialzie CHUNK */
-int chk_set( CHUNK *, int , int, char *, uint64_t, uint64_t);
+int chk_set( CHUNK *, int , int, char *, unsigned long long , unsigned long long );
 /* append data to CHUNK BUFFER */
 int chk_append(CHUNK *, void *, size_t );
 /* fill CHUNK with data */

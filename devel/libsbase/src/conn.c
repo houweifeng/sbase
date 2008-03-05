@@ -392,7 +392,7 @@ void conn_recv_chunk(CONN *conn, size_t size)
 
 /* Receive FILE CHUNK */
 void conn_recv_file(CONN *conn, char *filename,
-         uint64_t offset, uint64_t size)
+         unsigned long long  offset, unsigned long long  size)
 {
         /* Check connection and transaction state */
         CONN_CHECK(conn);
@@ -432,7 +432,7 @@ int conn_push_chunk(CONN *conn, void *data, size_t size)
 
 /* Push File */
 int conn_push_file(CONN *conn, char *filename,
-         uint64_t offset, uint64_t size)
+         unsigned long long  offset, unsigned long long  size)
 {
 	CHUNK *cp = NULL;
         /* Check connection and transaction state */

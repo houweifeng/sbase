@@ -37,11 +37,11 @@ void conn_chunk_reader(struct _CONN *);
 /* Receive CHUNK */
 void conn_recv_chunk(struct _CONN *, size_t);
 /* Receive FILE CHUNK */
-void conn_recv_file(struct _CONN *,  char *, uint64_t,  uint64_t);
+void conn_recv_file(struct _CONN *,  char *, unsigned long long ,  unsigned long long );
 /* Push Chunk */
 int conn_push_chunk(struct _CONN *, void *, size_t );
 /* Push file */
-int conn_push_file(struct _CONN *,  char *, uint64_t,  uint64_t);
+int conn_push_file(struct _CONN *,  char *, unsigned long long ,  unsigned long long );
 /* Data handler */
 void conn_data_handler(struct _CONN *);
 /* Push message */

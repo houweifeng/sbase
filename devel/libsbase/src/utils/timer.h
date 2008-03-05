@@ -20,13 +20,13 @@ typedef struct _TIMER
 {
 	struct timeval tv;
 	time_t start_sec;
-	uint64_t start_usec;
+	unsigned long long  start_usec;
 	time_t sec_used;
-	uint64_t usec_used;
+	unsigned long long  usec_used;
 	time_t  last_sec;
-	uint64_t last_usec;
+	unsigned long long  last_usec;
 	time_t last_sec_used;
-        uint64_t last_usec_used;
+        unsigned long long  last_usec_used;
 
 	void *mutex;
 
