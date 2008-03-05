@@ -7,5 +7,9 @@
 #define MUTEX_UNLOCK(mlock) {if(mlock) pthread_mutex_unlock(mlock);}
 #define MUTEX_DESTROY(mlock) {if(mlock){pthread_mutex_destroy(mlock);free(mlock); mlock = NULL;}}
 #else
+#define MUTEX_INIT(mlock)
+#define MUTEX_LOCK(mlock)
+#define MUTEX_UNLOCK(mlock)
+#define MUTEX_DESTROY(mlock)
 #endif
 #endif
