@@ -78,8 +78,8 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
           )
         {
             //fprintf(stdout, "%s\n", task->file);
-            nblock = (st.st_size / global_tblock_size);
-            if((st.st_size % global_tblock_size) != 0) ++nblock;
+            nblock = (st.st_size / tasktable->block_size);
+            if((st.st_size % tasktable->block_size) != 0) ++nblock;
             //for truncate 
             ++nblock;
             //for md5sum
@@ -106,8 +106,8 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
             while(size > 0llu )
             {
                 tasktable->status[i].offset     = offset * 1llu;
-                tasktable->status[i].size       = global_tblock_size * 1llu;
-                if(size < global_tblock_size * 1llu)
+                tasktable->status[i].size       = tasktable->block_size * 1llu;
+                if(size < tasktable->block_size * 1llu)
                     tasktable->status[i].size   = size;
                 size -= tasktable->status[i].size;
 				offset += tasktable->status[i].size;

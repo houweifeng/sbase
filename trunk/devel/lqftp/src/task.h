@@ -41,6 +41,7 @@ typedef struct _TBLOCK
 typedef struct _TASKTABLE
 {
     TASK **table;
+    int block_size;
     int ntask;
     char taskfile[PATH_MAX_SIZE];
     int running_task_id;
