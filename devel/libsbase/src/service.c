@@ -63,7 +63,7 @@ server_setting:
 			FATAL_LOGGER(service->logger, "Initialize socket failed, %s", strerror(errno));
 			return -1;
 		}
-        //service->sa.sin_family = service->family;
+        service->sa.sin_family = service->family;
 		service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
 		service->sa.sin_port = htons(service->port); 
 		//setsockopt 
