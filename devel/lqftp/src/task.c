@@ -328,6 +328,7 @@ int tasktable_check_status(TASKTABLE *tasktable)
 /* pop block */
 TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
 {
+    TASK *task = NULL;
     int taskid   = 0;
     TBLOCK *block = NULL;
     int i = 0, n = 0;
@@ -340,13 +341,19 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
         if(tasktable->check_status(tasktable) != 0)
             return NULL;
         taskid = tasktable->running_task_id;
-        if(tasktable->status == NULL)
+        task = tasktable->table[taskid];
+        if(task == NULL) return NULL;
+        if(tasktable->status == NULL 
+                && tasktable->ready(tasktable, taskid) != 0)
         {
-            tasktable->ready(tasktable, taskid);
+          
+            fprintf(stderr, "task[%d] file[%s] destfile[%s]\n",
+                    task->id, task->file, task->destfile);
+            return NULL;
         }
         //no task
         MUTEX_LOCK(tasktable->mutex);
-        for(i = 0; i < tasktable->nblock; i++)  
+        for(i = 0; i < tasktable->nblock; i++) 
         {
             if(tasktable->status[i].status != BLOCK_STATUS_OVER)
             {
@@ -357,12 +364,12 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
                 }
                 if(tasktable->status[i].cmdid == CMD_MD5SUM && n > 0)
                     break;
-				else
-				{
-                	tasktable->status[i].status = BLOCK_STATUS_WORKING;
-                	block =  &(tasktable->status[i]);
-                	break;
-				}
+                else
+                {
+                    tasktable->status[i].status = BLOCK_STATUS_WORKING;
+                    block =  &(tasktable->status[i]);
+                    goto end;
+                }
             }
         }
         if(block)
@@ -371,10 +378,9 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
             block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
             block->sid = sid;
         }
-		//if(block)fprintf(stdout, "%d:block:%08x:%llu:%llu\n", i, block, block->offset, block->size);
-		//else fprintf(stdout, "no block\n");
         MUTEX_UNLOCK(tasktable->mutex);
     }
+end:
     return block;
 }
 
