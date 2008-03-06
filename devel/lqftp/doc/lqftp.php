@@ -230,6 +230,7 @@ if($lqftp->is_connected)
                    if(($taskid = $lqftp->add($file, $destfile)) === FALSE)
                    {
                         echo "task[put $file $destfile] failed, try again later\n";
+                        break;
                    }
                    else
                    {

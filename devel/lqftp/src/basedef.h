@@ -5,7 +5,7 @@
 #define CMD_DEL         2
 #define CMD_MD5SUM      3
 #ifndef PATH_MAX_SIZE
-#define PATH_MAX_SIZE   256
+#define PATH_MAX_SIZE   1024
 #endif
 #define MD5SUM_SIZE    32
 #define TBLOCK_SIZE    2097152
