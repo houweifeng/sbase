@@ -297,16 +297,54 @@ int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
     return n;
 }
 
+int tasktable_check_status(TASKTABLE *tasktable)
+{
+    int taskid = 0;
+    int ret = -1;
+
+    if(tasktable && tasktable->table)
+    {
+        MUTEX_LOCK(tasktable->mutex);
+        //check running taskid
+        if(tasktable->running_task_id >= 0 
+                && tasktable->running_task_id < tasktable->ntask)
+            taskid = tasktable->running_task_id;
+        while(taskid < tasktable->ntask)
+        {
+            if(tasktable->table[taskid] 
+                    && tasktable->table[taskid]->status != TASK_STATUS_OVER)
+            {
+                tasktable->running_task_id = taskid;
+                ret = 0;
+                break;
+            }
+            taskid++;
+        }
+        MUTEX_UNLOCK(tasktable->mutex);
+    }
+    return ret;
+}
+
 /* pop block */
 TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
 {
+    int taskid   = 0;
     TBLOCK *block = NULL;
     int i = 0, n = 0;
     struct timeval tv;
     
 
-    if(tasktable && tasktable->status)
+    if(tasktable && tasktable->table && tasktable->ntask > 0)
     {
+        //check status and ready 
+        if(tasktable->check_status(tasktable) != 0)
+            return NULL;
+        taskid = tasktable->running_task_id;
+        if(tasktable->status == NULL)
+        {
+            tasktable->ready(tasktable, taskid);
+        }
+        //no task
         MUTEX_LOCK(tasktable->mutex);
         for(i = 0; i < tasktable->nblock; i++)  
         {
@@ -410,6 +448,7 @@ TASKTABLE *tasktable_init(char *taskfile, char *statusfile)
         tasktable->add              = tasktable_add;
         tasktable->discard          = tasktable_discard;
         tasktable->ready            = tasktable_ready;
+        tasktable->check_status     = tasktable_check_status;
         tasktable->check_timeout    = tasktable_check_timeout;
         tasktable->md5sum           = tasktable_md5sum;
         tasktable->dump_task        = tasktable_dump_task;
