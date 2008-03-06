@@ -197,6 +197,7 @@ work_thread_init:
 		goto end ;
     /* client connection initialize */
 end:
+        /*
         if(service->service_type == C_SERVICE)
         {
             for(i = 0; i < service->connections_limit; i++)
@@ -214,6 +215,7 @@ end:
                 }
             }
         }
+        */
         return ; 
 	}
 }
@@ -355,8 +357,9 @@ void service_state_conns(SERVICE *service)
 			while(i++ < num)
 			{
 				if(service->newconn(service, NULL, -1) == NULL)
+                {
 					break;
-				
+                }
 			}
 		}
     }
