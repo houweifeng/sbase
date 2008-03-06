@@ -229,13 +229,21 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
             while(p < end && *p != ' ' )++p;
             while(p < end && *p == ' ')++p;
             np = file;
-            while(p < end && *p != ' ' && *p != '\r' && *p != '\n')*np++ = *p++;
+            while(p < end && *p != ' ' && *p != '\r' && *p != '\n')
+            {
+                if((np - file) >= PATH_MAX_SIZE) goto bad_req_err;
+                *np++ = *p++;
+            }
             while(p < end && *p == ' ')++p;
             *np = '\0';
             n = np - file;
 
             np = destfile;
-            while(p < end && *p != ' ' && *p != '\r' && *p != '\n')*np++ = *p++;
+            while(p < end && *p != ' ' && *p != '\r' && *p != '\n')
+            {
+                if((np - destfile) >= PATH_MAX_SIZE) goto bad_req_err;
+                *np++ = *p++;
+            }
             *np = '\0';
 
             if(n > 0 && (np - destfile) > 0) 

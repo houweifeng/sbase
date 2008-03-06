@@ -216,7 +216,11 @@ void cb_packet_handler(CONN *conn, BUFFER *packet)
         while(p < end && *p != '\r' && *p != '\n' && *p == ' ') ++p;
         memset(path, '\0', PATH_MAX_SIZE);
         np = path;
-        while(p < end && *p != ' ' && *p != '\r' && *p != '\n') *np++ = *p++;
+        while(p < end && *p != ' ' && *p != '\r' && *p != '\n') 
+        {
+            if((np - path) >= PATH_MAX_SIZE) goto bad_req;
+            *np++ = *p++;
+        }
         while(p < end && *p != '\n')++p;
         ++p;
         //plist
