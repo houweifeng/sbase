@@ -178,8 +178,9 @@ void cb_serv_heartbeat_handler(void *arg)
             }
             else
             {
-                //DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
-                 //       c_conn->fd);
+                DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d] "
+                        "with %d tasks running[%d]",
+                        c_conn->fd, tasktable->ntask, tasktable->running_task_id);
                 c_conn->over_cstate((CONN *)c_conn);
                 goto end;
             }
@@ -255,7 +256,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
             if(taskid >= 0 && taskid < tasktable->ntask)
             {
                 n = sprintf(buf, "%d OK\r\ntaskid:%d\r\nstatus:%d\r\n"
-                                 "timeout:%d(seconds)\r\nretry:%d\r\n\r\n", 
+                                 "timeout:%d(times)\r\nretry:%d\r\n\r\n", 
                                  RESP_OK_CODE, taskid, tasktable->table[taskid]->status,
                                  tasktable->table[taskid]->timeout, 
                                  tasktable->table[taskid]->nretry);
