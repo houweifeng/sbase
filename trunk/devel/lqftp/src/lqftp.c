@@ -43,6 +43,7 @@ static dictionary *dict = NULL;
 static TASKTABLE *tasktable = NULL;
 static LOGGER *daemon_logger = NULL;
 static unsigned long long global_timeout_times = 60000000llu;
+//static unsigned long long nheartbeat = 0;
 
 #define GET_RESPID(p, end, n, respid)                                               \
 {                                                                                   \
@@ -132,14 +133,16 @@ void cb_serv_heartbeat_handler(void *arg)
 
     if(serv && transport && tasktable)
     {
+        //DEBUG_LOGGER(daemon_logger, "Heartbeat:%llu", nheartbeat++);
         while((c_conn = transport->getconn(transport)))
         {
+                //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
+                 //       c_conn, c_conn->fd, c_conn->index);
             if((block = tasktable->pop_block(tasktable, c_conn->fd)))
             {
+                //DEBUG_LOGGER(daemon_logger, "NEW BLOCK TASK");
                 taskid = tasktable->running_task_id;
                 task = tasktable->table[taskid];
-                DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
-                        c_conn, c_conn->fd, c_conn->index);
                 //transaction confirm
                 c_conn->c_id = block->id;
                 if(block->cmdid == CMD_TRUNCATE)
@@ -178,11 +181,11 @@ void cb_serv_heartbeat_handler(void *arg)
             }
             else
             {
-                DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d] "
-                        "with %d tasks running[%d]",
-                        c_conn->fd, tasktable->ntask, tasktable->running_task_id);
+                //DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d] "
+                 //       "with %d tasks running[%d]",
+                 //       c_conn->fd, tasktable->ntask, tasktable->running_task_id);
                 c_conn->over_cstate((CONN *)c_conn);
-                goto end;
+                break;
             }
         }
         if((n = tasktable->check_timeout(tasktable, global_timeout_times)) > 0)
@@ -192,7 +195,6 @@ void cb_serv_heartbeat_handler(void *arg)
         }
         //if task is running then log TIMEOUT
     }
-end:
     return  ;
 }
 

@@ -332,6 +332,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
     int taskid   = 0;
     TBLOCK *block = NULL;
     int i = 0, n = 0;
+    int nover = 0;
     struct timeval tv;
     
 
@@ -339,38 +340,56 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
     {
         //check status and ready 
         if(tasktable->check_status(tasktable) != 0)
+        {
+            fprintf(stderr, "check status failed\n");
             return NULL;
+        }
         taskid = tasktable->running_task_id;
         task = tasktable->table[taskid];
         if(task == NULL) return NULL;
         if(tasktable->status == NULL 
                 && tasktable->ready(tasktable, taskid) != 0)
         {
-          
+
             fprintf(stderr, "task[%d] file[%s] destfile[%s]\n",
                     task->id, task->file, task->destfile);
             return NULL;
         }
+        //fprintf(stderr, "running_task:%d block:%d\n", taskid, tasktable->nblock);
         //no task
         MUTEX_LOCK(tasktable->mutex);
+        n = 0;
         for(i = 0; i < tasktable->nblock; i++) 
         {
             if(tasktable->status[i].status != BLOCK_STATUS_OVER)
             {
                 if(tasktable->status[i].status == BLOCK_STATUS_WORKING) 
-                {
-                    ++n;
                     continue;
-                }
-                if(tasktable->status[i].cmdid == CMD_MD5SUM && n > 0)
+                else if(tasktable->status[i].cmdid == CMD_MD5SUM)
+                {
+                    if(n == 0)
+                    {
+                        tasktable->status[i].status = BLOCK_STATUS_WORKING;
+                        block =  &(tasktable->status[i]);
+                    }
                     break;
+                }
                 else
                 {
                     tasktable->status[i].status = BLOCK_STATUS_WORKING;
                     block =  &(tasktable->status[i]);
-                    goto end;
+                    break;
                 }
+                n++;
             }
+            else nover++;
+        }
+        //fprintf(stdout, "running_task:%d nblock:%d n:%d over:%d\n", 
+        //        taskid, tasktable->nblock, n, nover);
+        if(nover == tasktable->nblock)
+        {
+            task->status = TASK_STATUS_OVER;
+            tasktable->running_task_id++;
         }
         if(block)
         {
@@ -380,7 +399,6 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
-end:
     return block;
 }
 
