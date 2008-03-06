@@ -63,12 +63,14 @@ server_setting:
 			FATAL_LOGGER(service->logger, "Initialize socket failed, %s", strerror(errno));
 			return -1;
 		}
-        service->sa.sin_family = service->family;
+        //service->sa.sin_family = service->family;
 		service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
 		service->sa.sin_port = htons(service->port); 
 		//setsockopt 
 		setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR,
 				(char *)&opt, (socklen_t)sizeof(opt) );
+        //set non-block
+        fcntl(service->fd, F_SETFL, O_NONBLOCK);
 		//Bind 
 		if(bind(service->fd, (struct sockaddr *)&(service->sa), 
                     (socklen_t)sizeof(struct sockaddr)) != 0 )
@@ -197,6 +199,12 @@ work_thread_init:
 		goto end ;
     /* client connection initialize */
 end:
+        /*
+        if(service->service_type == S_SERVICE)
+        {
+               service->newconn(service, service->ip, service->port); 
+        }
+        */
         /*
         if(service->service_type == C_SERVICE)
         {
@@ -329,12 +337,13 @@ void service_active_heartbeat(SERVICE *service)
 			if(service->cb_heartbeat_handler)
 			{
 				//DEBUG_LOGGER(service->logger, "Heartbeat %llu in service[%s]", 
-				//service->nheartbeat++, service->name);
+				  //  service->nheartbeat++, service->name);
 				service->cb_heartbeat_handler(service->cb_heartbeat_arg);
 			}
 			if(service->service_type == C_SERVICE)
 			{
-				//DEBUG_LOGGER(service->logger, "Heartbeat %llu service[%s] check connection state", 
+				//DEBUG_LOGGER(service->logger, 
+                //"Heartbeat %llu service[%s] check connection state", 
 				// service->nheartbeat++, service->name);
 				service->state_conns(service);
 			}
@@ -352,8 +361,9 @@ void service_state_conns(SERVICE *service)
 		if(service->running_connections < service->connections_limit)
 		{
 			num = service->connections_limit - service->running_connections;
-            DEBUG_LOGGER(service->logger, "Ready for adding %d connections(running_connections:%d)",
-                    num, service->running_connections);
+            //DEBUG_LOGGER(service->logger, 
+            //"Ready for adding %d connections(running_connections:%d)",
+            //       num, service->running_connections);
 			while(i++ < num)
 			{
 				if(service->newconn(service, NULL, -1) == NULL)
