@@ -132,96 +132,57 @@ void cb_serv_heartbeat_handler(void *arg)
 
     if(serv && transport && tasktable)
     {
-        //check and start new task
-        taskid = tasktable->running_task_id;
-        if(taskid == -1)
-            taskid = tasktable->running_task_id = 0;    
-        while(taskid < tasktable->ntask)
+        while((c_conn = transport->getconn(transport)))
         {
-            if(tasktable->table 
-                    && (task = tasktable->table[taskid])
-                    && task->status != TASK_STATUS_OVER)
+            if((block = tasktable->pop_block(tasktable, c_conn->fd)))
             {
-                //DEBUG_LOGGER(daemon_logger, "picking task[%08x] id:%d status:%d",
-                //		task, task->id, task->status);
-                if(tasktable->status == NULL)
+                taskid = tasktable->running_task_id;
+                task = tasktable->table[taskid];
+                DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
+                        c_conn, c_conn->fd, c_conn->index);
+                //transaction confirm
+                c_conn->c_id = block->id;
+                if(block->cmdid == CMD_TRUNCATE)
                 {
-                    tasktable->running_task_id = taskid;
-                    if(tasktable->ready(tasktable, taskid) == 0)
-                    {
-                        task->nretry++;
-                        DEBUG_LOGGER(daemon_logger, "ntask:%d nblock:%d running_task:%d", 
-                            tasktable->ntask, tasktable->nblock, tasktable->running_task_id);	
-                        DEBUG_LOGGER(daemon_logger, "Ready for handling task[%d] file[%s]", 
-                                taskid, task->file);
-                    }
-                    else 
-                    {
-                        ERROR_LOGGER(daemon_logger, "Ready for handling task[%d][%s] failed, %s",
-                                taskid, task->file, strerror(errno));
-                        break;
-                    }
+                    DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_TRNCATE %s", 
+                            block->id, task->destfile);
+                    n = sprintf(buf, "truncate %s\r\nsize:%llu\r\n\r\n",
+                            task->destfile, block->size); 
+                    DEBUG_LOGGER(daemon_logger, "truncate %s offset:%llu size:%llu on %d",
+                            task->destfile, block->offset, block->size, c_conn->fd); 
+                    c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                 }
-                while(tasktable->status && (c_conn = transport->getconn(transport)))
+                if(block->cmdid == CMD_PUT)
                 {
-                    if((block = tasktable->pop_block(tasktable, c_conn->fd)))
-                    {
-                        DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
-                            c_conn, c_conn->fd, c_conn->index);
-                        //transaction confirm
-                        c_conn->c_id = block->id;
-                        if(block->cmdid == CMD_TRUNCATE)
-                        {
-                            DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_TRNCATE %s", 
-                                    block->id, task->destfile);
-                            n = sprintf(buf, "truncate %s\r\nsize:%llu\r\n\r\n",
-                                    task->destfile, block->size); 
-                            DEBUG_LOGGER(daemon_logger, "truncate %s offset:%llu size:%llu on %d",
-                                    task->destfile, block->offset, block->size, c_conn->fd); 
-                            c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
-                        }
-                        if(block->cmdid == CMD_PUT)
-                        {
-                            if(stat(tasktable->table[taskid]->file, &st) == 0 && st.st_size > 0) 
-                            {
-                                DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_PUT", block->id);
-                                n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
-                                        task->destfile, block->offset, block->size); 
-                                DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
-                                        task->destfile, block->offset, block->size, c_conn->fd); 
-                                c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
-                                c_conn->push_file((CONN *)c_conn, tasktable->table[taskid]->file, 
-                                        block->offset, block->size);
-                            }
-                            else
-                            {
-                                c_conn->over_cstate(c_conn);
-                            }
-                        }
-                        if(block->cmdid == CMD_MD5SUM)
-                        {
-                            tasktable->md5sum(tasktable, taskid);
-                            //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
-                            n = sprintf(buf, "md5sum %s\r\nmd5:%s\r\n\r\n", 
-                                    tasktable->table[taskid]->destfile,
-                                    tasktable->table[taskid]->md5); 
-                            //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
-                            DEBUG_LOGGER(daemon_logger, "md5sum %s[%s] on %d",
-                                    task->destfile, tasktable->table[taskid]->md5, c_conn->fd);
-                            c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
-                        }
-                    }
-                    else
-                    {
-                        //DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
-                         //       c_conn->fd);
-                        c_conn->over_cstate((CONN *)c_conn);
-                        goto end;
-                    }
+                    DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_PUT", block->id);
+                    n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
+                            task->destfile, block->offset, block->size); 
+                    DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
+                            task->destfile, block->offset, block->size, c_conn->fd); 
+                    c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
+                    c_conn->push_file((CONN *)c_conn, tasktable->table[taskid]->file, 
+                            block->offset, block->size);
                 }
-                break;
+                if(block->cmdid == CMD_MD5SUM)
+                {
+                    tasktable->md5sum(tasktable, taskid);
+                    //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
+                    n = sprintf(buf, "md5sum %s\r\nmd5:%s\r\n\r\n", 
+                            tasktable->table[taskid]->destfile,
+                            tasktable->table[taskid]->md5); 
+                    //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
+                    DEBUG_LOGGER(daemon_logger, "md5sum %s[%s] on %d",
+                            task->destfile, tasktable->table[taskid]->md5, c_conn->fd);
+                    c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
+                }
             }
-            ++taskid;
+            else
+            {
+                //DEBUG_LOGGER(daemon_logger, "Over cstate on connection[%d]",
+                 //       c_conn->fd);
+                c_conn->over_cstate((CONN *)c_conn);
+                goto end;
+            }
         }
         if((n = tasktable->check_timeout(tasktable, global_timeout_times)) > 0)
         {

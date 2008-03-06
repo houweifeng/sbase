@@ -53,6 +53,7 @@ typedef struct _TASKTABLE
     int     (*add)(struct _TASKTABLE *, char *file, char *destfile);
     int     (*ready)(struct _TASKTABLE *, int taskid);
     int     (*check_timeout)(struct _TASKTABLE *, unsigned long long );
+    int     (*check_status)(struct _TASKTABLE *);
     int     (*md5sum)(struct _TASKTABLE *, int taskid);
     int     (*discard)(struct _TASKTABLE *, int taskid);
     int     (*dump_task)(struct _TASKTABLE *);
