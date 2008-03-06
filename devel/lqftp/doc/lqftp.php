@@ -1,8 +1,8 @@
 #!/usr/bin/php
 <?php
-define(CALL_TIMEOUT, 200000);
-define(SOCK_END, "\r\n\r\n");
-define(RESP_OK, 300);
+define('CALL_TIMEOUT', 200000);
+define('SOCK_END', "\r\n\r\n");
+define('RESP_OK', 300);
 class CLQFTP
 {
     var $host = "127.0.0.1";
