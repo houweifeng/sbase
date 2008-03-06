@@ -297,8 +297,10 @@ int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
     return n;
 }
 
+/* check task status */
 int tasktable_check_status(TASKTABLE *tasktable)
 {
+    TASK *task = NULL;
     int taskid = 0;
     int ret = -1;
 
@@ -311,13 +313,15 @@ int tasktable_check_status(TASKTABLE *tasktable)
             taskid = tasktable->running_task_id;
         while(taskid < tasktable->ntask)
         {
-            if(tasktable->table[taskid] 
-                    && tasktable->table[taskid]->status != TASK_STATUS_OVER)
+            if((task = tasktable->table[taskid]) && task->status != TASK_STATUS_OVER)
             {
+                task->nretry++;
                 tasktable->running_task_id = taskid;
                 ret = 0;
                 break;
             }
+            //fprintf(stdout, "check running_task:%d status:%d\n", 
+            //        taskid, tasktable->table[taskid]->status);
             taskid++;
         }
         MUTEX_UNLOCK(tasktable->mutex);
@@ -341,7 +345,8 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
         //check status and ready 
         if(tasktable->check_status(tasktable) != 0)
         {
-            fprintf(stderr, "check status failed\n");
+            //fprintf(stderr, "check running_task:%d ntask:%d status failed\n", 
+            //        tasktable->running_task_id, tasktable->ntask);
             return NULL;
         }
         taskid = tasktable->running_task_id;

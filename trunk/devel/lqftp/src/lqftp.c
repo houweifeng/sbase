@@ -209,6 +209,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
     int cmdid = -1;
     int i = 0, n = 0;
     int taskid = -1;
+    struct stat st;
 
     if(conn)
     {
@@ -240,6 +241,27 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
             if(n > 0 && (np - destfile) > 0) 
             {
                 urldecode(file);
+                urldecode(destfile);
+                if(stat(file, &st) != 0 || S_ISDIR(st.st_mode))
+                {
+                    goto bad_req_err;
+                }
+                p = buf;
+                np = destfile;
+                while(*np != '\0') *p++ = *np++;
+                p--;
+                if(*p == '/')
+                {
+                    end = NULL;
+                    np = file; 
+                    while(*np != '\0')
+                    {
+                        if(*np == '/') end = np++;
+                        else ++np;
+                    }
+                    while(end && *end != '\0') *p++ = *end++;
+                }
+                urlencode(buf, destfile);
                 if((taskid = tasktable->add(tasktable, file, destfile)) >= 0)
                 {
                     n = sprintf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
@@ -247,7 +269,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
                     conn->push_chunk(conn, (void *)buf, n);
                     return;
                 }
-		//fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
+                //fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
             }
         }
         if(cmdid == OP_STATUS)
