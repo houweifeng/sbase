@@ -41,25 +41,26 @@ typedef struct _TBLOCK
 
 typedef struct _TASKTABLE
 {
-    TASK **table;
     int block_size;
-    int ntask;
     char taskfile[PATH_MAX_SIZE];
-    int running_task_id;
+    int ntask;
+    TASK running_task;
+    int  running_task_id;
     TBLOCK *status;
     int  nblock;
     char statusfile[PATH_MAX_SIZE];
     void *mutex;
     
     int     (*add)(struct _TASKTABLE *, char *file, char *destfile);
-    int     (*ready)(struct _TASKTABLE *, int taskid);
+    int     (*ready)(struct _TASKTABLE *);
     int     (*check_timeout)(struct _TASKTABLE *, unsigned long long );
     int     (*check_status)(struct _TASKTABLE *);
-    int     (*md5sum)(struct _TASKTABLE *, int taskid);
+    int     (*md5sum)(struct _TASKTABLE *);
+    int     (*statusout)(struct _TASKTABLE *, int taskid, TASK *);
     int     (*discard)(struct _TASKTABLE *, int taskid);
     int     (*dump_task)(struct _TASKTABLE *);
     int     (*resume_task)(struct _TASKTABLE *);
-    int     (*dump_status)(struct _TASKTABLE *);
+    int     (*dump_status)(struct _TASKTABLE *, int);
     int     (*resume_status)(struct _TASKTABLE *);
     TBLOCK  *(*pop_block)(struct _TASKTABLE *, int, void *);
     void    (*update_status)(struct _TASKTABLE *, int , int, int);

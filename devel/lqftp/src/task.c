@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <errno.h>
 #include "task.h"
 #include "md5.h"
 #include "basedef.h"
@@ -13,29 +14,28 @@
 /* add file transmssion task to tasktable */
 int tasktable_add(TASKTABLE *tasktable, char *file, char *destfile)
 {
+    int fd = -1;
     int taskid = -1;
-    TASK *task = NULL;
+    TASK task;
 
-    if(tasktable)
+    if(tasktable && tasktable->taskfile)
     {
         MUTEX_LOCK(tasktable->mutex);
-        if((task = (TASK *)calloc(1, sizeof(TASK))))    
+        if((fd = open(tasktable->taskfile, O_CREAT|O_RDWR|O_APPEND, 0644)) > 0) 
         {
-            tasktable->table = (TASK **)realloc(tasktable->table, 
-                    (tasktable->ntask + 1) * sizeof(TASK *));
-            if(tasktable->table)
+            memset(&task, 0, sizeof(TASK));
+            strcpy(task.file, file);
+            strcpy(task.destfile, destfile);
+            task.id = tasktable->ntask;
+            task.status = TASK_STATUS_WAIT;
+            if(write(fd, &task, sizeof(TASK)))
             {
                 taskid = tasktable->ntask;
-                strcpy(task->file, file);
-                strcpy(task->destfile, destfile);
-                task->id = taskid;
-                task->status = TASK_STATUS_WAIT;
-                tasktable->table[taskid] = task;
                 tasktable->ntask++;
             }
+            close(fd);
         }
         MUTEX_UNLOCK(tasktable->mutex);
-        tasktable->dump_task(tasktable);
     }
     return taskid;
 }
@@ -43,15 +43,32 @@ int tasktable_add(TASKTABLE *tasktable, char *file, char *destfile)
 /* discard task */
 int tasktable_discard(TASKTABLE *tasktable, int taskid)
 {
+    TASK task  = {0};
     int ret = -1;
-    if(tasktable && tasktable->table)
+    int fd = -1;
+    unsigned long long offset = 0llu;
+
+    if(tasktable)
     {
         MUTEX_LOCK(tasktable->mutex);
-        if(taskid < tasktable->ntask && tasktable->table[taskid])
+        if(taskid < tasktable->ntask)
         {
-            tasktable->table[taskid]->status = TASK_STATUS_DISCARD;   
-            tasktable->dump_task(tasktable);
-            ret = 0;
+            if((fd = open(tasktable->taskfile, O_RDWR)) > 0) 
+            {
+                offset = taskid * sizeof(TASK) * 1llu;
+                if(lseek(fd, offset, SEEK_SET) == offset)
+                {
+                    if(read(fd, &task, sizeof(TASK)) == sizeof(TASK) 
+                            && task.id == taskid)
+                    {
+                        task.status = TASK_STATUS_DISCARD;
+                        lseek(fd, offset, SEEK_SET);
+                        write(fd, &task, sizeof(TASK));
+                        ret = 0;
+                    }
+                }
+                close(fd);
+            }
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
@@ -59,22 +76,20 @@ int tasktable_discard(TASKTABLE *tasktable, int taskid)
 }
 
 /* Ready for job */
-int tasktable_ready(TASKTABLE *tasktable, int taskid)
+int tasktable_ready(TASKTABLE *tasktable)
 {
     int i = 0;
     unsigned long long offset = 0llu, size = 0llu;
     struct stat st;
     int nblock = 0;
-    TASK *task = NULL;
     int ret = -1;
 
     if(tasktable)
     {
         MUTEX_LOCK(tasktable->mutex);
-        if(taskid >= 0 && taskid < tasktable->ntask
-                && tasktable->table   
-                && (task = tasktable->table[taskid])
-                && stat(task->file, &st) == 0
+        if(tasktable->running_task.id >= 0
+                && tasktable->running_task.id < tasktable->ntask
+                && stat(tasktable->running_task.file, &st) == 0
           )
         {
             //fprintf(stdout, "%s\n", task->file);
@@ -95,7 +110,7 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
             memset(tasktable->status, 0, sizeof(TBLOCK) * nblock);
             size = st.st_size * 1llu;
             i = 0;
-            //for truncate 
+            //for truncate commond 
             tasktable->status[i].offset = 0llu;
             tasktable->status[i].size = st.st_size * 1llu;
             tasktable->status[i].id = i;
@@ -119,7 +134,8 @@ int tasktable_ready(TASKTABLE *tasktable, int taskid)
             tasktable->status[i].size = st.st_size * 1llu;
             tasktable->status[i].id = i;
             tasktable->status[i].cmdid = CMD_MD5SUM;
-            tasktable->dump_status(tasktable);
+            //dump all blocks 
+            tasktable->dump_status(tasktable, -1);
             ret = 0;
         }
 end:
@@ -129,26 +145,48 @@ end:
     return ret;
 }
 
+/* status out*/
+int tasktable_statusout(TASKTABLE *tasktable, int taskid, TASK *task)
+{
+    int fd = -1;
+    unsigned long long offset = 0llu;
+    int ret = -1;
+
+    if(tasktable && taskid >= 0 && taskid < tasktable->ntask)
+    {
+        if((fd = open(tasktable->taskfile, O_RDONLY)) > 0)    
+        {
+            offset = sizeof(TASK) * taskid * 1llu;
+            if(lseek(fd, offset, SEEK_SET) == offset 
+                    && read(fd, task, sizeof(TASK)) == sizeof(TASK))
+            {
+                ret = 0;
+            }
+            close(fd);
+        }
+    }
+    return ret;
+}
+
 /* md5sum */
-int tasktable_md5sum(TASKTABLE *tasktable, int taskid)
+int tasktable_md5sum(TASKTABLE *tasktable)
 {
     unsigned char md5str[MD5_LEN];
     int i = 0, ret = -1;
     char *p = NULL, *file = NULL;
 
-    if(tasktable && taskid >= 0 
-            && taskid < tasktable->ntask 
-            && tasktable->table
-            && tasktable->table[taskid] 
-            && md5_file(tasktable->table[taskid]->file, md5str) == 0)
+    if(tasktable  && tasktable->running_task.id >= 0 
+            && tasktable->running_task.id < tasktable->ntask
+            && md5_file(tasktable->running_task.file, md5str) == 0)
     {
         MUTEX_LOCK(tasktable->mutex);
-        p = tasktable->table[taskid]->md5;
+        p = tasktable->running_task.md5;
         for(i = 0; i < MD5_LEN; i++)
         {
             p += sprintf(p, "%02x", md5str[i]);
         }
         ret = 0;
+        tasktable->dump_task(tasktable);
         MUTEX_UNLOCK(tasktable->mutex);
     }
     return ret;
@@ -160,19 +198,34 @@ int tasktable_dump_task(TASKTABLE *tasktable)
     int fd = 0;
     int i = 0;
     int ret = -1;
+    unsigned long long offset = 0llu;
 
-    if(tasktable && tasktable->ntask > 0)
+    if(tasktable && tasktable->running_task.id >= 0 
+            && tasktable->running_task.id < tasktable->ntask)
     {
-        if((fd = open(tasktable->taskfile, O_CREAT|O_RDWR, 0644)) > 0)
+        if((fd = open(tasktable->taskfile, O_RDWR)) > 0)
         {
-            write(fd, &(tasktable)->ntask, sizeof(int));
-            for(i = 0; i < tasktable->ntask; i++) 
+            offset = sizeof(TASK) * tasktable->running_task.id * 1llu; 
+            fprintf(stdout, "Ready for dump running_task:%d offset:%llu\n", 
+                tasktable->running_task.id, offset);
+            if(lseek(fd, offset, SEEK_SET) == offset)
             {
-                if(tasktable->table[i])
-                    write(fd, tasktable->table[i], sizeof(TASK));
+                if(write(fd, &(tasktable->running_task), sizeof(TASK)) == sizeof(TASK))
+                {
+                    fprintf(stdout, "Dump task %d\n", tasktable->running_task.id);
+                    ret = 0;
+                }
+            }
+            else
+            {
+                fprintf(stderr, "LSEEK %s offset:%llu failed, %s\n", 
+                        tasktable->taskfile, offset, strerror(errno));
             }
             close(fd);
-            ret = 0;
+        }
+        else
+        {
+            fprintf(stderr, "dump taskfile %s failed, %s", tasktable->taskfile, strerror(errno));
         }
     }
     return ret;
@@ -181,55 +234,74 @@ int tasktable_dump_task(TASKTABLE *tasktable)
 /* resume */
 int tasktable_resume_task(TASKTABLE *tasktable)
 {
-    int ntask = 0;
     int fd = -1, ret = -1;
-    TASK task, *ptask = NULL;
+    TASK task;
 
     if(tasktable)
     {
-        if((fd = open(tasktable->taskfile, O_RDONLY)) > 0)
+        if((fd = open(tasktable->taskfile, O_RDONLY, 0644)) > 0)
         {
-            if(read(fd, &ntask, sizeof(int)) > 0 
-                    && (tasktable->table = (TASK **)calloc(ntask, sizeof(TASK *))))
+            //fprintf(stdout, "open file:%s fd:%d\n", tasktable->taskfile, fd);
+            while(read(fd, &task, sizeof(TASK)) == sizeof(TASK))
             {
-                tasktable->ntask = ntask;
-                while(read(fd, &task, sizeof(TASK)) > 0)
+                //fprintf(stdout, "read %d \n", task.id);
+                tasktable->ntask++;
+                if(tasktable->running_task.id >= 0) continue;
+                if(task.status != TASK_STATUS_OVER)
                 {
-
-                    if((ptask = (TASK *)calloc(1, sizeof(TASK)))) 
-                    {
-                        memcpy(ptask, &task, sizeof(TASK));
-                        tasktable->table[ptask->id] = ptask;
-                    }
+                    memcpy(&(tasktable->running_task), &task, sizeof(TASK));
                 }
-                ret = 0;
             }
+            //fprintf(stderr, "read file:%s failed, %s\n", tasktable->taskfile, strerror(errno));
+            ret = 0;
             close(fd);
+        }
+        else
+        {
+            fprintf(stderr, "resume taskfile:%s failed, %s", tasktable->taskfile, strerror(errno));
         }
     }
     return ret;
 }
 
 /* Dump status */
-int tasktable_dump_status(TASKTABLE *tasktable)
+int tasktable_dump_status(TASKTABLE *tasktable, int blockid)
 {
     int taskid = 0;
     int i = 0;
     int fd = 0;
     int ret = -1;
+    unsigned long long offset = 0llu;
 
-    if(tasktable && tasktable->status && (taskid = tasktable->running_task_id) >= 0)
+    if(tasktable && tasktable->status && (taskid = tasktable->running_task.id) >= 0)
     {
-        if((fd = open(tasktable->statusfile, O_CREAT|O_WRONLY, 0644)) > 0)
+        if(blockid >= 0)
         {
-            write(fd, &(taskid), sizeof(int));
-            write(fd, &(tasktable->nblock), sizeof(int));
-            for(i = 0; i < tasktable->nblock; i++)
+            if((fd = open(tasktable->statusfile, O_RDWR)) > 0)
             {
-                write(fd, &(tasktable->status[i]), sizeof(TBLOCK));
+                offset = 0llu;
+                offset += sizeof(int) * 1llu;
+                offset += sizeof(int) * 1llu;
+                offset += sizeof(TBLOCK) * blockid * 1llu;
+                if(lseek(fd, offset, SEEK_SET) == offset)
+                {
+                    write(fd, &(tasktable->status[i]), sizeof(TBLOCK));
+                }
+                //fprintf(stderr, "dump block:%d on task:%d\n", blockid, taskid);
+                close(fd);
+                ret = 0;
             }
-            close(fd);
-            ret = 0;
+        }
+        else
+        {
+            if((fd = open(tasktable->statusfile, O_CREAT|O_WRONLY, 0644)) > 0)
+            {
+                write(fd, &(tasktable->running_task_id), sizeof(int));
+                write(fd, &(tasktable->nblock), sizeof(int));
+                write(fd, tasktable->status, sizeof(TBLOCK) * tasktable->nblock);
+                ret = 0;
+                close(fd);
+            }
         }
     }
     return ret;
@@ -247,17 +319,12 @@ int tasktable_resume_status(TASKTABLE *tasktable)
         {
             read(fd, &(tasktable->running_task_id), sizeof(int));
             read(fd, &(tasktable->nblock), sizeof(int));
-            //fprintf(stdout, "Resume running_task_id:%d nblock:%d\n", 
-             //       tasktable->running_task_id, tasktable->nblock);
+            //fprintf(stdout, "Resume running_task.id:%d nblock:%d\n", 
+             //       tasktable->running_task.id, tasktable->nblock);
             if(tasktable->nblock > 0)
             {
                 tasktable->status = (TBLOCK *)calloc(tasktable->nblock, sizeof(TBLOCK));
-                for(i = 0; i < tasktable->nblock; i++)
-                {
-                    read(fd, &(tasktable->status[i]), sizeof(TBLOCK));
-                    tasktable->status[i].arg = NULL;
-                    tasktable->status[i].sid = -1;
-                }
+                read(fd, &(tasktable->status), sizeof(TBLOCK) * tasktable->nblock);
             }
             close(fd);
             return 0;
@@ -287,13 +354,10 @@ int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
                 ++n;
             }
         }
-        if(n > 0 && tasktable->table && tasktable->running_task_id >= 0)
+        if(n > 0 && tasktable->running_task.id >= 0)
         {
-            if((task = tasktable->table[tasktable->running_task_id]))
-            {
-                task->timeout += n;
+                tasktable->running_task.timeout += n;
                 tasktable->dump_task(tasktable);
-            }
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
@@ -303,29 +367,45 @@ int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
 /* check task status */
 int tasktable_check_status(TASKTABLE *tasktable)
 {
-    TASK *task = NULL;
-    int taskid = 0;
+    TASK task = {0};
+    int fd = -1;
     int ret = -1;
+    unsigned long long offset = 0llu;
 
-    if(tasktable && tasktable->table)
+    if(tasktable)
     {
+        if(tasktable->status != NULL) return 0;
         MUTEX_LOCK(tasktable->mutex);
         //check running taskid
-        if(tasktable->running_task_id >= 0 
-                && tasktable->running_task_id < tasktable->ntask)
-            taskid = tasktable->running_task_id;
-        while(taskid < tasktable->ntask)
+        if (tasktable->running_task_id < tasktable->ntask)
         {
-            if((task = tasktable->table[taskid]) && task->status != TASK_STATUS_OVER)
+            if((fd = open(tasktable->taskfile, O_RDONLY)) > 0) 
             {
-                task->nretry++;
-                tasktable->running_task_id = taskid;
-                ret = 0;
-                break;
+                //fprintf(stdout, "taskfile fd:%d\n", fd);
+                offset = sizeof(TASK ) * tasktable->running_task_id * 1llu;
+                if(lseek(fd, offset, SEEK_SET) == offset)
+                {
+                    while(read(fd, &(tasktable->running_task), sizeof(TASK)) == sizeof(TASK))
+                    {
+                        tasktable->running_task_id = tasktable->running_task.id;
+                        if(tasktable->running_task.status != TASK_STATUS_OVER)
+                        {
+                            //fprintf(stdout, "running_task taskid:%d id:%d file:%s\n", 
+                            //        tasktable->running_task_id, tasktable->running_task.id,
+                            //        tasktable->running_task.file);
+                            ret = 0;
+                            break;
+                        }
+                    }
+                    //fprintf(stdout, "taskfile fd:%d offset:%llu \n", fd, offset);
+                }
+                else
+                {
+                    fprintf(stderr, "LSEEK taskfile %s offset:%llu failed, %s\n", 
+                            tasktable->taskfile, offset, strerror(errno));
+                }
+                close(fd);
             }
-            //fprintf(stdout, "check running_task:%d status:%d\n", 
-            //        taskid, tasktable->table[taskid]->status);
-            taskid++;
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
@@ -343,27 +423,26 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
     struct timeval tv;
     
 
-    if(tasktable && tasktable->table && tasktable->ntask > 0)
+    if(tasktable && tasktable->ntask > 0)
     {
         //check status and ready 
         if(tasktable->check_status(tasktable) != 0)
         {
-            //fprintf(stderr, "check running_task:%d ntask:%d status failed\n", 
-            //        tasktable->running_task_id, tasktable->ntask);
+            fprintf(stderr, "check running_task_id:%d id:%d ntask:%d status failed\n", 
+                    tasktable->running_task_id, tasktable->running_task.id, tasktable->ntask);
+            //_exit(-1);
             return NULL;
         }
-        taskid = tasktable->running_task_id;
-        task = tasktable->table[taskid];
-        if(task == NULL) return NULL;
-        if(tasktable->status == NULL 
-                && tasktable->ready(tasktable, taskid) != 0)
+        //ready for new task
+        if(tasktable->status == NULL && tasktable->ready(tasktable) != 0)
         {
-
+            task = &(tasktable->running_task);
             fprintf(stderr, "task[%d] file[%s] destfile[%s]\n",
                     task->id, task->file, task->destfile);
             return NULL;
         }
-        //fprintf(stderr, "running_task:%d block:%d\n", taskid, tasktable->nblock);
+        //fprintf(stderr, "running_task:%d block:%d\n", 
+        //tasktable->running_task.id, tasktable->nblock);
         //no task
         MUTEX_LOCK(tasktable->mutex);
         n = 0;
@@ -382,7 +461,8 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
                         break;
                     }
                 }
-                if(tasktable->status[i].status == BLOCK_STATUS_WORKING) 
+                if(tasktable->status[i].status == BLOCK_STATUS_WORKING
+                        && tasktable->status[i].arg != NULL)
                 {
                     n++;
                     continue;
@@ -405,11 +485,13 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
             }
             else nover++;
         }
-        //fprintf(stdout, "running_task:%d nblock:%d n:%d over:%d\n", 
-        //        taskid, tasktable->nblock, n, nover);
+        //fprintf(stdout, "running_task:%d nblock:%d n:%d over:%d block:%08x\n", 
+        //        taskid, tasktable->nblock, n, nover, block);
         if(nover == tasktable->nblock)
         {
+            task = &(tasktable->running_task);
             task->status = TASK_STATUS_OVER;
+            tasktable->dump_task(tasktable);
             tasktable->running_task_id++;
         }
         if(block)
@@ -418,6 +500,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
             block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
             block->sid = sid;
             block->arg = arg;
+            fprintf(stdout, "select block:%d\n", block->id);
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
@@ -427,8 +510,6 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
 /* update status */
 void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int sid)
 {
-    int taskid = -1;
-    
     if(tasktable && blockid >= 0 && blockid < tasktable->nblock
 			&& tasktable->status[blockid].status != BLOCK_STATUS_OVER
             && tasktable->status[blockid].sid == sid)
@@ -437,17 +518,19 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int 
         tasktable->status[blockid].status   = status;
         tasktable->status[blockid].sid      = -1;
         tasktable->status[blockid].arg      = NULL;
-        tasktable->dump_status(tasktable);
+        tasktable->dump_status(tasktable, blockid);
+        fprintf(stdout, "Update status:%d block:%d sid:%d cmdid:%d\n",
+                status, blockid, sid, status, blockid, sid);
         if(tasktable->status[blockid].cmdid == CMD_MD5SUM)
         {
             if(status == BLOCK_STATUS_OVER)
             {
-                taskid = tasktable->running_task_id;
-                tasktable->table[taskid]->status = TASK_STATUS_OVER;
-                tasktable->free_status(tasktable);
-                tasktable->running_task_id++;
+        fprintf(stdout, "Update status:%d block:%d sid:%d cmdid:%d\n",
+                status, blockid, sid, status, blockid, sid);
+                tasktable->running_task.status = TASK_STATUS_OVER;
                 tasktable->dump_task(tasktable);
                 tasktable->free_status(tasktable);
+                tasktable->running_task_id++;
             }
         }
         MUTEX_UNLOCK(tasktable->mutex);
@@ -473,8 +556,9 @@ void tasktable_clean(TASKTABLE **tasktable)
 {
     if(*tasktable)
     {
-        if((*tasktable)->table)
-            free((*tasktable)->table);
+        if((*tasktable)->status)
+            free((*tasktable)->status);
+        (*tasktable)->status = NULL;
         MUTEX_DESTROY((*tasktable)->mutex);
         free(*tasktable);
         (*tasktable) = NULL;
@@ -492,6 +576,7 @@ TASKTABLE *tasktable_init(char *taskfile, char *statusfile)
         tasktable->ready            = tasktable_ready;
         tasktable->check_status     = tasktable_check_status;
         tasktable->check_timeout    = tasktable_check_timeout;
+        tasktable->statusout        = tasktable_statusout;
         tasktable->md5sum           = tasktable_md5sum;
         tasktable->dump_task        = tasktable_dump_task;
         tasktable->resume_task      = tasktable_resume_task;
@@ -501,6 +586,7 @@ TASKTABLE *tasktable_init(char *taskfile, char *statusfile)
         tasktable->update_status    = tasktable_update_status;
         tasktable->free_status      = tasktable_free_status;
         tasktable->clean            = tasktable_clean;
+        tasktable->running_task.id = -1;
         strcpy(tasktable->taskfile, taskfile);
         tasktable->resume_task(tasktable);
         strcpy(tasktable->statusfile, statusfile);
