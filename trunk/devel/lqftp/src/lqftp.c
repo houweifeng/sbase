@@ -139,12 +139,12 @@ void cb_serv_heartbeat_handler(void *arg)
         while((c_conn = transport->getconn(transport)))
         {
             //break;
-            DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
-                        c_conn, c_conn->fd, c_conn->index);
+            //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
+             //           c_conn, c_conn->fd, c_conn->index);
             if((block = tasktable->pop_block(tasktable, c_conn->fd, (void *)c_conn)))
             {
-                DEBUG_LOGGER(daemon_logger, "running_task_id:%d running_task.id:%d",
-                 tasktable->running_task_id, tasktable->running_task.id);
+                //DEBUG_LOGGER(daemon_logger, "running_task_id:%d running_task.id:%d",
+                 //tasktable->running_task_id, tasktable->running_task.id);
                 taskid = tasktable->running_task_id;
                 task = &(tasktable->running_task);
                 //transaction confirm
