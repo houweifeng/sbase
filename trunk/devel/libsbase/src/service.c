@@ -459,7 +459,8 @@ CONN *service_getconn(SERVICE *service)
     int i = 0;
     int fd = 0;
     CONN *conn = NULL;
-    if(service)
+
+    if(service && service->connections && service->running_connections > 0)
     {
 		MUTEX_LOCK(service->mutex);
         //select free connection 
