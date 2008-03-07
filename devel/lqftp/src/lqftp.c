@@ -130,6 +130,7 @@ void cb_serv_heartbeat_handler(void *arg)
     CONN *c_conn = NULL;
     char buf[SBUF_SIZE];
     int n = 0;
+    int i = 0;
 
     if(serv && transport && tasktable)
     {
@@ -138,7 +139,7 @@ void cb_serv_heartbeat_handler(void *arg)
         {
                 //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
                  //       c_conn, c_conn->fd, c_conn->index);
-            if((block = tasktable->pop_block(tasktable, c_conn->fd)))
+            if((block = tasktable->pop_block(tasktable, c_conn->fd, (void *)c_conn)))
             {
                 //DEBUG_LOGGER(daemon_logger, "NEW BLOCK TASK");
                 taskid = tasktable->running_task_id;
@@ -190,6 +191,18 @@ void cb_serv_heartbeat_handler(void *arg)
         }
         if((n = tasktable->check_timeout(tasktable, global_timeout_times)) > 0)
         {
+            if(tasktable->status && tasktable->nblock > 0)
+            {
+                for(i = 0; i < tasktable->nblock; i++)
+                {
+                    if(tasktable->status[i].status == BLOCK_STATUS_TIMEOUT 
+                            && (c_conn = (CONN *)tasktable->status[i].arg)
+                            && (c_conn->fd == tasktable->status[i].sid))
+                    {
+                        c_conn->close(c_conn);
+                    }
+                }
+            }
             DEBUG_LOGGER(daemon_logger, "%d block is TIMEOUT on task:%d",
                     n, tasktable->running_task_id);
         }
@@ -237,7 +250,6 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
             while(p < end && *p == ' ')++p;
             *np = '\0';
             n = np - file;
-
             np = destfile;
             while(p < end && *p != ' ' && *p != '\r' && *p != '\n')
             {
@@ -254,10 +266,10 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
                 {
                     goto bad_req_err;
                 }
+                memset(buf, 0, SBUF_SIZE);
                 p = buf;
                 np = destfile;
                 while(*np != '\0') *p++ = *np++;
-                p--;
                 if(*p == '/')
                 {
                     end = NULL;
@@ -269,6 +281,8 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
                     }
                     while(end && *end != '\0') *p++ = *end++;
                 }
+                memset(destfile, 0, PATH_MAX_SIZE);
+                DEBUG_LOGGER(daemon_logger, "Adding [put %s %s] tasktable", file, buf); 
                 urlencode(buf, destfile);
                 if((taskid = tasktable->add(tasktable, file, destfile)) >= 0)
                 {

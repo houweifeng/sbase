@@ -253,6 +253,8 @@ int tasktable_resume_status(TASKTABLE *tasktable)
                 for(i = 0; i < tasktable->nblock; i++)
                 {
                     read(fd, &(tasktable->status[i]), sizeof(TBLOCK));
+                    tasktable->status[i].arg = NULL;
+                    tasktable->status[i].sid = -1;
                 }
             }
             close(fd);
@@ -280,7 +282,6 @@ int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
                     && (times - tasktable->status[i].times) >= timeout) 
             {
                 tasktable->status[i].status = BLOCK_STATUS_TIMEOUT;
-                tasktable->status[i].sid    = -1;
                 ++n;
             }
         }
@@ -330,7 +331,7 @@ int tasktable_check_status(TASKTABLE *tasktable)
 }
 
 /* pop block */
-TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
+TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
 {
     TASK *task = NULL;
     int taskid   = 0;
@@ -368,8 +369,22 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
         {
             if(tasktable->status[i].status != BLOCK_STATUS_OVER)
             {
+                if(tasktable->status[i].cmdid == CMD_TRUNCATE)
+                {
+                    if(tasktable->status[i].status == BLOCK_STATUS_WORKING)
+                        break;
+                    if(tasktable->status[i].status != BLOCK_STATUS_OVER)
+                    {
+                        tasktable->status[i].status = BLOCK_STATUS_WORKING;
+                        block =  &(tasktable->status[i]);
+                        break;
+                    }
+                }
                 if(tasktable->status[i].status == BLOCK_STATUS_WORKING) 
+                {
+                    n++;
                     continue;
+                }
                 else if(tasktable->status[i].cmdid == CMD_MD5SUM)
                 {
                     if(n == 0)
@@ -385,7 +400,6 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
                     block =  &(tasktable->status[i]);
                     break;
                 }
-                n++;
             }
             else nover++;
         }
@@ -401,6 +415,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid)
             gettimeofday(&tv, NULL);
             block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
             block->sid = sid;
+            block->arg = arg;
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
@@ -417,7 +432,9 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int 
             && tasktable->status[blockid].sid == sid)
     {
         MUTEX_LOCK(tasktable->mutex);
-        tasktable->status[blockid].status = status;
+        tasktable->status[blockid].status   = status;
+        tasktable->status[blockid].sid      = -1;
+        tasktable->status[blockid].arg      = NULL;
         if(blockid == (tasktable->nblock - 1) 
                 && tasktable->status[blockid].cmdid == CMD_MD5SUM)
         {
