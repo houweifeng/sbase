@@ -137,13 +137,14 @@ void cb_serv_heartbeat_handler(void *arg)
         //DEBUG_LOGGER(daemon_logger, "Heartbeat:%llu", nheartbeat++);
         while((c_conn = transport->getconn(transport)))
         {
-                //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
-                 //       c_conn, c_conn->fd, c_conn->index);
+            //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
+            //            c_conn, c_conn->fd, c_conn->index);
             if((block = tasktable->pop_block(tasktable, c_conn->fd, (void *)c_conn)))
             {
-                //DEBUG_LOGGER(daemon_logger, "NEW BLOCK TASK");
+                DEBUG_LOGGER(daemon_logger, "running_task_id:%d running_task.id:%d",
+                 tasktable->running_task_id, tasktable->running_task.id);
                 taskid = tasktable->running_task_id;
-                task = tasktable->table[taskid];
+                task = &(tasktable->running_task);
                 //transaction confirm
                 c_conn->c_id = block->id;
                 if(block->cmdid == CMD_TRUNCATE)
@@ -164,19 +165,19 @@ void cb_serv_heartbeat_handler(void *arg)
                     DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
                             task->destfile, block->offset, block->size, c_conn->fd); 
                     c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
-                    c_conn->push_file((CONN *)c_conn, tasktable->table[taskid]->file, 
+                    c_conn->push_file((CONN *)c_conn, task->file, 
                             block->offset, block->size);
                 }
                 if(block->cmdid == CMD_MD5SUM)
                 {
-                    tasktable->md5sum(tasktable, taskid);
+                    tasktable->md5sum(tasktable);
                     //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
                     n = sprintf(buf, "md5sum %s\r\nmd5:%s\r\n\r\n", 
-                            tasktable->table[taskid]->destfile,
-                            tasktable->table[taskid]->md5); 
+                            task->destfile,
+                            task->md5); 
                     //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
                     DEBUG_LOGGER(daemon_logger, "md5sum %s[%s] on %d",
-                            task->destfile, tasktable->table[taskid]->md5, c_conn->fd);
+                            task->destfile, task->md5, c_conn->fd);
                     c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                 }
             }
@@ -223,6 +224,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
     int i = 0, n = 0;
     int taskid = -1;
     struct stat st;
+    TASK task ;
 
     if(conn)
     {
@@ -299,13 +301,14 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
             while(p < end && *p != ' ' )++p;
             while(p < end && *p == ' ')++p;
             taskid = atoi(p);
-            if(taskid >= 0 && taskid < tasktable->ntask)
+            if(taskid >= 0 && taskid < tasktable->ntask 
+                    && tasktable->statusout(tasktable, taskid, &task) == 0)
             {
+                
                 n = sprintf(buf, "%d OK\r\ntaskid:%d\r\nstatus:%d\r\n"
                                  "timeout:%d(times)\r\nretry:%d\r\n\r\n", 
-                                 RESP_OK_CODE, taskid, tasktable->table[taskid]->status,
-                                 tasktable->table[taskid]->timeout, 
-                                 tasktable->table[taskid]->nretry);
+                                 RESP_OK_CODE, taskid, task.status,
+                                 task.timeout, task.nretry);
                 conn->push_chunk((CONN *)conn, (void *)buf, n);
                 return;
             }
