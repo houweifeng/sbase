@@ -43,7 +43,7 @@ static dictionary *dict = NULL;
 static TASKTABLE *tasktable = NULL;
 static LOGGER *daemon_logger = NULL;
 static unsigned long long global_timeout_times = 60000000llu;
-//static unsigned long long nheartbeat = 0;
+static unsigned long long nheartbeat = 0;
 
 #define GET_RESPID(p, end, n, respid)                                               \
 {                                                                                   \
@@ -134,11 +134,13 @@ void cb_serv_heartbeat_handler(void *arg)
 
     if(serv && transport && tasktable)
     {
-        //DEBUG_LOGGER(daemon_logger, "Heartbeat:%llu", nheartbeat++);
+        //DEBUG_LOGGER(daemon_logger, "Heartbeat:%llu connections:%d", 
+        //        nheartbeat++, transport->running_connections);
         while((c_conn = transport->getconn(transport)))
         {
-            //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
-            //            c_conn, c_conn->fd, c_conn->index);
+            //break;
+            DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
+                        c_conn, c_conn->fd, c_conn->index);
             if((block = tasktable->pop_block(tasktable, c_conn->fd, (void *)c_conn)))
             {
                 DEBUG_LOGGER(daemon_logger, "running_task_id:%d running_task.id:%d",
@@ -370,8 +372,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	}
     /* service type */
     transport->service_type = iniparser_getint(dict, "TRANSPORT:service_type", 1);
-	/* INET protocol family */
-	n = iniparser_getint(dict, "TRANSPORT:inet_family", 0);
 	/* INET protocol family */
 	n = iniparser_getint(dict, "TRANSPORT:inet_family", 0);
 	switch(n)

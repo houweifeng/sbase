@@ -324,7 +324,7 @@ int tasktable_resume_status(TASKTABLE *tasktable)
             if(tasktable->nblock > 0)
             {
                 tasktable->status = (TBLOCK *)calloc(tasktable->nblock, sizeof(TBLOCK));
-                read(fd, &(tasktable->status), sizeof(TBLOCK) * tasktable->nblock);
+                read(fd, tasktable->status, sizeof(TBLOCK) * tasktable->nblock);
             }
             close(fd);
             return 0;
@@ -333,11 +333,11 @@ int tasktable_resume_status(TASKTABLE *tasktable)
     return -1;
 }
 
+/* check timeout */
 int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
 {
     int i = 0, n = 0;
     struct timeval tv;
-    TASK *task = NULL;
     unsigned long long times = 0llu;
 
     if(tasktable && tasktable->status)
@@ -359,6 +359,7 @@ int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
                 tasktable->running_task.timeout += n;
                 tasktable->dump_task(tasktable);
         }
+end:
         MUTEX_UNLOCK(tasktable->mutex);
     }
     return n;
