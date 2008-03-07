@@ -247,6 +247,8 @@ int tasktable_resume_status(TASKTABLE *tasktable)
         {
             read(fd, &(tasktable->running_task_id), sizeof(int));
             read(fd, &(tasktable->nblock), sizeof(int));
+            //fprintf(stdout, "Resume running_task_id:%d nblock:%d\n", 
+             //       tasktable->running_task_id, tasktable->nblock);
             if(tasktable->nblock > 0)
             {
                 tasktable->status = (TBLOCK *)calloc(tasktable->nblock, sizeof(TBLOCK));
@@ -435,8 +437,8 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int 
         tasktable->status[blockid].status   = status;
         tasktable->status[blockid].sid      = -1;
         tasktable->status[blockid].arg      = NULL;
-        if(blockid == (tasktable->nblock - 1) 
-                && tasktable->status[blockid].cmdid == CMD_MD5SUM)
+        tasktable->dump_status(tasktable);
+        if(tasktable->status[blockid].cmdid == CMD_MD5SUM)
         {
             if(status == BLOCK_STATUS_OVER)
             {
@@ -445,14 +447,8 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int 
                 tasktable->free_status(tasktable);
                 tasktable->running_task_id++;
                 tasktable->dump_task(tasktable);
-            }
-            {
                 tasktable->free_status(tasktable);
             }
-        }
-        else
-        {
-            tasktable->dump_status(tasktable);
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
@@ -508,7 +504,7 @@ TASKTABLE *tasktable_init(char *taskfile, char *statusfile)
         strcpy(tasktable->taskfile, taskfile);
         tasktable->resume_task(tasktable);
         strcpy(tasktable->statusfile, statusfile);
-        tasktable->resume_task(tasktable);
+        tasktable->resume_status(tasktable);
         MUTEX_INIT(tasktable->mutex);
     }
     return tasktable;
