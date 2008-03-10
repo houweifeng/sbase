@@ -206,13 +206,13 @@ int tasktable_dump_task(TASKTABLE *tasktable)
         if((fd = open(tasktable->taskfile, O_RDWR)) > 0)
         {
             offset = sizeof(TASK) * tasktable->running_task.id * 1llu; 
-            fprintf(stdout, "Ready for dump running_task:%d offset:%llu\n", 
-                tasktable->running_task.id, offset);
+            //fprintf(stdout, "Ready for dump running_task:%d offset:%llu\n", 
+            //    tasktable->running_task.id, offset);
             if(lseek(fd, offset, SEEK_SET) == offset)
             {
                 if(write(fd, &(tasktable->running_task), sizeof(TASK)) == sizeof(TASK))
                 {
-                    fprintf(stdout, "Dump task %d\n", tasktable->running_task.id);
+                    //fprintf(stdout, "Dump task %d\n", tasktable->running_task.id);
                     ret = 0;
                 }
             }
@@ -532,6 +532,10 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int 
                 tasktable->dump_task(tasktable);
                 tasktable->free_status(tasktable);
                 tasktable->running_task_id++;
+            }
+            else
+            {
+                tasktable->free_status(tasktable);
             }
         }
         MUTEX_UNLOCK(tasktable->mutex);
