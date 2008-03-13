@@ -505,7 +505,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
             block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
             block->sid = sid;
             block->arg = arg;
-            DEBUG_LOGGER(tasktable->logger, "select block:%d\n", block->id);
+            //DEBUG_LOGGER(tasktable->logger, "select block:%d\n", block->id);
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
