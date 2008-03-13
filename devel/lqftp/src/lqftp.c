@@ -227,6 +227,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
     int taskid = -1;
     struct stat st;
     TASK task ;
+    double speed = 0.0;
 
     if(conn)
     {
@@ -306,10 +307,11 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
             if(taskid >= 0 && taskid < tasktable->ntask 
                     && tasktable->statusout(tasktable, taskid, &task) == 0)
             {
-                
-                n = sprintf(buf, "%d OK\r\ntaskid:%d\r\nstatus:%d\r\n"
-                                 "timeout:%d(times)\r\nretry:%d\r\n\r\n", 
-                                 RESP_OK_CODE, taskid, task.status,
+                if(task.times >= 0llu)
+                    speed = (double )(task.bytes/task.times);
+                n = sprintf(buf, "%d OK\r\nTASKID:%d\r\nstatus:%d\r\n SPEED:%8f (Bytes/S)"
+                                 "TIMEOUT:%d(times)\r\nRETRY:%d\r\n\r\n", 
+                                 RESP_OK_CODE, taskid, task.status, speed,
                                  task.timeout, task.nretry);
                 conn->push_chunk((CONN *)conn, (void *)buf, n);
                 return;
@@ -339,7 +341,8 @@ void cb_serv_oob_handler(CONN *conn, BUFFER *oob)
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-	char *logfile = NULL, *s = NULL, *p = NULL, *taskfile = NULL, *statusfile = NULL;
+	char *logfile = NULL, *s = NULL, *p = NULL, 
+         *tasklog = NULL, *taskfile = NULL, *statusfile = NULL;
 	int n = 0;
 	int ret = 0;
     int block_size = 0;
@@ -540,6 +543,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		fprintf(stderr, "Initiailize service[%s] failed, %s\n", transport->name, strerror(errno));
 		return ret;
 	}
+    //logger 
+	daemon_logger = logger_init(iniparser_getstr(dict, "DAEMON:access_log"));
     //task and block status file
 	taskfile = iniparser_getstr(dict, "DAEMON:taskfile");
     statusfile = iniparser_getstr(dict, "DAEMON:statusfile");
@@ -548,7 +553,9 @@ int sbase_initialize(SBASE *sbase, char *conf)
     {
         global_timeout_times = str2llu(p);
     }
-    if((tasktable = tasktable_init(taskfile, statusfile)) == NULL)
+    //tasklog
+    tasklog = iniparser_getstr(dict, "DAEMON:tasklog");
+    if((tasktable = tasktable_init(taskfile, statusfile, tasklog)) == NULL)
     {
         fprintf(stderr, "Initialize tasktable failed, %s\n", strerror(errno));
         return -1;
@@ -559,9 +566,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
         tasktable->block_size = block_size;
     else
         tasktable->block_size = TBLOCK_SIZE;
-	//logger 
-	daemon_logger = logger_init(iniparser_getstr(dict, "DAEMON:access_log"));
-	return 0;
+		return 0;
 }
 
 static void cb_stop(int sig){

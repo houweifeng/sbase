@@ -10,6 +10,7 @@
 #include "md5.h"
 #include "basedef.h"
 #include "mutex.h"
+#include "logger.h"
 
 /* add file transmssion task to tasktable */
 int tasktable_add(TASKTABLE *tasktable, char *file, char *destfile)
@@ -92,7 +93,9 @@ int tasktable_ready(TASKTABLE *tasktable)
                 && stat(tasktable->running_task.file, &st) == 0
           )
         {
-            //fprintf(stdout, "%s\n", task->file);
+            DEBUG_LOGGER(tasktable->logger, "Ready transport file %s on task %d",
+                tasktable->running_task.file, tasktable->running_task.id);
+            //DEBUG_LOGGER(tasktable->logger, "%s\n", task->file);
             nblock = (st.st_size / tasktable->block_size);
             if((st.st_size % tasktable->block_size) != 0) ++nblock;
             //for truncate 
@@ -125,11 +128,11 @@ int tasktable_ready(TASKTABLE *tasktable)
                 if(size < tasktable->block_size * 1llu)
                     tasktable->status[i].size   = size;
                 size -= tasktable->status[i].size;
-				offset += tasktable->status[i].size;
+                offset += tasktable->status[i].size;
                 tasktable->status[i].cmdid      = CMD_PUT;
                 tasktable->status[i].id   = i++;
             }
-			//last block for md5sum
+            //last block for md5sum
             tasktable->status[i].offset = 0llu;
             tasktable->status[i].size = st.st_size * 1llu;
             tasktable->status[i].id = i;
@@ -206,26 +209,26 @@ int tasktable_dump_task(TASKTABLE *tasktable)
         if((fd = open(tasktable->taskfile, O_RDWR)) > 0)
         {
             offset = sizeof(TASK) * tasktable->running_task.id * 1llu; 
-            //fprintf(stdout, "Ready for dump running_task:%d offset:%llu\n", 
+            //DEBUG_LOGGER(tasktable->logger, "Ready for dump running_task:%d offset:%llu\n", 
             //    tasktable->running_task.id, offset);
             if(lseek(fd, offset, SEEK_SET) == offset)
             {
                 if(write(fd, &(tasktable->running_task), sizeof(TASK)) == sizeof(TASK))
                 {
-                    //fprintf(stdout, "Dump task %d\n", tasktable->running_task.id);
+                    //DEBUG_LOGGER(tasktable->logger, "Dump task %d\n", tasktable->running_task.id);
                     ret = 0;
                 }
             }
             else
             {
-                fprintf(stderr, "LSEEK %s offset:%llu failed, %s\n", 
+                DEBUG_LOGGER(tasktable->logger, "LSEEK %s offset:%llu failed, %s\n", 
                         tasktable->taskfile, offset, strerror(errno));
             }
             close(fd);
         }
         else
         {
-            fprintf(stderr, "dump taskfile %s failed, %s", tasktable->taskfile, strerror(errno));
+            DEBUG_LOGGER(tasktable->logger, "dump taskfile %s failed, %s", tasktable->taskfile, strerror(errno));
         }
     }
     return ret;
@@ -241,10 +244,10 @@ int tasktable_resume_task(TASKTABLE *tasktable)
     {
         if((fd = open(tasktable->taskfile, O_RDONLY, 0644)) > 0)
         {
-            //fprintf(stdout, "open file:%s fd:%d\n", tasktable->taskfile, fd);
+            //DEBUG_LOGGER(tasktable->logger, "open file:%s fd:%d\n", tasktable->taskfile, fd);
             while(read(fd, &task, sizeof(TASK)) == sizeof(TASK))
             {
-                //fprintf(stdout, "read %d \n", task.id);
+                //DEBUG_LOGGER(tasktable->logger, "read %d \n", task.id);
                 tasktable->ntask++;
                 if(tasktable->running_task.id >= 0) continue;
                 if(task.status != TASK_STATUS_OVER)
@@ -252,13 +255,13 @@ int tasktable_resume_task(TASKTABLE *tasktable)
                     memcpy(&(tasktable->running_task), &task, sizeof(TASK));
                 }
             }
-            //fprintf(stderr, "read file:%s failed, %s\n", tasktable->taskfile, strerror(errno));
+            //DEBUG_LOGGER(tasktable->logger, "read file:%s failed, %s\n", tasktable->taskfile, strerror(errno));
             ret = 0;
             close(fd);
         }
         else
         {
-            fprintf(stderr, "resume taskfile:%s failed, %s", tasktable->taskfile, strerror(errno));
+            DEBUG_LOGGER(tasktable->logger, "resume taskfile:%s failed, %s", tasktable->taskfile, strerror(errno));
         }
     }
     return ret;
@@ -287,7 +290,7 @@ int tasktable_dump_status(TASKTABLE *tasktable, int blockid)
                 {
                     write(fd, &(tasktable->status[i]), sizeof(TBLOCK));
                 }
-                //fprintf(stderr, "dump block:%d on task:%d\n", blockid, taskid);
+                //DEBUG_LOGGER(tasktable->logger, "dump block:%d on task:%d\n", blockid, taskid);
                 close(fd);
                 ret = 0;
             }
@@ -319,7 +322,7 @@ int tasktable_resume_status(TASKTABLE *tasktable)
         {
             read(fd, &(tasktable->running_task_id), sizeof(int));
             read(fd, &(tasktable->nblock), sizeof(int));
-            //fprintf(stdout, "Resume running_task.id:%d nblock:%d\n", 
+            //DEBUG_LOGGER(tasktable->logger, "Resume running_task.id:%d nblock:%d\n", 
              //       tasktable->running_task.id, tasktable->nblock);
             if(tasktable->nblock > 0)
             {
@@ -382,7 +385,7 @@ int tasktable_check_status(TASKTABLE *tasktable)
         {
             if((fd = open(tasktable->taskfile, O_RDONLY)) > 0) 
             {
-                //fprintf(stdout, "taskfile fd:%d\n", fd);
+                //DEBUG_LOGGER(tasktable->logger, "taskfile fd:%d\n", fd);
                 offset = sizeof(TASK ) * tasktable->running_task_id * 1llu;
                 if(lseek(fd, offset, SEEK_SET) == offset)
                 {
@@ -391,18 +394,18 @@ int tasktable_check_status(TASKTABLE *tasktable)
                         tasktable->running_task_id = tasktable->running_task.id;
                         if(tasktable->running_task.status != TASK_STATUS_OVER)
                         {
-                            //fprintf(stdout, "running_task taskid:%d id:%d file:%s\n", 
+                            //DEBUG_LOGGER(tasktable->logger, "running_task taskid:%d id:%d file:%s\n", 
                             //        tasktable->running_task_id, tasktable->running_task.id,
                             //        tasktable->running_task.file);
                             ret = 0;
                             break;
                         }
                     }
-                    //fprintf(stdout, "taskfile fd:%d offset:%llu \n", fd, offset);
+                    //DEBUG_LOGGER(tasktable->logger, "taskfile fd:%d offset:%llu \n", fd, offset);
                 }
                 else
                 {
-                    fprintf(stderr, "LSEEK taskfile %s offset:%llu failed, %s\n", 
+                    DEBUG_LOGGER(tasktable->logger, "LSEEK taskfile %s offset:%llu failed, %s\n", 
                             tasktable->taskfile, offset, strerror(errno));
                 }
                 close(fd);
@@ -429,7 +432,8 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
         //check status and ready 
         if(tasktable->check_status(tasktable) != 0)
         {
-            fprintf(stderr, "check running_task_id:%d id:%d ntask:%d status failed\n", 
+            DEBUG_LOGGER(tasktable->logger, 
+                    "check running_task_id:%d id:%d ntask:%d status failed\n", 
                     tasktable->running_task_id, tasktable->running_task.id, tasktable->ntask);
             //_exit(-1);
             return NULL;
@@ -438,11 +442,11 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
         if(tasktable->status == NULL && tasktable->ready(tasktable) != 0)
         {
             task = &(tasktable->running_task);
-            fprintf(stderr, "task[%d] file[%s] destfile[%s]\n",
+            DEBUG_LOGGER(tasktable->logger, "task[%d] file[%s] destfile[%s]\n",
                     task->id, task->file, task->destfile);
             return NULL;
         }
-        //fprintf(stderr, "running_task:%d block:%d\n", 
+        //DEBUG_LOGGER(tasktable->logger, "running_task:%d block:%d\n", 
         //tasktable->running_task.id, tasktable->nblock);
         //no task
         MUTEX_LOCK(tasktable->mutex);
@@ -486,7 +490,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
             }
             else nover++;
         }
-        //fprintf(stdout, "running_task:%d nblock:%d n:%d over:%d block:%08x\n", 
+        //DEBUG_LOGGER(tasktable->logger, "running_task:%d nblock:%d n:%d over:%d block:%08x\n", 
         //        taskid, tasktable->nblock, n, nover, block);
         if(nover == tasktable->nblock)
         {
@@ -501,7 +505,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
             block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
             block->sid = sid;
             block->arg = arg;
-            fprintf(stdout, "select block:%d\n", block->id);
+            DEBUG_LOGGER(tasktable->logger, "select block:%d\n", block->id);
         }
         MUTEX_UNLOCK(tasktable->mutex);
     }
@@ -511,23 +515,51 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
 /* update status */
 void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int sid)
 {
+    struct timeval tv;
+    unsigned long long times = 0llu;
+    double speed = 0.0;
+
     if(tasktable && blockid >= 0 && blockid < tasktable->nblock
-			&& tasktable->status[blockid].status != BLOCK_STATUS_OVER
+            && tasktable->status[blockid].status != BLOCK_STATUS_OVER
             && tasktable->status[blockid].sid == sid)
     {
         MUTEX_LOCK(tasktable->mutex);
+        if(status == BLOCK_STATUS_OVER)
+        {
+            gettimeofday(&tv, NULL);
+            times = tv.tv_sec * 1000000llu + tv.tv_usec - tasktable->status[blockid].times;
+            if(times > 0llu)
+            {
+                tasktable->running_task.times += times;
+                tasktable->running_task.bytes += tasktable->status[blockid].size;
+                tasktable->dump_task(tasktable);
+            }
+        }
+
         tasktable->status[blockid].status   = status;
         tasktable->status[blockid].sid      = -1;
         tasktable->status[blockid].arg      = NULL;
         tasktable->dump_status(tasktable, blockid);
-        fprintf(stdout, "Update status:%d block:%d sid:%d cmdid:%d\n",
-                status, blockid, sid, status, blockid, sid);
+        //DEBUG_LOGGER(tasktable->logger, "Update status:%d block:%d sid:%d cmdid:%d\n",
+        //      status, blockid, sid, status, blockid, sid);
         if(tasktable->status[blockid].cmdid == CMD_MD5SUM)
         {
             if(status == BLOCK_STATUS_OVER)
             {
-        fprintf(stdout, "Update status:%d block:%d sid:%d cmdid:%d\n",
-                status, blockid, sid, status, blockid, sid);
+                //DEBUG_LOGGER(tasktable->logger, "Update status:%d block:%d sid:%d cmdid:%d\n",
+                //   status, blockid, sid, status, blockid, sid);
+                tasktable->times += tasktable->running_task.times;
+                tasktable->bytes += tasktable->running_task.bytes;
+                if(tasktable->running_task.times > 0llu)
+                {
+                    speed = (double )(tasktable->running_task.bytes * 1000000llu
+                            / tasktable->running_task.times);
+                }
+                DEBUG_LOGGER(tasktable->logger, "OVER %d %llu/%llu (%f) %s",
+                        tasktable->running_task.id, tasktable->running_task.bytes,
+                        tasktable->running_task.times, speed,
+                        tasktable->running_task.file);
+
                 tasktable->running_task.status = TASK_STATUS_OVER;
                 tasktable->dump_task(tasktable);
                 tasktable->free_status(tasktable);
@@ -570,7 +602,7 @@ void tasktable_clean(TASKTABLE **tasktable)
     }
 }
 /* Initialize tasktable */
-TASKTABLE *tasktable_init(char *taskfile, char *statusfile)
+TASKTABLE *tasktable_init(char *taskfile, char *statusfile, char *logfile)
 {
     TASKTABLE *tasktable = NULL;
 
@@ -592,6 +624,7 @@ TASKTABLE *tasktable_init(char *taskfile, char *statusfile)
         tasktable->free_status      = tasktable_free_status;
         tasktable->clean            = tasktable_clean;
         tasktable->running_task.id = -1;
+        tasktable->logger = logger_init(logfile);
         strcpy(tasktable->taskfile, taskfile);
         tasktable->resume_task(tasktable);
         strcpy(tasktable->statusfile, statusfile);

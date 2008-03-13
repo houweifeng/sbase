@@ -22,6 +22,8 @@ typedef struct _TASK
     int timeout;
     int nretry;
     int status;
+    unsigned long long times;
+    unsigned long long bytes;
 
     char md5[MD5SUM_SIZE + 1];
     char file[PATH_MAX_SIZE];
@@ -50,6 +52,11 @@ typedef struct _TASKTABLE
     int  nblock;
     char statusfile[PATH_MAX_SIZE];
     void *mutex;
+    void *logger;
+    unsigned long long times;
+    unsigned long long bytes;
+
+
     
     int     (*add)(struct _TASKTABLE *, char *file, char *destfile);
     int     (*ready)(struct _TASKTABLE *);
@@ -70,5 +77,5 @@ typedef struct _TASKTABLE
 }TASKTABLE;
 
 /* Initialize tasktable */
-TASKTABLE *tasktable_init(char *taskfile, char *statusfile);
+TASKTABLE *tasktable_init(char *taskfile, char *statusfile, char *logfile);
 #endif
