@@ -432,9 +432,9 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
         //check status and ready 
         if(tasktable->check_status(tasktable) != 0)
         {
-            DEBUG_LOGGER(tasktable->logger, 
-                    "check running_task_id:%d id:%d ntask:%d status failed\n", 
-                    tasktable->running_task_id, tasktable->running_task.id, tasktable->ntask);
+            //DEBUG_LOGGER(tasktable->logger, 
+            //        "check running_task_id:%d id:%d ntask:%d status failed\n", 
+            //        tasktable->running_task_id, tasktable->running_task.id, tasktable->ntask);
             //_exit(-1);
             return NULL;
         }
