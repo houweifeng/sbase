@@ -255,13 +255,15 @@ int tasktable_resume_task(TASKTABLE *tasktable)
                     memcpy(&(tasktable->running_task), &task, sizeof(TASK));
                 }
             }
-            //DEBUG_LOGGER(tasktable->logger, "read file:%s failed, %s\n", tasktable->taskfile, strerror(errno));
+            //DEBUG_LOGGER(tasktable->logger, "read file:%s failed, %s\n", 
+            //tasktable->taskfile, strerror(errno));
             ret = 0;
             close(fd);
         }
         else
         {
-            DEBUG_LOGGER(tasktable->logger, "resume taskfile:%s failed, %s", tasktable->taskfile, strerror(errno));
+            DEBUG_LOGGER(tasktable->logger, "resume taskfile:%s failed, %s", 
+                    tasktable->taskfile, strerror(errno));
         }
     }
     return ret;
@@ -394,7 +396,7 @@ int tasktable_check_status(TASKTABLE *tasktable)
                         if(tasktable->running_task.status != TASK_STATUS_OVER)
                         {
                             DEBUG_LOGGER(tasktable->logger, 
-                                    "running_task taskid:%d id:%d file:%s\n", 
+                                    "running_task taskid:%d id:%d file:%s", 
                                     tasktable->running_task_id, tasktable->running_task.id,
                                     tasktable->running_task.file);
                             tasktable->running_task_id = tasktable->running_task.id;
@@ -406,7 +408,7 @@ int tasktable_check_status(TASKTABLE *tasktable)
                 }
                 else
                 {
-                    DEBUG_LOGGER(tasktable->logger, "LSEEK taskfile %s offset:%llu failed, %s\n", 
+                    DEBUG_LOGGER(tasktable->logger, "LSEEK taskfile %s offset:%llu failed, %s", 
                             tasktable->taskfile, offset, strerror(errno));
                 }
                 close(fd);
@@ -444,7 +446,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
         if(tasktable->status == NULL && tasktable->ready(tasktable) != 0)
         {
             task = &(tasktable->running_task);
-            DEBUG_LOGGER(tasktable->logger, "task[%d] file[%s] destfile[%s]\n",
+            DEBUG_LOGGER(tasktable->logger, "task[%d] file[%s] destfile[%s]",
                     task->id, task->file, task->destfile);
             return NULL;
         }
