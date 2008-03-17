@@ -391,12 +391,13 @@ int tasktable_check_status(TASKTABLE *tasktable)
                 {
                     while(read(fd, &(tasktable->running_task), sizeof(TASK)) == sizeof(TASK))
                     {
-                        tasktable->running_task_id = tasktable->running_task.id;
                         if(tasktable->running_task.status != TASK_STATUS_OVER)
                         {
-                            //DEBUG_LOGGER(tasktable->logger, "running_task taskid:%d id:%d file:%s\n", 
-                            //        tasktable->running_task_id, tasktable->running_task.id,
-                            //        tasktable->running_task.file);
+                            DEBUG_LOGGER(tasktable->logger, 
+                                    "running_task taskid:%d id:%d file:%s\n", 
+                                    tasktable->running_task_id, tasktable->running_task.id,
+                                    tasktable->running_task.file);
+                            tasktable->running_task_id = tasktable->running_task.id;
                             ret = 0;
                             break;
                         }
@@ -425,6 +426,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
     int i = 0, n = 0;
     int nover = 0;
     struct timeval tv;
+    struct stat st;
     
 
     if(tasktable && tasktable->ntask > 0)
@@ -492,19 +494,30 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
         }
         //DEBUG_LOGGER(tasktable->logger, "running_task:%d nblock:%d n:%d over:%d block:%08x\n", 
         //        taskid, tasktable->nblock, n, nover, block);
-        if(nover == tasktable->nblock)
+        if(nover > 0 && nover == tasktable->nblock 
+                && tasktable->running_task.status != TASK_STATUS_OVER)
         {
-            task = &(tasktable->running_task);
-            task->status = TASK_STATUS_OVER;
+            DEBUG_LOGGER(tasktable->logger, "over task %d", tasktable->running_task_id);
+            tasktable->running_task.status = TASK_STATUS_OVER;
             tasktable->dump_task(tasktable);
+            tasktable->free_status(tasktable);
             tasktable->running_task_id++;
         }
         if(block)
         {
-            gettimeofday(&tv, NULL);
-            block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
-            block->sid = sid;
-            block->arg = arg;
+            task = &(tasktable->running_task);
+            if(stat(task->file, &st) != 0 || st.st_size <= block->offset)
+            {
+                tasktable->free_status(tasktable);
+                block = NULL;
+            }
+            else
+            {
+                gettimeofday(&tv, NULL);
+                block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
+                block->sid = sid;
+                block->arg = arg;
+            }
             //DEBUG_LOGGER(tasktable->logger, "select block:%d\n", block->id);
         }
         MUTEX_UNLOCK(tasktable->mutex);
