@@ -388,7 +388,7 @@ int tasktable_check_status(TASKTABLE *tasktable)
             if((fd = open(tasktable->taskfile, O_RDONLY)) > 0) 
             {
                 //DEBUG_LOGGER(tasktable->logger, "taskfile fd:%d\n", fd);
-                offset = sizeof(TASK ) * tasktable->running_task_id * 1llu;
+                offset = sizeof(TASK ) * (tasktable->running_task_id+1) * 1llu;
                 if(lseek(fd, offset, SEEK_SET) == offset)
                 {
                     while(read(fd, &(tasktable->running_task), sizeof(TASK)) == sizeof(TASK))
@@ -503,10 +503,10 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
             tasktable->running_task.status = TASK_STATUS_OVER;
             tasktable->dump_task(tasktable);
             tasktable->free_status(tasktable);
-            tasktable->running_task_id++;
         }
         if(block)
         {
+            /*
             task = &(tasktable->running_task);
             if(stat(task->file, &st) != 0 || st.st_size <= block->offset)
             {
@@ -515,11 +515,12 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
             }
             else
             {
+            */
                 gettimeofday(&tv, NULL);
                 block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
                 block->sid = sid;
                 block->arg = arg;
-            }
+            //}
             //DEBUG_LOGGER(tasktable->logger, "select block:%d\n", block->id);
         }
         MUTEX_UNLOCK(tasktable->mutex);
@@ -578,7 +579,7 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int 
                 tasktable->running_task.status = TASK_STATUS_OVER;
                 tasktable->dump_task(tasktable);
                 tasktable->free_status(tasktable);
-                tasktable->running_task_id++;
+                //tasktable->running_task_id++;
             }
             else
             {
@@ -638,6 +639,7 @@ TASKTABLE *tasktable_init(char *taskfile, char *statusfile, char *logfile)
         tasktable->update_status    = tasktable_update_status;
         tasktable->free_status      = tasktable_free_status;
         tasktable->clean            = tasktable_clean;
+        tasktable->running_task_id = -1;
         tasktable->running_task.id = -1;
         tasktable->logger = logger_init(logfile);
         strcpy(tasktable->taskfile, taskfile);

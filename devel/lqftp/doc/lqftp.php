@@ -3,6 +3,8 @@
 define('CALL_TIMEOUT', 200000);
 define('SOCK_END', "\r\n\r\n");
 define('RESP_OK', 300);
+define('READYFLAG', ".xxxxxx.flag");
+define('OVERFLAG', ".xxxxxx.end");
 class CLQFTP
 {
     var $host = "127.0.0.1";
@@ -150,6 +152,71 @@ class CLQFTP
         }
         return false;
     }
+    /* lookup dir */
+    function lookup($dir)
+    {
+       $j = 0;
+       $pdir = NULL;
+       $dirp = NULL;
+       $file = NULL;
+       $ent = NULL;
+       $path = NULL;
+       $p = NULL;
+       $overlist = Array();
+
+        if($dir && is_dir($dir) && ($pdir = opendir($dir)))
+        {
+            while(($file = readdir($pdir)))
+            {
+                if($file == '.' || $file == '..') continue;
+                $path = "$dir/$file";
+                if(is_dir($path) && file_exists($path."/".READYFLAG) 
+                    && !file_exists($path."/".OVERFLAG))
+                {
+                    if(filesize($path."/".READYFLAG) > 0)
+                        $overlist = file($path."/".READYFLAG);
+                    //print_r($overlist);
+                    //echo "Ready for transport dir[$path]\n";
+                    if(($dirp = opendir($path)))
+                    {
+                        while(($ent = readdir($dirp)))
+                        {
+                            $p = $path."/".$ent;
+                            if(is_file($p) && $ent != READYFLAG 
+                                && filesize($p) > 0 && !in_array($ent."\n", $overlist))
+                            {
+                                if($this->add($p, "/$file/".$ent) === FALSE)
+                                {
+                                    closedir($dirp);
+                                    closedir($pdir);
+                                    return ;
+                                }
+                                else 
+                                {
+                                    echo "Added $p to queue\n";
+                                    error_log($ent."\n", 3, "$path/".READYFLAG);
+                                }
+                            }
+                        }
+                        if($this->add("$path/".READYFLAG, "/$file/".READYFLAG) === FALSE)
+                        {
+                                    closedir($dirp);
+                                    closedir($pdir);
+                                    return ;
+                        }
+                        else
+                        {
+                            copy("$path/".READYFLAG, "$path/".OVERFLAG);
+                        }
+                        closedir($dirp);
+                    }
+                }
+            }
+            closedir($pdir);
+        }
+        return ;
+    }
+
     /* Close socket */
     function close()
     {
@@ -168,10 +235,11 @@ if($_SERVER['argc'] < 2)
     echo "\t OR status taskid\n";
     echo "\t OR addlist filelist statuslist\n";
     echo "\t OR statuslist statusfile\n";
+    echo "\t OR lookup dir\n";
     exit;
 }
 $op = $_SERVER['argv'][1];
-$lqftp = new CLQFTP('192.168.5.191', 63800);
+$lqftp = new CLQFTP();
 if($lqftp->is_connected)
 {
     //add new task 
@@ -262,6 +330,16 @@ if($lqftp->is_connected)
                 }
             }
             fclose($fp);
+        }
+    }
+    //lookup
+    if($op == "lookup")
+    {
+        $lookdir = $_SERVER['argv']['2'];
+        while(1)
+        {
+                $lqftp->lookup($lookdir);
+                sleep(60);
         }
     }
     $lqftp->close();
