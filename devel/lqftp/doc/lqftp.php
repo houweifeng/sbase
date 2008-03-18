@@ -26,6 +26,13 @@ class CLQFTP
             $this->is_connected = 1;
     }
 
+    function reconnect()
+    {
+        $this->sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        if(socket_connect($this->sock, $this->host, $this->port))
+            $this->is_connected = 1;
+    }
+
     function parse($string)
     {
         $list = Array();
@@ -126,6 +133,9 @@ class CLQFTP
         $this->timer($stime);
         $n = strlen($query_string);
 
+        if($this->is_connected == 0)
+            $this->reconnect();
+
         if($this->sock  && $n > 0
             && socket_write($this->sock, $query_string, $n) == $n)
         {
@@ -142,14 +152,22 @@ class CLQFTP
                         break;
                     }
                 }
-                else return false;
+                else
+                {
+                    $this->close();
+                    return false;
+                }
                 $usec = $this->timer($stime);
                 if($usec >= $timeout)
+                {
+                    $this->close();
                     return false;
+                }
                 usleep(1);
             }
             return $string;
         }
+        $this->close(); 
         return false;
     }
     /* lookup dir */
@@ -220,11 +238,9 @@ class CLQFTP
     /* Close socket */
     function close()
     {
-        if($this->sock)
-        {
-            socket_close($this->sock);
-            $this->sock = false;
-        }
+        socket_close($this->sock);
+        $this->sock = false;
+        $this->is_connected = 0;
     }
 }
 
