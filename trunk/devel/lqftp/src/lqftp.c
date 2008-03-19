@@ -309,7 +309,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
             {
                 if(task.times >= 0llu)
                     speed = (double )(task.bytes/task.times);
-                n = sprintf(buf, "%d OK\r\nTASKID:%d\r\nstatus:%d\r\n SPEED:%8f (Bytes/S)"
+                n = sprintf(buf, "%d OK\r\nTASKID:%d\r\nSTATUS:%d\r\n SPEED:%8f (Bytes/S)"
                                  "TIMEOUT:%d(times)\r\nRETRY:%d\r\n\r\n", 
                                  RESP_OK_CODE, taskid, task.status, speed,
                                  task.timeout, task.nretry);
