@@ -42,7 +42,7 @@ HTTP_HEADER *http_header()
 }
 
 /* HTTP header add */
-void http_header_add(HTTP_HEADER *http_header, const char *format, ...)
+void http_header_add(HTTP_HEADER *http_header, char *format, ...)
 {
 	va_list ap;
 	int n = 0;
@@ -56,7 +56,7 @@ void http_header_add(HTTP_HEADER *http_header, const char *format, ...)
 }
 
 /* HTTP header send */
-void http_header_send(HTTP_HEADER *http_header, const CONN *conn)
+void http_header_send(HTTP_HEADER *http_header, CONN *conn)
 {
 	if(http_header && http_header->buf && http_header->len > 0 )
 	{
@@ -349,7 +349,7 @@ void http_path_handler(HTTP_REQ *req)
 }
 
 /* HTTP Dir Index view */
-void http_index_dir(const CONN *conn, HTTP_REQ *req)
+void http_index_dir(CONN *conn, HTTP_REQ *req)
 {
 	struct _BUFFER *html = NULL;
 	char 	buf[BUFFER_SIZE];
@@ -453,7 +453,7 @@ int http_file_type(HTTP_REQ *req)
 }
 
 /* parser HTTP RANGE */
-int http_send_range_file(const CONN *conn, HTTP_REQ *req, struct stat st)
+int http_send_range_file(CONN *conn, HTTP_REQ *req, struct stat st)
 {
 	char *s = NULL;
 	uint64_t l = 0llu;
@@ -524,7 +524,7 @@ int http_send_range_file(const CONN *conn, HTTP_REQ *req, struct stat st)
 }
 
 /* send file */
-int http_send_file(const CONN *conn, HTTP_REQ *req, struct stat st)
+int http_send_file(CONN *conn, HTTP_REQ *req, struct stat st)
 {
 	int file_ext = -1;
 	HTTP_HEADER *resp_header = NULL;
@@ -565,7 +565,7 @@ int http_send_file(const CONN *conn, HTTP_REQ *req, struct stat st)
 
 
 /* HTTP GET HANDLER */
-void http_get_handler(const CONN *conn, HTTP_REQ *req)
+void http_get_handler(CONN *conn, HTTP_REQ *req)
 {
 	struct stat st;	
 	time_t timep;
@@ -615,7 +615,7 @@ void http_get_handler(const CONN *conn, HTTP_REQ *req)
 }
 
 /* HTTP PUT HANDLER */
-void http_put_handler(const CONN *conn, HTTP_REQ *req)
+void http_put_handler(CONN *conn, HTTP_REQ *req)
 {
 	char tmp[] = "/tmp/temp-XXXXXX";
 	if(conn) conn->recv_file((CONN *)conn, tmp, 0llu, 1024llu);	
@@ -623,7 +623,7 @@ void http_put_handler(const CONN *conn, HTTP_REQ *req)
 }
 
 /* handle packet */
-void cb_packet_handler(const CONN *conn,  const struct _BUFFER *packet)
+void cb_packet_handler(CONN *conn,  struct _BUFFER *packet)
 {
 	HTTP_REQ req;
 	char *buf = (char *)calloc(1, BUFFER_SIZE);
@@ -697,13 +697,13 @@ void cb_packet_handler(const CONN *conn,  const struct _BUFFER *packet)
 	return ;
 }
 
-void cb_data_handler(const CONN *conn,  const struct  _BUFFER *packet, const struct _CHUNK *chunk, const struct _BUFFER *cache)
+void cb_data_handler(CONN *conn,  struct  _BUFFER *packet, struct _CHUNK *chunk, struct _BUFFER *cache)
 {
 	
 }
 
 /* read packet from buffer */
-int cb_packet_reader(const CONN *conn, const struct _BUFFER *buf)
+int cb_packet_reader(CONN *conn, struct _BUFFER *buf)
 {
 	char *p   = (char *)(buf->data);
 	char *end = (char *)(buf->end);
@@ -825,7 +825,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	}
 	*s++ = 0;
 	service->packet_delimiter_length = strlen(service->packet_delimiter);
-	service->buffer_size = iniparser_getint(dict, "LHTTPD:buffer_size", BUF_SIZE);
+	service->buffer_size = iniparser_getint(dict, "LHTTPD:buffer_size", SB_BUF_SIZE);
 	service->cb_packet_reader = &cb_packet_reader;
 	service->cb_packet_handler = &cb_packet_handler;
 	service->cb_data_handler = &cb_data_handler;

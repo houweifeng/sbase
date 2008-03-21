@@ -66,8 +66,8 @@ typedef struct _HTTP_REQ{
 typedef struct _HTTP_HEADER{
 	char *buf;
 	int len ;
-	void (*add)(struct _HTTP_HEADER *, const char *format, ...);
-	void (*send)(struct _HTTP_HEADER *, const CONN *conn);
+	void (*add)(struct _HTTP_HEADER *, char *format, ...);
+	void (*send)(struct _HTTP_HEADER *, CONN *conn);
 	void (*clear)(struct _HTTP_HEADER *);
 }HTTP_HEADER;
 #endif
@@ -494,10 +494,10 @@ static char *ftypes[] = {
 HTTP_HEADER *http_header();
 
 /* HTTP header add */
-void http_header_add(HTTP_HEADER *http_header, const char *format, ...);
+void http_header_add(HTTP_HEADER *http_header, char *format, ...);
 
 /* HTTP header send */
-void http_header_send(HTTP_HEADER *http_header, const CONN *conn);
+void http_header_send(HTTP_HEADER *http_header, CONN *conn);
 
 /* HTTP header clear */
 void http_header_clear(HTTP_HEADER *http_header);
@@ -524,27 +524,27 @@ int http_host_handler(HTTP_REQ *req);
 void http_path_handler(HTTP_REQ *req);
 
 /* HTTP Dir Index view */
-void http_index_dir(const CONN *conn, HTTP_REQ *req);
+void http_index_dir(CONN *conn, HTTP_REQ *req);
 
 /* parser HTTP RANGE */
-int http_send_range_file(const CONN *conn, HTTP_REQ *req, struct stat st);
+int http_send_range_file(CONN *conn, HTTP_REQ *req, struct stat st);
 
 /* send file */
-int http_send_file(const CONN *conn, HTTP_REQ *req, struct stat st);
+int http_send_file(CONN *conn, HTTP_REQ *req, struct stat st);
 
 /* HTTP GET HANDLER */
-void http_get_handler(const CONN *conn, HTTP_REQ *req);
+void http_get_handler(CONN *conn, HTTP_REQ *req);
 
 /* HTTP put HANDLER */
-void http_put_handler(const CONN *conn, HTTP_REQ *req);
+void http_put_handler(CONN *conn, HTTP_REQ *req);
 
 /* read packet from buffer */
-int packet_reader(const CONN *conn, const struct _BUFFER *buf);
+int packet_reader(CONN *conn, struct _BUFFER *buf);
 
 /* handle packet */
-void packet_handler(const CONN *conn,  const struct _BUFFER *packet);
+void packet_handler(CONN *conn,  struct _BUFFER *packet);
 
 /* handler data */
-void data_handler(const CONN *conn,  const struct _BUFFER *packet, const struct _CHUNK *chunk, const struct _BUFFER *cache);
+void data_handler(CONN *conn,  struct _BUFFER *packet, struct _CHUNK *chunk, struct _BUFFER *cache);
 
 #endif
