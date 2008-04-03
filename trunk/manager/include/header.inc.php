@@ -38,14 +38,22 @@ include_once('./include/h.inc.php');
               <tr>
 		<?
 		$menus	= Array();
-		if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(10000)){
-                        $menus['数据查看']      = 'view.php';
+		if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(10000))
+        {
+                        $menus['数据查询']      = 'view.php';
                 }
-		if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(10000)){
-                        $menus['相应错误数据包']      = 'badresp.php';
-                }
-		if(isset($sess_user) && $sess_user->IS_LOGGED_IN ){//&& $sess_user->is_permission(10002)){
-			//$menus['系统管理']	= 'system.php';
+        if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(10000))
+        {
+                        $menus['数据统计']      = 'view.php';
+            
+        }
+		if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(10000))
+        {
+                        $menus['客户端管理']      = 'mclient.php';
+        }
+		if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(10000))
+        {
+			$menus['系统管理']	= 'system.php';
 		}
 		foreach($menus as $text => $url ){?>
 		<td height="22" align="left" valign="bottom">

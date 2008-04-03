@@ -5,7 +5,7 @@
  */
 
 function jsescape($str){
-	return base64_encode(iconv('GB18030','UTF-8',$str));
+	return base64_encode($str);
 }
 
 //print between "<pre>" and "</pre>"

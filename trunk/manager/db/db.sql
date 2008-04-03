@@ -50,6 +50,24 @@ CREATE TABLE IF NOT EXISTS user_permissions(
 	INDEX(datetime)
 	)Type=MyISAM;
 --
+-- clients table ---
+--
+CREATE TABLE IF NOT EXISTS clients(
+	client_id		INT		NOT NULL AUTO_INCREMENT,
+	client_name	CHAR(64)	NOT NULL,
+	client_password	VARCHAR(64)	NOT NULL,
+	client_phone	VARCHAR(32)	NOT NULL,
+	client_email	    VARCHAR(128)	NOT NULL,
+	client_desc	    VARCHAR(255)	NOT NULL,
+	client_datetime	DATETIME	NOT NULL,
+	PRIMARY KEY(client_id),
+	UNIQUE(client_name),
+	INDEX(client_name),
+	INDEX(client_email),
+	INDEX(client_datetime)
+	)AUTO_INCREMENT=2000000;
+
+--
 -- action log for security ----
 --
 CREATE TABLE IF NOT EXISTS action_log(
