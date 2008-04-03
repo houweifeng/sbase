@@ -108,3 +108,6 @@ String.prototype.getGBCode = function()
 function strdecode(str){
 	return utf8to16(base64decode(str));
 }
+function strencode(str){
+	return base64encode(utf16to8(str));
+}

@@ -16,6 +16,7 @@ function DataShow(PageNum,HTMLID,PAGEID,_PageLimit,_PageViewLimit,_ColsLimit){
     Table._table_var 	=   	new Array();
     Table.rows(data,ColsLimit);
     string      +=   Table.draw();
+    alert(string);
     if(document.getElementById(ContentOutID)){
     	document.getElementById(ContentOutID).innerHTML	=   string;
     }
