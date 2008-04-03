@@ -62,7 +62,7 @@ if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(SY
         	<td rowspan="2" align="left" valign="bottom"><img src="images/menu_line.gif" width="3" height="22"></td>
 		<?}?>
         	<td height="22" width="26" align="right" valign="bottom" >
-			<a href="about.asp" class="menu"><strong>关于</strong></a>
+			<a href="about.php" class="menu"><strong>关于</strong></a>
 		</td>
               </tr>
 	   </table>
