@@ -45,6 +45,7 @@ define('USER_DESC_TITLE','用户说明');
 define('USER_PERMISSION_ADMIN_TITLE','用户权限管理');
 define('USER_MANAGEMENT_TITLE','用户管理');
 define('USER_ADMIN_PERMISSION_NOT_EXISTS','您没有该权限');
+define('DATA_ADMIN_PERMISSION_NOT_EXISTS','您没有该权限');
 define('USER_DROP_TEXT','删除');
 define('USER_UPDATE_TEXT','修改');
 define('PERMISSION_DROP_TEXT','删除');

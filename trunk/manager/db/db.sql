@@ -42,7 +42,6 @@ CREATE TABLE IF NOT EXISTS user_permissions(
 	user_name		CHAR(32)	NOT NULL,
 	datetime		DATETIME	NOT NULL,
 	UNIQUE(permission_id,user_id),
-	UNIQUE(permission_name,user_name),
 	INDEX(permission_id),
 	INDEX(user_id),
 	INDEX(permission_name),
@@ -85,4 +84,6 @@ INSERT users(user_name, user_password) VALUES('admin', md5('admin'));
 INSERT permissions(permission_name) VALUES('admin');
 INSERT user_permissions(permission_id, permission_name, user_id, user_name)
 	VALUES(10000, 'admin', 1000000, 'admin');
+INSERT user_permissions(permission_id, permission_name, user_id, user_name)
+	VALUES(10001, 'data_admin', 1000000, 'admin');
 

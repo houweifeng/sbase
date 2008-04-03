@@ -1,7 +1,7 @@
 <?php
 include_once('./include/header.inc.php');
-if(!isset($sess_user) || !$sess_user->is_permission(SYSTEM_ADMIN)){
-        echo USER_ADMIN_PERMISSION_NOT_EXISTS;
+if(!isset($sess_user) || !$sess_user->is_permission(DATA_ADMIN)){
+        echo red(DATA_ADMIN_PERMISSION_NOT_EXISTS);
         exit;
 }
 $op         =  (isset($_POST['op'])) ? $_POST['op'] : '';
