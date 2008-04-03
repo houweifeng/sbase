@@ -16,7 +16,7 @@ if(isset($_POST['op']) && $_POST['op'] == 'login') {
 		$_SESSION['sess_user']=$obj_user;
 		$action = USER_LOGIN_SUCCESSED.",username:".$username.",password:".$password;
 		$obj_user->action_log($action,$username);
-		go2url('view.php');
+		go2url(DEFAULT_PAGE);
 	}
 }
 //logout
@@ -80,6 +80,6 @@ if(isset($_GET['op']) && $_GET['op'] == 'change'){
 		<?
 }
 include_once('./include/header.inc.php');
-go2url('view.php');
+go2url(DEFAULT_PAGE);
 require_once('./include/footer.inc.php');
 ?>

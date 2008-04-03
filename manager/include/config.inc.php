@@ -11,6 +11,7 @@ define('DB_NAME', 'manager_db');
 define('DEFAULT_DB', 'manager_db');
 define('SITE_NAME', '数据统计系统');
 define('ABSOLUTE_PATH', '/view');
+define('DEFAULT_PAGE', 'query.php');
 define('WEBMASTER_EMAIL', 'admin@abc.com');
 define('GRAPHCACHE_PATH', '/var/www/html/view/graphcache');
 
