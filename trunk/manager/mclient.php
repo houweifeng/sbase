@@ -15,7 +15,9 @@ if( isset($_POST['op']) && $_POST['op'] == 'user_add' ){
 	$password	= (isset($_POST['password']))?mysql_escape_string($_POST['password']):die(red(FULL_ENTER_USER_DATA));
 	$password1	= (isset($_POST['password1']))?mysql_escape_string($_POST['password1']):die(red(FULL_ENTER_USER_DATA));
 	$email		= (isset($_POST['email']))?mysql_escape_string($_POST['email']):'';
-	$desc		= (isset($_POST['desc']))?mysql_escape_string($_POST['desc']):'';
+	$tel      = (isset($_POST['tel']))?mysql_escape_string($_POST['tel']):'';
+    $desc		= (isset($_POST['desc']))?mysql_escape_string($_POST['desc']):'';
+    $status       = (isset($_POST['status']))?mysql_escape_string($_POST['status']):'';
 	($password != $password1)?die(red(TWO_PASSWORD_NOT_IDENTICAL)):null;
 	($sess_user->user_exists($username))?die(red(USER_REG_EXISTS)):null;
 	(!$sess_user->user_add($username,$password,$email,$desc))?die(USER_REG_FAILED):print(red(USER_REG_SUCCESSED));
@@ -211,8 +213,10 @@ function check_update_input(form){
 <TR><TD  bgcolor='#FFFFFF' align=left >密码     </TD><TD bgcolor='#FFFFFF'><input type=password name='password' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >确认密码</TD><TD bgcolor='#FFFFFF'><input type=password name='password1' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >EMAIL    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left >电话    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left ><select name="状态" size="1"><option value="激活"><option value="禁止"></select>    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >说明     </TD><TD bgcolor='#FFFFFF'><textarea name='desc' rows=6 cols=100 ><?isset($user_desc)?print($user_desc):null;?></textarea></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left ></TD><TD bgcolor='#FFFFFF'><input type=submit ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left ></TD><TD bgcolor='#FFFFFF'><input type=submit value="提交" ></TD></TR>
 </FORM>
 </TABLE>
 <?
@@ -246,9 +250,11 @@ function check_input(form){
 <TR><TD  bgcolor='#FFFFFF' align=left >用户名	</TD><TD bgcolor='#FFFFFF'><input type=text name='username' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >密码	</TD><TD bgcolor='#FFFFFF'><input type=password name='password' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >确认密码</TD><TD bgcolor='#FFFFFF'><input type=password name='password1' ></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left >EMAIL	</TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left >说明	</TD><TD bgcolor='#FFFFFF'><textarea name='desc' rows=6 cols=100 ></textarea></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left ></TD><TD bgcolor='#FFFFFF'><input type=submit ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left >EMAIL    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left >电话 </TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left >状态	</TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left >说明 </TD><TD bgcolor='#FFFFFF'><textarea name='desc' rows=6 cols=100 ></textarea></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left ></TD><TD bgcolor='#FFFFFF'><input type=submit value="提交" ></TD></TR>
 </FORM>
 </TABLE>
 <?
