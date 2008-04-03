@@ -162,7 +162,7 @@ function ActionDataForm(form)
 }
 </script>
 <TABLE cellspacing=0 bgcolor='#000000' width='100%' align=center >
-<FORM action='view.php' method='POST' name='URL' >
+<FORM action='' method='POST' name='URL' >
 <input type=hidden name='op' value='url_query'>
 <TR align=left>
 <TD bgcolor='#CCCC90' align=left width=100 ><b>URL查询:</b></TD>
@@ -178,7 +178,7 @@ URL地址<input type=text name='url' size=64 value='<? echo $url;?>'>
 </TABLE>
 
 <TABLE cellspacing=0 bgcolor='#000000' width='100%' align=center >
-<FORM action='view.php' method='POST' name='data' 
+<FORM action='' method='POST' name='data' 
     OnAction='javascript:return ActionDataForm(this);' >
 <input type=hidden name='op' value='data_query'>
 <TR>
