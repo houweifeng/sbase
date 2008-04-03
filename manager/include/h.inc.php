@@ -5,7 +5,7 @@
  */
 include_once('./lang/zh_CN.lang.php');
 include_once('./conf/permissions.conf.php');
-include_once('./conf/products.conf.php');
+include_once('./conf/base.conf.php');
 include_once('./include/config.inc.php');
 include_once('./include/functions.inc.php');
 include_once('./include/cdatabase.inc.php');
