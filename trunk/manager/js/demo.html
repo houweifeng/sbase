@@ -1,10 +1,31 @@
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<script src='js/functions.js'></script>
+<script src='js/utf.js'></script>
+<script src='js/base64.js'></script>
 <script src='js/cTable.js'></script>
 <script src='js/cPageSplit.js'></script>
 <script src='js/draw.js'></script>
+</head>
+<body>
 <div id='content'></div>
 <div id='PageSplit'></div>
 <br>
 <br>
 <br>
-<input type=button value='On Click Here AddData' onclick="javascript:DataAdd('^%2C,0,1,2,3,4,5,6,7,8,^9','content','PageSplit')" >
-
+<script language='javascript' >
+function RowAdd(dArray, HTMLID, PAGEID)
+{
+        var RowArray    = new Array();
+        RowArray = dArray.split(",");
+        PageSplit.DataAdd(RowArray);
+        DataShow(1,HTMLID,PAGEID,10, 10, 11);
+        //^ZmVpbGQ=,0,1,2,3,4,5,6,7,8,9,^dG90YWw=
+        //alert(strdecode('ZmVpbGQ='));
+        //alert(strdecode(strencode('total')));
+}
+</script>
+<input type=button value='On Click Here AddData' onclick="javascript:RowAdd('^'+base64encode('feild')+',0,1,2,3,4,5,6,7,8,9,total','content','PageSplit');" >
+</body>
+</html>

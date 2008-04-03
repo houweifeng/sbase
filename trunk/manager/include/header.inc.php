@@ -35,7 +35,7 @@ include_once('./include/h.inc.php');
 	  <td rowspan="2" align="left" valign="bottom"><img src="images/menu_line.gif" width="3" height="22"></td>
           <td width=100% >
             <table border="0" cellpadding="0" cellspacing="0" background="images/menu_bg.gif" height="22" width=100%>
-              <tr>
+              <tr align=left >
 		<?
 $menus	= Array();
 if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(DATA_ADMIN))
@@ -56,7 +56,7 @@ if(isset($sess_user) && $sess_user->IS_LOGGED_IN && $sess_user->is_permission(SY
     $menus['系统管理']	= 'system.php';
 }
 		foreach($menus as $text => $url ){?>
-		<td height="22" align="left" valign="bottom">
+		<td height="22" align="left" valign="bottom" >
 			<a href='<?echo $url?>' class='menu'><strong><?echo $text?></strong></a>
 		</td>
         	<td rowspan="2" align="left" valign="bottom"><img src="images/menu_line.gif" width="3" height="22"></td>

@@ -128,8 +128,8 @@ function cTable(){
             td_property     +=  (css) ? ' class = "'+css+'" ':' style = "'+this._td_css+'" ';
             td_property     +=  (align) ? ' align = '+align:' align = '+this._align;
             td_property     +=  (valign) ? ' valign = '+valign:' valign = '+this._valign;
-	if(ret){return '<TD '+td_property+' >'+strdecode(data)+"</TD>\n";}
-        this._table_var.push('<TD '+td_property+' >'+strdecode(data)+"</TD>\n"); 
+	if(ret){return '<TD '+td_property+' > '+strdecode(data)+" </TD>\n";}
+        this._table_var.push('<TD '+td_property+' > '+strdecode(data)+" </TD>\n"); 
     }
     //th
     this.th                 =   function(data,width,css,align,valign,ret){
@@ -139,8 +139,8 @@ function cTable(){
             td_property     +=  (align) ? ' align = '+align:' align = '+this._align;
             td_property     +=  (valign) ? ' valign = '+valign:' valign = '+this._valign;
             td_property     +=  ' bgcolor = '+this._header_color; 
-	if(ret){return '<TD '+td_property+' >'+strdecode(data)+"</TD>\n";}
-        this._table_var.push('<TD '+td_property+' >'+strdecode(data)+"</TD>\n");
+	if(ret){return '<TD '+td_property+' > '+strdecode(data)+" </TD>\n";}
+        this._table_var.push('<TD '+td_property+' > '+strdecode(data)+" </TD>\n");
     }
     //set td light  bgcolor
     this.set_table_light    =   function(color){

@@ -110,11 +110,13 @@ if( isset($_GET['op']) && $_GET['op'] == 'permission_drop' ){
 /***************************************user management ********************************/
 $_users_	= $sess_user->get_all_users();
 $title	= Array(
-	USER_ID_TITLE,
+//	USER_ID_TITLE,
 	USER_NAME_TITLE,
 	USER_DESC_TITLE,
 	USER_PERMISSION_ADMIN_TITLE,
-	USER_MANAGEMENT_TITLE
+	USER_MANAGEMENT_TITLE,
+    //USER_STATUS,
+   // USER_PHONE
 );
 foreach($title AS $key => $val){
 	$arr['title'][$key] = '^'.base64_encode($val);
@@ -160,10 +162,13 @@ if(is_array($_users_)){
 	}
 	$user_permission	= $user_perm_list." ".$user_perm_select;
 	$arr[$user_id] = Array(
-		'user_id'	=>	jsescape($_user['user_id']), 
+		//'user_id'	=>	jsescape($_user['user_id']), 
 		'user_name'	=>	jsescape($_user['user_name']),
-		'user_desc'	=>	jsescape($_user['user_desc']),
-		'user_perm'	=>	jsescape($user_permission),
+		 'user_desc' =>  jsescape($_user['user_desc']),
+         //'user_status'    =>  jsescape($_user['user_status']),
+         //'user_phone'	=>	jsescape($_user['user_phone']),
+	   // 'user_perm' =>  jsescape($user_permission),
+        'user_status'	=>	jsescape('可用'),
 		'user_admin'	=>	jsescape($user_admin),
 	);
  }
@@ -214,7 +219,6 @@ function check_update_input(form){
 <TR><TD  bgcolor='#FFFFFF' align=left >确认密码</TD><TD bgcolor='#FFFFFF'><input type=password name='password1' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >EMAIL    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >电话    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left >状态    </TD><TD bgcolor='#FFFFFF'<select name='状态' size='1'><option value='激活'><option value='禁止'></select>  <input type=text name='status' value='<?isset($user_status)?print($user_status):null;?>' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >说明     </TD><TD bgcolor='#FFFFFF'><textarea name='desc' rows=6 cols=100 ><?isset($user_desc)?print($user_desc):null;?></textarea></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left ></TD><TD bgcolor='#FFFFFF'><input type=submit value="提交" ></TD></TR>
 </FORM>
@@ -252,7 +256,6 @@ function check_input(form){
 <TR><TD  bgcolor='#FFFFFF' align=left >确认密码</TD><TD bgcolor='#FFFFFF'><input type=password name='password1' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >EMAIL    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >电话 </TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left >状态	</TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >说明 </TD><TD bgcolor='#FFFFFF'><textarea name='desc' rows=6 cols=100 ></textarea></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left ></TD><TD bgcolor='#FFFFFF'><input type=submit value="提交" ></TD></TR>
 </FORM>

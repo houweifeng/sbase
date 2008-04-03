@@ -58,11 +58,13 @@ CREATE TABLE IF NOT EXISTS clients(
 	client_phone	VARCHAR(32)	NOT NULL,
 	client_email	    VARCHAR(128)	NOT NULL,
 	client_desc	    VARCHAR(255)	NOT NULL,
+	client_status	INT	    NOT NULL,
 	client_datetime	DATETIME	NOT NULL,
 	PRIMARY KEY(client_id),
 	UNIQUE(client_name),
 	INDEX(client_name),
 	INDEX(client_email),
+	INDEX(client_status),
 	INDEX(client_datetime)
 	)AUTO_INCREMENT=2000000;
 

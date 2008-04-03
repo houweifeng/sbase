@@ -188,8 +188,15 @@ URL地址<input type=text name='url' size=64 value='<? echo $url;?>'>
 	<TD bgcolor='#CCCCCC' align=left width >
     关键词<input type=text name='keyword' size=32 value='<? echo $keyword;?>'>
     类别<select name='data_type' >
-    <option value='product' >产品</option>
-    <option value='site' >公司</option>
+    <?php $type_list = Array('product' => '产品', 'company' => '公司');
+    foreach($type_list as $k => $v)
+    {
+        if($k == $data_type)
+            echo "<option value='$k' selected>$v</option>";
+        else
+            echo "<option value='$k' >$v</option>";
+    }
+    ?>
     </select>
     <input type=submit name='submit' value='查询' >
 	</TD>	
