@@ -214,7 +214,7 @@ function check_update_input(form){
 <TR><TD  bgcolor='#FFFFFF' align=left >确认密码</TD><TD bgcolor='#FFFFFF'><input type=password name='password1' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >EMAIL    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >电话    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left ><select name="状态" size="1"><option value="激活"><option value="禁止"></select>    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left >状态    </TD><TD bgcolor='#FFFFFF'<select name="状态" size="1"><option value="激活"><option value="禁止"></select>  <input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >说明     </TD><TD bgcolor='#FFFFFF'><textarea name='desc' rows=6 cols=100 ><?isset($user_desc)?print($user_desc):null;?></textarea></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left ></TD><TD bgcolor='#FFFFFF'><input type=submit value="提交" ></TD></TR>
 </FORM>
