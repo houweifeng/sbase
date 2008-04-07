@@ -113,6 +113,7 @@ $title	= Array(
 //	USER_ID_TITLE,
 	USER_NAME_TITLE,
 	USER_DESC_TITLE,
+    //USER_STATS_TITLE，
 	USER_PERMISSION_ADMIN_TITLE,
 	USER_MANAGEMENT_TITLE,
     //USER_STATUS,
@@ -125,8 +126,10 @@ if(is_array($_users_)){
  foreach($_users_ as $user_id => $_user){
 	$user_admin		=  "<a href=\"?op=user_update&user_id=".$user_id."\" >";
 	$user_admin             .= USER_UPDATE_TEXT." </a>";
-	$user_admin		.= "<a href=\"?op=user_drop&user_id=".$user_id."\" > ";
-	$user_admin             .= USER_DROP_TEXT." </a> ";
+	$user_admin     .= "<a href=\"?op=user_drop&user_id=".$user_id."\" > ";
+    $user_admin             .= USER_DROP_TEXT." </a> ";
+    $user_admin		.= "<a href=\"?op=user_drop&user_id=".$user_id."\" > ";
+	$user_admin             .= USER_UPSTATS_TEXT." </a> ";
 	$user_perm_list		=  "<table width=100% bgcolor='#C0C0C0' cellspacing =0 height=26>";
 	$user_perm_list         .= "<tr><td width='100%' align=center ><b>";
 	$user_perm_list         .= PERMISSION_LIST_TEXT."</b></td></tr></table><hr>";

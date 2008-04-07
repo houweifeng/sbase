@@ -1,4 +1,11 @@
 <?php
+define('URL_SVR_HOST', '127.0.0.1');
+define('URL_SVR_PORT', '65536');
+define('CALL_TIMEOUT', 200000);
+define('FEILD_DELIMITER', '\t'); 
+define('SOCK_END', '\n');
+define('RESP_OK', 'OK\n');
+$priority_list = Array('0' => '普通', '1' => '中级', '2' => '高级');
 $url_data_feilds = Array(
         'URLID' => 'UrlMD5',
         'Url地址' => 'Url',
