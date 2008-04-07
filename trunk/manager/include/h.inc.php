@@ -9,6 +9,8 @@ include_once('./conf/base.conf.php');
 include_once('./include/config.inc.php');
 include_once('./include/functions.inc.php');
 include_once('./include/cinterface.inc.php');
+include_once('./include/cdatadb.inc.php');
+include_once('./include/cstoredb.inc.php');
 include_once('./include/cdatabase.inc.php');
 include_once('./include/ctable.inc.php');
 include_once('./include/cform.inc.php');

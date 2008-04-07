@@ -34,16 +34,55 @@ if($op == 'url_query')
 //add URL
 if($op == 'url_add')
 {
+    if($url)
+    {
+        $uri = new cInterface(URL_SVR_HOST, URL_SVR_PORT);
+        $uri->addurl($url, $priority);
+        if($uri->send())
+        {
+            $data = "";
+        }
+        else
+        {
+            $data = "";
+        }
+    }
 }
 
 //change priority 
 if($op == 'pri_change')
 {
+    if($url)
+    {
+        $uri = new cInterface(URL_SVR_HOST, URL_SVR_PORT);
+        $uri->addurl($url, $priority);
+        if($uri->send())
+        {
+            $data = "";
+        }
+        else
+        {
+            $data = "";
+        }
+    }
 }
 
 //redownload
 if($op == 'redownload')
 {
+    if($url)
+    {
+        $uri = new cInterface(URL_SVR_HOST, URL_SVR_PORT);
+        $uri->addurl($url, $priority);
+        if($uri->send())
+        {
+            $data = "";
+        }
+        else
+        {
+            $data = "";
+        }
+    }
 }
 
 //data query
@@ -51,6 +90,9 @@ if($op == 'data_query')
 {
     if($data_type == 'product')
     {
+        $storedb = new cStoredb(STORE_DB_HOST, STORE_DB_USERNAME, 
+            STORE_DB_PASSWD, STORE_DB_NAME, STORE_DB_TYPE);
+        $data = $storedb->find_product($keyword);
         $product_data_array = Array (
                 'NFOID' => '',
                 'GETINFOTIME' => '',
@@ -91,6 +133,9 @@ if($op == 'data_query')
     }
     if($data_type == 'company')
     {
+        $storedb = new cStoredb(STORE_DB_HOST, STORE_DB_PORT, 
+            STORE_DB_USERNAME, STORE_DB_PASSWD, STORE_DB_TYPE);
+        $data = $storedb->find_product($keyword);
         $company_data_array = Array(
         'INFOID' => '',
         'URL' => '',
