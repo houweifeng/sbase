@@ -5,8 +5,51 @@ define('CALL_TIMEOUT', 200000);
 define('FEILD_DELIMITER', '\t'); 
 define('SOCK_END', '\n');
 define('RESP_OK', 'OK\n');
+define('STORE_DB_HOST', '127.0.0.1:3306');
+define('STORE_DB_NAME', 'manager_db');
+define('STORE_DB_USERNAME', 'dbadmin');
+define('STORE_DB_PASSWD', 'dbadmin');
+define('STORE_DB_TYPE', 'mysql');
+define('DATA_DB_HOST', '127.0.0.1:3306');
+define('DATA_DB_NAME', 'manager_db');
+define('DATA_DB_USERNAME', 'dbadmin');
+define('DATA_DB_PASSWD', 'dbadmin');
+define('DATA_DB_TYPE', 'mysql');
 $priority_list = Array('0' => '普通', '1' => '中级', '2' => '高级');
 $client_status_list = Array('0' => '可用', '1' => '禁用');
+$data_view_type_list = Array(
+        'client' => '节点按天', 
+        'domain' => '站点按天 ',
+        'total' => '汇总');
+$client_day_feilds = Array(
+        '节点ID' => 'ClientID',
+        '下载总页面数' => 'TotalPage',
+        '下载成功页面数' => 'DownPage',
+        '下载失败页面数' => 'DownFailedPage',
+        '总下载时长' => 'DownTime',
+        '下载总字节数' => 'TotalBytes',
+        '下载平均速度' => 'DownSpeedAvg'
+        );
+$domain_day_feilds = Array(
+        '站点ID' => 'DomainID',
+        '下载总页面数' => 'TotalPage',
+        '下载成功页面数' => 'DownPage',
+        '下载失败页面数' => 'DownFailedPage',
+        '总下载时长' => 'DownTime',
+        '下载总字节数' => 'TotalBytes',
+        '下载平均速度' => 'DownSpeedAvg',
+        '下载客户端数目' => 'ClientCount'
+        );
+$client_total_feilds = Array(
+        '节点ID' => 'ClientID',
+        '客户端IP地址' => 'IP',
+        '当前下载总数' => 'TotalCount',
+        '已经完成总数' => 'DownPage',
+        '下载失败总数' => 'DownFailedPage',
+        '总下载时长' => 'DownTime',
+        '下载总字节数' => 'TotalBytes',
+        '下载平均速度' => 'DownSpeedAvg');
+
 $url_data_feilds = Array(
         'URLID' => 'UrlMD5',
         'Url地址' => 'Url',

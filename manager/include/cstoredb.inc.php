@@ -3,10 +3,10 @@ class cStoredb
 {
 	var $db;
 
-	function cStoredb($db_host, $db_port, $db_passwd, $db_name)
+	function cStoredb($db_host, $db_username, $db_passwd, $db_name, $db_type)
 	{
-        $this->db = new cDatabase($db_host, $db_port, $db_passwd,
-            'mssql', $db_name, false, false);
+        $this->db = new cDatabase($db_host, $db_username, $db_passwd,
+            $db_type, $db_name, false, false);
     }
 
 	function checkdb()
@@ -19,9 +19,9 @@ class cStoredb
 	{
         if($this->checkdb() == false) 
             return false;
-        $table = ""
+        $table = "";
         $SQL =  "SELECT * FROM $table WHERE  PRODUCTCNAME ";
-        $SQL .= " = '$keyword' OR  PRODUCTENAME = '$keyword';"
+        $SQL .= " = '$keyword' OR  PRODUCTENAME = '$keyword';";
         if(($result = $this->db->query($SQL)))
         {
             return $this->db->fetch_array($result);
@@ -34,9 +34,9 @@ class cStoredb
 	{
         if($this->checkdb() == false) 
             return false;
-        $table = ""
+        $table = "";
         $SQL =  "SELECT * FROM $table WHERE  PRODUCTCNAME ";
-        $SQL .= " = '$keyword' OR  PRODUCTENAME = '$keyword';"
+        $SQL .= " = '$keyword' OR  PRODUCTENAME = '$keyword';";
         if(($result = $this->db->query($SQL)))
         {
             return $this->db->fetch_array($result);

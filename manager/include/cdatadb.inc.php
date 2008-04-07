@@ -1,12 +1,12 @@
 <?php
-class cData
+class cDatadb
 {
 	var $db;
 
-	function cData($db_host, $db_port, $db_passwd, $db_name)
+	function cDatadb($db_host, $db_username, $db_passwd, $db_name, $db_type)
 	{
-        $this->db = new cDatabase($db_host, $db_port, $db_passwd,
-            'mssql', $db_name, false, false);
+        $this->db = new cDatabase($db_host, $db_username, $db_passwd,
+            $db_type, $db_name, false, false);
     }
 
 	function checkdb()
@@ -19,8 +19,8 @@ class cData
         if($this->checkdb() == false) 
             return false;
         $urlmd5 = hexdec(md5(ltrim(rtrim($url))));
-        $table = ""
-        $SQL = "SELECT * FROM $table WHERE UrlMD5 = '$urlmd5';"
+        $table = "";
+        $SQL = "SELECT * FROM $table WHERE UrlMD5 = '$urlmd5';";
         if(($result = $this->db->query($SQL)))
         {
             return $this->db->fetch_array($result);
@@ -55,7 +55,7 @@ class cData
     }
 
     //get total static 
-    function get_client_sum()
+    function get_client_total()
     {
         if($this->checkdb() == false) return false;
         $table  = "DomainDayQuery".$date;
