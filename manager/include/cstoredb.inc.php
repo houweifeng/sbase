@@ -3,10 +3,9 @@ class cStoredb
 {
 	var $db;
 
-	function cStoredb($db_host, $db_username, $db_passwd, $db_name, $db_type)
+	function cStoredb(&$db)
 	{
-        $this->db = new cDatabase($db_host, $db_username, $db_passwd,
-            $db_type, $db_name, false, false);
+        $this->db = $db;
     }
 
 	function checkdb()

@@ -90,8 +90,7 @@ if($op == 'data_query')
 {
     if($data_type == 'product')
     {
-        $storedb = new cStoredb(STORE_DB_HOST, STORE_DB_USERNAME, 
-            STORE_DB_PASSWD, STORE_DB_NAME, STORE_DB_TYPE);
+        $storedb = new cStoredb($db); 
         $data = $storedb->find_product($keyword);
         $product_data_array = Array (
                 'NFOID' => '',
