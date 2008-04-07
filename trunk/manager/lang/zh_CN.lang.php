@@ -54,5 +54,6 @@ define('PERMISSION_LIST_TEXT','权限列表');
 define('PERMISSION_SELECT_TEXT','请选择');
 define('USER_STATS_TITLE','用户状态管理');
 define('USER_PHONE_TITLE','电话');
-
+define('USER_DISABLE_TEXT','禁用');
+define('USER_ENABLE_TEXT','可用');
 ?>
