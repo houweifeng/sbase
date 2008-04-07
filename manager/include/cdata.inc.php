@@ -3,21 +3,68 @@ class cData
 {
 	var $db;
 
-	function cData()
+	function cData($db_host, $db_port, $db_passwd, $db_name)
 	{
-		return ;
+        $this->db = new cDatabase($db_host, $db_port, $db_passwd,
+            'mssql', $db_name, false, false);
+    }
+
+	function checkdb()
+	{
+        return is_resource($this->db->link_id);
 	}
 
-	function get_statics($from, $count)
+	function find_url($url)
 	{
-		if($from >= 0 && $count > 0)
-		{
-			$SQL = "SELECT ";
-		}
+        if($this->checkdb() == false) 
+            return false;
+        $urlmd5 = hexdec(md5(ltrim(rtrim($url))));
+        $table = ""
+        $SQL = "SELECT * FROM $table WHERE UrlMD5 = '$urlmd5';"
+        if(($result = $this->db->query($SQL)))
+        {
+            return $this->db->fetch_array($result);
+        }
+        return false;
 	}
 
-	function get_all_list()
-	{
-	}
+    //get client day statics table 
+    function get_client_stat($date)
+    {
+        if($this->checkdb() == false) return false;
+        $table  = "ClientDayQuery".$date; 
+        $SQL    = "SELECT * FROM $table";
+        if(($result = $this->db->query($SQL)))
+        {   
+            return $this->db->fetch_array($result);
+        }
+        return false;
+    }
+
+    //get client day statics table 
+    function get_domain_stat($date)
+    {
+        if($this->checkdb() == false) return false;
+        $table  = "DomainDayQuery".$date; 
+        $SQL    = "SELECT * FROM $table";
+        if(($result = $this->db->query($SQL)))
+        {   
+            return $this->db->fetch_array($result);
+        }
+        return false;
+    }
+
+    //get total static 
+    function get_client_sum()
+    {
+        if($this->checkdb() == false) return false;
+        $table  = "DomainDayQuery".$date;
+        $SQL    = "SELECT * FROM $table";
+        if(($result = $this->db->query($SQL)))
+        {
+            return $this->db->fetch_array($result);
+        }
+        return false;
+    }
 }
 ?>

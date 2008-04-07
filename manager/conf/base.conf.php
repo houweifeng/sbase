@@ -6,6 +6,7 @@ define('FEILD_DELIMITER', '\t');
 define('SOCK_END', '\n');
 define('RESP_OK', 'OK\n');
 $priority_list = Array('0' => '普通', '1' => '中级', '2' => '高级');
+$client_status_list = Array('0' => '可用', '1' => '禁用');
 $url_data_feilds = Array(
         'URLID' => 'UrlMD5',
         'Url地址' => 'Url',

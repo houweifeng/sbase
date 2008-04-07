@@ -113,9 +113,9 @@ $title	= Array(
 //	USER_ID_TITLE,
 	USER_NAME_TITLE,
 	USER_DESC_TITLE,
-    //USER_STATS_TITLE，
-	USER_PERMISSION_ADMIN_TITLE,
-	USER_MANAGEMENT_TITLE,
+    USER_STATS_TITLE,
+	//USER_PERMISSION_ADMIN_TITLE,
+	USER_MANAGEMENT_TITLE
     //USER_STATUS,
    // USER_PHONE
 );
@@ -128,8 +128,18 @@ if(is_array($_users_)){
 	$user_admin             .= USER_UPDATE_TEXT." </a>";
 	$user_admin     .= "<a href=\"?op=user_drop&user_id=".$user_id."\" > ";
     $user_admin             .= USER_DROP_TEXT." </a> ";
-    $user_admin		.= "<a href=\"?op=user_drop&user_id=".$user_id."\" > ";
-	$user_admin             .= USER_UPSTATS_TEXT." </a> ";
+    if(($status = $_user['status']) == 0)
+    {
+        $text = $client_status_list[$status];
+        $user_admin		.= "<a href=\"?op=user_disable&user_id=".$user_id."\" > ";
+	    $user_admin             .= USER_DISABLE_TEXT." </a> ";
+    }
+    else
+    {
+        $user_admin		.= "<a href=\"?op=user_enable&user_id=".$user_id."\" > ";
+	    $user_admin             .= USER_ENABLE_TEXT." </a> ";
+    }
+        
 	$user_perm_list		=  "<table width=100% bgcolor='#C0C0C0' cellspacing =0 height=26>";
 	$user_perm_list         .= "<tr><td width='100%' align=center ><b>";
 	$user_perm_list         .= PERMISSION_LIST_TEXT."</b></td></tr></table><hr>";
