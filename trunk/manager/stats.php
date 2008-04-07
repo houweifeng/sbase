@@ -33,21 +33,24 @@ $date       =  (isset($_POST['date'])) ? $_POST['date'] : '';
 //view URL stat
 if($op == 'view')
 {
-    $obj = new cData(DATA_DB_HOST, DATA_DB_USERNAME,
-            DATA_DB_PASSWD, DATA_DB_NAME, DATA_DB_TYPE);
+    $obj = new cDatadb($datadb);
+
     //client stats
     if($view_type == 'client')
     {
         $arr = Array();
-        $data = $obj->get_client_stats($date);
+        $data = $obj->get_client_stat($date);
         foreach($client_day_feilds AS $ktitle => $vfeild)
-            $arr['title'][$vfeild] = jsescape($ktitle);
-        for($i = 0; $i < count($data); $i++)
+            $arr['title'][$vfeild] = '^'.jsescape($ktitle);
+        if(is_array($data))
         {
-            $client = $data[$i]['ClientID'];
-            foreach($client_day_feilds AS $ktitle => $vfeild)
+            for($i = 0; $i < count($data); $i++)
             {
-                $arr[$client][$vfeild] = jsescape($data[$i][$vfeild]);
+                $client = $data[$i]['ClientID'];
+                foreach($client_day_feilds AS $ktitle => $vfeild)
+                {
+                    $arr[$client][$vfeild] = jsescape($data[$i][$vfeild]);
+                }
             }
         }
     }
@@ -56,18 +59,21 @@ if($op == 'view')
     if($view_type == 'domain')
     {
         $arr = Array();
-        $data = $obj->get_domain_stats($date);
+        $data = $obj->get_domain_stat($date);
         foreach($domain_day_feilds AS $ktitle => $vfeild)
             $arr['title'][$vfeild] = '^'.jsescape($ktitle);
-        for($i = 0; $i < count($data); $i++)
+        if(is_array($data))
         {
-            $domain = $data[$i]['DomainID'];
-            foreach($domain_day_feilds AS $ktitle => $vfeild)
+            for($i = 0; $i < count($data); $i++)
             {
-                if($vfeild == 'DomainID') 
-                    $arr[$domain][$vfeild] = '^'.jsescape($data[$i][$vfeild]);
-                else
-                    $arr[$domain][$vfeild] = jsescape($data[$i][$vfeild]);
+                $domain = $data[$i]['DomainID'];
+                foreach($domain_day_feilds AS $ktitle => $vfeild)
+                {
+                    if($vfeild == 'DomainID') 
+                        $arr[$domain][$vfeild] = '^'.jsescape($data[$i][$vfeild]);
+                    else
+                        $arr[$domain][$vfeild] = jsescape($data[$i][$vfeild]);
+                }
             }
         }
     }
@@ -76,15 +82,18 @@ if($op == 'view')
     if($view_type == 'total')
     {
         $arr = Array();
-        $data = $obj->get_client_stats($date);
+        $data = $obj->get_client_total($date);
         foreach($client_day_feilds AS $ktitle => $vfeild)
-            $arr['title'][$vfeild] = jsescape($ktitle);
-        for($i = 0; $i < count($data); $i++)
+            $arr['title'][$vfeild] = '^'.jsescape($ktitle);
+        if(is_array($data))
         {
-            $client = $data[$i]['ClientID'];
-            foreach($client_day_feilds AS $ktitle => $vfeild)
+            for($i = 0; $i < count($data); $i++)
             {
-                $arr[$client][$vfeild] = jsescape($data[$i][$vfeild]);
+                $client = $data[$i]['ClientID'];
+                foreach($client_day_feilds AS $ktitle => $vfeild)
+                {
+                    $arr[$client][$vfeild] = jsescape($data[$i][$vfeild]);
+                }
             }
         }
     }
@@ -95,7 +104,7 @@ if($op == 'view')
     foreach($arr AS $KID => $VARR)
         $string .= " DataListArray['".$KID."'] = '".implode(',',$VARR)."';\n";
     $string .= "DataInit(DataListArray,'content',";
-    $string .= "'pagesplit',10,20,".count($title).");\n";
+    $string .= "'pagesplit',10,20,".count($arr['title']).");\n";
     $string .= "</script>\n";
 
     echo "<div id='content' valign='top' ></div>\n";
