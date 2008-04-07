@@ -36,6 +36,16 @@ if($op == 'url_add')
 {
 }
 
+//change priority 
+if($op == 'pri_change')
+{
+}
+
+//redownload
+if($op == 'redownload')
+{
+}
+
 //data query
 if($op == 'data_query')
 {
@@ -224,8 +234,7 @@ if($op == 'url_query')
                 $result_string .= "<TD bgcolor='#ffffff' align=left width=200 ><b>".$k."</b></TD>"; 
                 $result_string .= "<TD bgcolor='#ffffff' align=left>".$url_data_array[$v];
                 $result_string .= "<select name='priority' >";
-                $priority_list = Array('1' => '紧急', '2' => '尽快');
-                foreach($priority_list as $opv => $optxt)
+                foreach($priority_list AS $opv => $optxt)
                 {
                     $result_string .= "<option value='$opv'>$optxt</option>";
                 }

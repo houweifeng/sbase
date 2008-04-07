@@ -52,8 +52,7 @@ define('PERMISSION_DROP_TEXT','删除');
 define('PERMISSION_ADD_TEXT','添加权限');
 define('PERMISSION_LIST_TEXT','权限列表');
 define('PERMISSION_SELECT_TEXT','请选择');
-define('USER_STATUS','状态');
-define('USER_PHONE','电话');
-
+define('USER_STATS_TITLE','用户状态管理');
+define('USER_PHONE_TITLE','电话');
 
 ?>
