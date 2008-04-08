@@ -119,7 +119,7 @@ foreach($title AS $key => $val){
 }
 if(is_array($_users_)){
  foreach($_users_ as $user_id => $_user){
-	$user_admin		=  "<a href=\"?op=user_update&user_id=".$user_id."\" >";
+	$user_admin		=  "<a href=\"?op=user_edit&user_id=".$user_id."\" >";
 	$user_admin             .= USER_UPDATE_TEXT." </a>";
 	$user_admin		.= "<a href=\"?op=user_drop&user_id=".$user_id."\" > ";
 	$user_admin             .= USER_DROP_TEXT." </a> ";
@@ -180,7 +180,7 @@ unset($string);
 /****************************************user management ******************************************/
 
 /****************************************user UPDATE form******************************************/
-if(isset($_GET['op']) && $_GET['op'] == 'user_update'){
+if(isset($_GET['op']) && $_GET['op'] == 'user_edit'){
 	if(isset($_GET['user_id'])){
 		$user_id        = mysql_escape_string($_GET['user_id']);
 	}else{
@@ -191,6 +191,7 @@ if(isset($_GET['op']) && $_GET['op'] == 'user_update'){
 		die(red(INVALID_USER_ID));
 	}else{
 		@extract($_user_);
+        print_r($_user_);
 	}
 ?>
 <script language='javascript'>
@@ -208,7 +209,7 @@ function check_update_input(form){
 <INPUT type=hidden name='userid' value='<?isset($user_id)?print($user_id):null;?>'>
 <TR><TD  bgcolor='#C0C0C0' align=left ></TD><TD bgcolor='#C0C0C0'>用户资料修改</TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >用户名   </TD><TD bgcolor='#FFFFFF'><?isset($user_name)?print($user_name):null;?></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left >密码     </TD><TD bgcolor='#FFFFFF'><input type=password name='password' ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left >密码     </TD><TD bgcolor='#FFFFFF'><input type=password name='password'  ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >确认密码</TD><TD bgcolor='#FFFFFF'><input type=password name='password1' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >EMAIL    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' value='<?isset($user_email)?print($user_email):null;?>' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >说明     </TD><TD bgcolor='#FFFFFF'><textarea name='desc' rows=6 cols=100 ><?isset($user_desc)?print($user_desc):null;?></textarea></TD></TR>
