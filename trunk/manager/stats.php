@@ -9,7 +9,7 @@ $view_type  = (isset($_POST['view_type'])) ? $_POST['view_type'] : '';
 $date       =  (isset($_POST['date'])) ? $_POST['date'] : '';
 ?>
 <TABLE cellspacing=0 bgcolor='#000000' width=100% align=center class='form'>
-<FORM action='' method='POST' >
+<FORM action='stats.php' method='POST' >
 <input type=hidden name='op' value='view'>
 <TR>
 <TD bgcolor='#CCCCCC' align=left width=200 ><b>下载统计查看</b></TD>
@@ -23,7 +23,18 @@ $date       =  (isset($_POST['date'])) ? $_POST['date'] : '';
             echo "<option value='$opv' >$optxt</option>";
     }?>
     </select>
-    日期<input type=text name='date' value='<? echo $date ?>'>
+    日期:<select  name='date' >
+    <?php
+    if($date) $endtime = strtotime($date);
+    else $endtime = time() - 86400;
+    for($i = 0; $i < 31; $i++)
+    {
+        $day = date('Ymd', $endtime);
+        $endtime -= 86400;
+        echo "<option value='$day'> $day </option>\n";
+    }
+    ?>
+    </select>
     <input type=submit name='submit' >
     </TD>
 </TR>
