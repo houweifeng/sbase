@@ -69,6 +69,7 @@ $url_data_feilds = Array(
         '原文字节数目' => 'Bytes'
         );
 $product_data_feilds = Array(
+        '产品ID' => 'INFOID',
         '抓取时间' => 'GETINFOTIME',
         '网站名称' => 'WebName',
         '原文URL' => 'URL',
@@ -106,7 +107,7 @@ $product_data_feilds = Array(
         '热词标记' => 'Word'
         );
         $company_data_feilds = Array(
-                '一次库主键' => 'INFOID',
+                '公司ID' => 'INFOID',
                 '原文URL' => 'URL',
                 '一次库频道' => 'SITEID',
                 '抓取时间' => 'GETINFOTIME',
