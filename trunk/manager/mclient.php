@@ -268,7 +268,7 @@ function check_input(form){
 <TR><TD  bgcolor='#FFFFFF' align=left >密码	</TD><TD bgcolor='#FFFFFF'><input type=password name='password' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >确认密码</TD><TD bgcolor='#FFFFFF'><input type=password name='password1' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >EMAIL    </TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
-<TR><TD  bgcolor='#FFFFFF' align=left >电话 </TD><TD bgcolor='#FFFFFF'><input type=text name='email' ></TD></TR>
+<TR><TD  bgcolor='#FFFFFF' align=left >电话 </TD><TD bgcolor='#FFFFFF'><input type=text name='phone' ></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left >说明 </TD><TD bgcolor='#FFFFFF'><textarea name='desc' rows=6 cols=100 ></textarea></TD></TR>
 <TR><TD  bgcolor='#FFFFFF' align=left ></TD><TD bgcolor='#FFFFFF'><input type=submit value="提交" ></TD></TR>
 </FORM>
