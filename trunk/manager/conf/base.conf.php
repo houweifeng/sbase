@@ -17,6 +17,7 @@ define('DATA_DB_PASSWORD', 'dbadmin');
 define('DATA_DB_TYPE', 'mysql');
 $priority_list = Array('0' => '普通', '1' => '中级', '2' => '高级');
 $client_status_list = Array('0' => '可用', '1' => '禁用');
+$query_data_type_list = Array('product' => '产品', 'company' => '公司');
 $data_view_type_list = Array(
         'client' => '节点按天', 
         'domain' => '站点按天 ',

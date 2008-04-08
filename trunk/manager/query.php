@@ -9,28 +9,6 @@ $url        =  (isset($_POST['url'])) ? $_POST['url'] : '';
 $keyword    =  (isset($_POST['keyword'])) ? $_POST['keyword'] : '';
 $data_type  =  (isset($_POST['data_type'])) ? $_POST['data_type'] : '';
 $priority   =  (isset($_POST['priority'])) ? $_POST['priority'] : '';
-//query URL 
-if($op == 'url_query')
-{
-    $url_data_array = Array(
-            'UrlMD5' => 'dskfjalkdsfjdlkf',
-            'Url' => 'http://www.china.com',
-            'DownloadTime' => '2008-02-15 05:22:34',
-            'SubmitTime' => '2008-02-15 03:22:34',
-            'EndTime' => '2008-02-15 05:22:34',
-            'UseTime' => '2008-02-15 05:22:34',
-            'ParserTime' => '2008-02-15 05:22:34',
-            'ParserEndTime' => '2008-02-15 05:22:34',
-            'DownlCount' => '1',
-            'ParserCount' => '1',
-            'Priority' => '1',
-            'DomainID' => '100',
-            'Status' => '1',
-            'Flag' => '1',
-            'Bytes' => '1024'
-            ); 
-}
-
 //add URL
 if($op == 'url_add')
 {
@@ -40,11 +18,11 @@ if($op == 'url_add')
         $uri->addurl($url, $priority);
         if($uri->send())
         {
-            $data = "";
+            $strings = "添加URL[$url]优先级成功!";
         }
         else
         {
-            $data = "";
+            $strings = red("添加URL[$url]优先级失败!");
         }
     }
 }
@@ -58,11 +36,11 @@ if($op == 'pri_change')
         $uri->addurl($url, $priority);
         if($uri->send())
         {
-            $data = "";
+            $strings = "修改URL[$url]优先级成功!";
         }
         else
         {
-            $data = "";
+            $strings = red("修改URL[$url]优先级失败!");
         }
     }
 }
@@ -82,106 +60,6 @@ if($op == 'redownload')
         {
             $data = "";
         }
-    }
-}
-
-//data query
-if($op == 'data_query')
-{
-    if($data_type == 'product')
-    {
-        $storedb = new cStoredb($db); 
-        $data = $storedb->find_product($keyword);
-        $product_data_array = Array (
-                'NFOID' => '',
-                'GETINFOTIME' => '',
-                'WebName' => '',
-                'URL' => '',
-                'PRODUCTCNAME' => '',
-                'PRODUCTENAME' => '',
-                'CATEGORIES' => '',
-                'BRANDNAME' => '',
-                'KEYWORD ' => '',
-                'DESCRIPTION' => '',
-                'MODEL' => '',
-                'PUBDATE' => '',
-                'EXPDATE' => '',
-                'ORIGIN' => '',
-                'PACKAGING' => '',
-                'STANDARD' => '',
-                'PAYMENT' => '',
-                'DELIVERY' => '',
-                'PRICE' => '',
-                'INSPECTION' => '',
-                'MINIMUMORDER' => '',
-                'QUALITYCERTIFICATION' => '',
-                'PICURL' => '',
-                'BYTES' => '',
-                'LPATH' => '',
-                'PICLPATH' => '',
-                'CONTACTUSURL' => '',
-                'SHOWROOMURL' => '',
-                'SHOWROOMMD5' => '',
-                'ISPICEXIST' => '',
-                'DOMAIN_ID' => '',
-                'TYPEID' => '',
-                'SiteId' => '',
-                'WordID' => '',
-                'OrderNo' => '',
-                'Word' => '');
-    }
-    if($data_type == 'company')
-    {
-        $storedb = new cStoredb(STORE_DB_HOST, STORE_DB_PORT, 
-            STORE_DB_USERNAME, STORE_DB_PASSWD, STORE_DB_TYPE);
-        $data = $storedb->find_product($keyword);
-        $company_data_array = Array(
-        'INFOID' => '',
-        'URL' => '',
-        'SITEID' => '',
-        'GETINFOTIME' => '',
-        'IDENTITYS' => '',
-        'COMPANYCNAME' => '',
-        'COMPANYENAME' => '',
-        'BUSINESSTYPE' => '',
-        'CONTECTPERSON' => '',
-        'EMAIL' => '',
-        'INDUSTRY' => '',
-        'STREETADDRESS' => '',
-        'CITY' => '',
-        'PROVINCE_STATE' => '',
-        'BUSINESSPHONE' => '',
-        'FAX' => '',
-        'MOBILEPHONE' => '',
-        'PRUDUCTKEYWORDS' => '',
-        'CATEGORIES' => '',
-        'MAINMARCKETS' => '',
-        'EMPLOYEENUMBER' => '',
-        'COMPANYINTRODUCTION' => '',
-        'ANNUALSALES' => '',
-        'YEARESTABLISHED' => '',
-        'CETTIFICATES' => '',
-        'BANKINFORMATION' => '',
-        'TRADEINFORMATION' => '',
-        'CAPITALASSETS' => '',
-        'TRADEMARK' => '',
-        'OEMSERVICE' => '',
-        'WEBSITE' => '',
-        'ABOUTFACTORY' => '',
-        'RD' => '',
-        'ZIP' => '',
-        'CONTACTUSURL' => '',
-        'COUNTRYENAME' => '',
-        'T_COUNTRYID' => '',
-        'PICURL' => '',
-        'BYTES' => '',
-        'LPATH' => '',
-        'PICLPATH' => '',
-        'SHOWROOMURL' => '',
-        'SHOWROOMMD5' => '',
-        'DOMAIN_ID' => '',
-        'ISPICEXIST' => '',
-        'QR' => '');
     }
 }
 
@@ -242,8 +120,8 @@ URL地址<input type=text name='url' size=64 value='<? echo $url;?>'>
 	<TD bgcolor='#CCCCCC' align=left width >
     关键词<input type=text name='keyword' size=32 value='<? echo $keyword;?>'>
     类别<select name='data_type' >
-    <?php $type_list = Array('product' => '产品', 'company' => '公司');
-    foreach($type_list as $k => $v)
+    <?php 
+    foreach($query_data_type_list as $k => $v)
     {
         if($k == $data_type)
             echo "<option value='$k' selected>$v</option>";
@@ -311,31 +189,64 @@ if($op == 'url_query')
 }
 if($op == 'data_query')
 {
-    if($data_type == 'company')
-    {
-        if(isset($data_company_array) && $data_company_array)
-        {
-        
-        }
-        else
-        {
-            $result_string = red("没有找到[$keyword]相关的公司数据");
-        }
-    }
+    $storedb = new cStoredb($db);
     if($data_type == 'product')
     {
-        if(isset($data_product_array) && $data_product_array)
+        $arr = Array();
+        $product_feilds_list = Array(
+            'INFOID' => '产品ID', 
+            'PRODUCTCNAME' => '产品中文名称', 
+            'PRODUCTENAME' => '产品英文名称',
+            'URL' => 'URL');
+        $data = $storedb->find_product($keyword);
+            foreach($product_feilds_list AS $k => $v)
+                $arr['title'][$k] = '^'.jsescape($v);
+        if(is_array($data))
         {
-        
-        }
-        else
-        {
-            $result_string = red("没有找到[$keyword]相关的产品数据");
+            for($i = 0; $i < count($data); $i++)
+            {
+                $id = $data[$i]['INFOID'];
+                foreach($product_feilds_list AS $k => $v)
+                    $arr[$id][$k] = jsescape($data[$i][$k]);
+            }
         }
     }
+    if($data_type == 'company')
+    {
+        $arr = Array();
+        $company_feilds_list = Array(
+                'INFOID' => '公司ID', 
+                'PRODUCTCNAME' => '公司中文名称', 
+                'PRODUCTENAME' => '公司英文名称',
+                'URL' => 'URL',
+                'OP' => '操作');
+        $data = $storedb->find_company($keyword);    
+        foreach($company_feilds_list AS $k => $v)
+            $arr['title'][$k] = '^'.jsescape($v);
+        if(is_array($data))
+        {
+            for($i = 0; $i < count($data); $i++)
+            {
+                $id = $data[$i]['INFOID'];
+                foreach($company_feilds_list AS $k => $v)
+                    $arr[$id][$k] = jsescape($data[$i][$k]);
+            }
+        }
+    }
+    $string =  "<script language='JavaScript'>\n";
+    $string .= " var DataListArray = new Array();\n";
+    //html array
+    foreach($arr AS $KID => $VARR)
+        $string .= " DataListArray['".$KID."'] = '".implode(',',$VARR)."';\n";
+    $string .= "DataInit(DataListArray,'content',";
+    $string .= "'pagesplit',10,20,".count($arr['title']).");\n";
+    $string .= "</script>\n";
 
+    echo "<div id='content' valign='top' ></div>\n";
+    echo "<div id='pagesplit' valign='top' ></div><br>\n";
+    echo $string;
+    unset($string);
 }
-echo $result_string;
 ?>
 <?
 include_once('./include/footer.inc.php');
