@@ -20,13 +20,13 @@ typedef struct _TIMER
 {
 	struct timeval tv;
 	time_t start_sec;
-	unsigned long long  start_usec;
+	long long  start_usec;
 	time_t sec_used;
-	unsigned long long  usec_used;
+	long long  usec_used;
 	time_t  last_sec;
-	unsigned long long  last_usec;
+	long long  last_usec;
 	time_t last_sec_used;
-        unsigned long long  last_usec_used;
+        long long  last_usec_used;
 
 	void *mutex;
 
@@ -55,15 +55,15 @@ void timer_clean(TIMER **);
 	{ \
 		printf("timerptr:%08x\n" \
 				"timer->start_sec:%u\n" \
-				"timer->start_usec:%llu\n" \
+				"timer->start_usec:%lld\n" \
 				"timer->tv.tv_sec:%u\n" \
 				"timer->tv.tv_usec:%u\n" \
 				"timer->sec_used:%u\n" \
-				"timer->usec_used:%llu\n" \
+				"timer->usec_used:%lld\n" \
                                 "timer->last_sec:%u\n" \
-                                "timer->last_usec:%llu\n" \
+                                "timer->last_usec:%lld\n" \
                                 "timer->last_sec_used:%u\n" \
-                                "timer->last_usec_used:%llu\n" \
+                                "timer->last_usec_used:%lld\n" \
 				"timer->reset():%08x\n" \
 				"timer->check():%08x\n" \
 				"timer->sample():%08x\n" \

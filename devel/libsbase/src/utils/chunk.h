@@ -42,12 +42,12 @@ typedef struct _CHUNK{
                 int   fd ;
                 char  name[FILE_NAME_LIMIT + 1];
         } file;
-        unsigned long long  offset;
-        unsigned long long  len;
+        long long  offset;
+        long long  len;
 	void *mutex;
 
         /* method */
-        int (*set)(struct _CHUNK *, int , int , char *, unsigned long long , unsigned long long );
+        int (*set)(struct _CHUNK *, int , int , char *, long long , long long );
         int (*append)(struct _CHUNK *, void *, size_t); 
         int (*fill)(struct _CHUNK *, void *, size_t); 
         int (*send)(struct _CHUNK *, int , size_t );
@@ -69,8 +69,8 @@ struct _CHUNK *chunk_init();
 		"chunk->buf->size:%u\n" \
 		"chunk->file.fd:%d\n" \
 		"chunk->file.name:%s\n" \
-		"chunk->offset:%llu\n" \
-		"chunk->len:%llu\n\n", \
+		"chunk->offset:%lld\n" \
+		"chunk->len:%lld\n\n", \
 		chunk, chunk->id, chunk->type, \
 		chunk->buf, chunk->buf->data, chunk->buf->size, \
 		chunk->file.fd, chunk->file.name, \
@@ -81,7 +81,7 @@ struct _CHUNK *chunk_init();
 #endif
 
 /* Initialzie CHUNK */
-int chk_set( CHUNK *, int , int, char *, unsigned long long , unsigned long long );
+int chk_set( CHUNK *, int , int, char *, long long , long long );
 /* append data to CHUNK BUFFER */
 int chk_append(CHUNK *, void *, size_t );
 /* fill CHUNK with data */

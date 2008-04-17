@@ -22,7 +22,7 @@ CHUNK *chunk_init()
 }
 
 /* Initialzie CHUNK */
-int chk_set(CHUNK *chunk, int id, int type, char *filename, unsigned long long  offset, unsigned long long  len)
+int chk_set(CHUNK *chunk, int id, int type, char *filename, long long  offset, long long  len)
 {
 	if(chunk)
 	{	
@@ -100,7 +100,7 @@ int chk_fill(CHUNK *chunk, void *data, size_t len)
 				}
 				else
 				{
-					chunk->len  -= size * 1llu;
+					chunk->len  -= size * 1ll;
 					n = (int)size;
 				}
 				break;
@@ -123,8 +123,8 @@ int chk_fill(CHUNK *chunk, void *data, size_t len)
 				size = (chunk->len > len)? len : chunk->len;
 				if((n = write(chunk->file.fd, data, size) ) > 0 )
 				{
-					chunk->offset += n * 1llu;
-					chunk->len  -= n * 1llu;
+					chunk->offset += n * 1ll;
+					chunk->len  -= n * 1ll;
 				}
 				CLOSE_FD(chunk->file.fd);
 				break;
@@ -147,7 +147,7 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 	void *buf = NULL;
 
 	if(chunk == NULL ) return -1;
-	if(chunk->len <= 0llu ) return -1;
+	if(chunk->len <= 0ll ) return -1;
 #ifdef HAVE_PTHREAD
 	if(chunk->mutex) pthread_mutex_lock((pthread_mutex_t *)chunk->mutex);
 #endif
@@ -162,8 +162,8 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 				}
 				else
 				{
-					chunk->offset  += n * 1llu;
-					chunk->len  -= n * 1llu;
+					chunk->offset  += n * 1ll;
+					chunk->len  -= n * 1ll;
 				}
 				break;
 			}	
@@ -184,7 +184,7 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 							chunk->offset, strerror(errno));
 					goto end;
 				}
-				m_size = (chunk->len > (buf_size * 1llu))
+				m_size = (chunk->len > (buf_size * 1ll))
 					? buf_size : ((chunk->len) * 1u);
 #ifdef _USE_MMAP
 				if( (data = mmap(NULL, m_size, PROT_READ, MAP_PRIVATE,
@@ -218,8 +218,8 @@ int chk_send(CHUNK *chunk, int fd, size_t buf_size)
 				}
 				else
 				{
-					chunk->offset += n * 1llu;
-					chunk->len  -= n * 1llu;
+					chunk->offset += n * 1ll;
+					chunk->len  -= n * 1ll;
 				}
 #ifdef _USE_MMAP
 				munmap(data, m_size);
@@ -266,8 +266,8 @@ void chk_reset(CHUNK *chunk)
 		}
 		chunk->id = 0;
 		chunk->type = 0;
-		chunk->offset = 0llu;
-		chunk->len = 0llu;
+		chunk->offset = 0ll;
+		chunk->len = 0ll;
 #ifdef HAVE_PTHREAD
 		if(chunk->mutex) pthread_mutex_unlock((pthread_mutex_t *)chunk->mutex);
 #endif

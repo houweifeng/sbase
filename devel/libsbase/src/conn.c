@@ -180,7 +180,7 @@ void conn_read_handler(CONN *conn)
 		if((n = recv(conn->fd, tmp, nbuf, MSG_OOB)) > 0 )	
 		{
 			conn->recv_oob_total += n;
-			DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %llu from %s:%d via %d",
+			DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld from %s:%d via %d",
 				n, conn->recv_oob_total, conn->ip, conn->port, conn->fd);
 			conn->oob->push(conn->oob, buf->data, n);	
 			conn->oob_handler(conn);
@@ -202,7 +202,7 @@ void conn_read_handler(CONN *conn)
 		/* Push to buffer */
 		conn->buffer->push(conn->buffer, tmp, n);
 		conn->recv_data_total += n;	
-		DEBUG_LOGGER(conn->logger, "Received %d bytes data total %llu from %s:%d via %d",
+		DEBUG_LOGGER(conn->logger, "Received %d bytes data total %lld from %s:%d via %d",
                                 n, conn->recv_data_total, conn->ip, conn->port, conn->fd);
 		/* Handle buffer with packet_reader OR chunk_reader (with high priority) */
 		if(conn->s_state == S_STATE_READ_CHUNK)
@@ -233,14 +233,14 @@ void conn_write_handler(CONN *conn)
 		{
 			if((n = cp->send(cp, conn->fd, conn->buffer_size)) > 0)
 			{
-				conn->sent_data_total += n * 1llu;
-				DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %llu) "
-						"to %s:%d via %d leave %llu",
+				conn->sent_data_total += n * 1ll;
+				DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
+						"to %s:%d via %d leave %lld",
 						n, conn->sent_data_total, conn->ip, 
 						conn->port, conn->fd, cp->len);
 				/* CONN TIMER sample */
                 if(conn->timer) SAMPLE_TIMER(conn->timer);
-				if(cp->len <= 0llu )
+				if(cp->len <= 0ll )
 				{
 					cp = (CHUNK *)POP_QUEUE(conn->send_queue);	
 					DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it leave %d", 
@@ -392,7 +392,7 @@ void conn_recv_chunk(CONN *conn, size_t size)
 
 /* Receive FILE CHUNK */
 void conn_recv_file(CONN *conn, char *filename,
-         unsigned long long  offset, unsigned long long  size)
+         long long  offset, long long  size)
 {
         /* Check connection and transaction state */
         CONN_CHECK(conn);
@@ -421,7 +421,7 @@ int conn_push_chunk(CONN *conn, void *data, size_t size)
 		else
 		{
 			cp = chunk_init();
-			cp->set(cp, conn->s_id, MEM_CHUNK, NULL, 0llu, 0llu);
+			cp->set(cp, conn->s_id, MEM_CHUNK, NULL, 0ll, 0ll);
 			cp->append(cp, data, size);
 			PUSH_QUEUE(conn->send_queue, (void *)cp);
 		}
@@ -432,7 +432,7 @@ int conn_push_chunk(CONN *conn, void *data, size_t size)
 
 /* Push File */
 int conn_push_file(CONN *conn, char *filename,
-         unsigned long long  offset, unsigned long long  size)
+         long long  offset, long long  size)
 {
 	CHUNK *cp = NULL;
         /* Check connection and transaction state */
@@ -446,7 +446,7 @@ int conn_push_file(CONN *conn, char *filename,
 		if((TOTAL_QUEUE(conn->send_queue)) > 0 ) 
 			conn->event->add(conn->event, E_WRITE);	
 		DEBUG_LOGGER(conn->logger, 
-			"Pushed file\"%s\" [%llu][%llu] to send_queue (total %d) on %s:%d via %d\n",
+			"Pushed file\"%s\" [%lld][%lld] to send_queue (total %d) on %s:%d via %d\n",
 			filename, offset, size, TOTAL_QUEUE(conn->send_queue), 
             conn->ip, conn->port, conn->fd);
 	}

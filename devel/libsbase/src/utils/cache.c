@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 	char buf[nbuf];
 	char *p = (char *)calloc(1, BUF_SIZE);
 	int np = 0;
-	unsigned long long  total = 0, md5_total = 0;
+	long long  total = 0, md5_total = 0;
 	int n = 0;
 	int fd = 0;
 
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 		timer->reset(timer);
 		cache->resume(cache);	
 		timer->sample(timer);
-		fprintf(stdout, "Resume Time Used:%llu\n", timer->usec_used);
+		fprintf(stdout, "Resume Time Used:%lld\n", timer->usec_used);
 		if(dict && (fp = fopen(dict, "r")))
 		{
 			while((s = fgets(buf, nbuf, fp)))
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 				buf[--ns] = 0;
 				MD5(s, ns, inode.key);	
 				timer->sample(timer);
-				fprintf(stdout, "MD5:%llu\n", timer->usec_used);
+				fprintf(stdout, "MD5:%lld\n", timer->usec_used);
 				md5_total += timer->usec_used;
 				timer->reset(timer);
 				//fprintf(stdout, "%s\n", s);
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 				inode.size = (size_t)np;
 				cache->add(cache, &inode, p);
 				timer->sample(timer);
-				fprintf(stdout, "CACHE:%llu\n", timer->usec_used);
+				fprintf(stdout, "CACHE:%lld\n", timer->usec_used);
 				total += timer->usec_used;
 				n++;	
 			}
@@ -77,8 +77,8 @@ int main(int argc, char **argv)
 		}
 		if(n > 0)
 		{
-			fprintf(stdout, "MD5 TIME USED:%llu AVG:%llu\n", md5_total, (md5_total/n));
-			fprintf(stdout, "CACHE TIME USED:%llu AVG:%llu\n", total, (total/n));
+			fprintf(stdout, "MD5 TIME USED:%lld AVG:%lld\n", md5_total, (md5_total/n));
+			fprintf(stdout, "CACHE TIME USED:%lld AVG:%lld\n", total, (total/n));
 		}
 		//fprintf(stdout, "List cache ...\n");
 		//cache->list(cache, stdout);
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 		fprintf(stdout, "Dump cache ...\n");
 		cache->dump(cache);
 		timer->sample(timer);
-		fprintf(stdout, "Dump Time Used:%llu\n", timer->usec_used);
+		fprintf(stdout, "Dump Time Used:%lld\n", timer->usec_used);
 		fprintf(stdout, "Clean cache ...\n");
 		cache->clean(&cache);
 	}
