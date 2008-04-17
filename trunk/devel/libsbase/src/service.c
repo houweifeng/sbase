@@ -326,7 +326,7 @@ void service_active_heartbeat(SERVICE *service)
     if(service)
     {
 
-	//	DEBUG_LOGGER(service->logger, "Heartbeat %llu in service[%s] "
+	//	DEBUG_LOGGER(service->logger, "Heartbeat %lld in service[%s] "
       //          "interval:%d timer:%08x timer->check:%08x", 
 		//		 service->nheartbeat++, service->name, service->heartbeat_interval,
           //       service->timer, ((TIMER *)service->timer)->check);
@@ -336,14 +336,14 @@ void service_active_heartbeat(SERVICE *service)
 		{
 			if(service->cb_heartbeat_handler)
 			{
-				//DEBUG_LOGGER(service->logger, "Heartbeat %llu in service[%s]", 
+				//DEBUG_LOGGER(service->logger, "Heartbeat %lld in service[%s]", 
 				  //  service->nheartbeat++, service->name);
 				service->cb_heartbeat_handler(service->cb_heartbeat_arg);
 			}
 			if(service->service_type == C_SERVICE)
 			{
 				//DEBUG_LOGGER(service->logger, 
-                //"Heartbeat %llu service[%s] check connection state", 
+                //"Heartbeat %lld service[%s] check connection state", 
 				// service->nheartbeat++, service->name);
 				service->state_conns(service);
 			}

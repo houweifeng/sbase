@@ -134,12 +134,12 @@ typedef struct _CHUNK{
             int   fd ;
             char  name[FILE_NAME_LIMIT + 1];
         } file;
-        unsigned long long  offset;
-        unsigned long long  len;
+        long long  offset;
+        long long  len;
         void *mutex;
 
         /* method */
-        int (*set)(struct _CHUNK *, int , int , char *, unsigned long long , unsigned long long );
+        int (*set)(struct _CHUNK *, int , int , char *, long long , long long );
         int (*append)(struct _CHUNK *, void *, size_t); 
         int (*fill)(struct _CHUNK *, void *, size_t); 
         int (*send)(struct _CHUNK *, int , size_t );
@@ -161,8 +161,8 @@ struct _CHUNK *chunk_init();
                     "chunk->buf->size:%u\n" \
                     "chunk->file.fd:%d\n" \
                     "chunk->file.name:%s\n" \
-                    "chunk->offset:%llu\n" \
-                    "chunk->len:%llu\n\n", \
+                    "chunk->offset:%lld\n" \
+                    "chunk->len:%lld\n\n", \
                     chunk, chunk->id, chunk->type, \
                     chunk->buf, chunk->buf->data, chunk->buf->size, \
                     chunk->file.fd, chunk->file.name, \
@@ -285,7 +285,7 @@ typedef struct _SERVICE
 
         /* Running options */
         int      running_status;
-		unsigned long long nheartbeat;
+		long long nheartbeat;
         uint32_t heartbeat_interval;
         void     *cb_heartbeat_arg;
         uint32_t sleep_usec;
@@ -409,10 +409,10 @@ typedef struct _CONN
         int  		packet_delimiter_length;
         uint32_t 	buffer_size;
         /* connection bytes stats */
-        unsigned long long 	recv_oob_total;
-        unsigned long long 	sent_oob_total;
-        unsigned long long 	recv_data_total;
-        unsigned long long 	sent_data_total;
+        long long 	recv_oob_total;
+        long long 	sent_oob_total;
+        long long 	recv_data_total;
+        long long 	sent_data_total;
 
         /* Global  options */
         //parent pointer 
@@ -465,9 +465,9 @@ typedef struct _CONN
         void      (*packet_handler)(struct _CONN *);
         void      (*chunk_reader)(struct _CONN *);
         void      (*recv_chunk)(struct _CONN *, size_t);
-        void      (*recv_file)(struct _CONN *, char *, unsigned long long , unsigned long long );
+        void      (*recv_file)(struct _CONN *, char *, long long , long long );
         int       (*push_chunk)(struct _CONN *, void *, size_t);
-        int       (*push_file)(struct _CONN *, char *, unsigned long long , unsigned long long );
+        int       (*push_file)(struct _CONN *, char *, long long , long long );
         void      (*data_handler)(struct _CONN *);
         void      (*oob_handler)(struct _CONN *);
         void	  (*push_message)(struct _CONN *, int);

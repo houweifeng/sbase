@@ -13,7 +13,7 @@ TIMER *timer_init()
 	{
 		gettimeofday(&(timer->tv), NULL);
 		timer->start_sec	= timer->tv.tv_sec;
-		timer->start_usec	= timer->tv.tv_sec * 1000000llu + timer->tv.tv_usec * 1llu;
+		timer->start_usec	= timer->tv.tv_sec * 1000000ll + timer->tv.tv_usec * 1ll;
 		timer->last_sec		= timer->start_sec;
 		timer->last_usec	= timer->start_usec;
 		timer->sample		= timer_sample;
@@ -38,7 +38,7 @@ void timer_reset(TIMER *timer)
 #endif
 		gettimeofday(&(timer->tv), NULL);
                 timer->start_sec        = timer->tv.tv_sec;
-                timer->start_usec       = timer->tv.tv_sec * 1000000llu + timer->tv.tv_usec * 1llu;
+                timer->start_usec       = timer->tv.tv_sec * 1000000ll + timer->tv.tv_usec * 1ll;
 		timer->last_sec         = timer->start_sec;
                 timer->last_usec        = timer->start_usec;
 #ifdef HAVE_PTHREAD
@@ -57,10 +57,10 @@ void timer_sample(TIMER *timer)
 #endif
 		gettimeofday(&(timer->tv), NULL);	
 		timer->last_sec_used    = timer->tv.tv_sec - timer->last_sec;
-                timer->last_usec_used   = timer->tv.tv_sec * 1000000llu 
+                timer->last_usec_used   = timer->tv.tv_sec * 1000000ll 
 						+ timer->tv.tv_usec - timer->last_usec;
 		timer->last_sec         = timer->tv.tv_sec;
-                timer->last_usec        = timer->tv.tv_sec * 1000000llu + timer->tv.tv_usec;
+                timer->last_usec        = timer->tv.tv_sec * 1000000ll + timer->tv.tv_usec;
 		timer->sec_used  	= timer->tv.tv_sec - timer->start_sec;
 		timer->usec_used 	= timer->last_usec - timer->start_usec;
 #ifdef HAVE_PTHREAD
@@ -73,14 +73,14 @@ void timer_sample(TIMER *timer)
 int timer_check(TIMER *timer, uint32_t interval)
 {
     int ret = -1;
-	unsigned long long  n = 0llu;
+	long long  n = 0ll;
 	if(timer)
 	{
 #ifdef HAVE_PTHREAD
 		if(timer->mutex) pthread_mutex_lock((pthread_mutex_t *)timer->mutex);
 #endif
                 gettimeofday(&(timer->tv), NULL);       
-                n = (timer->tv.tv_sec * 1000000llu + timer->tv.tv_usec);
+                n = (timer->tv.tv_sec * 1000000ll + timer->tv.tv_usec);
                 if( (n - timer->last_usec) >= interval)
                 {
                         ret = 0;
