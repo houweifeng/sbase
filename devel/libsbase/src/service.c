@@ -307,6 +307,7 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             service->procthread->add_connection(service->procthread, conn);
 			return conn;
         }
+        //fprintf(stdout, "%dOK:%08x %s:%d\n", __LINE__, conn, ip, port);
         /* Add connection to procthread pool */
         if(service->working_mode == WORKING_THREAD && service->procthreads)
         {
@@ -390,6 +391,7 @@ CONN *service_newconn(SERVICE *service, char *ip, int port)
             sa.sin_addr.s_addr = inet_addr(ip);
             sa.sin_port = htons(port);
             psa = &sa;
+            //fprintf(stdout, "%dOK:%08x %s:%d\n", __LINE__, conn, ip, port);
         }
         else
         {
@@ -400,7 +402,7 @@ CONN *service_newconn(SERVICE *service, char *ip, int port)
         if(fd > 0 && (connect(fd, (struct sockaddr *)psa, 
                     sizeof(struct sockaddr )) == 0 || errno == EINPROGRESS))
         {
-            conn = service->addconn(service, fd, &(service->sa));
+            conn = service->addconn(service, fd, psa);
         }
         else
         {
