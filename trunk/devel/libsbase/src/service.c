@@ -304,7 +304,7 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
         {
             DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthread[%d]",
                     conn->fd, conn->ip, conn->port, getpid());
-            service->procthread->addconn(service->procthread, conn);
+            service->procthread->add_connection(service->procthread, conn);
 			return conn;
         }
         /* Add connection to procthread pool */
@@ -313,7 +313,7 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             index = fd % service->max_procthreads;
             DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthreads[%d]",
                     conn->fd, conn->ip, conn->port, index);
-            service->procthreads[index]->addconn(service->procthreads[index], conn);
+            service->procthreads[index]->add_connection(service->procthreads[index], conn);
 			return conn;
         }
     }
