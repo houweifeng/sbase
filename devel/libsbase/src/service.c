@@ -396,7 +396,9 @@ CONN *service_newconn(SERVICE *service, char *ip, int port)
             psa = &(service->sa);
         }
         fd = socket(service->family, service->socket_type, 0);
-        if(fd > 0 && connect(fd, (struct sockaddr *)psa, sizeof(struct sockaddr )) == 0)
+        fcntl(fd, F_SETFL, O_NONBLOCK);
+        if(fd > 0 && (connect(fd, (struct sockaddr *)psa, 
+                    sizeof(struct sockaddr )) == 0 || errno == EINPROGRESS))
         {
             conn = service->addconn(service, fd, &(service->sa));
         }
