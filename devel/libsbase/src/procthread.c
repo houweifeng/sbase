@@ -19,6 +19,7 @@ PROCTHREAD *procthread_init()
 		pth->message_queue		= queue_init();
 		pth->run			    = procthread_run;
 		pth->running_once		= procthread_running_once;
+		pth->newtask		    = procthread_newtask;
 		pth->newtransaction		= procthread_newtransaction;
 		pth->addconn			= procthread_addconn;
 		pth->add_connection		= procthread_add_connection;
@@ -46,6 +47,15 @@ void procthread_running_once(PROCTHREAD *pth)
             if(!(msg->msg_id & MESSAGE_ALL))
             {
                 WARN_LOGGER(pth->logger, "Unkown message[%d]", msg->msg_id);
+                goto next;
+            }
+            //NEW task 
+            if(msg->msg_id == MESSAGE_TASK)
+            {
+                if(msg->handler)
+                {
+                    ((FUNCALL)(msg->handler))(msg->arg);
+                }
                 goto next;
             }
             conn = (CONN *)msg->handler;
@@ -111,6 +121,25 @@ void procthread_run(void *arg)
 		pth->running_once(pth);
 		usleep(pth->service->sleep_usec);
 	}
+}
+
+/* add new task */
+void procthread_newtask(PROCTHREAD *pth, FUNCALL taskhandler, void *arg)
+{
+    MESSAGE *msg = NULL;
+    if(pth && pth->message_queue && taskhandler)
+    {
+        if((msg = MESSAGE_INIT()))
+        {
+            msg->msg_id = MESSAGE_TASK;
+            msg->handler = (void *)taskhandler;
+            msg->arg    = (void *)arg;
+            msg->parent  = (void *)pth;
+            PUSH_QUEUE(pth->message_queue, msg);
+            DEBUG_LOGGER(pth->logger, "Added message TASK to PROCTHREAD[%d]", pth->index);
+        }
+    }
+
 }
 
 /* add new transaction */

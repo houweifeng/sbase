@@ -14,6 +14,7 @@ SERVICE *service_init()
 		service->event_handler	    = service_event_handler;
 		service->set		        = service_set;
 		service->run		        = service_run;
+		service->newtask		    = service_newtask;
 		service->newtransaction		= service_newtransaction;
 		service->addconn	        = service_addconn;
         service->state_conns        = service_state_conns;
@@ -349,6 +350,30 @@ void service_active_heartbeat(SERVICE *service)
     return ;
 }
 
+/* add new task */
+void service_newtask(SERVICE *service, FUNCALL taskhandler, void *arg)
+{
+    PROCTHREAD *pth = NULL;
+    int index = 0;
+    if(service)
+    {
+        /* Add task for procthread */
+        if(service->working_mode == WORKING_PROC && service->procthread)
+        {
+            service->procthread->newtask(service->procthread, taskhandler, arg);
+        }
+        /* Add task to procthread pool */
+        if(service->working_mode == WORKING_THREAD && service->procthreads)
+        {
+            index = service->ntask % service->max_procthreads;
+            pth = service->procthreads[index];
+            pth->newtask(pth, taskhandler, arg);
+        }
+        service->ntask++;
+    }
+    return ;
+}
+
 /* add new transaction */
 void service_newtransaction(SERVICE *service, CONN *conn, int tid)
 {
@@ -357,14 +382,14 @@ void service_newtransaction(SERVICE *service, CONN *conn, int tid)
     
     if(service && conn && conn->fd > 0)
     {
-        /* Add connection for procthread */
+        /* Add transaction for procthread */
         if(service->working_mode == WORKING_PROC && service->procthread)
         {
             DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthread[%d]",
                     tid, conn->ip, conn->port, getpid());
             return service->procthread->newtransaction(service->procthread, conn, tid);
         }
-        /* Add connection to procthread pool */
+        /* Add transaction to procthread pool */
         if(service->working_mode == WORKING_THREAD && service->procthreads)
         {
             index = conn->fd % service->max_procthreads;

@@ -24,6 +24,9 @@ void procthread_run(void *);
 /* Running procthread once */
 void procthread_running_once(PROCTHREAD *);
 
+/* add new task */
+void procthread_newtask(PROCTHREAD *pth, FUNCALL, void *arg);
+
 /* add new transaction */
 void procthread_newtransaction(PROCTHREAD *pth, CONN *, int tid);
 
