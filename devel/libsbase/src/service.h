@@ -27,6 +27,8 @@ void service_event_handler(int, short, void*);
 int service_set(SERVICE *);
 /* Run service */
 void service_run(SERVICE *);
+/* add new transaction */
+void service_newtransaction(SERVICE *service, CONN *conn, int tid);
 /* Add new conn */
 CONN *service_addconn(SERVICE *, int , struct sockaddr_in *);
 /* check conns status */

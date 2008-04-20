@@ -44,6 +44,8 @@ int conn_push_chunk(struct _CONN *, void *, size_t );
 int conn_push_file(struct _CONN *,  char *, long long ,  long long );
 /* Data handler */
 void conn_data_handler(struct _CONN *);
+/* Transaction handler */
+void conn_transaction_handler(struct _CONN *, int tid);
 /* Push message */
 void conn_push_message(struct _CONN *, int );
 /* start cstate on conn */

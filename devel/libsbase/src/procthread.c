@@ -14,11 +14,12 @@ PROCTHREAD *procthread_init()
 	PROCTHREAD *pth = (PROCTHREAD *) calloc(1, sizeof(PROCTHREAD));
 	if(pth)
 	{
+		TIMER_INIT(pth->timer);
 		pth->evbase 			= evbase_init();		
 		pth->message_queue		= queue_init();
-		pth->timer			    = timer_init();
 		pth->run			    = procthread_run;
 		pth->running_once		= procthread_running_once;
+		pth->newtransaction		= procthread_newtransaction;
 		pth->addconn			= procthread_addconn;
 		pth->add_connection		= procthread_add_connection;
 		pth->terminate_connection	= procthread_terminate_connection;
@@ -81,11 +82,15 @@ void procthread_running_once(PROCTHREAD *pth)
 				case MESSAGE_DATA :
 					conn->data_handler(conn);
 					break;
+                case MESSAGE_TRANSACTION :
+					conn->transaction_handler(conn, msg->tid);
+					break;
+
 				default:
 					break;
 			}
 next:
-			msg->clean(&msg);
+			MESSAGE_CLEAN(msg);
 		}
 	}
 }
@@ -106,24 +111,45 @@ void procthread_run(void *arg)
 	}
 }
 
+/* add new transaction */
+void procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
+{
+	MESSAGE *msg = NULL;
+	if(pth && pth->message_queue && conn)
+    {
+        if((msg = MESSAGE_INIT()))
+        {
+            msg->msg_id = MESSAGE_TRANSACTION;
+            msg->fd = conn->fd;
+            msg->tid = tid;
+            msg->handler = conn;
+            msg->parent  = (void *)pth;
+            PUSH_QUEUE(pth->message_queue, msg);
+            DEBUG_LOGGER(pth->logger, "Added message TRANSACTION[%d] to %s:%d via %d total %d",
+                    tid, conn->fd, conn->ip, conn->port, conn->fd, 
+                    ((QUEUE *)pth->message_queue)->total);
+        }
+    }
+}
+
 /* Add connection msg */
 void procthread_addconn(PROCTHREAD *pth, CONN *conn)
 {
 	MESSAGE *msg = NULL;
 	//DEBUG_LOGGER(pth->logger, "Adding NEW CONN[%08x] IN PROCTHREAD[%08x]", conn, pth);
 	if(pth && pth->message_queue && conn)
-	{
-		if((msg = message_init()))
-		{
-			msg->msg_id = MESSAGE_NEW_SESSION;
-			msg->fd = conn->fd;
-			msg->handler = conn;
-			msg->parent  = (void *)pth;
-			PUSH_QUEUE(pth->message_queue, msg);
-			DEBUG_LOGGER(pth->logger, "Added message for NEW_SESSION[%d] %s:%d total %d",
-				conn->fd, conn->ip, conn->port, ((QUEUE *)pth->message_queue)->total);
-		}
-	}	
+    {
+        if((msg = MESSAGE_INIT()))
+        {
+            msg->msg_id = MESSAGE_NEW_SESSION;
+            msg->fd = conn->fd;
+            msg->handler = conn;
+            msg->parent  = (void *)pth;
+            PUSH_QUEUE(pth->message_queue, msg);
+            DEBUG_LOGGER(pth->logger, "Added message for NEW_SESSION[%d] %s:%d total %d",
+                    conn->fd, conn->ip, conn->port, ((QUEUE *)pth->message_queue)->total);
+        }
+    }	
 }
 
 /* Add new connection */
@@ -135,22 +161,23 @@ void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 			pth->connections = (CONN **)calloc(pth->service->max_connections, sizeof(CONN *));
 		if(pth->connections == NULL && conn->fd <= 0 )
 			return ;
+        /* Add event to evbase */
+        conn->evbase = pth->evbase;
+        conn->message_queue = pth->message_queue;
+        conn->parent = (void *)pth;
+        if(conn->set(conn) != 0)
+        {
+            FATAL_LOGGER(pth->logger, "Setting connections[%d] %s:%d failed, %s",
+                    conn->fd, conn->ip, conn->port, strerror(errno));
+            return ;
+        }
 		if(conn->fd < pth->service->max_connections)
-		{
-			/* Add event to evbase */
-			conn->evbase = pth->evbase;
-			conn->message_queue = pth->message_queue;
-			conn->parent = (void *)pth;
-			if(conn->set(conn) != 0)
-			{
-				FATAL_LOGGER(pth->logger, "Setting connections[%d] %s:%d failed, %s",
-					conn->fd, conn->ip, conn->port, strerror(errno));
-			}
-			pth->connections[conn->fd] = conn;
-			pth->service->pushconn(pth->service, conn);
-			DEBUG_LOGGER(pth->logger, "Added connection[%d] %s:%d to procthread[%d] total %d",
-				 conn->fd, conn->ip, conn->port, pth->index, pth->service->running_connections);
-		}
+        {
+            pth->connections[conn->fd] = conn;
+            pth->service->pushconn(pth->service, conn);
+            DEBUG_LOGGER(pth->logger, "Added connection[%d] %s:%d to procthread[%d] total %d",
+                    conn->fd, conn->ip, conn->port, pth->index, pth->service->running_connections);
+        }
 		else
 		{
 			ERROR_LOGGER(pth->logger, "Connections is full in procthread[%d]", pth->index);
@@ -216,7 +243,7 @@ void procthread_clean(PROCTHREAD **pth)
         {
             while((msg = (MESSAGE *)POP_QUEUE((*pth)->message_queue)))	
             {
-                if(msg) msg->clean(&msg);
+                MESSAGE_CLEAN(msg);
             }
             CLEAN_QUEUE((*pth)->message_queue);
         }
@@ -226,7 +253,7 @@ void procthread_clean(PROCTHREAD **pth)
 			(*pth)->evbase->clean(&((*pth)->evbase));
 		}
 		/* Clean Timer */
-		if((*pth)->timer) CLEAN_TIMER((*pth)->timer);
+		TIMER_CLEAN((*pth)->timer);
 		(*pth) = NULL;
 	}	
 }
