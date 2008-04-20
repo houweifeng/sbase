@@ -68,14 +68,13 @@ extern "C" {
 #define S_SERVICE 0
 #define C_SERVICE 1
 #endif
-
+typedef void *(*FUNCALL)(void *);
 /* TYPES PREDEFINE */
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
 struct _BUFFER;
 struct _CHUNK;
-
 #ifndef _TYPEDEF_BUFFER
 #define _TYPEDEF_BUFFER
 typedef struct _BUFFER
@@ -291,6 +290,9 @@ typedef struct _SERVICE
         uint32_t sleep_usec;
         long long conn_timeout;
 
+        /* Task option */
+        long long ntask;
+
 		/* mutext lock */
 		void *mutex;
 
@@ -319,6 +321,7 @@ typedef struct _SERVICE
         void (*active_heartbeat)(struct _SERVICE *);
         /******** Client methods *************/
         void (*newtransaction)(struct _SERVICE *, struct _CONN *, int tid);
+        void (*newtask)(struct _SERVICE *, FUNCALL, void *arg);
         void (*state_conns)(struct _SERVICE *);
         struct _CONN *(*newconn)(struct _SERVICE *, char *, int);
         struct _CONN *(*getconn)(struct _SERVICE *);
@@ -363,6 +366,7 @@ typedef struct _PROCTHREAD
         void (*run)(void *);
         void (*running_once)(struct _PROCTHREAD *);
         void (*addconn)(struct _PROCTHREAD *, struct _CONN *);
+        void (*newtask)(struct _PROCTHREAD *, FUNCALL, void *arg);
         void (*newtransaction)(struct _PROCTHREAD *, struct _CONN *, int tid);
         void (*add_connection)(struct _PROCTHREAD *, struct _CONN *);
         void (*terminate_connection)(struct _PROCTHREAD *, struct _CONN *);

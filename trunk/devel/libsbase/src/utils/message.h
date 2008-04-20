@@ -20,8 +20,9 @@ extern "C" {
 #define MESSAGE_PACKET          0x08
 #define MESSAGE_DATA            0x10
 #define MESSAGE_TRANSACTION     0x30
+#define MESSAGE_TASK            0x40
 #define MESSAGE_ALL		(MESSAGE_QUIT | MESSAGE_NEW_SESSION | MESSAGE_INPUT | MESSAGE_OUTPUT \
-				| MESSAGE_PACKET | MESSAGE_DATA | MESSAGE_TRANSACTION)
+				| MESSAGE_PACKET | MESSAGE_DATA | MESSAGE_TRANSACTION| MESSAGE_TASK)
 static char *messagelist[] = 
 {
 	"",
@@ -41,6 +42,7 @@ typedef struct _MESSAGE
     int             fd;
     void            *handler;
     void		    *parent;
+    void            *arg;
     int             tid;
 }MESSAGE;
 /* Initialize message */
