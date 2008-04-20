@@ -308,6 +308,8 @@ typedef struct _SERVICE
                 struct _CHUNK *, struct _BUFFER *);
         /* OOB Data Handler */
         void (*cb_oob_handler)(struct _CONN *, struct _BUFFER *oob);
+        /* Transaction handler */
+        void (*cb_transaction_handler)(struct _CONN *, int tid);
 
         /* Methods */
         void (*event_handler)(int, short, void*);
@@ -316,6 +318,7 @@ typedef struct _SERVICE
         struct _CONN* (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
         void (*active_heartbeat)(struct _SERVICE *);
         /******** Client methods *************/
+        void (*newtransaction)(struct _SERVICE *, struct _CONN *, int tid);
         void (*state_conns)(struct _SERVICE *);
         struct _CONN *(*newconn)(struct _SERVICE *, char *, int);
         struct _CONN *(*getconn)(struct _SERVICE *);
@@ -360,6 +363,7 @@ typedef struct _PROCTHREAD
         void (*run)(void *);
         void (*running_once)(struct _PROCTHREAD *);
         void (*addconn)(struct _PROCTHREAD *, struct _CONN *);
+        void (*newtransaction)(struct _PROCTHREAD *, struct _CONN *, int tid);
         void (*add_connection)(struct _PROCTHREAD *, struct _CONN *);
         void (*terminate_connection)(struct _PROCTHREAD *, struct _CONN *);
         void (*terminate)(struct _PROCTHREAD*);
@@ -454,6 +458,8 @@ typedef struct _CONN
                 struct _CHUNK *, struct _BUFFER *);
         /* OOB Data Handler */
         void (*cb_oob_handler)(struct _CONN *, struct _BUFFER *oob);
+        /* Transaction handler */
+        void (*cb_transaction_handler)(struct _CONN *, int tid);
 
         /* Methods */
         int	      (*set)(struct _CONN *);
@@ -470,6 +476,7 @@ typedef struct _CONN
         int       (*push_file)(struct _CONN *, char *, long long , long long );
         void      (*data_handler)(struct _CONN *);
         void      (*oob_handler)(struct _CONN *);
+        void      (*transaction_handler)(struct _CONN *, int tid);
         void	  (*push_message)(struct _CONN *, int);
         int       (*start_cstate)(struct _CONN *);
         void      (*over_cstate)(struct _CONN *);

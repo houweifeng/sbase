@@ -14,6 +14,7 @@ SERVICE *service_init()
 		service->event_handler	    = service_event_handler;
 		service->set		        = service_set;
 		service->run		        = service_run;
+		service->newtransaction		= service_newtransaction;
 		service->addconn	        = service_addconn;
         service->state_conns        = service_state_conns;
         service->newconn            = service_newconn;
@@ -24,7 +25,7 @@ SERVICE *service_init()
 		service->terminate	        = service_terminate;
 		service->clean		        = service_clean;
 		service->event 		        = ev_init();
-		service->timer		        = timer_init();
+		TIMER_INIT(service->timer);
 		MUTEX_INIT(service->mutex);
 	}
 	return service;
@@ -295,6 +296,7 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             conn->cb_packet_reader = service->cb_packet_reader;
             conn->cb_packet_handler = service->cb_packet_handler;
             conn->cb_data_handler = service->cb_data_handler;
+            conn->cb_transaction_handler = service->cb_transaction_handler;
             conn->cb_oob_handler = service->cb_oob_handler;
             conn->cb_error_handler = service->cb_error_handler;
         }
@@ -304,17 +306,17 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
         {
             DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthread[%d]",
                     conn->fd, conn->ip, conn->port, getpid());
-            service->procthread->add_connection(service->procthread, conn);
+            service->procthread->addconn(service->procthread, conn);
 			return conn;
         }
         //fprintf(stdout, "%dOK:%08x %s:%d\n", __LINE__, conn, ip, port);
         /* Add connection to procthread pool */
         if(service->working_mode == WORKING_THREAD && service->procthreads)
         {
-            index = fd % service->max_procthreads;
+            index = conn->fd % service->max_procthreads;
             DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthreads[%d]",
                     conn->fd, conn->ip, conn->port, index);
-            service->procthreads[index]->add_connection(service->procthreads[index], conn);
+            service->procthreads[index]->addconn(service->procthreads[index], conn);
 			return conn;
         }
     }
@@ -332,8 +334,7 @@ void service_active_heartbeat(SERVICE *service)
 		//		 service->nheartbeat++, service->name, service->heartbeat_interval,
           //       service->timer, ((TIMER *)service->timer)->check);
 		if(service->heartbeat_interval > 0
-			&& service->timer && ((TIMER *)(service->timer))->check
-			&& CHECK_TIMER(service->timer, service->heartbeat_interval) == 0 )
+            && TIMER_CHECK(service->timer, service->heartbeat_interval) == 0)
 		{
 			if(service->cb_heartbeat_handler)
 			{
@@ -348,6 +349,32 @@ void service_active_heartbeat(SERVICE *service)
 				// service->nheartbeat++, service->name);
 				service->state_conns(service);
 			}
+        }
+    }
+    return ;
+}
+
+/* add new transaction */
+void service_newtransaction(SERVICE *service, CONN *conn, int tid)
+{
+    int index = 0;
+    if(service && conn && conn->fd > 0)
+    {
+        /* Add connection for procthread */
+        if(service->working_mode == WORKING_PROC && service->procthread)
+        {
+            DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthread[%d]",
+                    tid, conn->fd, conn->ip, conn->port, getpid());
+            return service->procthread->newtransaction(service->procthread, conn, tid);
+        }
+        //fprintf(stdout, "%dOK:%08x %s:%d\n", __LINE__, conn, ip, port);
+        /* Add connection to procthread pool */
+        if(service->working_mode == WORKING_THREAD && service->procthreads)
+        {
+            index = conn->fd % service->max_procthreads;
+            DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthreads[%d]",
+                    tid, conn->fd, conn->ip, conn->port, index);
+            return service->procthreads[index]->newtransaction(service->procthreads[index],conn,tid);
         }
     }
     return ;
@@ -391,7 +418,6 @@ CONN *service_newconn(SERVICE *service, char *ip, int port)
             sa.sin_addr.s_addr = inet_addr(ip);
             sa.sin_port = htons(port);
             psa = &sa;
-            //fprintf(stdout, "%dOK:%08x %s:%d\n", __LINE__, conn, ip, port);
         }
         else
         {
@@ -402,6 +428,8 @@ CONN *service_newconn(SERVICE *service, char *ip, int port)
         if(fd > 0 && (connect(fd, (struct sockaddr *)psa, 
                     sizeof(struct sockaddr )) == 0 || errno == EINPROGRESS))
         {
+            DEBUG_LOGGER(service->logger, "Ready for connection %s:%d via %d",
+                    inet_ntoa(psa->sin_addr), ntohs(psa->sin_port), fd);
             conn = service->addconn(service, fd, psa);
         }
         else
@@ -538,8 +566,7 @@ void service_clean(SERVICE **service)
             CLOSE_LOGGER((*service)->evlogger);
         if((*service)->event) 
             (*service)->event->clean(&(*service)->event);
-        if((*service)->timer) 
-            CLEAN_TIMER((*service)->timer);
+        TIMER_CLEAN((*service)->timer);
 		if((*service)->mutex)
 			MUTEX_DESTROY((*service)->mutex);
         free((*service));

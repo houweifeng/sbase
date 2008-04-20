@@ -24,6 +24,9 @@ void procthread_run(void *);
 /* Running procthread once */
 void procthread_running_once(PROCTHREAD *);
 
+/* add new transaction */
+void procthread_newtransaction(PROCTHREAD *pth, CONN *, int tid);
+
 /* Add connection message */
 void procthread_addconn(PROCTHREAD *, CONN *);
 

@@ -33,32 +33,33 @@ CONN *conn_init(char *ip, int port)
 	if(port <= 0 ) goto ERROR;
 	if(conn)
 	{
-		conn->buffer	        = buffer_init();
-		conn->oob		        = buffer_init();
-		conn->cache		        = buffer_init();
-		conn->packet		    = buffer_init();
-		conn->chunk		        = chunk_init();
-		conn->send_queue 	    = queue_init();
-		conn->event		        = ev_init();
-		conn->set		        = conn_set;
-		conn->event_handler 	= conn_event_handler;
-		conn->state_handler 	= conn_state_handler;
-		conn->read_handler	    = conn_read_handler;
-		conn->write_handler	    = conn_write_handler;
-		conn->packet_reader	    = conn_packet_reader;
-		conn->packet_handler	= conn_packet_handler;
-		conn->chunk_reader	    = conn_chunk_reader;
-		conn->recv_chunk	    = conn_recv_chunk;
-		conn->recv_file		    = conn_recv_file;
-		conn->push_chunk	    = conn_push_chunk;
-		conn->push_file	        = conn_push_file;
-		conn->data_handler	    = conn_data_handler;
-		conn->push_message	    = conn_push_message;
-        conn->start_cstate      = conn_start_cstate;
-        conn->over_cstate       = conn_over_cstate;
-		conn->close 	    	= conn_close;
-		conn->terminate 	    = conn_terminate;
-		conn->clean 		    = conn_clean;
+		conn->buffer	            = buffer_init();
+		conn->oob		            = buffer_init();
+		conn->cache		            = buffer_init();
+		conn->packet		        = buffer_init();
+		conn->chunk		            = chunk_init();
+		conn->send_queue 	        = queue_init();
+		conn->event		            = ev_init();
+		conn->set		            = conn_set;
+		conn->event_handler 	    = conn_event_handler;
+		conn->state_handler 	    = conn_state_handler;
+		conn->read_handler	        = conn_read_handler;
+		conn->write_handler	        = conn_write_handler;
+		conn->packet_reader	        = conn_packet_reader;
+		conn->packet_handler	    = conn_packet_handler;
+		conn->chunk_reader	        = conn_chunk_reader;
+		conn->recv_chunk	        = conn_recv_chunk;
+		conn->recv_file		        = conn_recv_file;
+		conn->push_chunk	        = conn_push_chunk;
+		conn->push_file	            = conn_push_file;
+		conn->data_handler	        = conn_data_handler;
+		conn->transaction_handler	= conn_transaction_handler;
+		conn->push_message	        = conn_push_message;
+        conn->start_cstate          = conn_start_cstate;
+        conn->over_cstate           = conn_over_cstate;
+		conn->close 	    	    = conn_close;
+		conn->terminate 	        = conn_terminate;
+		conn->clean 		        = conn_clean;
 		strcpy(conn->ip, ip);
 		conn->port  = port; 
 		conn->sa.sin_family = AF_INET;
@@ -149,9 +150,9 @@ void conn_state_handler(CONN *conn)
 {
 	/* Check connection and transaction state  */
         CONN_CHECK(conn);
-	if(conn && conn->timer)
+	if(conn)
 	{
-		if(conn->timeout > 0 && (time(NULL) - LAST_SEC_TIMER(conn->timer) ) >= conn->timeout)
+		if(conn->timeout > 0 && TIMER_CHECK(conn->timer, conn->timeout) == 0)
 		{
 			WARN_LOGGER(conn->logger, "Connection[%d] from %s:%d TIMEOUT",
 				conn->fd, conn->ip, conn->port);
@@ -185,7 +186,7 @@ void conn_read_handler(CONN *conn)
 			conn->oob->push(conn->oob, buf->data, n);	
 			conn->oob_handler(conn);
 			/* CONN TIMER sample */
-			if(conn->timer) SAMPLE_TIMER(conn->timer);
+			TIMER_SAMPLE(conn->timer);
 			goto end;
 		}
 		/* Receive normal data */
@@ -198,7 +199,7 @@ void conn_read_handler(CONN *conn)
 			goto end;
 		}
 		/* CONN TIMER sample */
-		if(conn->timer) SAMPLE_TIMER(conn->timer);
+		TIMER_SAMPLE(conn->timer);
 		/* Push to buffer */
 		conn->buffer->push(conn->buffer, tmp, n);
 		conn->recv_data_total += n;	
@@ -239,7 +240,7 @@ void conn_write_handler(CONN *conn)
 						n, conn->sent_data_total, conn->ip, 
 						conn->port, conn->fd, cp->len);
 				/* CONN TIMER sample */
-                if(conn->timer) SAMPLE_TIMER(conn->timer);
+		        TIMER_SAMPLE(conn->timer);
 				if(cp->len <= 0ll )
 				{
 					cp = (CHUNK *)POP_QUEUE(conn->send_queue);	
@@ -466,6 +467,23 @@ void conn_data_handler(CONN *conn)
 	}	
 }
 
+/* Transaction handler */
+void conn_transaction_handler(struct _CONN *conn, int tid)
+{
+    /* Check connection and transaction state */
+    CONN_CHECK(conn);
+
+    if(conn && conn->cb_transaction_handler )
+    {
+        DEBUG_LOGGER(conn->logger, "Handling transaction with customized "
+                "function[%08x] on %s:%d via %d",
+                conn->cb_transaction_handler,  
+                conn->ip, conn->port, conn->fd);
+        conn->cb_transaction_handler(conn, tid);
+    }
+    return ;
+}
+
 /* Push message */
 void conn_push_message(CONN *conn, int message_id)
 {
@@ -475,7 +493,7 @@ void conn_push_message(CONN *conn, int message_id)
 		//DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] on %s:%d via %d",
 		//messagelist[message_id], conn->message_queue, conn->ip, conn->port, conn->fd);
 
-		if((message_id & MESSAGE_ALL) && conn->message_queue && (msg = message_init()))
+		if((message_id & MESSAGE_ALL) && conn->message_queue && (msg = MESSAGE_INIT()))
 		{
 			msg->msg_id = message_id;
 			msg->fd	= conn->fd;

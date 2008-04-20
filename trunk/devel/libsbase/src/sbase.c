@@ -39,8 +39,8 @@ SBASE *sbase_init()
         sb->stop        	= sbase_stop;
         sb->clean		    = sbase_clean;
         sb->evbase		    = evbase_init();
-        sb->timer		    = timer_init();
         sb->message_queue	= queue_init();
+        TIMER_INIT(sb->timer);
     }
     return sb;
 }
@@ -196,15 +196,11 @@ running:
         {
             if(seconds > 0) 
             {
-                timer = timer_init();
+                TIMER_INIT(timer);
                 while(sb->running_status)
                 {
-                    if(timer)
-                    {
-                        timer->sample(timer);
-                        if(timer->sec_used >= seconds)
-                            sb->stop(sb);
-                    }
+                    TIMER_SAMPLE(timer);
+                    if(PT_SEC_USED(timer) >= seconds) sb->stop(sb);
                     sb->evbase->loop(sb->evbase, 0, NULL);
                     sbase_active_heartbeat(sb);
                     usleep(sb->sleep_usec);
@@ -226,15 +222,12 @@ running:
             /* only for WORKING_PROC */
             if(seconds > 0 )
             {
-                timer = timer_init();
+                TIMER_SAMPLE(timer);
                 while(sb->running_status)
                 {
-                    if(timer)
-                    {
-                        timer->sample(timer);
-                        if(timer->sec_used >= seconds)
-                            sb->stop(sb);
-                    }
+                    TIMER_SAMPLE(timer);
+                    if(PT_SEC_USED(timer) >= seconds) sb->stop(sb);
+
                     sb->evbase->loop(sb->evbase, 0, NULL);
                     sb->running_once(sb);
                     sbase_active_heartbeat(sb);
@@ -307,11 +300,14 @@ void sbase_running_once(SBASE *sb)
                 case MESSAGE_DATA :
                     conn->data_handler(conn);
                     break;
+                case MESSAGE_TRANSACTION:
+                    conn->transaction_handler(conn, msg->tid);
+                    break;
                 default:
                     break;
             }
 next:
-            msg->clean(&msg);
+            MESSAGE_CLEAN(msg);
         }
     }
 }
@@ -353,7 +349,7 @@ void sbase_clean(struct _SBASE **sb)
         /* Clean eventbase */
         if((*sb)->evbase) (*sb)->evbase->clean(&((*sb)->evbase));
         /* Clean timer */
-        if((*sb)->timer) CLEAN_TIMER((*sb)->timer);
+        TIMER_CLEAN((*sb)->timer);
         /* Clean logger */
         if((*sb)->logger) CLOSE_LOGGER((*sb)->logger);
         /* Clean message queue */
@@ -361,7 +357,7 @@ void sbase_clean(struct _SBASE **sb)
         {
             while((msg = (MESSAGE *)POP_QUEUE((*sb)->message_queue)))
             {
-                if(msg) msg->clean(&msg);
+                MESSAGE_CLEAN(msg);
             }
             CLEAN_QUEUE((*sb)->message_queue);
         }
