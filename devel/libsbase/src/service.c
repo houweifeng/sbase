@@ -299,6 +299,8 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             conn->cb_transaction_handler = service->cb_transaction_handler;
             conn->cb_oob_handler = service->cb_oob_handler;
             conn->cb_error_handler = service->cb_error_handler;
+            /* other option */
+            conn->timeout = service->conn_timeout;
         }
         else return conn;
         /* Add connection for procthread */
@@ -342,13 +344,6 @@ void service_active_heartbeat(SERVICE *service)
 				  //  service->nheartbeat++, service->name);
 				service->cb_heartbeat_handler(service->cb_heartbeat_arg);
 			}
-			if(service->service_type == C_SERVICE)
-			{
-				//DEBUG_LOGGER(service->logger, 
-                //"Heartbeat %lld service[%s] check connection state", 
-				// service->nheartbeat++, service->name);
-				service->state_conns(service);
-			}
         }
     }
     return ;
@@ -386,10 +381,12 @@ void service_newtransaction(SERVICE *service, CONN *conn, int tid)
 /* check conns status */
 void service_state_conns(SERVICE *service)
 {
+    CONN *conn = NULL;
 	int i = 0, num = 0;
     if(service)
     {
-		if(service->running_connections < service->connections_limit)
+		if(service->service_type == C_SERVICE
+                && service->running_connections < service->connections_limit)
 		{
 			num = service->connections_limit - service->running_connections;
             //DEBUG_LOGGER(service->logger, 
@@ -403,6 +400,14 @@ void service_state_conns(SERVICE *service)
                 }
 			}
 		}
+        i = 0;
+        while(i < service->max_connections)
+        {
+            if((conn = service->connections[i++]))
+            {
+                conn->state_handler(conn);
+            }
+        }
     }
 }
 

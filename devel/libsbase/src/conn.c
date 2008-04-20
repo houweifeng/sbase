@@ -55,6 +55,7 @@ CONN *conn_init(char *ip, int port)
 		conn->data_handler	        = conn_data_handler;
 		conn->transaction_handler	= conn_transaction_handler;
 		conn->push_message	        = conn_push_message;
+        conn->set_timeout           = conn_set_timeout;
         conn->start_cstate          = conn_start_cstate;
         conn->over_cstate           = conn_over_cstate;
 		conn->close 	    	    = conn_close;
@@ -148,17 +149,17 @@ void conn_event_handler(int event_fd, short event, void *arg)
 /* Check connection state  TIMEOUT */
 void conn_state_handler(CONN *conn)
 {
-	/* Check connection and transaction state  */
-        CONN_CHECK(conn);
-	if(conn)
-	{
-		if(conn->timeout > 0 && TIMER_CHECK(conn->timer, conn->timeout) == 0)
-		{
-			WARN_LOGGER(conn->logger, "Connection[%d] from %s:%d TIMEOUT",
-				conn->fd, conn->ip, conn->port);
-			return conn->push_message(conn, MESSAGE_QUIT);
-		}
-	}
+    /* Check connection and transaction state  */
+    CONN_CHECK(conn);
+    if(conn)
+    {
+        if(conn->timeout > 0 && TIMER_CHECK(conn->timer, conn->timeout) == 0)
+        {
+            WARN_LOGGER(conn->logger, "Connection[%d] from %s:%d TIMEOUT",
+                    conn->fd, conn->ip, conn->port);
+            return conn->push_message(conn, MESSAGE_QUIT);
+        }
+    }
 }
 
 /* Read handler */
@@ -508,6 +509,15 @@ void conn_push_message(CONN *conn, int message_id)
 			FATAL_LOGGER(conn->logger, "Initialize MESSAGE failed, %s", strerror(errno));
 		}
 	}
+}
+
+/* Set timeout */
+void conn_set_timeout(CONN *conn, long long timeout)
+{
+    if(conn)
+    {
+        conn->timeout = timeout;
+    }
 }
 
 /* Start cstate */

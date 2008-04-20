@@ -289,7 +289,7 @@ typedef struct _SERVICE
         uint32_t heartbeat_interval;
         void     *cb_heartbeat_arg;
         uint32_t sleep_usec;
-        uint32_t conn_timeout;
+        long long conn_timeout;
 
 		/* mutext lock */
 		void *mutex;
@@ -400,7 +400,7 @@ typedef struct _CONN
         /* Transaction option */
         int			s_id;
         int			s_state;
-        int			timeout;
+        long long	timeout;
         /* Client options */
         int         c_id;
         int         c_state;
@@ -480,6 +480,7 @@ typedef struct _CONN
         void	  (*push_message)(struct _CONN *, int);
         int       (*start_cstate)(struct _CONN *);
         void      (*over_cstate)(struct _CONN *);
+        void      (*set_timeout)(struct _CONN *, long long timeout);
         void      (*close)(struct _CONN *); 
         void      (*terminate)(struct _CONN *); 
         void      (*clean)(struct _CONN **);

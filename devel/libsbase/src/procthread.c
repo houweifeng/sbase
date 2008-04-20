@@ -33,66 +33,68 @@ PROCTHREAD *procthread_init()
 /* Running once for message queue */
 void procthread_running_once(PROCTHREAD *pth)
 {
-	MESSAGE *msg = NULL;
-	CONN    *conn = NULL;
-	PROCTHREAD *parent = NULL;
-	if(pth)
-	{
-		msg = (MESSAGE *)POP_QUEUE(pth->message_queue);
-		if(msg)
-		{
-			DEBUG_LOGGER(pth->logger, "Got message[%08x] id[%d] handler[%08x] parent[%08x]",
-                                        msg, msg->msg_id, msg->handler, msg->parent);
-			if(!(msg->msg_id & MESSAGE_ALL))
-			{
-				WARN_LOGGER(pth->logger, "Unkown message[%d]", msg->msg_id);
-				goto next;
-			}
-			conn = (CONN *)msg->handler;
-			parent = (PROCTHREAD *)msg->parent;
-			if(conn == NULL || parent == NULL 
-				|| msg->fd != conn->fd || pth->service == NULL )
-			{
-				WARN_LOGGER(pth->logger, 
-				"Invalid MESSAGE[%08x] fd[%d] handler[%08x] parent[%08x]",
-					msg, msg->fd, conn, parent);
-				goto next;
-			}
-			DEBUG_LOGGER(pth->logger, "Got message[%s] On service[%s] procthread[%08x] connection[%d] %s:%d",
-				messagelist[msg->msg_id], pth->service->name, pth, conn->fd, conn->ip, conn->port);
-			switch(msg->msg_id)
-			{
-				/* NEW connection */
-				case MESSAGE_NEW_SESSION :
-					pth->add_connection(pth, conn);
-					break;
-				/* Close connection */
-				case MESSAGE_QUIT :
-					if(pth->connections[msg->fd])
-						pth->terminate_connection(pth, conn);
-					break;
-				case MESSAGE_INPUT :
-					break;
-				case MESSAGE_OUTPUT :
-					conn->write_handler(conn);
-					break;
-				case MESSAGE_PACKET :
-					conn->packet_handler(conn);
-					break;
-				case MESSAGE_DATA :
-					conn->data_handler(conn);
-					break;
+    MESSAGE *msg = NULL;
+    CONN    *conn = NULL;
+    PROCTHREAD *parent = NULL;
+    if(pth)
+    {
+        msg = (MESSAGE *)POP_QUEUE(pth->message_queue);
+        if(msg)
+        {
+            DEBUG_LOGGER(pth->logger, "Got message[%08x] id[%d] handler[%08x] parent[%08x]",
+                    msg, msg->msg_id, msg->handler, msg->parent);
+            if(!(msg->msg_id & MESSAGE_ALL))
+            {
+                WARN_LOGGER(pth->logger, "Unkown message[%d]", msg->msg_id);
+                goto next;
+            }
+            conn = (CONN *)msg->handler;
+            parent = (PROCTHREAD *)msg->parent;
+            if(conn == NULL || parent == NULL 
+                    || msg->fd != conn->fd || pth->service == NULL )
+            {
+                WARN_LOGGER(pth->logger, 
+                        "Invalid MESSAGE[%08x] fd[%d] handler[%08x] parent[%08x]",
+                        msg, msg->fd, conn, parent);
+                goto next;
+            }
+            DEBUG_LOGGER(pth->logger, 
+                    "Got message[%s] On service[%s] procthread[%08x] connection[%d] %s:%d",
+                    messagelist[msg->msg_id], pth->service->name, 
+                    pth, conn->fd, conn->ip, conn->port);
+            switch(msg->msg_id)
+            {
+                /* NEW connection */
+                case MESSAGE_NEW_SESSION :
+                    pth->add_connection(pth, conn);
+                    break;
+                    /* Close connection */
+                case MESSAGE_QUIT :
+                    if(pth->connections[msg->fd])
+                        pth->terminate_connection(pth, conn);
+                    break;
+                case MESSAGE_INPUT :
+                    break;
+                case MESSAGE_OUTPUT :
+                    conn->write_handler(conn);
+                    break;
+                case MESSAGE_PACKET :
+                    conn->packet_handler(conn);
+                    break;
+                case MESSAGE_DATA :
+                    conn->data_handler(conn);
+                    break;
                 case MESSAGE_TRANSACTION :
-					conn->transaction_handler(conn, msg->tid);
-					break;
+                    conn->transaction_handler(conn, msg->tid);
+                    break;
 
-				default:
-					break;
-			}
+                default:
+                    break;
+            }
 next:
-			MESSAGE_CLEAN(msg);
-		}
-	}
+            MESSAGE_CLEAN(msg);
+        }
+    }
 }
 
 /* Running procthread */
