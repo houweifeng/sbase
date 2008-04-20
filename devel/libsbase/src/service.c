@@ -357,24 +357,27 @@ void service_active_heartbeat(SERVICE *service)
 /* add new transaction */
 void service_newtransaction(SERVICE *service, CONN *conn, int tid)
 {
+    PROCTHREAD *pth = NULL;
     int index = 0;
+    
     if(service && conn && conn->fd > 0)
     {
         /* Add connection for procthread */
         if(service->working_mode == WORKING_PROC && service->procthread)
         {
             DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthread[%d]",
-                    tid, conn->fd, conn->ip, conn->port, getpid());
+                    tid, conn->ip, conn->port, getpid());
             return service->procthread->newtransaction(service->procthread, conn, tid);
         }
-        //fprintf(stdout, "%dOK:%08x %s:%d\n", __LINE__, conn, ip, port);
         /* Add connection to procthread pool */
         if(service->working_mode == WORKING_THREAD && service->procthreads)
         {
             index = conn->fd % service->max_procthreads;
+            pth = service->procthreads[index];
             DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthreads[%d]",
-                    tid, conn->fd, conn->ip, conn->port, index);
-            return service->procthreads[index]->newtransaction(service->procthreads[index],conn,tid);
+                    tid, conn->ip, conn->port, index);
+            if(pth && pth->newtransaction)
+                return pth->newtransaction(pth, conn, tid);
         }
     }
     return ;

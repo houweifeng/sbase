@@ -126,8 +126,7 @@ void procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
             msg->parent  = (void *)pth;
             PUSH_QUEUE(pth->message_queue, msg);
             DEBUG_LOGGER(pth->logger, "Added message TRANSACTION[%d] to %s:%d via %d total %d",
-                    tid, conn->fd, conn->ip, conn->port, conn->fd, 
-                    ((QUEUE *)pth->message_queue)->total);
+                    tid, conn->ip, conn->port, conn->fd, ((QUEUE *)pth->message_queue)->total);
         }
     }
 }
@@ -150,6 +149,7 @@ void procthread_addconn(PROCTHREAD *pth, CONN *conn)
                     conn->fd, conn->ip, conn->port, ((QUEUE *)pth->message_queue)->total);
         }
     }	
+    return ;
 }
 
 /* Add new connection */
