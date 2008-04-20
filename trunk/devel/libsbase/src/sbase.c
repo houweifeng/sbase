@@ -267,6 +267,15 @@ void sbase_running_once(SBASE *sb)
                 WARN_LOGGER(sb->logger, "Unkown message[%d]", msg->msg_id);
                 goto next;
             }
+            //NEW task 
+            if(msg->msg_id == MESSAGE_TASK)
+            {
+                if(msg->handler)
+                {
+                    ((FUNCALL)(msg->handler))(msg->arg);
+                }
+                goto next;
+            }
             conn = (CONN *)msg->handler;
             pth = (PROCTHREAD *)msg->parent;
             if(conn == NULL || pth == NULL || msg->fd != conn->fd || pth->service == NULL )

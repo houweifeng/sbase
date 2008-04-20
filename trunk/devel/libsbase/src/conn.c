@@ -33,6 +33,7 @@ CONN *conn_init(char *ip, int port)
 	if(port <= 0 ) goto ERROR;
 	if(conn)
 	{
+        TIMER_INIT(conn->timer);
 		conn->buffer	            = buffer_init();
 		conn->oob		            = buffer_init();
 		conn->cache		            = buffer_init();
@@ -122,28 +123,28 @@ int conn_set(CONN *conn)
 /* Event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
-	CONN *conn = (CONN *)arg;
-	if(conn)
-	{
-		if(event_fd == conn->fd)
-		{
-			if(event & E_CLOSE)
-                        {
-                                DEBUG_LOGGER(conn->logger, "E_CLOSE:%d", E_CLOSE);
-                                return conn->push_message(conn, MESSAGE_QUIT);
-                        }
-			if(event & E_READ)
-			{
-				DEBUG_LOGGER(conn->logger, "E_READ:%d on %d", E_READ, event_fd);
-				conn->read_handler(conn);
-			}
-			if(event & E_WRITE)
-			{
-				DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d", E_WRITE, event_fd);
-				conn->write_handler(conn);
-			} 
-		}	
-	}
+    CONN *conn = (CONN *)arg;
+    if(conn)
+    {
+        if(event_fd == conn->fd)
+        {
+            if(event & E_CLOSE)
+            {
+                DEBUG_LOGGER(conn->logger, "E_CLOSE:%d", E_CLOSE);
+                return conn->push_message(conn, MESSAGE_QUIT);
+            }
+            if(event & E_READ)
+            {
+                DEBUG_LOGGER(conn->logger, "E_READ:%d on %d", E_READ, event_fd);
+                conn->read_handler(conn);
+            }
+            if(event & E_WRITE)
+            {
+                DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d", E_WRITE, event_fd);
+                conn->write_handler(conn);
+            } 
+        }	
+    }
 }
 
 /* Check connection state  TIMEOUT */
@@ -151,13 +152,16 @@ void conn_state_handler(CONN *conn)
 {
     /* Check connection and transaction state  */
     CONN_CHECK(conn);
+    int check = -1;
+    void *ptr = NULL;
+    long long usec = 0ll;
     if(conn)
     {
-        if(conn->timeout > 0 && TIMER_CHECK(conn->timer, conn->timeout) == 0)
+        if(conn->timeout > 0 && conn->timer && TIMER_CHECK(conn->timer, conn->timeout) == 0)
         {
-            WARN_LOGGER(conn->logger, "Connection[%d] from %s:%d TIMEOUT",
-                    conn->fd, conn->ip, conn->port);
-            return conn->push_message(conn, MESSAGE_QUIT);
+                WARN_LOGGER(conn->logger, "Connection[%d] from %s:%d TIMEOUT",
+                        conn->fd, conn->ip, conn->port);
+                CONN_TERMINATE(conn);
         }
     }
 }
@@ -600,6 +604,8 @@ void conn_clean(CONN **conn)
 		if((*conn)->packet) (*conn)->packet->clean(&((*conn)->packet));
 		/* Clean chunk */
 		if((*conn)->chunk) (*conn)->chunk->clean(&((*conn)->chunk));
+        /* Clean timer */
+        TIMER_CLEAN((*conn)->timer);
 		/* Clean send queue */
 		if((*conn)->send_queue)
         {
