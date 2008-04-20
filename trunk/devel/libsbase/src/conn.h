@@ -48,6 +48,8 @@ void conn_data_handler(struct _CONN *);
 void conn_transaction_handler(struct _CONN *, int tid);
 /* Push message */
 void conn_push_message(struct _CONN *, int );
+/* Set timeout */
+void conn_set_timeout(CONN *conn, long long timeout);
 /* start cstate on conn */
 int conn_start_cstate(struct _CONN *);
 /* over  cstate on conn */
