@@ -78,7 +78,7 @@ typedef struct _TIMER
 }
 
 #define TIMER_CHECK(ptr, interval)                                              \
-    (PT(ptr) && (gettimeofday(&(PT(ptr)->tv), NULL) == 0                        \
+    ((PT(ptr) && gettimeofday(&(PT(ptr)->tv), NULL) == 0                        \
      && ((PT(ptr)->tv.tv_sec * 1000000ll + PT(ptr)->tv.tv_usec)                 \
         - PT(ptr)->last_usec) > interval) ? 0 : -1)
 
