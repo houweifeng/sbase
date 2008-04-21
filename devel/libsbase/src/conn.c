@@ -59,6 +59,7 @@ CONN *conn_init(char *ip, int port)
         conn->set_timeout           = conn_set_timeout;
         conn->start_cstate          = conn_start_cstate;
         conn->over_cstate           = conn_over_cstate;
+		conn->over 	    	        = conn_over;
 		conn->close 	    	    = conn_close;
 		conn->terminate 	        = conn_terminate;
 		conn->clean 		        = conn_clean;
@@ -215,6 +216,7 @@ void conn_read_handler(CONN *conn)
 			conn->chunk_reader(conn);
 		else
 			conn->packet_reader(conn);			
+        DEBUG_LOGGER(conn->logger, "test OK");
 	}
 	end:
 	{
@@ -566,6 +568,16 @@ void conn_close(CONN *conn)
 {
 	CONN_TERMINATE(conn);
 }
+
+/* Over connection */
+void conn_over(CONN *conn)
+{
+    if(conn)
+    {
+        conn->push_message(conn, MESSAGE_QUIT);
+    }
+}
+
 /* Terminate connection  */
 void conn_terminate(CONN *conn)
 {
