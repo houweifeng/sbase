@@ -4,6 +4,7 @@
 #include "procthread.h"
 #include "logger.h"
 #include "conn.h"
+#include "message.h"
 
 /* Initialize service */
 SERVICE *service_init()
@@ -17,12 +18,12 @@ SERVICE *service_init()
 		service->newtask		    = service_newtask;
 		service->newtransaction		= service_newtransaction;
 		service->addconn	        = service_addconn;
-        service->state_conns        = service_state_conns;
         service->newconn            = service_newconn;
         service->getconn            = service_getconn;
         service->pushconn           = service_pushconn;
         service->popconn            = service_popconn;
         service->active_heartbeat    = service_active_heartbeat;
+        service->state_conns        = service_state_conns;
 		service->terminate	        = service_terminate;
 		service->clean		        = service_clean;
 		service->event 		        = ev_init();
@@ -112,7 +113,22 @@ client_setting:
 	}
 	return -1;
 }
-
+#ifdef HAVE_PTHREAD
+#define NEW_PROCTHREAD(id, pthid, pth, logger)                                              \
+{                                                                                           \
+    if(pthread_create(&pthid, NULL, (void *)(pth->run), (void *)pth) == 0)                  \
+    {                                                                                       \
+        DEBUG_LOGGER(logger, "Created procthreads[%d] ID[%08x]", id, pthid);                \
+    }	                                                                                    \
+    else                                                                                    \
+    {                                                                                       \
+        FATAL_LOGGER(logger, "Create procthreads[%d] failed, %s", id, strerror(errno));     \
+        exit(EXIT_FAILURE);				                                                    \
+    }                                                                                       \
+}
+#else
+#define NEW_PROCTHREAD(id, pthid, pth, logger)
+#endif
 /* Run service */
 void service_run(SERVICE *service)
 {
@@ -159,6 +175,14 @@ work_proc_init:
 		}	
         goto end;
 work_thread_init:
+        //daemon thread
+        if((service->daemon = procthread_init()))
+        {
+            NEW_PROCTHREAD(-1, procthread_id, service->daemon, service->logger);
+            service->daemon->service = service;
+            service->daemon->logger = service->logger;
+            service->daemon->evbase->logger = service->evlogger;
+        }
 		/* Initialize Threads */
 		service->procthreads = (PROCTHREAD **)calloc(service->max_procthreads,
 				sizeof(PROCTHREAD *));
@@ -182,21 +206,7 @@ work_thread_init:
 						strerror(errno));
 				exit(EXIT_FAILURE);
 			}
-#ifdef HAVE_PTHREAD
-			if(pthread_create(&procthread_id, NULL, 
-				(void *)(service->procthreads[i]->run),
-				(void *)service->procthreads[i]) == 0)
-			{
-				DEBUG_LOGGER(service->logger, "Created procthreads[%d] ID[%08x]",
-						i, procthread_id);	
-			}	
-			else
-			{
-				FATAL_LOGGER(service->logger, "Create procthreads[%d] failed, %s",
-						i, strerror(errno));
-				exit(EXIT_FAILURE);				
-			}
-#endif
+            NEW_PROCTHREAD(i, procthread_id, service->procthreads[i], service->logger);
 		}	
 		goto end ;
     /* client connection initialize */
@@ -331,20 +341,27 @@ void service_active_heartbeat(SERVICE *service)
 {
     if(service)
     {
-
-	//	DEBUG_LOGGER(service->logger, "Heartbeat %lld in service[%s] "
-      //          "interval:%d timer:%08x timer->check:%08x", 
-		//		 service->nheartbeat++, service->name, service->heartbeat_interval,
-          //       service->timer, ((TIMER *)service->timer)->check);
 		if(service->heartbeat_interval > 0
             && TIMER_CHECK(service->timer, service->heartbeat_interval) == 0)
 		{
 			if(service->cb_heartbeat_handler)
 			{
-				//DEBUG_LOGGER(service->logger, "Heartbeat %lld in service[%s]", 
-				  //  service->nheartbeat++, service->name);
-				service->cb_heartbeat_handler(service->cb_heartbeat_arg);
+                if(service->daemon)
+                    service->daemon->heartbeat(service->daemon);
+                else
+				    service->cb_heartbeat_handler(service->cb_heartbeat_arg);
 			}
+            //DEBUG_LOGGER(service->logger, "Heartbeat %lld", service->nheartbeat);
+            //state
+            if(service->running_connections > 0)
+            {
+                if(service->daemon)
+                    service->daemon->dstate(service->daemon);
+                else 
+                    service->state_conns(service);
+            }
+            //DEBUG_LOGGER(service->logger, "Heartbeat %lld", service->nheartbeat++);
+            TIMER_SAMPLE(service->timer);
         }
     }
     return ;
@@ -414,8 +431,6 @@ void service_state_conns(SERVICE *service)
                 && service->running_connections < service->connections_limit)
 		{
 			num = service->connections_limit - service->running_connections;
-            //DEBUG_LOGGER(service->logger, 
-            //"Ready for adding %d connections(running_connections:%d)",
             //       num, service->running_connections);
 			while(i++ < num)
 			{
@@ -426,11 +441,11 @@ void service_state_conns(SERVICE *service)
 			}
 		}
         i = 0;
-        while(i < service->max_connections)
+        while(i < service->running_connections)
         {
             if((conn = service->connections[i++]))
             {
-                conn->state_handler(conn);
+                conn->push_message(conn, MESSAGE_STATE);
             }
         }
     }

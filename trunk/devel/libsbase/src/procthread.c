@@ -15,18 +15,20 @@ PROCTHREAD *procthread_init()
 	if(pth)
 	{
 		TIMER_INIT(pth->timer);
-		pth->evbase 			= evbase_init();		
-		pth->message_queue		= queue_init();
-		pth->run			    = procthread_run;
-		pth->running_once		= procthread_running_once;
-		pth->newtask		    = procthread_newtask;
-		pth->newtransaction		= procthread_newtransaction;
-		pth->addconn			= procthread_addconn;
-		pth->add_connection		= procthread_add_connection;
+		pth->evbase 			    = evbase_init();		
+		pth->message_queue		    = queue_init();
+		pth->run			        = procthread_run;
+		pth->running_once		    = procthread_running_once;
+		pth->dstate		            = procthread_dstate;
+		pth->heartbeat		        = procthread_heartbeat;
+		pth->newtask		        = procthread_newtask;
+		pth->newtransaction		    = procthread_newtransaction;
+		pth->addconn			    = procthread_addconn;
+		pth->add_connection		    = procthread_add_connection;
 		pth->terminate_connection	= procthread_terminate_connection;
-		pth->terminate			= procthread_terminate;
-		pth->clean			= procthread_clean;
-		pth->running_status		= 1;
+		pth->terminate			    = procthread_terminate;
+		pth->clean			        = procthread_clean;
+		pth->running_status		    = 1;
 	}
 	return pth;
 }
@@ -50,12 +52,19 @@ void procthread_running_once(PROCTHREAD *pth)
                 goto next;
             }
             //NEW task 
-            if(msg->msg_id == MESSAGE_TASK)
+            if(msg->msg_id == MESSAGE_TASK || msg->msg_id == MESSAGE_HEARTBEAT)
             {
                 if(msg->handler)
                 {
                     ((FUNCALL)(msg->handler))(msg->arg);
                 }
+                goto next;
+            }
+            //daemon state
+            if(msg->msg_id == MESSAGE_DSTATE)
+            {
+                if(pth->service && pth->service->state_conns)
+                    pth->service->state_conns(pth->service);
                 goto next;
             }
             conn = (CONN *)msg->handler;
@@ -97,7 +106,9 @@ void procthread_running_once(PROCTHREAD *pth)
                 case MESSAGE_TRANSACTION :
                     conn->transaction_handler(conn, msg->tid);
                     break;
-
+                case MESSAGE_STATE :
+                    conn->state_handler(conn);
+                    break;
                 default:
                     break;
             }
@@ -121,6 +132,41 @@ void procthread_run(void *arg)
 		pth->running_once(pth);
 		usleep(pth->service->sleep_usec);
 	}
+}
+
+/* check state for daemon */
+void procthread_dstate(PROCTHREAD *pth)
+{
+	MESSAGE *msg = NULL;
+	if(pth && pth->message_queue)
+    {
+        if((msg = MESSAGE_INIT()))
+        {
+            msg->msg_id = MESSAGE_DSTATE;
+            msg->parent  = (void *)pth;
+            PUSH_QUEUE(pth->message_queue, msg);
+            DEBUG_LOGGER(pth->logger, "Added message DSTATE to PROCTHREAD[%d]", pth->index);
+        }
+    }
+}
+
+
+/* execute  heartbeat*/
+void procthread_heartbeat(PROCTHREAD *pth)
+{
+	MESSAGE *msg = NULL;
+	if(pth && pth->message_queue)
+    {
+        if((msg = MESSAGE_INIT()))
+        {
+            msg->msg_id = MESSAGE_HEARTBEAT;
+            msg->handler = pth->service->cb_heartbeat_handler;
+            msg->parent  = (void *)pth;
+            PUSH_QUEUE(pth->message_queue, msg);
+            DEBUG_LOGGER(pth->logger, "Added message HEARTBEAT to PROCTHREAD[%d]", pth->index);
+        }
+    }
+    return ;
 }
 
 /* add new task */
