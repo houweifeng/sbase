@@ -24,6 +24,12 @@ void procthread_run(void *);
 /* Running procthread once */
 void procthread_running_once(PROCTHREAD *);
 
+/* check state for daemon */
+void procthread_dstate(PROCTHREAD *pth);
+
+/* execute  heartbeat*/
+void procthread_heartbeat(PROCTHREAD *pth);
+
 /* add new task */
 void procthread_newtask(PROCTHREAD *pth, FUNCALL, void *arg);
 

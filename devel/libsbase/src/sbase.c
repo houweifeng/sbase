@@ -138,7 +138,6 @@ int sbase_state(struct _SBASE *sb)
             if((service = sb->services[i]))
             {
                 service->active_heartbeat(service); 
-				service->state_conns(service);
             }
         }
 
@@ -268,7 +267,7 @@ void sbase_running_once(SBASE *sb)
                 goto next;
             }
             //NEW task 
-            if(msg->msg_id == MESSAGE_TASK)
+            if(msg->msg_id == MESSAGE_TASK || msg->msg_id == MESSAGE_HEARTBEAT)
             {
                 if(msg->handler)
                 {
@@ -276,6 +275,15 @@ void sbase_running_once(SBASE *sb)
                 }
                 goto next;
             }
+
+            //daemon state
+            if(msg->msg_id == MESSAGE_DSTATE)
+            {
+                if(pth->service && pth->service->state_conns)
+                    pth->service->state_conns(pth->service);
+                goto next;
+            }
+            //connection 
             conn = (CONN *)msg->handler;
             pth = (PROCTHREAD *)msg->parent;
             if(conn == NULL || pth == NULL || msg->fd != conn->fd || pth->service == NULL )
@@ -312,6 +320,9 @@ void sbase_running_once(SBASE *sb)
                     break;
                 case MESSAGE_TRANSACTION:
                     conn->transaction_handler(conn, msg->tid);
+                    break;
+                case MESSAGE_STATE :
+                    conn->state_handler(conn);
                     break;
                 default:
                     break;

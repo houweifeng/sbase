@@ -259,6 +259,8 @@ typedef struct _SERVICE
         int running_procthreads;
         struct _PROCTHREAD **procthreads;
         struct _PROCTHREAD *procthread;
+        //only for multithreads 
+        struct _PROCTHREAD *daemon;
 
         /* Connection options */
         int max_connections;
@@ -366,6 +368,8 @@ typedef struct _PROCTHREAD
         void (*run)(void *);
         void (*running_once)(struct _PROCTHREAD *);
         void (*addconn)(struct _PROCTHREAD *, struct _CONN *);
+        void (*dstate)(struct _PROCTHREAD *);
+        void (*heartbeat)(struct _PROCTHREAD *);
         void (*newtask)(struct _PROCTHREAD *, FUNCALL, void *arg);
         void (*newtransaction)(struct _PROCTHREAD *, struct _CONN *, int tid);
         void (*add_connection)(struct _PROCTHREAD *, struct _CONN *);
