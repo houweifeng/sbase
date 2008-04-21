@@ -489,6 +489,7 @@ typedef struct _CONN
         int       (*start_cstate)(struct _CONN *);
         void      (*over_cstate)(struct _CONN *);
         void      (*set_timeout)(struct _CONN *, long long timeout);
+        void      (*over)(struct _CONN *); 
         void      (*close)(struct _CONN *); 
         void      (*terminate)(struct _CONN *); 
         void      (*clean)(struct _CONN **);
