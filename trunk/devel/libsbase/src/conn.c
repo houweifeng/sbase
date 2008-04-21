@@ -216,7 +216,6 @@ void conn_read_handler(CONN *conn)
 			conn->chunk_reader(conn);
 		else
 			conn->packet_reader(conn);			
-        DEBUG_LOGGER(conn->logger, "test OK");
 	}
 	end:
 	{
