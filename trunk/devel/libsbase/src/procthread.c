@@ -44,8 +44,8 @@ void procthread_running_once(PROCTHREAD *pth)
         msg = (MESSAGE *)POP_QUEUE(pth->message_queue);
         if(msg)
         {
-            DEBUG_LOGGER(pth->logger, "Got message[%08x] id[%d] handler[%08x] parent[%08x]",
-                    msg, msg->msg_id, msg->handler, msg->parent);
+            DEBUG_LOGGER(pth->logger, "Got message[%s] id[%d] handler[%08x] parent[%08x]",
+                    MESSAGE_DESC(msg->msg_id), msg->msg_id, msg->handler, msg->parent);
             if(!(msg->msg_id & MESSAGE_ALL))
             {
                 WARN_LOGGER(pth->logger, "Unkown message[%d]", msg->msg_id);
@@ -78,7 +78,7 @@ void procthread_running_once(PROCTHREAD *pth)
                 goto next;
             }
             DEBUG_LOGGER(pth->logger, 
-                    "Got message[%d] On service[%s] procthread[%08x] connection[%d] %s:%d",
+                    "Got message[%s] On service[%s] procthread[%08x] connection[%d] %s:%d",
                     MESSAGE_DESC(msg->msg_id), pth->service->name, 
                     pth, conn->fd, conn->ip, conn->port);
             switch(msg->msg_id)
