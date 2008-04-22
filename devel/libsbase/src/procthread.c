@@ -63,6 +63,7 @@ void procthread_running_once(PROCTHREAD *pth)
             //daemon state
             if(msg->msg_id == MESSAGE_DSTATE)
             {
+                DEBUG_LOGGER(pth->logger, "daemon[%s] state", pth);
                 if(pth->service && pth->service->state_conns)
                     pth->service->state_conns(pth->service);
                 goto next;
@@ -73,8 +74,8 @@ void procthread_running_once(PROCTHREAD *pth)
                     || msg->fd != conn->fd || pth->service == NULL )
             {
                 WARN_LOGGER(pth->logger, 
-                        "Invalid MESSAGE[%08x] fd[%d] handler[%08x] parent[%08x]",
-                        msg, msg->fd, conn, parent);
+                        "Invalid MESSAGE[%08x] msg_id[%d] fd[%d] handler[%08x] parent[%08x]",
+                        msg, msg->msg_id, msg->fd, conn, parent);
                 goto next;
             }
             DEBUG_LOGGER(pth->logger, 
