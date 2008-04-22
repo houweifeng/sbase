@@ -114,6 +114,8 @@ void procthread_running_once(PROCTHREAD *pth)
                     break;
             }
 next:
+            DEBUG_LOGGER(pth->logger, "message[%s] id[%d] over", 
+                    MESSAGE_DESC(msg->msg_id), msg->msg_id);
             MESSAGE_CLEAN(msg);
         }
     }

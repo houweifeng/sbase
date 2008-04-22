@@ -131,18 +131,21 @@ void conn_event_handler(int event_fd, short event, void *arg)
         {
             if(event & E_CLOSE)
             {
-                DEBUG_LOGGER(conn->logger, "E_CLOSE:%d", E_CLOSE);
-                return conn->push_message(conn, MESSAGE_QUIT);
+                DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
+                conn->push_message(conn, MESSAGE_QUIT);
+                DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d OVER ", E_CLOSE, event_fd);
             }
             if(event & E_READ)
             {
-                DEBUG_LOGGER(conn->logger, "E_READ:%d on %d", E_READ, event_fd);
+                DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
                 conn->read_handler(conn);
+                DEBUG_LOGGER(conn->logger, "E_READ:%d on %d OVER ", E_READ, event_fd);
             }
             if(event & E_WRITE)
             {
-                DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d", E_WRITE, event_fd);
+                DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
                 conn->write_handler(conn);
+                DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
         }	
     }
