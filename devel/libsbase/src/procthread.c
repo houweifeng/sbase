@@ -63,7 +63,7 @@ void procthread_running_once(PROCTHREAD *pth)
             //daemon state
             if(msg->msg_id == MESSAGE_DSTATE)
             {
-                DEBUG_LOGGER(pth->logger, "daemon[%s] state", pth);
+                DEBUG_LOGGER(pth->logger, "daemon[%08x] state", pth);
                 if(pth->service && pth->service->state_conns)
                     pth->service->state_conns(pth->service);
                 goto next;
