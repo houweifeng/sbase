@@ -503,8 +503,8 @@ void conn_push_message(CONN *conn, int message_id)
 			msg->handler = (void *)conn;
 			msg->parent  = (void *)conn->parent;
 			PUSH_QUEUE(conn->message_queue, (void *)msg);
-			DEBUG_LOGGER(conn->logger, "Pushed message_id[%d] to message_queue[%08x] "
-                    "on %s:%d via %d",message_id, conn->message_queue, 
+			DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] "
+                    "on %s:%d via %d", MESSAGE_DESC(message_id), conn->message_queue, 
                     conn->ip, conn->port, conn->fd);
 		}	
 		else
