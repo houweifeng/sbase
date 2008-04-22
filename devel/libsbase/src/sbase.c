@@ -293,8 +293,8 @@ void sbase_running_once(SBASE *sb)
                 goto next;
             }
             DEBUG_LOGGER(sb->logger, 
-                    "Got message[%s] On service[%s] procthread[%08x] connection[%d] %s:%d",
-                    messagelist[msg->msg_id], pth->service->name, 
+                    "Got message[%d] On service[%s] procthread[%08x] connection[%d] %s:%d",
+                    msg->msg_id, pth->service->name, 
                     pth, conn->fd, conn->ip, conn->port);
             switch(msg->msg_id)
             {
