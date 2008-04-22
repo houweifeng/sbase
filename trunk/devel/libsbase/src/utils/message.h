@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
 #ifndef _MESSAGE_H
 #define _MESSAGE_H
 #ifdef __cplusplus
@@ -51,11 +50,12 @@ typedef struct _MESSAGE
     void            *arg;
     int             tid;
 }MESSAGE;
+int get_msg_no(int message_id);
 /* Initialize message */
 #define MESSAGE_INIT() ((MESSAGE *)calloc(1, sizeof(MESSAGE)))
 #define MESSAGE_CLEAN(ptr) {if(ptr){free(ptr);ptr = NULL;}}
 #define MESSAGE_SIZE    sizeof(MESSAGE)
-#define MESSAGE_DESC(id) ((id >= 0 && id < MESSAGE_NUM)?messagelist[] : "")
+#define MESSAGE_DESC(id) ((id >= 0 && id < MESSAGE_NUM)?messagelist[get_msg_no(id)] : "")
 #endif
 #ifdef __cplusplus
  }

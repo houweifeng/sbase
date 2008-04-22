@@ -15,6 +15,7 @@ utils/chunk.h \
 utils/logger.c \
 utils/logger.h \
 utils/message.h \
+utils/message.c \
 utils/queue.c \
 utils/queue.h \
 utils/timer.c \

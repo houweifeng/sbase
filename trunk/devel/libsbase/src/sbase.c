@@ -259,8 +259,8 @@ void sbase_running_once(SBASE *sb)
         msg = (MESSAGE *)POP_QUEUE(sb->message_queue);
         if(msg)
         {
-            DEBUG_LOGGER(sb->logger, "Got message[%08x] id[%d] handler[%08x] parent[%08x]",
-                    msg, msg->msg_id, msg->handler, msg->parent);
+            DEBUG_LOGGER(sb->logger, "Got message[%s] with [%08x] id[%d] handler[%08x] parent[%08x]",
+                    MESSAGE_DESC(msg->msg_id), msg, msg->msg_id, msg->handler, msg->parent);
             if(!(msg->msg_id & MESSAGE_ALL))
             {
                 WARN_LOGGER(sb->logger, "Unkown message[%d]", msg->msg_id);
@@ -293,8 +293,8 @@ void sbase_running_once(SBASE *sb)
                 goto next;
             }
             DEBUG_LOGGER(sb->logger, 
-                    "Got message[%d] On service[%s] procthread[%08x] connection[%d] %s:%d",
-                    msg->msg_id, pth->service->name, 
+                    "Got message[ss] On service[%s] procthread[%08x] connection[%d] %s:%d",
+                    MESSAGE_DESC(msg->msg_id), pth->service->name, 
                     pth, conn->fd, conn->ip, conn->port);
             switch(msg->msg_id)
             {
