@@ -26,7 +26,6 @@ extern "C" {
 #define MESSAGE_ALL		(MESSAGE_QUIT | MESSAGE_NEW_SESSION | MESSAGE_INPUT | MESSAGE_OUTPUT \
 				| MESSAGE_PACKET | MESSAGE_DATA | MESSAGE_TRANSACTION| MESSAGE_TASK \
                 | MESSAGE_HEARTBEAT | MESSAGE_STATE | MESSAGE_DSTATE)
-#define MESSAGE_NUM 11
 static char *messagelist[] = 
 {
 	"MESSAGE_NEW_SESSION",
@@ -55,7 +54,7 @@ int get_msg_no(int message_id);
 #define MESSAGE_INIT() ((MESSAGE *)calloc(1, sizeof(MESSAGE)))
 #define MESSAGE_CLEAN(ptr) {if(ptr){free(ptr);ptr = NULL;}}
 #define MESSAGE_SIZE    sizeof(MESSAGE)
-#define MESSAGE_DESC(id) ((id >= 0 && id < MESSAGE_NUM)?messagelist[get_msg_no(id)] : "")
+#define MESSAGE_DESC(id) ((id & MESSAGE_ALL)?messagelist[get_msg_no(id)] : "")
 #endif
 #ifdef __cplusplus
  }
