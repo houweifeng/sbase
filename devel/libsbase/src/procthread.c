@@ -78,6 +78,8 @@ void procthread_running_once(PROCTHREAD *pth)
                         msg, msg->msg_id, msg->fd, conn, parent);
                 goto next;
             }
+            /*
+                    */
             DEBUG_LOGGER(pth->logger, 
                     "Got message[%s] On service[%s] procthread[%08x] connection[%d] %s:%d",
                     MESSAGE_DESC(msg->msg_id), pth->service->name, 
@@ -114,8 +116,8 @@ void procthread_running_once(PROCTHREAD *pth)
                     break;
             }
 next:
-            DEBUG_LOGGER(pth->logger, "message[%s] id[%d] over", 
-                    MESSAGE_DESC(msg->msg_id), msg->msg_id);
+            //DEBUG_LOGGER(pth->logger, "message[%s] id[%d] over", 
+            //        MESSAGE_DESC(msg->msg_id), msg->msg_id);
             MESSAGE_CLEAN(msg);
         }
     }
@@ -148,7 +150,7 @@ void procthread_dstate(PROCTHREAD *pth)
             msg->msg_id = MESSAGE_DSTATE;
             msg->parent  = (void *)pth;
             PUSH_QUEUE(pth->message_queue, msg);
-            DEBUG_LOGGER(pth->logger, "Added message DSTATE to PROCTHREAD[%d]", pth->index);
+            //DEBUG_LOGGER(pth->logger, "Added message DSTATE to PROCTHREAD[%d]", pth->index);
         }
     }
 }
@@ -166,7 +168,7 @@ void procthread_heartbeat(PROCTHREAD *pth)
             msg->handler = pth->service->cb_heartbeat_handler;
             msg->parent  = (void *)pth;
             PUSH_QUEUE(pth->message_queue, msg);
-            DEBUG_LOGGER(pth->logger, "Added message HEARTBEAT to PROCTHREAD[%d]", pth->index);
+            //DEBUG_LOGGER(pth->logger, "Added message HEARTBEAT to PROCTHREAD[%d]", pth->index);
         }
     }
     return ;
