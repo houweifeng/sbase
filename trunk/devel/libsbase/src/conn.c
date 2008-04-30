@@ -163,7 +163,7 @@ void conn_state_handler(CONN *conn)
     {
         if(conn->timeout > 0 && conn->timer && TIMER_CHECK(conn->timer, conn->timeout) == 0)
         {
-                WARN_LOGGER(conn->logger, "Connection[%d] from %s:%d TIMEOUT",
+                WARN_LOGGER(conn->logger, "Connection[%d] ON %s:%d TIMEOUT",
                         conn->fd, conn->ip, conn->port);
                 CONN_TERMINATE(conn);
         }
@@ -506,9 +506,11 @@ void conn_push_message(CONN *conn, int message_id)
 			msg->handler = (void *)conn;
 			msg->parent  = (void *)conn->parent;
 			PUSH_QUEUE(conn->message_queue, (void *)msg);
+            /*
 			DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] "
                     "on %s:%d via %d", MESSAGE_DESC(message_id), conn->message_queue, 
                     conn->ip, conn->port, conn->fd);
+            */
 		}	
 		else
 		{
