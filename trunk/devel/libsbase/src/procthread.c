@@ -271,7 +271,7 @@ void procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 /* Terminate connection */
 void procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 {
-	if(pth && pth->connections && conn && conn->fd < pth->service->max_connections && conn->fd > 0  )
+	if(pth && pth->connections && conn && conn->fd < pth->service->max_connections && conn->fd > 0)
 	{
 		pth->connections[conn->fd] = NULL;
         pth->service->popconn(pth->service, conn->index);

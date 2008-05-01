@@ -260,7 +260,8 @@ typedef struct _SERVICE
         struct _PROCTHREAD **procthreads;
         struct _PROCTHREAD *procthread;
         //only for multithreads 
-        struct _PROCTHREAD *daemon;
+        int max_daemons;
+        struct _PROCTHREAD **daemons;
 
         /* Connection options */
         int max_connections;
