@@ -343,22 +343,16 @@ void service_active_heartbeat(SERVICE *service)
     {
 		if(service->heartbeat_interval > 0
             && TIMER_CHECK(service->timer, service->heartbeat_interval) == 0)
-		{
-			if(service->cb_heartbeat_handler)
-			{
-                if(service->daemon)
-                    service->daemon->heartbeat(service->daemon);
-                else
-				    service->cb_heartbeat_handler(service->cb_heartbeat_arg);
-			}
+        {
+            if(service->cb_heartbeat_handler)
+            {
+                service->cb_heartbeat_handler(service->cb_heartbeat_arg);
+            }
             //DEBUG_LOGGER(service->logger, "Heartbeat %lld", service->nheartbeat);
             //state
             if(service->running_connections > 0)
             {
-                if(service->daemon)
-                    service->daemon->dstate(service->daemon);
-                else 
-                    service->state_conns(service);
+                service->state_conns(service);
             }
             //DEBUG_LOGGER(service->logger, "Heartbeat %lld", service->nheartbeat++);
             TIMER_SAMPLE(service->timer);
@@ -376,16 +370,10 @@ void service_newtask(SERVICE *service, FUNCALL taskhandler, void *arg)
     {
         /* Add task for procthread */
         if(service->working_mode == WORKING_PROC && service->procthread)
-        {
-            service->procthread->newtask(service->procthread, taskhandler, arg);
-        }
-        /* Add task to procthread pool */
-        if(service->working_mode == WORKING_THREAD && service->procthreads)
-        {
-            index = service->ntask % service->max_procthreads;
-            pth = service->procthreads[index];
-            pth->newtask(pth, taskhandler, arg);
-        }
+            pth = service->procthread;
+        if(service->working_mode == WORKING_THREAD && service->daemon)
+            pth = service->daemon;
+        pth->newtask(pth, taskhandler, arg);
         service->ntask++;
     }
     return ;
