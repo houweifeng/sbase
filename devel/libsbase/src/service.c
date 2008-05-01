@@ -175,17 +175,9 @@ work_proc_init:
 		}	
         goto end;
 work_thread_init:
-        //daemon thread
-        if((service->daemon = procthread_init()))
-        {
-            NEW_PROCTHREAD(-1, procthread_id, service->daemon, service->logger);
-            service->daemon->service = service;
-            service->daemon->logger = service->logger;
-            service->daemon->evbase->logger = service->evlogger;
-        }
-		/* Initialize Threads */
-		service->procthreads = (PROCTHREAD **)calloc(service->max_procthreads,
-				sizeof(PROCTHREAD *));
+        /* Initialize Threads */
+        //threads
+		service->procthreads = (PROCTHREAD **)calloc(service->max_procthreads, sizeof(PROCTHREAD *));
 		if(service->procthreads == NULL)
 		{
 			FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
@@ -193,22 +185,47 @@ work_thread_init:
 			exit(EXIT_FAILURE);
 		}
 		for(i = 0; i < service->max_procthreads; i++)
-		{
-			if((service->procthreads[i] = procthread_init()))
-			{
-				service->procthreads[i]->service = service;
-				service->procthreads[i]->logger = service->logger;
-				service->procthreads[i]->evbase->logger = service->evlogger;
-			}
-			else
-			{
-				FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
-						strerror(errno));
-				exit(EXIT_FAILURE);
-			}
+        {
+            if((service->procthreads[i] = procthread_init()))
+            {
+                service->procthreads[i]->service = service;
+                service->procthreads[i]->logger = service->logger;
+                service->procthreads[i]->evbase->logger = service->evlogger;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
+                        strerror(errno));
+                exit(EXIT_FAILURE);
+            }
             NEW_PROCTHREAD(i, procthread_id, service->procthreads[i], service->logger);
-		}	
-		goto end ;
+        }
+        //daemons
+        if(service->max_daemons == 0) service->max_daemons = service->max_procthreads;
+		service->daemons = (PROCTHREAD **)calloc(service->max_daemons,sizeof(PROCTHREAD *));
+		if(service->daemons == NULL)
+		{
+			FATAL_LOGGER(service->logger, "Initialize daemon procthreads pool failed, %s",
+					strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+        for(i = 0; i < service->max_daemons; i++)
+        {
+            if((service->daemons[i] = procthread_init()))
+            {
+                service->daemons[i]->service = service;
+                service->daemons[i]->logger = service->logger;
+                service->daemons[i]->evbase->logger = service->evlogger;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "Initialize daemon procthreads pool failed, %s",
+                        strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+            NEW_PROCTHREAD(i, procthread_id, service->daemons[i], service->logger);
+        }
+        goto end ;
     /* client connection initialize */
 end:
         /*
@@ -348,6 +365,13 @@ void service_active_heartbeat(SERVICE *service)
             {
                 service->cb_heartbeat_handler(service->cb_heartbeat_arg);
             }
+            TIMER_SAMPLE(service->timer);
+        }
+        /*
+        if(service->timeout > 0
+            && TIMER_CHECK(service->timeout_timer, service->timeout) == 0)
+        {
+         
             //DEBUG_LOGGER(service->logger, "Heartbeat %lld", service->nheartbeat);
             //state
             if(service->running_connections > 0)
@@ -357,6 +381,7 @@ void service_active_heartbeat(SERVICE *service)
             //DEBUG_LOGGER(service->logger, "Heartbeat %lld", service->nheartbeat++);
             TIMER_SAMPLE(service->timer);
         }
+        */
     }
     return ;
 }
@@ -371,10 +396,16 @@ void service_newtask(SERVICE *service, FUNCALL taskhandler, void *arg)
         /* Add task for procthread */
         if(service->working_mode == WORKING_PROC && service->procthread)
             pth = service->procthread;
-        if(service->working_mode == WORKING_THREAD && service->daemon)
-            pth = service->daemon;
-        pth->newtask(pth, taskhandler, arg);
-        service->ntask++;
+        if(service->working_mode == WORKING_THREAD && service->daemons)
+        {
+            index = service->ntask % service->max_daemons;
+            pth = service->daemons[index];
+        }
+        if(pth)
+        {
+            pth->newtask(pth, taskhandler, arg);
+            service->ntask++;
+        }
     }
     return ;
 }
@@ -585,11 +616,22 @@ void service_clean(SERVICE **service)
         }	
         else
         {
-             for(i = 0; i < (*service)->max_procthreads; i++)
-             {
-                 (*service)->procthreads[i]->clean(
-                         &((*service)->procthreads[i]));
-             }
+            if((*service)->procthreads)
+            {
+                for(i = 0; i < (*service)->max_procthreads; i++)
+                {
+                    (*service)->procthreads[i]->clean(&((*service)->procthreads[i]));
+                }
+                free((*service)->procthreads);
+            }
+            if((*service)->daemons)
+            {
+                for(i = 0; i < (*service)->max_daemons; i++)
+                {
+                    (*service)->daemons[i]->clean(&((*service)->daemons[i]));
+                }
+                free((*service)->daemons);
+            }
         }
         if((*service)->connections)
         {
