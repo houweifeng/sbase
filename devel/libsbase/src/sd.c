@@ -30,7 +30,8 @@ int main()
     SERVICE *service = service_init();
     service->family = AF_INET;
     service->socket_type = SOCK_STREAM;
-    service->ip="";
+    service->service_type = S_SERVICE;
+    service->ip=NULL;
     service->logfile = "/tmp/abc.log";
     service->port=62800;
     service->working_mode = 1;
