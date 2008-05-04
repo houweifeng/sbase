@@ -322,6 +322,7 @@ typedef struct _SERVICE
         void (*run)(struct _SERVICE * );
         struct _CONN* (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
         void (*active_heartbeat)(struct _SERVICE *);
+
         /******** Client methods *************/
         void (*newtransaction)(struct _SERVICE *, struct _CONN *, int tid);
         void (*newtask)(struct _SERVICE *, FUNCALL, void *arg);
@@ -330,6 +331,7 @@ typedef struct _SERVICE
         struct _CONN *(*getconn)(struct _SERVICE *);
 		void (*pushconn)(struct _SERVICE *, struct _CONN *);
 		void (*popconn)(struct _SERVICE *, int );
+
         /** terminate methods **/
         void (*terminate)(struct _SERVICE * );
         void (*clean)(struct _SERVICE ** );

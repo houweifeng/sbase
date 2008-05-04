@@ -43,12 +43,12 @@ int service_set(SERVICE *service)
 		/* Setting logger */
 		if(service->logfile)
 		{
-			service->logger = logger_init(service->logfile);
+			LOGGER_INIT(service->logger, service->logfile);
 			DEBUG_LOGGER(service->logger, "Setting service[%d] log to %s", service->name, service->logfile);
 		}
         if(service->evlogfile)
         {
-			service->evlogger = logger_init(service->evlogfile);
+			LOGGER_INIT(service->evlogger, service->evlogfile);
 			DEBUG_LOGGER(service->logger, "Setting service[%d] evlog to %s", service->name, service->evlogfile);
         }
         /* Initialize conns array */
@@ -70,8 +70,7 @@ server_setting:
 		service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
 		service->sa.sin_port = htons(service->port); 
 		//setsockopt 
-		setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR,
-				(char *)&opt, (socklen_t)sizeof(opt) );
+		setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, (socklen_t)sizeof(opt) );
         //set non-block
         fcntl(service->fd, F_SETFL, O_NONBLOCK);
 		//Bind 
@@ -284,7 +283,7 @@ void service_event_handler(int event_fd, short event, void *arg)
 			else
 			{
 				FATAL_LOGGER(service->logger, "Accept new connection[%d] failed, %s",
-					strerror(errno), fd);
+					fd, strerror(errno));
 			}
 		}
 	}
@@ -639,9 +638,9 @@ void service_clean(SERVICE **service)
             (*service)->connections = NULL;
         }
         if((*service)->logger) 
-            CLOSE_LOGGER((*service)->logger);
+            LOGGER_CLEAN((*service)->logger);
         if((*service)->evlogger) 
-            CLOSE_LOGGER((*service)->evlogger);
+            LOGGER_CLEAN((*service)->evlogger);
         if((*service)->event) 
             (*service)->event->clean(&(*service)->event);
         TIMER_CLEAN((*service)->timer);

@@ -51,7 +51,7 @@ int sbase_set_log(struct _SBASE *sb, char *logfile)
     if(sb)
     {
         if(sb->logger == NULL)
-            sb->logger = logger_init((char *)logfile);		
+            LOGGER_INIT(sb->logger, logfile);
     }		
 }
 
@@ -61,7 +61,7 @@ int sbase_set_evlog(struct _SBASE *sb, char *evlogfile)
     if(sb)
     {
         if(sb->evlogger == NULL)
-            sb->evlogger = logger_init((char *)evlogfile);
+            LOGGER_INIT(sb->evlogger,evlogfile);
         if(sb->evbase)
             sb->evbase->logger = sb->evlogger;
     }
@@ -372,7 +372,7 @@ void sbase_clean(struct _SBASE **sb)
         /* Clean timer */
         TIMER_CLEAN((*sb)->timer);
         /* Clean logger */
-        if((*sb)->logger) CLOSE_LOGGER((*sb)->logger);
+        if((*sb)->logger) LOGGER_CLEAN((*sb)->logger);
         /* Clean message queue */
         if((*sb)->message_queue) 
         {
