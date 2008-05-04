@@ -225,7 +225,7 @@ void evepoll_clean(EVBASE **evbase)
     if(*evbase)
     {
         close((*evbase)->efd);
-        if((*evbase)->logger)CLOSE_LOGGER((*evbase)->logger);
+        if((*evbase)->logger)LOGGER_CLEAN((*evbase)->logger);
         if((*evbase)->evlist)free((*evbase)->evlist);
         if((*evbase)->evs)free((*evbase)->evs);
         if((*evbase)->ev_fds)free((*evbase)->ev_fds);

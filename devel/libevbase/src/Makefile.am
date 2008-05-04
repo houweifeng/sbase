@@ -18,7 +18,9 @@ evselect.h \
 evwin32.c \
 evwin32.h \
 logger.h \
-logger.c 
+logger.c \
+mutex.h \
+mutex.c
 
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = evbase.h
