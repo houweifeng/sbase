@@ -132,7 +132,7 @@ int main(int argc, char **argv)
         /* set evbase */
         if((evbase = evbase_init()))
 	{
-		evbase->logger = logger_init("/tmp/ev_udp_client.log");
+		LOGGER_INIT(evbase->logger, "/tmp/ev_udp_client.log");
 		while((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 && fd < conn_num)
 		{
 			/* Set REUSE */

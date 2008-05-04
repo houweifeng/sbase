@@ -234,7 +234,7 @@ int main(int argc, char **argv)
         /* set evbase */
         if((evbase = evbase_init()))
         {
-		evbase->logger = logger_init("/tmp/ev_udp_server.log");
+		LOGGER_INIT(evbase->logger, "/tmp/ev_udp_server.log");
                 if((event = ev_init()))
                 {
 			SHOW_LOG("Initialized event ");

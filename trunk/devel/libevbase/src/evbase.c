@@ -62,7 +62,7 @@ void evbase_set_logfile(EVBASE *evbase, char *file)
 {
     if(evbase)
     {
-        evbase->logger = (LOGGER *)logger_init(file);
+        LOGGER_INIT(evbase->logger, file);
     }
     return ;
 }
