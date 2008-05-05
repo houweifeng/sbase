@@ -41,6 +41,7 @@ SBASE *sbase_init()
         sb->evbase		    = evbase_init();
         sb->message_queue	= queue_init();
         TIMER_INIT(sb->timer);
+        sb->evbase->set_evops(sb->evbase, EOP_POLL);
     }
     return sb;
 }

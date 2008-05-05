@@ -34,7 +34,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = lechod$(EXEEXT)
+bin_PROGRAMS = lechod$(EXEEXT) sd$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -59,9 +59,10 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libsbase_la_LIBADD =
 am_libsbase_la_OBJECTS = libsbase_la-conn.lo libsbase_la-procthread.lo \
 	libsbase_la-sbase.lo libsbase_la-service.lo \
-	libsbase_la-buffer.lo libsbase_la-chunk.lo \
-	libsbase_la-logger.lo libsbase_la-message.lo \
-	libsbase_la-queue.lo libsbase_la-timer.lo
+	libsbase_la-mutex.lo libsbase_la-buffer.lo \
+	libsbase_la-chunk.lo libsbase_la-logger.lo \
+	libsbase_la-message.lo libsbase_la-queue.lo \
+	libsbase_la-timer.lo
 libsbase_la_OBJECTS = $(am_libsbase_la_OBJECTS)
 libsbase_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
@@ -73,6 +74,12 @@ lechod_OBJECTS = $(am_lechod_OBJECTS)
 lechod_DEPENDENCIES = libsbase.la
 lechod_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(lechod_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_sd_OBJECTS = sd.$(OBJEXT)
+sd_OBJECTS = $(am_sd_OBJECTS)
+sd_DEPENDENCIES = libsbase.la
+sd_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(sd_LDFLAGS) \
 	$(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -86,8 +93,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES)
-DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES)
+SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) $(sd_SOURCES)
+DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) $(sd_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -208,6 +215,7 @@ sbase.h \
 service.c \
 service.h \
 utils/mutex.h \
+utils/mutex.c \
 utils/buffer.c \
 utils/buffer.h \
 utils/chunk.c \
@@ -232,6 +240,9 @@ include_HEADERS = sbase.h
 lechod_SOURCES = lechod.c iniparser.c iniparser.h
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
+sd_SOURCES = sd.c
+sd_LDADD = libsbase.la
+sd_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -325,6 +336,9 @@ clean-binPROGRAMS:
 lechod$(EXEEXT): $(lechod_OBJECTS) $(lechod_DEPENDENCIES) 
 	@rm -f lechod$(EXEEXT)
 	$(lechod_LINK) $(lechod_OBJECTS) $(lechod_LDADD) $(LIBS)
+sd$(EXEEXT): $(sd_OBJECTS) $(sd_DEPENDENCIES) 
+	@rm -f sd$(EXEEXT)
+	$(sd_LINK) $(sd_OBJECTS) $(sd_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -339,11 +353,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-logger.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-message.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-mutex.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-procthread.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-queue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-sbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-service.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-timer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sd.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -393,6 +409,13 @@ libsbase_la-service.lo: service.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='service.c' object='libsbase_la-service.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-service.lo `test -f 'service.c' || echo '$(srcdir)/'`service.c
+
+libsbase_la-mutex.lo: utils/mutex.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-mutex.lo -MD -MP -MF $(DEPDIR)/libsbase_la-mutex.Tpo -c -o libsbase_la-mutex.lo `test -f 'utils/mutex.c' || echo '$(srcdir)/'`utils/mutex.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libsbase_la-mutex.Tpo $(DEPDIR)/libsbase_la-mutex.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/mutex.c' object='libsbase_la-mutex.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-mutex.lo `test -f 'utils/mutex.c' || echo '$(srcdir)/'`utils/mutex.c
 
 libsbase_la-buffer.lo: utils/buffer.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-buffer.lo -MD -MP -MF $(DEPDIR)/libsbase_la-buffer.Tpo -c -o libsbase_la-buffer.lo `test -f 'utils/buffer.c' || echo '$(srcdir)/'`utils/buffer.c

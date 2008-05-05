@@ -44,12 +44,14 @@ int service_set(SERVICE *service)
 		if(service->logfile)
 		{
 			LOGGER_INIT(service->logger, service->logfile);
-			DEBUG_LOGGER(service->logger, "Setting service[%d] log to %s", service->name, service->logfile);
+			DEBUG_LOGGER(service->logger, "Setting service[%d] log to %s", 
+                    service->name, service->logfile);
 		}
         if(service->evlogfile)
         {
 			LOGGER_INIT(service->evlogger, service->evlogfile);
-			DEBUG_LOGGER(service->logger, "Setting service[%d] evlog to %s", service->name, service->evlogfile);
+			DEBUG_LOGGER(service->evlogger, "Setting service[%d] evlog to %s", 
+                    service->name, service->evlogfile);
         }
         /* Initialize conns array */
         if(service->max_connections > 0)
@@ -100,8 +102,12 @@ server_setting:
 		{
 			service->event->set(service->event, service->fd,
 					E_READ | E_PERSIST, (void *)service, service->event_handler);
+        fprintf(stdout, "%s::%dOK %08x:%08x:%08x\n", __FILE__, __LINE__,
+                service->evbase, service->event, service->evbase->add);
 			service->evbase->add(service->evbase, service->event);
+        fprintf(stdout, "%s::%dOK\n", __FILE__, __LINE__);
 		}
+        fprintf(stdout, "%s::%dOK\n", __FILE__, __LINE__);
 		return 0;
 client_setting:
         DEBUG_LOGGER(service->logger, "Setting client[%s]\n", service->name);

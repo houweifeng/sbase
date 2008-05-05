@@ -30,7 +30,12 @@ libsbase_la_LDFLAGS = -levbase
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = sbase.h
 
-bin_PROGRAMS = lechod
+bin_PROGRAMS = lechod sd
 lechod_SOURCES = lechod.c iniparser.c iniparser.h
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
+
+sd_SOURCES = sd.c
+sd_LDADD = libsbase.la
+sd_LDFLAGS = -static
+
