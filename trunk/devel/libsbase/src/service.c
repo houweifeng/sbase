@@ -366,23 +366,13 @@ void service_active_heartbeat(SERVICE *service)
             {
                 service->cb_heartbeat_handler(service->cb_heartbeat_arg);
             }
-            TIMER_SAMPLE(service->timer);
-        }
-        /*
-        if(service->timeout > 0
-            && TIMER_CHECK(service->timeout_timer, service->timeout) == 0)
-        {
-         
-            //DEBUG_LOGGER(service->logger, "Heartbeat %lld", service->nheartbeat);
-            //state
             if(service->running_connections > 0)
             {
                 service->state_conns(service);
             }
-            //DEBUG_LOGGER(service->logger, "Heartbeat %lld", service->nheartbeat++);
+
             TIMER_SAMPLE(service->timer);
         }
-        */
     }
     return ;
 }
