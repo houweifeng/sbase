@@ -488,7 +488,8 @@ CONN *service_newconn(SERVICE *service, char *ip, int port)
         {
             DEBUG_LOGGER(service->logger, "Ready for connection %s:%d via %d",
                     inet_ntoa(psa->sin_addr), ntohs(psa->sin_port), fd);
-            conn = service->addconn(service, fd, psa);
+            if((conn = service->addconn(service, fd, psa)))
+                conn->status = CONN_STATUS_READY;
         }
         else
         {

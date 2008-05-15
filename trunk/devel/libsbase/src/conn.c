@@ -124,11 +124,24 @@ int conn_set(CONN *conn)
 /* Event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
+    int error = 0;
+    socklen_t len = sizeof(int);
     CONN *conn = (CONN *)arg;
+
     if(conn)
     {
         if(event_fd == conn->fd)
         {
+            if(conn->status == CONN_STATUS_READY)
+            {
+                if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, &len) != 0 || error != 0)
+                {
+                    conn->status = CONN_STATUS_CLOSED;
+                    CONN_TERMINATE(conn);          
+                    return ;
+                }
+                conn->status = CONN_STATUS_CONNECTED;
+            }
             if(event & E_CLOSE)
             {
                 DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
