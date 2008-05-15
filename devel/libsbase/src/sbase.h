@@ -399,6 +399,9 @@ PROCTHREAD *procthread_init();
 #define RECONNECT_MAX     10000
 #ifndef CONN_MAX
 #define CONN_MAX          65535
+#define CONN_STATUS_READY       1
+#define CONN_STATUS_CONNECTED   2
+#define CONN_STATUS_CLOSED      4
 #endif
 /* struct CONN */
 typedef struct _CONN
@@ -413,6 +416,7 @@ typedef struct _CONN
         int			s_state;
         long long	timeout;
         /* Client options */
+        int         status;
         int         c_id;
         int         c_state;
         int         index;
