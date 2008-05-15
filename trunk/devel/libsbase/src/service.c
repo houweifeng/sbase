@@ -453,7 +453,8 @@ void service_state_conns(SERVICE *service)
         i = 0;
         while(i < service->running_connections)
         {
-            if((conn = service->connections[i++]))
+            if((conn = service->connections[i++]) && conn->timeout > 0 
+                    && conn->timer && TIMER_CHECK(conn->timer, conn->timeout) == 0)
             {
                 conn->push_message(conn, MESSAGE_STATE);
             }
