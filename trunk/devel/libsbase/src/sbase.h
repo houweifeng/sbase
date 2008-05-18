@@ -73,104 +73,7 @@ typedef void *(*FUNCALL)(void *);
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
-struct _BUFFER;
-struct _CHUNK;
-#ifndef _TYPEDEF_BUFFER
-#define _TYPEDEF_BUFFER
-typedef struct _BUFFER
-{
-        void *data;
-        void *end;
-        size_t size;
-        void *mutex;
-
-        void 	*(*calloc)(struct _BUFFER *, size_t);
-        void 	*(*malloc)(struct _BUFFER *, size_t);
-        void 	*(*recalloc)(struct _BUFFER *, size_t);
-        void 	*(*remalloc)(struct _BUFFER *, size_t);
-        int 	(*push)(struct _BUFFER *, void *, size_t);
-        int 	(*del)(struct _BUFFER *, size_t);
-        void 	(*reset)(struct _BUFFER *);
-        void 	(*clean)(struct _BUFFER **);
-}BUFFER;
-
-#define BUFFER_VIEW(buf) \
-    { \
-        if(buf) \
-        { \
-            fprintf(stdout, "buf:%08X\n" \
-                    "buf->data:%08X\n" \
-                    "buf->end:%08X\n" \
-                    "buf->size:%ld\n" \
-                    "buf->recalloc():%08X\n" \
-                    "buf->remalloc():%08X\n" \
-                    "buf->push():%08X\n" \
-                    "buf->del():%08X\n" \
-                    "buf->reset():%08X\n" \
-                    "buf->clean():%08X\n", \
-                    buf, buf->data, buf->end, buf->size, \
-                    buf->recalloc, buf->remalloc, \
-                    buf->push, buf->del, \
-                    buf->reset, buf->clean); \
-        } \
-    }
-struct _BUFFER *buffer_init();
-#endif
-
-    /* CHUNK */
-#ifndef _TYPEDEF_CHUNK
-#define _TYPEDEF_CHUNK
-#define MEM_CHUNK   0x02
-#define FILE_CHUNK  0x04
-#define ALL_CHUNK  (MEM_CHUNK | FILE_CHUNK)
-#define FILE_NAME_LIMIT 255
-typedef struct _CHUNK{
-        /* property */
-        int id;
-        int type;
-        struct _BUFFER *buf;
-        struct {
-            int   fd ;
-            char  name[FILE_NAME_LIMIT + 1];
-        } file;
-        long long  offset;
-        long long  len;
-        void *mutex;
-
-        /* method */
-        int (*set)(struct _CHUNK *, int , int , char *, long long , long long );
-        int (*append)(struct _CHUNK *, void *, size_t); 
-        int (*fill)(struct _CHUNK *, void *, size_t); 
-        int (*send)(struct _CHUNK *, int , size_t );
-        void (*reset)(struct _CHUNK *); 
-        void (*clean)(struct _CHUNK **); 
-}CHUNK;
-#define CHUNK_SIZE sizeof(CHUNK)
-/* Initialize struct CHUNK */
-struct _CHUNK *chunk_init();
-#define CHUNK_VIEW(chunk) \
-    { \
-        if(chunk) \
-        { \
-            fprintf(stdout, "chunk:%08X\n" \
-                    "chunk->id:%d\n" \
-                    "chunk->type:%02X\n" \
-                    "chunk->buf:%08X\n" \
-                    "chunk->buf->data:%08X\n" \
-                    "chunk->buf->size:%u\n" \
-                    "chunk->file.fd:%d\n" \
-                    "chunk->file.name:%s\n" \
-                    "chunk->offset:%lld\n" \
-                    "chunk->len:%lld\n\n", \
-                    chunk, chunk->id, chunk->type, \
-                    chunk->buf, chunk->buf->data, chunk->buf->size, \
-                    chunk->file.fd, chunk->file.name, \
-                    chunk->offset, chunk->len \
-                   ); \
-        } \
-    }
-#endif
-
+struct _CALLBACK_OPS;
 /* Transaction state */
 #ifndef S_STATES
 #define S_STATE_READY		    0x00
@@ -227,8 +130,30 @@ typedef struct _SBASE{
     /* Initialize struct sbase */
     SBASE *sbase_init();
 #endif
+typedef struct _SDATA
+{
+    char *data;
+    int ndata;
+}SDATA;
+typedef struct _CALLBACK_OPS
+{
+        /* error handler */
+        void (*cb_error_handler)(struct _CONN *);
+        /* Read From Buffer and return packet length to get */
+        int (*cb_packet_reader)(struct _CONN*, SDATA *buffer);
+        /* Packet Handler */
+        void (*cb_packet_handler)(struct _CONN*, SDATA *packet);
+        /* Data Handler */
+        void (*cb_data_handler)(struct _CONN*, SDATA *packet, SDATA *cache, SDATA *chunk);
+        /* File handler */
+        void (*cb_file_handler)(struct _CONN*, SDATA *packet, SDATA *cache, char *file);
+        /* OOB Data Handler */
+        void (*cb_oob_handler)(struct _CONN *, SDATA  *oob);
+        /* Transaction handler */
+        void (*cb_transaction_handler)(struct _CONN *, int tid);
+}CALLBACK_OPS;
 
-    /* SERVICE */
+/* SERVICE */
 #ifndef _TYPEDEF_SERVICE
 #define _TYPEDEF_SERVICE
 typedef struct _SERVICE
@@ -302,32 +227,22 @@ typedef struct _SERVICE
         /**************** Callback options for service *****************/
         /* Heartbeat Handler */
         void (*cb_heartbeat_handler)(void *arg);
-        /* error handler */
-        void (*cb_error_handler)(struct _CONN*);
-        /* Read From Buffer and return packet length to get */
-        int (*cb_packet_reader)(struct _CONN*, struct _BUFFER *);
-        /* Packet Handler */
-        void (*cb_packet_handler)(struct _CONN*, struct _BUFFER *);
-        /* Data Handler */
-        void (*cb_data_handler)(struct _CONN*, struct _BUFFER *,
-                struct _CHUNK *, struct _BUFFER *);
-        /* OOB Data Handler */
-        void (*cb_oob_handler)(struct _CONN *, struct _BUFFER *oob);
-        /* Transaction handler */
-        void (*cb_transaction_handler)(struct _CONN *, int tid);
+        struct _CALLBACK_OPS ops;
 
         /* Methods */
         void (*event_handler)(int, short, void*);
         int  (*set)(struct _SERVICE * );
         void (*run)(struct _SERVICE * );
-        struct _CONN* (*addconn)(struct _SERVICE *, int , struct sockaddr_in *);
+        struct _CONN* (*addconn)(struct _SERVICE *, int , struct sockaddr_in *, 
+                struct _CALLBACK_OPS *);
         void (*active_heartbeat)(struct _SERVICE *);
 
         /******** Client methods *************/
         void (*newtransaction)(struct _SERVICE *, struct _CONN *, int tid);
         void (*newtask)(struct _SERVICE *, FUNCALL, void *arg);
         void (*state_conns)(struct _SERVICE *);
-        struct _CONN *(*newconn)(struct _SERVICE *, char *, int);
+        struct _CONN *(*newconn)(struct _SERVICE *, int family, char *ip, int port,
+                int sock_type, struct _CALLBACK_OPS *ops);
         struct _CONN *(*getconn)(struct _SERVICE *);
 		void (*pushconn)(struct _SERVICE *, struct _CONN *);
 		void (*popconn)(struct _SERVICE *, int );
@@ -403,6 +318,7 @@ PROCTHREAD *procthread_init();
 #define CONN_STATUS_CONNECTED   2
 #define CONN_STATUS_CLOSED      4
 #endif
+
 /* struct CONN */
 typedef struct _CONN
 {
@@ -439,15 +355,15 @@ typedef struct _CONN
         //message queue 
         void        *message_queue;
         //buffer 
-        struct _BUFFER		*buffer;
+        void		*buffer;
         //OOB 
-        struct _BUFFER      *oob;
+        void      *oob;
         //cache
-        struct _BUFFER      *cache;
+        void      *cache;
         //packet 
-        struct _BUFFER		*packet;
+        void		*packet;
         // chunk 
-        struct _CHUNK		*chunk;
+        void		*chunk;
         // send queue 
         void 		*send_queue;
         // Logger
@@ -461,20 +377,7 @@ typedef struct _CONN
 
         /* Callback */
         struct _CONN *callback_conn;
-
-        /* error handler */
-        void (*cb_error_handler)(struct _CONN *);
-        /* Read From Buffer and return packet length to get */
-        int (*cb_packet_reader)(struct _CONN*, struct _BUFFER *);
-        /* Packet Handler */
-        void (*cb_packet_handler)(struct _CONN*, struct _BUFFER *);
-        /* Data Handler */
-        void (*cb_data_handler)(struct _CONN*, struct _BUFFER *,
-                struct _CHUNK *, struct _BUFFER *);
-        /* OOB Data Handler */
-        void (*cb_oob_handler)(struct _CONN *, struct _BUFFER *oob);
-        /* Transaction handler */
-        void (*cb_transaction_handler)(struct _CONN *, int tid);
+        struct _CALLBACK_OPS ops;
 
         /* Methods */
         int	      (*set)(struct _CONN *);
