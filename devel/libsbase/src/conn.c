@@ -3,7 +3,7 @@
 #include <netinet/tcp.h>
 #include "timer.h"
 #include "queue.h"
-#include "buffer.h"
+#include "memb.h"
 #include "message.h"
 #include "conn.h"
 #include "chunk.h"
@@ -34,11 +34,11 @@ CONN *conn_init(char *ip, int port)
 	if(conn)
 	{
         TIMER_INIT(conn->timer);
-		conn->buffer	            = buffer_init();
-		conn->oob		            = buffer_init();
-		conn->cache		            = buffer_init();
-		conn->packet		        = buffer_init();
-		conn->chunk		            = chunk_init();
+		MB_INIT(conn->buffer, MB_BLOCK_SIZE);
+		MB_INIT(conn->oob, MB_BLOCK_SIZE);
+		MB_INIT(conn->cache, MB_BLOCK_SIZE);
+		MB_INIT(conn->packet, MB_BLOCK_SIZE);
+		CHUNK_INIT(conn->chunk);
 		conn->send_queue 	        = queue_init();
 		conn->event		            = ev_init();
 		conn->set		            = conn_set;
@@ -186,58 +186,46 @@ void conn_state_handler(CONN *conn)
 /* Read handler */
 void conn_read_handler(CONN *conn)
 {
-	int n = 0;
-	BUFFER *buf = NULL ;
-	char *tmp = NULL;
-	int nbuf = SB_BUF_SIZE;
-		
-	/* Check connection and transaction state  */
-	CONN_CHECK(conn);
-	if(conn)
-	{
-		if(conn->buffer_size)
-			nbuf = conn->buffer_size;
-		if((buf = buffer_init()) == NULL 
-			|| ((tmp = (char *)buf->calloc(buf, nbuf)) == NULL) ) goto end;
-		/* Receive OOB */
-		if((n = recv(conn->fd, tmp, nbuf, MSG_OOB)) > 0 )	
-		{
-			conn->recv_oob_total += n;
-			DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld from %s:%d via %d",
-				n, conn->recv_oob_total, conn->ip, conn->port, conn->fd);
-			conn->oob->push(conn->oob, buf->data, n);	
-			conn->oob_handler(conn);
-			/* CONN TIMER sample */
-			TIMER_SAMPLE(conn->timer);
-			goto end;
-		}
-		/* Receive normal data */
-		if( (n = read(conn->fd, tmp, nbuf)) <= 0 )
-		{
-			FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d via %d failed, %s",
-				n, conn->ip, conn->port, conn->fd, strerror(errno));
-			/* Terminate connection */
-                        CONN_TERMINATE(conn);
-			goto end;
-		}
-		/* CONN TIMER sample */
-		TIMER_SAMPLE(conn->timer);
-		/* Push to buffer */
-		conn->buffer->push(conn->buffer, tmp, n);
-		conn->recv_data_total += n;	
-		DEBUG_LOGGER(conn->logger, "Received %d bytes data total %lld from %s:%d via %d",
-                                n, conn->recv_data_total, conn->ip, conn->port, conn->fd);
-		/* Handle buffer with packet_reader OR chunk_reader (with high priority) */
-		if(conn->s_state == S_STATE_READ_CHUNK)
-			conn->chunk_reader(conn);
-		else
-			conn->packet_reader(conn);			
-	}
-	end:
-	{
-		if(buf) buf->clean(&buf);
-	}
-	return ;
+    int n = 0;
+
+    /* Check connection and transaction state  */
+    CONN_CHECK(conn);
+    if(conn)
+    {
+        /* Receive OOB */
+        if((n = MB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
+        {
+            conn->recv_oob_total += n;
+            DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld from %s:%d via %d",
+                    n, conn->recv_oob_total, conn->ip, conn->port, conn->fd);
+            conn->oob_handler(conn);
+            /* CONN TIMER sample */
+            TIMER_SAMPLE(conn->timer);
+            return ;
+        }
+        if(conn->s_state == S_STATE_READ_CHUNK)
+        {
+            conn->chunk_reader(conn);
+            TIMER_SAMPLE(conn->timer);
+            return ;
+        }
+        /* Receive normal data */
+        if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
+        {
+            FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d via %d failed, %s",
+                    n, conn->ip, conn->port, conn->fd, strerror(errno));
+            /* Terminate connection */
+            CONN_TERMINATE(conn);
+            return ;
+        }
+        /* CONN TIMER sample */
+        TIMER_SAMPLE(conn->timer);
+        conn->recv_data_total += n;	
+        DEBUG_LOGGER(conn->logger, "Received %d bytes data total %lld from %s:%d via %d",
+                n, conn->recv_data_total, conn->ip, conn->port, conn->fd);
+        conn->packet_reader(conn);			
+    }
+    return ;
 }
 
 /* Write hanler */
@@ -290,12 +278,14 @@ void conn_write_handler(CONN *conn)
 int conn_packet_reader(CONN *conn)
 {
 	int len = 0, i = 0;
+    SDATA *sdata = NULL;
 	char *p = NULL, *e = NULL;
 
         /* Check connection and transaction state */
         CONN_CHECK_RET(conn, -1);
 	if(conn)
 	{
+        sdata = (SDATA *)conn->buffer;
 		DEBUG_LOGGER(conn->logger, "Reading packet type[%d]", conn->packet_type);
 		/* Remove invalid packet type */
 		if(!(conn->packet_type & PACKET_ALL))
@@ -306,12 +296,12 @@ int conn_packet_reader(CONN *conn)
 			CONN_TERMINATE(conn);
 		}
 		/* Read packet with customized function from user */
-		if(conn->packet_type == PACKET_CUSTOMIZED && conn->cb_packet_reader)
+		if(conn->packet_type == PACKET_CUSTOMIZED && conn->ops.cb_packet_reader)
 		{
-			len = conn->cb_packet_reader(conn,  conn->buffer);	
+			len = conn->ops.cb_packet_reader(conn, sdata);	
 			DEBUG_LOGGER(conn->logger, 
 					"Reading packet with customized function[%08x] length[%d] on %s:%d via %d",
-					conn->cb_packet_reader, len, conn->ip, conn->port, conn->fd);
+					conn->ops.cb_packet_reader, len, conn->ip, conn->port, conn->fd);
 			goto end;
 		}
 		/* Read packet with certain length */
@@ -323,21 +313,23 @@ int conn_packet_reader(CONN *conn)
 			goto end;
 		}
 		/* Read packet with delimiter */
-		if(conn->packet_type == PACKET_DELIMITER && conn->packet_delimiter && conn->packet_delimiter_length > 0)
+		if(conn->packet_type == PACKET_DELIMITER && conn->packet_delimiter 
+                && conn->packet_delimiter_length > 0)
 		{
-			p = (char *) conn->buffer->data;
-			e = (char *) conn->buffer->end;
+			p = MB_DATA(conn->buffer);
+			e = MB_END(conn->buffer);
 			i = 0;
 			while(p < e && i < conn->packet_delimiter_length )
 			{
 				if(((char *)conn->packet_delimiter)[i++] != *p++) i = 0;
 				if(i == conn->packet_delimiter_length)
 				{
-					len = p - (char *) conn->buffer->data;
+					len = p - MB_DATA(conn->buffer);
 					break;
 				}
 			}
-			DEBUG_LOGGER(conn->logger, "Reading packet with delimiter[%d] length[%d] on %s:%d via %d",
+			DEBUG_LOGGER(conn->logger, "Reading packet with delimiter[%d] "
+                    "length[%d] on %s:%d via %d",
 					conn->packet_delimiter_length, len, conn->ip, conn->port, conn->fd);
 
 			goto end;
@@ -347,9 +339,9 @@ int conn_packet_reader(CONN *conn)
 		/* Copy data to packet from buffer */
 		if(len > 0)
 		{
-			conn->packet->reset(conn->packet);
-			conn->packet->push(conn->packet, conn->buffer->data, len);
-			conn->buffer->del(conn->buffer, len);
+            MB_RESET(conn->packet);
+            MB_PUSH(conn->packet, MB_DATA(conn->buffer), len);
+            MB_DEL(conn->buffer, len);
 			/* For packet handling */
 			conn->s_state = S_STATE_PACKET_HANDLING;
 			conn->push_message(conn, MESSAGE_PACKET);
@@ -360,15 +352,14 @@ int conn_packet_reader(CONN *conn)
 /* Packet Handler */
 void conn_packet_handler(CONN *conn)
 {
-	/* Check connection and transaction state */
-        CONN_CHECK(conn);
-
-	if(conn && conn->cb_packet_handler )
-	{
-		DEBUG_LOGGER(conn->logger, "Handling packet with customized function[%08x] on %s:%d via %d",
-			conn->cb_packet_handler,  conn->ip, conn->port, conn->fd);
-		return conn->cb_packet_handler(conn, conn->packet);
-	}
+    /* Check connection and transaction state */
+    CONN_CHECK(conn);
+    if(conn && conn->ops.cb_packet_handler )
+    {
+        DEBUG_LOGGER(conn->logger, "Handling packet with customized function[%08x] on %s:%d via %d",
+                conn->ops.cb_packet_handler,  conn->ip, conn->port, conn->fd);
+        return conn->ops.cb_packet_handler(conn, (SDATA *)(conn->packet));
+    }
 }
 
 /* CHUNK reader */
@@ -402,77 +393,79 @@ void conn_chunk_reader(CONN *conn)
 /* Receive CHUNK */
 void conn_recv_chunk(CONN *conn, size_t size)
 {
-        /* Check connection and transaction state */
-        CONN_CHECK(conn);
+    /* Check connection and transaction state */
+    CONN_CHECK(conn);
 
-	if(conn && conn->chunk)
-	{
-		conn->chunk->set(conn->chunk, conn->s_id, MEM_CHUNK, NULL, 0, size);
-		conn->s_state = S_STATE_READ_CHUNK;
-		conn->chunk_reader(conn);
-	}			
+    if(conn && conn->chunk)
+    {
+        CK_MEM(conn->chunk, size);
+        conn->s_state = S_STATE_READ_CHUNK;
+        conn->chunk_reader(conn);
+    }			
 }
 
 /* Receive FILE CHUNK */
 void conn_recv_file(CONN *conn, char *filename,
          long long  offset, long long  size)
 {
-        /* Check connection and transaction state */
-        CONN_CHECK(conn);
-
-        if(conn && conn->chunk)
-        {
-            conn->chunk->set(conn->chunk, conn->s_id, FILE_CHUNK, filename, offset, size);
-            conn->s_state = S_STATE_READ_CHUNK;
-            conn->chunk_reader(conn);
-        } 
+    /* Check connection and transaction state */
+    CONN_CHECK(conn);
+    if(conn && conn->chunk)
+    {
+        CK_FILE(conn->chunk, filename, offset, size);
+        conn->s_state = S_STATE_READ_CHUNK;
+        conn->chunk_reader(conn);
+    } 
 }
 
 /* Push Chunk */
 int conn_push_chunk(CONN *conn, void *data, size_t size)
 {
-	CHUNK *cp = NULL;
+    CHUNK *cp = NULL;
     /* Check connection and transaction state */
     CONN_CHECK_RET(conn, -1);
 
-	if(conn && conn->send_queue && data)
-	{
-		if((cp = (CHUNK *)TAIL_QUEUE(conn->send_queue)) && cp->type == MEM_CHUNK)
-		{
-			cp->append(cp, data, size);
-		}
-		else
-		{
-			cp = chunk_init();
-			cp->set(cp, conn->s_id, MEM_CHUNK, NULL, 0ll, 0ll);
-			cp->append(cp, data, size);
-			PUSH_QUEUE(conn->send_queue, (void *)cp);
-		}
-		if(TOTAL_QUEUE(conn->send_queue) > 0 ) 
-			conn->event->add(conn->event, E_WRITE);	
-	}	
+    if(conn && conn->send_queue && data)
+    {
+        if((cp = (CHUNK *)TAIL_QUEUE(conn->send_queue)) && CK_TYPE(cp) == MEM_CHUNK)
+        {
+            MB_PUSH(CK_MM(cp), data, size);
+        }
+        else
+        {
+            if((cp = CK_INIT()))
+            {
+                CK_MEM(cp, size);
+                MB_PUSH(CK_MM(cp), data, size);
+                PUSH_QUEUE(conn->send_queue, (void *)cp);
+            }
+        }
+        if(TOTAL_QUEUE(conn->send_queue) > 0 ) 
+            conn->event->add(conn->event, E_WRITE);	
+    }	
 }
 
 /* Push File */
 int conn_push_file(CONN *conn, char *filename,
          long long  offset, long long  size)
 {
-	CHUNK *cp = NULL;
-        /* Check connection and transaction state */
-        CONN_CHECK_RET(conn, -1);
+    CHUNK *cp = NULL;
+    /* Check connection and transaction state */
+    CONN_CHECK_RET(conn, -1);
 
-	if(conn && conn->send_queue && filename && offset >= 0 && size > 0 )
-	{
-		cp = chunk_init();
-		cp->set(cp, conn->s_id, FILE_CHUNK, filename, offset, size);
-		PUSH_QUEUE(conn->send_queue, (void *)cp);
-		if((TOTAL_QUEUE(conn->send_queue)) > 0 ) 
-			conn->event->add(conn->event, E_WRITE);	
-		DEBUG_LOGGER(conn->logger, 
-			"Pushed file\"%s\" [%lld][%lld] to send_queue (total %d) on %s:%d via %d\n",
-			filename, offset, size, TOTAL_QUEUE(conn->send_queue), 
-            conn->ip, conn->port, conn->fd);
-	}
+    if(conn && conn->send_queue && filename && offset >= 0 && size > 0 )
+    {
+        if((cp = CK_INIT()))
+        {
+            CK_FILE(cp, filename, offset, size);
+            PUSH_QUEUE(conn->send_queue, (void *)cp);
+            if((TOTAL_QUEUE(conn->send_queue)) > 0 ) conn->event->add(conn->event, E_WRITE);	
+            DEBUG_LOGGER(conn->logger, 
+                    "Pushed file\"%s\" [%lld][%lld] to send_queue (total %d) on %s:%d via %d\n",
+                    filename, offset, size, TOTAL_QUEUE(conn->send_queue), 
+                    conn->ip, conn->port, conn->fd);
+        }
+    }
 }
 
 /* Data handler */
@@ -480,13 +473,30 @@ void conn_data_handler(CONN *conn)
 {
     /* Check connection and transaction state */
     CONN_CHECK(conn);
-
-	if(conn && conn->cb_data_handler )
-	{
-		DEBUG_LOGGER(conn->logger, "Handling data with customized function[%08x] on %s:%d via %d",
-                        conn->cb_data_handler,  conn->ip, conn->port, conn->fd);
-		conn->cb_data_handler(conn, conn->packet, conn->chunk, conn->cache);
-	}	
+    if(conn)
+    {
+        if(CK_TYPE(conn->chunk) == CHUNK_MEM && conn->ops.cb_data_handler)
+        {
+            DEBUG_LOGGER(conn->logger, "Handling chunk data with customized "
+                    "function[%08x] on %s:%d via %d",
+                    conn->ops.cb_data_handler,  conn->ip, conn->port, conn->fd);
+            conn->ops.cb_data_handler(conn, (SDATA *)conn->packet, 
+                    (SDATA *)conn->cache, (SDATA *)CK_MM(cone->chunk));
+        }
+        else if(CK_TYPE(conn->chunk) == CHUNK_MEM && conn->ops.cb_file_handler)
+        {
+            DEBUG_LOGGER(conn->logger, "Handling chunk file with customized "
+                    "function[%08x] on %s:%d via %d",
+                    conn->ops.cb_file_handler,  conn->ip, conn->port, conn->fd);
+            conn->ops.cb_data_handler(conn, (SDATA *)conn->packet, 
+                    (SDATA *)conn->cache, CK_FILENAME(cone->chunk));
+        }
+        else
+        {
+            ERROR_LOGGER(conn->logger, "Invalid chunk[%08x] type[%d]", 
+                    conn->chunk, CK_TYPE(conn->chunk));
+        }
+    }	
 }
 
 /* Transaction handler */
@@ -495,13 +505,13 @@ void conn_transaction_handler(struct _CONN *conn, int tid)
     /* Check connection and transaction state */
     CONN_CHECK(conn);
 
-    if(conn && conn->cb_transaction_handler )
+    if(conn && conn->ops.cb_transaction_handler )
     {
         DEBUG_LOGGER(conn->logger, "Handling transaction with customized "
                 "function[%08x] on %s:%d via %d",
-                conn->cb_transaction_handler,  
+                conn->ops.cb_transaction_handler,  
                 conn->ip, conn->port, conn->fd);
-        conn->cb_transaction_handler(conn, tid);
+        conn->ops.cb_transaction_handler(conn, tid);
     }
     return ;
 }
@@ -557,11 +567,11 @@ int conn_start_cstate(CONN *conn)
 				cp = (CHUNK *)POP_QUEUE(conn->send_queue);
 				if(cp) cp->clean(&(cp));
 			}
-			conn->packet->reset(conn->packet);	
-			conn->cache->reset(conn->cache);	
-			conn->buffer->reset(conn->buffer);	
-			conn->oob->reset(conn->oob);	
-			conn->chunk->reset(conn->chunk);	
+			MB_RESET(conn->packet);	
+			MB_RESET(conn->cache);	
+			MB_RESET(conn->buffer);	
+			MB_RESET(conn->oob);	
+			CK_RESET(conn->chunk);	
             return 0;
         }
     }
@@ -598,10 +608,10 @@ void conn_terminate(CONN *conn)
 {
     if(conn)
     {
-        if(conn->c_state == C_STATE_USING && conn->cb_error_handler)
+        if(conn->c_state == C_STATE_USING && conn->ops.cb_error_handler)
         {
             DEBUG_LOGGER(conn->logger, "error handler on %d cid:%d", conn->fd, conn->c_id);
-            conn->cb_error_handler(conn); 
+            conn->ops.cb_error_handler(conn); 
         }
         conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing connecion[%d] %s:%d", 
@@ -622,15 +632,15 @@ void conn_clean(CONN **conn)
 		/* Clean event */
 		if((*conn)->event) (*conn)->event->clean(&((*conn)->event));
 		/* Clean BUFFER */
-		if((*conn)->buffer) (*conn)->buffer->clean(&((*conn)->buffer));
+		MB_CLEAN((*conn)->buffer);
 		/* Clean OOB */
-		if((*conn)->oob) (*conn)->oob->clean(&((*conn)->oob));
+		MB_CLEAN((*conn)->oob);
 		/* Clean cache */
-		if((*conn)->cache) (*conn)->cache->clean(&((*conn)->cache));
+		MB_CLEAN((*conn)->cache);
 		/* Clean packet */
-		if((*conn)->packet) (*conn)->packet->clean(&((*conn)->packet));
+		MB_CLEAN((*conn)->packet);
 		/* Clean chunk */
-		if((*conn)->chunk) (*conn)->chunk->clean(&((*conn)->chunk));
+		CK_CLEAN((*conn)->chunk);
         /* Clean timer */
         TIMER_CLEAN((*conn)->timer);
 		/* Clean send queue */
@@ -638,7 +648,7 @@ void conn_clean(CONN **conn)
         {
             while((cp = (CHUNK *)POP_QUEUE((*conn)->send_queue)))
             {
-                if(cp) cp->clean(&(cp));
+                if(cp) CK_CLEAN(cp);
             }
             CLEAN_QUEUE((*conn)->send_queue);
         }

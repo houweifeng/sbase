@@ -130,10 +130,10 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	*s++ = 0;
 	service->packet_delimiter_length = strlen(service->packet_delimiter);
 	service->buffer_size = iniparser_getint(dict, "LECHOD:buffer_size", SB_BUF_SIZE);
-	service->cb_packet_reader = &cb_packet_reader;
-	service->cb_packet_handler = &cb_packet_handler;
-	service->cb_data_handler = &cb_data_handler;
-	service->cb_oob_handler = &cb_oob_handler;
+	service->ops.cb_packet_reader = &cb_packet_reader;
+	service->ops.cb_packet_handler = &cb_packet_handler;
+	service->ops.cb_data_handler = &cb_data_handler;
+	service->ops.cb_oob_handler = &cb_oob_handler;
 	/* server */
 	fprintf(stdout, "Parsing for server...\n");
 	return sbase->add_service(sbase, service);

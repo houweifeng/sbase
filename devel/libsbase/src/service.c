@@ -279,7 +279,7 @@ void service_event_handler(int event_fd, short event, void *arg)
 			{
 				DEBUG_LOGGER(service->logger, "Accept new connection[%d] from %s:%d",
 					fd, inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port));			
-				service->addconn(service, fd, &rsa);
+				service->addconn(service, fd, &rsa, NULL);
 				return ;
 			}
 			else
@@ -293,7 +293,7 @@ void service_event_handler(int event_fd, short event, void *arg)
 }
 
 /* Add new conn */
-CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
+CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa, CALLBACK_OPS *ops)
 {
 	CONN *conn = NULL;
 	char *ip = NULL;
@@ -322,12 +322,10 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa)
             conn->packet_delimiter = service->packet_delimiter;
             conn->packet_delimiter_length = service->packet_delimiter_length;
             conn->buffer_size = service->buffer_size;
-            conn->cb_packet_reader = service->cb_packet_reader;
-            conn->cb_packet_handler = service->cb_packet_handler;
-            conn->cb_data_handler = service->cb_data_handler;
-            conn->cb_transaction_handler = service->cb_transaction_handler;
-            conn->cb_oob_handler = service->cb_oob_handler;
-            conn->cb_error_handler = service->cb_error_handler;
+            if(ops)
+                memcpy(&(conn->ops), ops, sizeof(CALLBACK_OPS));
+            else
+                memcpy(&(conn->ops), &(service->ops), sizeof(CALLBACK_OPS));
             /* other option */
             conn->timeout = service->conn_timeout;
         }
@@ -444,7 +442,7 @@ void service_state_conns(SERVICE *service)
             //       num, service->running_connections);
 			while(i++ < num)
 			{
-				if(service->newconn(service, NULL, -1) == NULL)
+				if(service->newconn(service, -1, NULL, -1, -1, NULL) == NULL)
                 {
 					break;
                 }
@@ -463,7 +461,8 @@ void service_state_conns(SERVICE *service)
 }
 
 /* NEW connection for client mode */
-CONN *service_newconn(SERVICE *service, char *ip, int port)
+CONN *service_newconn(SERVICE *service, int family, char *ip, 
+        int port, int sock_type, CALLBACK_OPS *ops)
 {
     CONN *conn = NULL;
     struct sockaddr_in sa, *psa = NULL;
@@ -473,7 +472,8 @@ CONN *service_newconn(SERVICE *service, char *ip, int port)
     {
         if(ip && port > 0)
         {
-            sa.sin_family = service->family;
+            if(family == -1) sa.sin_family = service->family;
+            else sa.sin_family = family;
             sa.sin_addr.s_addr = inet_addr(ip);
             sa.sin_port = htons(port);
             psa = &sa;
@@ -482,14 +482,17 @@ CONN *service_newconn(SERVICE *service, char *ip, int port)
         {
             psa = &(service->sa);
         }
-        fd = socket(service->family, service->socket_type, 0);
+        if(sock_type == -1)
+            fd = socket(service->family, service->socket_type, 0);
+        else
+            fd = socket(service->family, sock_type, 0);
         fcntl(fd, F_SETFL, O_NONBLOCK);
         if(fd > 0 && (connect(fd, (struct sockaddr *)psa, 
                     sizeof(struct sockaddr )) == 0 || errno == EINPROGRESS))
         {
             DEBUG_LOGGER(service->logger, "Ready for connection %s:%d via %d",
                     inet_ntoa(psa->sin_addr), ntohs(psa->sin_port), fd);
-            if((conn = service->addconn(service, fd, psa)))
+            if((conn = service->addconn(service, fd, psa, ops)))
                 conn->status = CONN_STATUS_READY;
         }
         else

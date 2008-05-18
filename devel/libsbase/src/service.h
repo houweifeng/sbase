@@ -32,13 +32,13 @@ void service_newtask(SERVICE *service, FUNCALL, void *arg);
 /* add new transaction */
 void service_newtransaction(SERVICE *service, CONN *conn, int tid);
 /* Add new conn */
-CONN *service_addconn(SERVICE *, int , struct sockaddr_in *);
+CONN *service_addconn(SERVICE *, int , struct sockaddr_in *, CALLBACK_OPS *);
 /* check conns status */
 void service_state_conns(SERVICE *);
 /* get free connection */
 CONN *service_getconn(SERVICE *);
 /* new connections */
-CONN *service_newconn(SERVICE *, char *, int);
+CONN *service_newconn(SERVICE *, int, char *, int, int , CALLBACK_OPS *);
 /* POP connections from connections pool */
 void service_popconn(SERVICE *service, int index);
 /* PUSH connections to connections pool */
