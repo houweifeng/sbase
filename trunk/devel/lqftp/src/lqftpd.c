@@ -365,7 +365,7 @@ op_md5sum:
             RESPONSE(conn, RESP_NOT_IMPLEMENT);
             return ;
         }
-        memset(pmd5sum, 0, MD5SUM_SIZE);
+        memset(pmd5sum, 0, MD5SUM_SIZE+1);
         for(i = 0; i < nplist; i++)
         {
             if(strncasecmp(plist[i].key, md5sum_plist[0], strlen(md5sum_plist[0])) == 0)
@@ -384,7 +384,7 @@ op_md5sum:
         {
             if(md5_file(fullpath, md5) == 0)
             {
-                memset(md5sum, 0, MD5SUM_SIZE);
+                memset(md5sum, 0, MD5SUM_SIZE+1);
                 p = md5sum;
                 for(i = 0; i < MD5_LEN; i++)
                     p += sprintf(p, "%02x", md5[i]);
