@@ -78,11 +78,11 @@ void cb_transport_error_handler(CONN *conn)
 }
 
 //
-int cb_transport_packet_reader(CONN *conn, BUFFER *buffer)
+int cb_transport_packet_reader(CONN *conn, SDATA *buffer)
 {
 }
 
-void cb_transport_packet_handler(CONN *conn, BUFFER *packet)
+void cb_transport_packet_handler(CONN *conn, SDATA *packet)
 {        
     char *p = NULL, *end = NULL;
     int respid = -1, n = 0;
@@ -92,7 +92,7 @@ void cb_transport_packet_handler(CONN *conn, BUFFER *packet)
     if(conn)
     {
         p = (char *)packet->data;
-        end = (char *)packet->end;
+        end = (char *)packet->data + packet->ndata;
         GET_RESPID(p, end, n, respid);
         blockid = conn->c_id;
         conn->over_cstate((CONN *)conn);
@@ -112,12 +112,12 @@ void cb_transport_packet_handler(CONN *conn, BUFFER *packet)
     }
 }
 
-void cb_transport_data_handler(CONN *conn, BUFFER *packet, 
-        CHUNK *chunk, BUFFER *cache)
+void cb_transport_data_handler(CONN *conn, SDATA *packet, 
+        SDATA *chunk, SDATA *cache)
 {
 }
 
-void cb_transport_oob_handler(CONN *conn, BUFFER *oob)
+void cb_transport_oob_handler(CONN *conn, SDATA *oob)
 {
 }
 
@@ -214,11 +214,11 @@ void cb_serv_heartbeat_handler(void *arg)
     return  ;
 }
 
-int cb_serv_packet_reader(CONN *conn, BUFFER *buffer)
+int cb_serv_packet_reader(CONN *conn, SDATA *buffer)
 {
 }
 
-void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
+void cb_serv_packet_handler(CONN *conn, SDATA *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL;
     char file[PATH_MAX_SIZE], destfile[PATH_MAX_SIZE], buf[SBUF_SIZE];
@@ -232,7 +232,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
     if(conn)
     {
         p = (char *)packet->data;
-        end = (char *)packet->end;
+        end = (char *)packet->data + packet->ndata;
         while(p < end && *p == ' ') ++p;
         for(i = 0; i < OP_NUM; i++)
         {
@@ -288,7 +288,7 @@ void cb_serv_packet_handler(CONN *conn, BUFFER *packet)
                 }
                 memset(destfile, 0, PATH_MAX_SIZE);
                 DEBUG_LOGGER(daemon_logger, "Adding [put %s %s] tasktable", file, buf); 
-                urlencode(buf, destfile);
+                urlencode((unsigned char *)buf, (unsigned char *)destfile);
                 if((taskid = tasktable->add(tasktable, file, destfile)) >= 0)
                 {
                     n = sprintf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
@@ -329,12 +329,17 @@ bad_req_err:
     return ;
 }
 
-void cb_serv_data_handler(CONN *conn, BUFFER *packet, 
-        CHUNK *chunk, BUFFER *cache)
+void cb_serv_data_handler(CONN *conn, SDATA *packet, 
+        SDATA *cache, SDATA *chunk)
 {
 }
 
-void cb_serv_oob_handler(CONN *conn, BUFFER *oob)
+void cb_serv_file_handler(CONN *conn, SDATA *packet, 
+        SDATA *cache, SDATA *chunk)
+{
+}
+
+void cb_serv_oob_handler(CONN *conn, SDATA *oob)
 {
 }
 
@@ -443,11 +448,11 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	*s++ = 0;
 	transport->packet_delimiter_length = strlen(transport->packet_delimiter);
 	transport->buffer_size = iniparser_getint(dict, "TRANSPORT:buffer_size", SB_BUF_SIZE);
-	transport->cb_packet_reader = &cb_transport_packet_reader;
-	transport->cb_packet_handler = &cb_transport_packet_handler;
-	transport->cb_data_handler = &cb_transport_data_handler;
-	transport->cb_oob_handler = &cb_transport_oob_handler;
-	transport->cb_error_handler = &cb_transport_error_handler;
+	transport->ops.cb_packet_reader = &cb_transport_packet_reader;
+	transport->ops.cb_packet_handler = &cb_transport_packet_handler;
+	transport->ops.cb_data_handler = &cb_transport_data_handler;
+	transport->ops.cb_oob_handler = &cb_transport_oob_handler;
+	transport->ops.cb_error_handler = &cb_transport_error_handler;
 	/* server */
 	fprintf(stdout, "Parsing for transport...\n");
 
@@ -527,10 +532,10 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	*s++ = 0;
 	serv->packet_delimiter_length = strlen(serv->packet_delimiter);
 	serv->buffer_size = iniparser_getint(dict, "DAEMON:buffer_size", SB_BUF_SIZE);
-	serv->cb_packet_reader = &cb_serv_packet_reader;
-	serv->cb_packet_handler = &cb_serv_packet_handler;
-	serv->cb_data_handler = &cb_serv_data_handler;
-	serv->cb_oob_handler = &cb_serv_oob_handler;
+	serv->ops.cb_packet_reader = &cb_serv_packet_reader;
+	serv->ops.cb_packet_handler = &cb_serv_packet_handler;
+	serv->ops.cb_data_handler = &cb_serv_data_handler;
+	serv->ops.cb_oob_handler = &cb_serv_oob_handler;
 	serv->cb_heartbeat_handler = &cb_serv_heartbeat_handler;
         /* server */
 	if((ret = sbase->add_service(sbase, serv)) != 0)
