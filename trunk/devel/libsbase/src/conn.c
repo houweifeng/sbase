@@ -26,6 +26,29 @@
 		conn->push_message(conn, MESSAGE_QUIT);                                         \
 	}                                                                                   \
 }
+#define CONN_CHUNK_READ(conn, n)                                                            \
+{                                                                                           \
+    /* read to chunk */                                                                     \
+    if(conn->s_state == S_STATE_READ_CHUNK)                                                 \
+    {                                                                                       \
+        if((n = CHUNK_READ(conn->chunk, conn->fd)) <= 0 && errno != EAGAIN)                 \
+        {                                                                                   \
+            FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d via %d failed, %s",\
+                    n, conn->ip, conn->port, conn->fd, strerror(errno));                    \
+            CONN_TERMINATE(conn);                                                           \
+            return ;                                                                        \
+        }                                                                                   \
+        DEBUG_LOGGER(conn->logger, "Read %d bytes left:%lld to chunk  from %s:%d via %d",   \
+                n, CK_LEFT(conn->chunk), conn->ip, conn->port, conn->fd);                   \
+        if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )                                 \
+        {                                                                                   \
+            conn->s_state = S_STATE_DATA_HANDLING;                                          \
+            conn->push_message(conn, MESSAGE_DATA);                                         \
+        }                                                                                   \
+        TIMER_SAMPLE(conn->timer);                                                          \
+        return ;                                                                            \
+    }                                                                                       \
+}
 /* Initialize CONN */
 CONN *conn_init(char *ip, int port)
 {
@@ -203,24 +226,8 @@ void conn_read_handler(CONN *conn)
             TIMER_SAMPLE(conn->timer);
             return ;
         }
-        /* read to chunk */
-        if(conn->s_state == S_STATE_READ_CHUNK)
-        {
-            if(CHUNK_READ(conn->chunk, conn->fd) <= 0)
-            {   
-                FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d via %d failed, %s",
-                        n, conn->ip, conn->port, conn->fd, strerror(errno));
-                CONN_TERMINATE(conn);
-                return ;
-            }
-            if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )
-            {
-                conn->s_state = S_STATE_DATA_HANDLING;
-                conn->push_message(conn, MESSAGE_DATA);
-            }
-            TIMER_SAMPLE(conn->timer);
-            return ;
-        }
+        /* Read to chunk */
+        CONN_CHUNK_READ(conn, n);
         /* Receive normal data */
         if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
         {
@@ -383,35 +390,44 @@ void conn_chunk_reader(CONN *conn)
     CONN_CHECK(conn);
 
 	if(conn && conn->chunk)
-	{
-		if(MB_NDATA(conn->buffer) > 0)
+    {
+        if(MB_NDATA(conn->buffer) > 0)
         {
             if((n = CHUNK_FILL(conn->chunk, MB_DATA(conn->buffer), MB_NDATA(conn->buffer))) > 0)
             {
                 MB_DEL(conn->buffer, n);
-                DEBUG_LOGGER(conn->logger, "Filled  %d byte(s) to CHUNK from buffer "
-                        "on conn[%s:%d] via %d", n, conn->ip, conn->port, conn->fd);
             }
             if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )
             {
                 conn->s_state = S_STATE_DATA_HANDLING;
                 conn->push_message(conn, MESSAGE_DATA);
             }
+            if(n > 0)
+            {
+                DEBUG_LOGGER(conn->logger, "Filled  %d byte(s) left:%lld to CHUNK from buffer "
+                        "on conn[%s:%d] via %d", n, CK_LEFT(conn->chunk), 
+                        conn->ip, conn->port, conn->fd);
+
+            }
         }	
-	}	
+    }	
 }
 
 /* Receive CHUNK */
 void conn_recv_chunk(CONN *conn, size_t size)
 {
+    int n = 0;
     /* Check connection and transaction state */
     CONN_CHECK(conn);
 
     if(conn && conn->chunk)
     {
+        DEBUG_LOGGER(conn->logger, "Ready for chunk size:%ld on %s:%d via %d", 
+                size, conn->ip, conn->port, conn->fd);
         CK_MEM(conn->chunk, size);
         conn->s_state = S_STATE_READ_CHUNK;
         conn->chunk_reader(conn);
+        CONN_CHUNK_READ(conn, n);
     }			
 }
 
@@ -419,14 +435,18 @@ void conn_recv_chunk(CONN *conn, size_t size)
 void conn_recv_file(CONN *conn, char *filename,
          long long  offset, long long  size)
 {
+    int n = 0;
     /* Check connection and transaction state */
     CONN_CHECK(conn);
     if(conn && conn->chunk)
     {
+        DEBUG_LOGGER(conn->logger, "Ready for chunk file:%s offset:%lld size:%lld on %s:%d via %d", 
+                filename, offset, size, conn->ip, conn->port, conn->fd);
         CK_FILE(conn->chunk, filename, offset, size);
         CK_SET_BSIZE(conn->chunk, conn->buffer_size);
         conn->s_state = S_STATE_READ_CHUNK;
         conn->chunk_reader(conn);
+        CONN_CHUNK_READ(conn, n);
     } 
 }
 

@@ -178,53 +178,59 @@ work_proc_init:
 work_thread_init:
         /* Initialize Threads */
         //threads
-		service->procthreads = (PROCTHREAD **)calloc(service->max_procthreads, sizeof(PROCTHREAD *));
-		if(service->procthreads == NULL)
-		{
-			FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
-					strerror(errno));
-			exit(EXIT_FAILURE);
-		}
-		for(i = 0; i < service->max_procthreads; i++)
+        if(service->max_procthreads > 0)
         {
-            if((service->procthreads[i] = procthread_init()))
-            {
-                service->procthreads[i]->service = service;
-                service->procthreads[i]->logger = service->logger;
-                service->procthreads[i]->evbase->logger = service->evlogger;
-            }
-            else
+            service->procthreads = (PROCTHREAD **)calloc(
+                    service->max_procthreads, sizeof(PROCTHREAD *));
+            if(service->procthreads == NULL)
             {
                 FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
                         strerror(errno));
                 exit(EXIT_FAILURE);
             }
-            NEW_PROCTHREAD(i, procthread_id, service->procthreads[i], service->logger);
+            for(i = 0; i < service->max_procthreads; i++)
+            {
+                if((service->procthreads[i] = procthread_init()))
+                {
+                    service->procthreads[i]->service = service;
+                    service->procthreads[i]->logger = service->logger;
+                    service->procthreads[i]->evbase->logger = service->evlogger;
+                }
+                else
+                {
+                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
+                            strerror(errno));
+                    exit(EXIT_FAILURE);
+                }
+                NEW_PROCTHREAD(i, procthread_id, service->procthreads[i], service->logger);
+            }
         }
         //daemons
-        if(service->max_daemons == 0) service->max_daemons = service->max_procthreads;
-		service->daemons = (PROCTHREAD **)calloc(service->max_daemons,sizeof(PROCTHREAD *));
-		if(service->daemons == NULL)
-		{
-			FATAL_LOGGER(service->logger, "Initialize daemon procthreads pool failed, %s",
-					strerror(errno));
-			exit(EXIT_FAILURE);
-		}
-        for(i = 0; i < service->max_daemons; i++)
+        if(service->max_daemons > 0) 
         {
-            if((service->daemons[i] = procthread_init()))
-            {
-                service->daemons[i]->service = service;
-                service->daemons[i]->logger = service->logger;
-                service->daemons[i]->evbase->logger = service->evlogger;
-            }
-            else
+            service->daemons = (PROCTHREAD **)calloc(service->max_daemons,sizeof(PROCTHREAD *));
+            if(service->daemons == NULL)
             {
                 FATAL_LOGGER(service->logger, "Initialize daemon procthreads pool failed, %s",
                         strerror(errno));
                 exit(EXIT_FAILURE);
             }
-            NEW_PROCTHREAD(i, procthread_id, service->daemons[i], service->logger);
+            for(i = 0; i < service->max_daemons; i++)
+            {
+                if((service->daemons[i] = procthread_init()))
+                {
+                    service->daemons[i]->service = service;
+                    service->daemons[i]->logger = service->logger;
+                    service->daemons[i]->evbase->logger = service->evlogger;
+                }
+                else
+                {
+                    FATAL_LOGGER(service->logger, "Initialize daemon procthreads pool failed, %s",
+                            strerror(errno));
+                    exit(EXIT_FAILURE);
+                }
+                NEW_PROCTHREAD(i, procthread_id, service->daemons[i], service->logger);
+            }
         }
         goto end ;
     /* client connection initialize */
@@ -435,6 +441,8 @@ void service_state_conns(SERVICE *service)
                 && service->running_connections < service->connections_limit)
 		{
 			num = service->connections_limit - service->running_connections;
+            DEBUG_LOGGER(service->logger, "limit:%d running:%d", 
+                    service->connections_limit, service->running_connections);
             //       num, service->running_connections);
 			while(i++ < num)
 			{
@@ -461,7 +469,8 @@ CONN *service_newconn(SERVICE *service, int family, char *ip,
         int port, int sock_type, CALLBACK_OPS *ops)
 {
     CONN *conn = NULL;
-    struct sockaddr_in sa, *psa = NULL;
+    struct sockaddr_in sa, *psa = NULL, lsa;
+    socklen_t lsa_len ;
     int fd = 0, i = 0;
 
     if(service)
@@ -484,11 +493,16 @@ CONN *service_newconn(SERVICE *service, int family, char *ip,
             fd = socket(service->family, sock_type, 0);
         fcntl(fd, F_SETFL, O_NONBLOCK);
         if(fd > 0 && (connect(fd, (struct sockaddr *)psa, 
-                    sizeof(struct sockaddr )) == 0 || errno == EINPROGRESS))
+                        sizeof(struct sockaddr )) == 0) || errno == EINPROGRESS)
+        //sizeof(struct sockaddr )) == 0 || errno == EINPROGRESS))
         {
             DEBUG_LOGGER(service->logger, "Ready for connection %s:%d via %d",
                     inet_ntoa(psa->sin_addr), ntohs(psa->sin_port), fd);
-            if((conn = service->addconn(service, fd, psa, ops)))
+            getsockname(fd, (struct sockaddr *)&(lsa), &(lsa_len));
+            /*
+            conn = service->addconn(service, fd, &lsa, ops);
+            */
+            if((conn = service->addconn(service, fd, &lsa, ops)))
                 conn->status = CONN_STATUS_READY;
         }
         else
