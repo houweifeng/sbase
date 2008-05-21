@@ -72,14 +72,16 @@ typedef struct _MEMB
 {                                                                                               \
     if(ptr && npdata > 0 && MB_DATA(ptr))                                                       \
     {                                                                                           \
-        MBN(ptr)    = npdata;                                                                   \
-        MBP(ptr)    = MB_DATA(ptr) + npdata;                                                    \
-        MB_END(ptr) = MB_DATA(ptr);                                                             \
-        while(MBN(ptr)-- > 0 && MB_LEFT(ptr) <= MB_SIZE(ptr))                                   \
+        MBN(ptr)        = MB_NDATA(ptr) - npdata;                                               \
+        MBP(ptr)        = MB_DATA(ptr) + npdata;                                                \
+        MB_END(ptr)     = MB_DATA(ptr);                                                         \
+        MB_LEFT(ptr)    = MB_SIZE(ptr);                                                         \
+        MB_NDATA(ptr)   = 0;                                                                    \
+        while(MBN(ptr)-- > 0)                                                                   \
         {                                                                                       \
             *(MB_END(ptr))++ = *(MBP(ptr))++;                                                   \
-            MB_NDATA(ptr)--;                                                                    \
-            MB_LEFT(ptr)++;                                                                     \
+            MB_NDATA(ptr)++;                                                                    \
+            MB_LEFT(ptr)--;                                                                     \
         }                                                                                       \
     }                                                                                           \
 }
