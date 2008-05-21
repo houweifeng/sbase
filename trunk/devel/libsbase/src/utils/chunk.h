@@ -85,26 +85,26 @@ typedef struct _CHUNK
         CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);                                                \
     }                                                                                       \
 }
-#define CK_MEM_STATUS(ptr) ((CK_LEFT(ptr) == 0) ? CHUNK_STATUS_OVER : CHUNK_STATUS_ON)
+#define CHUNK_STATUS(ptr) ((CK_LEFT(ptr) == 0) ? CHUNK_STATUS_OVER : CHUNK_STATUS_ON)
 /* read to mem chunk from fd */
 #define CK_READ(ptr, fd) ((ptr && fd > 0                                                    \
             && (CKN(ptr) = read(fd, CK_END(ptr), CK_LEFT(ptr))) > 0) ?                      \
          (((CK_END(ptr) += CKN(ptr)) && (CK_LEFT(ptr) -= CKN(ptr)) >= 0                     \
            && (CK_NDATA(ptr) += CKN(ptr)) > 0                                               \
-           && (CK_STATUS(ptr) = CK_MEM_STATUS(ptr)) > 0 ) ? CKN(ptr) : -1): -1)
+            && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0 ) ? CKN(ptr) : -1): -1)
 
 /* write to fd from mem chunk */
 #define CK_WRITE(ptr, fd) ((ptr && fd > 0                                                   \
             && (CKN(ptr) = write(fd, CK_END(ptr), CK_LEFT(ptr))) > 0) ?                     \
             (((CK_END(ptr) += CKN(ptr)) && (CK_LEFT(ptr) -= CKN(ptr)) >= 0                  \
-            && (CK_STATUS(ptr) = CK_MEM_STATUS(ptr)) > 0) ? CKN(ptr) : -1): -1)
+            && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0) ? CKN(ptr) : -1): -1)
 
 /* fill to memory from buffer */
 #define CK_MEM_FILL(ptr, pdata, npdata) ((ptr && pdata && npdata > 0                        \
             && (CKN(ptr) = ((npdata > CK_LEFT(ptr)) ? CK_LEFT(ptr) : npdata)) > 0           \
             && memcpy(CK_END(ptr), pdata, CKN(ptr)))?                                       \
             (((CK_LEFT(ptr) -= CKN(ptr)) >= 0 && (CK_END(ptr) += CKN(ptr))                  \
-            && (CK_STATUS(ptr) = CK_MEM_STATUS(ptr)) > 0)? CKN(ptr):-1):-1)
+            && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr):-1):-1)
 
 /* push to memory chunk from bufer */
 #define CK_MEM_COPY(ptr, pdata, npdata) ((ptr && pdata && npdata > 0                        \
@@ -113,7 +113,6 @@ typedef struct _CHUNK
 
 #define CK_CHECKFD(ptr) ((ptr)? ((CK_FD(ptr) <= 0) ?                                        \
      (CK_FD(ptr) = open(CK_FILENAME(ptr), O_CREAT|O_RDWR, 0644)): CK_FD(ptr)): -1)
-#define CK_FILE_STATUS(ptr) ((CK_LEFT(ptr) == 0) ? CHUNK_STATUS_OVER : CHUNK_STATUS_ON)
 #define CK_FLEFT(ptr) ((CK_LEFT(ptr) > CK_BSIZE(ptr))?CK_BSIZE(ptr) : CK_LEFT(ptr))
 /* read to file from fd */
 #define CK_READ_TO_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0                        \
@@ -123,7 +122,7 @@ typedef struct _CHUNK
             && write(CK_FD(ptr), CK_DATA(ptr), CKN(ptr)) == CKN(ptr)) ?                     \
             (((CK_LEFT(ptr) -= CKN(ptr)) >= 0 && (CK_OFFSET(ptr) += CKN(ptr)) > 0           \
             && (CK_FD(ptr) = close(CK_FD(ptr))) >= 0                                        \
-            && (CK_STATUS(ptr) = CK_FILE_STATUS(ptr)) > 0)? CKN(ptr): -1): -1)
+            && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr): -1): -1)
 
 /* write to fd from file */
 #define CK_WRITE_FROM_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0                     \
@@ -133,7 +132,7 @@ typedef struct _CHUNK
             && (CKN(ptr) = write(fd, CK_DATA(ptr), CKN(ptr))) > 0)?                         \
             (((CK_OFFSET(ptr) += CKN(ptr)) > 0 && (CK_LEFT(ptr) -= CKN(ptr)) >= 0           \
             && (CK_FD(ptr) = close(CK_FD(ptr))) >= 0                                        \
-            && (CK_STATUS(ptr) = CK_FILE_STATUS(ptr)) > 0)? CKN(ptr) : -1) : -1)
+            && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr) : -1) : -1)
 
 /* fill to file from buffer */
 #define CK_FILE_FILL(ptr, pdata, npdata) ((ptr && pdata && npdata > 0                       \
@@ -142,7 +141,7 @@ typedef struct _CHUNK
             && write(CK_FD(ptr), pdata, CKN(ptr)) > 0 )?                                    \
             (((CK_LEFT(ptr) -= CKN(ptr)) >= 0 && (CK_OFFSET(ptr) += CKN(ptr)) > 0           \
             && (CK_FD(ptr)      = close(CK_FD(ptr))) >= 0                                   \
-            && (CK_STATUS(ptr) = CK_FILE_STATUS(ptr)) > 0)? CKN(ptr) :-1):-1)
+            && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr) :-1):-1)
 /* CHUNK WRITE */
 #define CHUNK_WRITE(ptr, fd) ((CK_TYPE(ptr) == CHUNK_MEM)?  \
         CK_WRITE(ptr, fd) : CK_WRITE_FROM_FILE(ptr, fd))

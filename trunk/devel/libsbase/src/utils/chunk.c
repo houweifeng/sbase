@@ -18,7 +18,7 @@ int main(int argc, char **argv)
         if((n = CK_WRITE(chunk, fd)) > 0)
         {
             fprintf(stdout, "Wrote %d to file[%s] left:%lld status:%d\n", 
-                    n, file, CK_LEFT(chunk), CK_STATUS(chunk));
+                    n, file, CK_LEFT(chunk), CHUNK_STATUS(chunk));
         }
         close(fd);
     }
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
     {
         if((n = CK_READ(chunk, fd)) > 0)
             fprintf(stdout, "Read %d from file[%s] left:%lld status:%d\n", 
-                    n, file, CK_LEFT(chunk), CK_STATUS(chunk));
+                    n, file, CK_LEFT(chunk), CHUNK_STATUS(chunk));
         close(fd);
     }
     /* mem chunk fill */
@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     if((n = CK_MEM_FILL(chunk, str, n - 10)) > 0)
     {
         fprintf(stdout, "Filled %d bytes from %d block left %lld status %d\n", 
-                n, strlen(str), CK_LEFT(chunk), CK_STATUS(chunk));
+                n, strlen(str), CK_LEFT(chunk), CHUNK_STATUS(chunk));
     }
 
     CK_FILE(chunk, tempfile, 32, 32);
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
         if((n = CK_READ_TO_FILE(chunk, fd)) > 0)
         {
             fprintf(stdout, "Read %d bytes from file %s to file %s left:%lld status:%d\n", 
-                    n, file, tempfile, CK_LEFT(chunk), CK_STATUS(chunk));
+                    n, file, tempfile, CK_LEFT(chunk), CHUNK_STATUS(chunk));
         }
         close(fd);
     }
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
         if((n = CK_WRITE_FROM_FILE(chunk, fd)) > 0)
         {
             fprintf(stdout, "Wrote %d bytes from file %s to file %s left:%lld status:%d\n", 
-                    n, file, tempfile, CK_LEFT(chunk), CK_STATUS(chunk));
+                    n, file, tempfile, CK_LEFT(chunk), CHUNK_STATUS(chunk));
         }
         close(fd);
     }
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     if((n = CK_FILE_FILL(chunk, str, n)) > 0)
     {
         fprintf(stdout, "Filled %d bytes to file:%s left:%lld status:%d\n",
-                n, tempfile, CK_LEFT(chunk), CK_STATUS(chunk));
+                n, tempfile, CK_LEFT(chunk), CHUNK_STATUS(chunk));
     }
     CK_CLEAN(chunk); 
     return 0;
