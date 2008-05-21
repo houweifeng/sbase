@@ -170,6 +170,7 @@ class CLQFTP
         $this->close(); 
         return false;
     }
+
     /* lookup dir */
     function lookup($dir)
     {

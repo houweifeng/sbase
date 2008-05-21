@@ -49,7 +49,7 @@ SERVICE *lqftpd = NULL;
 char *histlist = "/tmp/hist.list";
 char *qlist = "/tmp/q.list";
 
-int cb_packet_reader(CONN *conn, BUFFER *buffer)
+int cb_packet_reader(CONN *conn, SDATA *buffer)
 {
 }
 
@@ -189,7 +189,7 @@ int truncate_file(char *file, unsigned long long size)
     return truncate(file, size);
 }
 
-void cb_packet_handler(CONN *conn, BUFFER *packet)
+void cb_packet_handler(CONN *conn, SDATA *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0, is_valid_offset = 0;
@@ -204,9 +204,9 @@ void cb_packet_handler(CONN *conn, BUFFER *packet)
     if(conn)
     {
         p = (char *)packet->data;
-        end = (char *)packet->end;
+        end = (char *)packet->data + packet->ndata;
         //cmd
-        if(packet->size > CMD_MAX_LEN)
+        if(packet->ndata > CMD_MAX_LEN)
         {
             GET_CMDID(p, n, cmdid);
         }
@@ -415,7 +415,7 @@ op_md5sum:
     }
 }
 
-void cb_data_handler(CONN *conn, BUFFER *packet, CHUNK *chunk, BUFFER *cache)
+void cb_data_handler(CONN *conn, SDATA *packet, SDATA *cache, SDATA *chunk)
 {
     if(conn)
     {
@@ -423,126 +423,136 @@ void cb_data_handler(CONN *conn, BUFFER *packet, CHUNK *chunk, BUFFER *cache)
     }
 }
 
-void cb_oob_handler(CONN *conn, BUFFER *oob)
+void cb_file_handler(CONN *conn, SDATA *packet, SDATA *cache, char *file)
+{
+    if(conn)
+    {
+        RESPONSE(conn, RESP_OK);
+    }
+}
+
+void cb_oob_handler(CONN *conn, SDATA *oob)
 {
 }
 
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-	char *logfile = NULL, *s = NULL, *p = NULL;
-	int n = 0;
-	SERVICE *service = NULL;
-	if((dict = iniparser_new(conf)) == NULL)
-	{
-		fprintf(stderr, "Initializing conf:%s failed, %s\n", conf, strerror(errno));
-		_exit(-1);
-	}
-	/* SBASE */
-	fprintf(stdout, "Parsing SBASE...\n");
-	sbase->working_mode = iniparser_getint(dict, "SBASE:working_mode", WORKING_PROC);
-	sbase->max_procthreads = iniparser_getint(dict, "SBASE:max_procthreads", 1);
-	if(sbase->max_procthreads > MAX_PROCTHREADS)
-		sbase->max_procthreads = MAX_PROCTHREADS;
-	sbase->sleep_usec = iniparser_getint(dict, "SBASE:sleep_usec", MIN_SLEEP_USEC);
-	if((logfile = iniparser_getstr(dict, "SBASE:logfile")) == NULL)
-		logfile = SBASE_LOG;
-	fprintf(stdout, "Parsing LOG[%s]...\n", logfile);
-	fprintf(stdout, "SBASE[%08x] sbase->evbase:%08x ...\n", sbase, sbase->evbase);
-	sbase->set_log(sbase, logfile);
-	if((logfile = iniparser_getstr(dict, "SBASE:evlogfile")))
-	    sbase->set_evlog(sbase, logfile);
-	/* LQFTPD */
-	fprintf(stdout, "Parsing LQFTPD...\n");
-	if((service = service_init()) == NULL)
-	{
-		fprintf(stderr, "Initialize service failed, %s", strerror(errno));
-		_exit(-1);
-	}
-	/* INET protocol family */
-	n = iniparser_getint(dict, "LQFTPD:inet_family", 0);
-	/* INET protocol family */
-	n = iniparser_getint(dict, "LQFTPD:inet_family", 0);
-	switch(n)
-	{
-		case 0:
-			service->family = AF_INET;
-			break;
-		case 1:
-			service->family = AF_INET6;
-			break;
-		default:
-			fprintf(stderr, "Illegal INET family :%d \n", n);
-			_exit(-1);
-	}
-	/* socket type */
-	n = iniparser_getint(dict, "LQFTPD:socket_type", 0);
-	switch(n)
-	{
-		case 0:
-			service->socket_type = SOCK_STREAM;
-			break;
-		case 1:
-			service->socket_type = SOCK_DGRAM;
-			break;
-		default:
-			fprintf(stderr, "Illegal socket type :%d \n", n);
-			_exit(-1);
-	}
-	/* service name and ip and port */
-	service->name = iniparser_getstr(dict, "LQFTPD:service_name");
-	service->ip = iniparser_getstr(dict, "LQFTPD:service_ip");
-	if(service->ip && service->ip[0] == 0 )
-		service->ip = NULL;
-	service->port = iniparser_getint(dict, "LQFTPD:service_port", 80);
-	service->working_mode = iniparser_getint(dict, "LQFTPD:working_mode", WORKING_PROC);
-	service->max_procthreads = iniparser_getint(dict, "LQFTPD:max_procthreads", 1);
-	service->sleep_usec = iniparser_getint(dict, "LQFTPD:sleep_usec", 100);
-	logfile = iniparser_getstr(dict, "LQFTPD:logfile");
-	if(logfile == NULL)
-		logfile = LQFTPD_LOG;
-	service->logfile = logfile;
-	logfile = iniparser_getstr(dict, "LQFTPD:evlogfile");
+    char *logfile = NULL, *s = NULL, *p = NULL;
+    int n = 0;
+    SERVICE *service = NULL;
+    if((dict = iniparser_new(conf)) == NULL)
+    {
+        fprintf(stderr, "Initializing conf:%s failed, %s\n", conf, strerror(errno));
+        _exit(-1);
+    }
+    /* SBASE */
+    fprintf(stdout, "Parsing SBASE...\n");
+    sbase->working_mode = iniparser_getint(dict, "SBASE:working_mode", WORKING_PROC);
+    sbase->max_procthreads = iniparser_getint(dict, "SBASE:max_procthreads", 1);
+    if(sbase->max_procthreads > MAX_PROCTHREADS)
+        sbase->max_procthreads = MAX_PROCTHREADS;
+    sbase->sleep_usec = iniparser_getint(dict, "SBASE:sleep_usec", MIN_SLEEP_USEC);
+    if((logfile = iniparser_getstr(dict, "SBASE:logfile")) == NULL)
+        logfile = SBASE_LOG;
+    fprintf(stdout, "Parsing LOG[%s]...\n", logfile);
+    fprintf(stdout, "SBASE[%08x] sbase->evbase:%08x ...\n", sbase, sbase->evbase);
+    sbase->set_log(sbase, logfile);
+    if((logfile = iniparser_getstr(dict, "SBASE:evlogfile")))
+        sbase->set_evlog(sbase, logfile);
+    /* LQFTPD */
+    fprintf(stdout, "Parsing LQFTPD...\n");
+    if((service = service_init()) == NULL)
+    {
+        fprintf(stderr, "Initialize service failed, %s", strerror(errno));
+        _exit(-1);
+    }
+    /* INET protocol family */
+    n = iniparser_getint(dict, "LQFTPD:inet_family", 0);
+    /* INET protocol family */
+    n = iniparser_getint(dict, "LQFTPD:inet_family", 0);
+    switch(n)
+    {
+        case 0:
+            service->family = AF_INET;
+            break;
+        case 1:
+            service->family = AF_INET6;
+            break;
+        default:
+            fprintf(stderr, "Illegal INET family :%d \n", n);
+            _exit(-1);
+    }
+    /* socket type */
+    n = iniparser_getint(dict, "LQFTPD:socket_type", 0);
+    switch(n)
+    {
+        case 0:
+            service->socket_type = SOCK_STREAM;
+            break;
+        case 1:
+            service->socket_type = SOCK_DGRAM;
+            break;
+        default:
+            fprintf(stderr, "Illegal socket type :%d \n", n);
+            _exit(-1);
+    }
+    /* service name and ip and port */
+    service->name = iniparser_getstr(dict, "LQFTPD:service_name");
+    service->ip = iniparser_getstr(dict, "LQFTPD:service_ip");
+    if(service->ip && service->ip[0] == 0 )
+        service->ip = NULL;
+    service->port = iniparser_getint(dict, "LQFTPD:service_port", 80);
+    service->working_mode = iniparser_getint(dict, "LQFTPD:working_mode", WORKING_PROC);
+    service->max_procthreads = iniparser_getint(dict, "LQFTPD:max_procthreads", 1);
+    service->sleep_usec = iniparser_getint(dict, "LQFTPD:sleep_usec", 100);
+    logfile = iniparser_getstr(dict, "LQFTPD:logfile");
+    if(logfile == NULL)
+        logfile = LQFTPD_LOG;
+    service->logfile = logfile;
+    logfile = iniparser_getstr(dict, "LQFTPD:evlogfile");
     if((p = iniparser_getstr(dict, "LQFTPD:access_log")))
     {
         lqftpd_logger = logger_init(p);
         DEBUG_LOGGER(lqftpd_logger, "Initialize logger %s", p);
     }
-	service->evlogfile = logfile;
-	document_root = iniparser_getstr(dict, "LQFTPD:server_root");
+    service->evlogfile = logfile;
+    document_root = iniparser_getstr(dict, "LQFTPD:server_root");
     if( (p = iniparser_getstr(dict, "LQFTPD:histlist")))
         histlist = p;
     if((p = iniparser_getstr(dict, "LQFTPD:qlist")))
         qlist = p;
-	service->max_connections = iniparser_getint(dict, "LQFTPD:max_connections", MAX_CONNECTIONS);
-	service->packet_type = PACKET_DELIMITER;
-	service->packet_delimiter = iniparser_getstr(dict, "LQFTPD:packet_delimiter");
-	p = s = service->packet_delimiter;
-	while(*p != 0 )
-	{
-		if(*p == '\\' && *(p+1) == 'n')
-		{
-			*s++ = '\n';
-			p += 2;
-		}
-		else if (*p == '\\' && *(p+1) == 'r')
-		{
-			*s++ = '\r';
-			p += 2;
-		}
-		else
-			*s++ = *p++;
-	}
-	*s++ = 0;
-	service->packet_delimiter_length = strlen(service->packet_delimiter);
-	service->buffer_size = iniparser_getint(dict, "LQFTPD:buffer_size", SB_BUF_SIZE);
-	service->cb_packet_reader = &cb_packet_reader;
-	service->cb_packet_handler = &cb_packet_handler;
-	service->cb_data_handler = &cb_data_handler;
-	service->cb_oob_handler = &cb_oob_handler;
-	/* server */
-	fprintf(stdout, "Parsing for server...\n");
-	return sbase->add_service(sbase, service);
+    service->max_connections = iniparser_getint(dict, "LQFTPD:max_connections", MAX_CONNECTIONS);
+    service->packet_type = PACKET_DELIMITER;
+    service->packet_delimiter = iniparser_getstr(dict, "LQFTPD:packet_delimiter");
+    p = s = service->packet_delimiter;
+    while(*p != 0 )
+    {
+        if(*p == '\\' && *(p+1) == 'n')
+        {
+            *s++ = '\n';
+            p += 2;
+        }
+        else if (*p == '\\' && *(p+1) == 'r')
+        {
+            *s++ = '\r';
+            p += 2;
+        }
+        else
+            *s++ = *p++;
+    }
+    *s++ = 0;
+    service->packet_delimiter_length = strlen(service->packet_delimiter);
+    service->buffer_size = iniparser_getint(dict, "LQFTPD:buffer_size", SB_BUF_SIZE);
+    service->ops.cb_packet_reader = &cb_packet_reader;
+    service->ops.cb_packet_handler = &cb_packet_handler;
+    service->ops.cb_data_handler = &cb_data_handler;
+    service->ops.cb_file_handler = &cb_file_handler;
+    service->ops.cb_oob_handler = &cb_oob_handler;
+
+    /* server */
+    fprintf(stdout, "Parsing for server...\n");
+    return sbase->add_service(sbase, service);
 }
 
 static void cb_stop(int sig){
