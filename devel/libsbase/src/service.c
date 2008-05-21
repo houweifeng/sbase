@@ -364,11 +364,7 @@ void service_active_heartbeat(SERVICE *service)
             {
                 service->cb_heartbeat_handler(service->cb_heartbeat_arg);
             }
-            if(service->running_connections > 0)
-            {
-                service->state_conns(service);
-            }
-
+            service->state_conns(service);
             TIMER_SAMPLE(service->timer);
         }
     }

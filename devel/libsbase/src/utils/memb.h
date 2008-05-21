@@ -28,8 +28,8 @@ typedef struct _MEMB
 #define MBN(ptr)       (MB(ptr)->n)
 #define MB_RESIZE(ptr, nsize) (((MBN(ptr) = MB_BSIZE(ptr) * (((nsize / MB_BSIZE(ptr)))          \
                 + (((nsize % MB_BSIZE(ptr)) == 0) ? 0 : 1))) > 0 ) ?                            \
-            ((MB_DATA(ptr) = realloc(MB_DATA(ptr), (MB_SIZE(ptr) + MBN(ptr))))?                 \
-              (((MB_END(ptr) = MB_DATA(ptr) + (MB_SIZE(ptr) - MB_LEFT(ptr)))                    \
+            ((MB_DATA(ptr) = (char *)realloc(MB_DATA(ptr), (MB_SIZE(ptr) + MBN(ptr))))?         \
+              (((MB_END(ptr) = MB_DATA(ptr) + MB_NDATA(ptr))                                   \
                 && (MB_SIZE(ptr) += MBN(ptr)) && (MB_LEFT(ptr) += MBN(ptr))) ?                  \
                 MB_DATA(ptr) : NULL)  : NULL) : NULL)
 #define MB_CHECK(ptr) ((ptr)?((MB_LEFT(ptr) <= 0)?((MB_RESIZE(ptr, MB_BSIZE(ptr)))?0:-1):0):-1)

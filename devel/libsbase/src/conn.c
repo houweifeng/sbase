@@ -213,7 +213,7 @@ void conn_read_handler(CONN *conn)
                 CONN_TERMINATE(conn);
                 return ;
             }
-            if(CK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )
+            if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )
             {
                 conn->s_state = S_STATE_DATA_HANDLING;
                 conn->push_message(conn, MESSAGE_DATA);
@@ -224,8 +224,8 @@ void conn_read_handler(CONN *conn)
         /* Receive normal data */
         if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
         {
-            FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d via %d failed, %s",
-                    n, conn->ip, conn->port, conn->fd, strerror(errno));
+            FATAL_LOGGER(conn->logger, "Reading %d bytes left:%d data from %s:%d via %d failed, %s",
+                    n, MB_LEFT(conn->buffer), conn->ip, conn->port, conn->fd, strerror(errno));
             /* Terminate connection */
             CONN_TERMINATE(conn);
             return ;
@@ -254,7 +254,7 @@ void conn_write_handler(CONN *conn)
 		cp = (CHUNK *)HEAD_QUEUE(conn->send_queue);
 		if(cp)
 		{
-            if(CHUNK_WRITE(cp, conn->fd) > 0)
+            if((n = CHUNK_WRITE(cp, conn->fd)) > 0)
             {
 				conn->sent_data_total += n * 1ll;
 				DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
@@ -262,7 +262,7 @@ void conn_write_handler(CONN *conn)
 						n, conn->sent_data_total, conn->ip, conn->port, conn->fd, CK_LEFT(cp));
 				/* CONN TIMER sample */
 		        TIMER_SAMPLE(conn->timer);
-				if(CK_STATUS(cp) == CHUNK_STATUS_OVER )
+				if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER )
 				{
 					cp = (CHUNK *)POP_QUEUE(conn->send_queue);	
 					DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it leave %d", 
@@ -392,7 +392,7 @@ void conn_chunk_reader(CONN *conn)
                 DEBUG_LOGGER(conn->logger, "Filled  %d byte(s) to CHUNK from buffer "
                         "on conn[%s:%d] via %d", n, conn->ip, conn->port, conn->fd);
             }
-            if(CK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )
+            if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )
             {
                 conn->s_state = S_STATE_DATA_HANDLING;
                 conn->push_message(conn, MESSAGE_DATA);
