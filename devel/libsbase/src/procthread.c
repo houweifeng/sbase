@@ -133,7 +133,7 @@ void procthread_run(void *arg)
 	while(pth->running_status)
 	{
 		pth->evbase->loop(pth->evbase, 0, NULL);
-		pth->running_once(pth);
+		if(TOTAL_QUEUE(pth->message_queue) > 0)pth->running_once(pth);
 		usleep(pth->service->sleep_usec);
 	}
 }
