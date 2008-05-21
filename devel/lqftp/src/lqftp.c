@@ -140,7 +140,7 @@ void cb_serv_heartbeat_handler(void *arg)
         {
             //break;
             //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
-             //           c_conn, c_conn->fd, c_conn->index);
+            //            c_conn, c_conn->fd, c_conn->index);
             if((block = tasktable->pop_block(tasktable, c_conn->fd, (void *)c_conn)))
             {
                 //DEBUG_LOGGER(daemon_logger, "running_task_id:%d running_task.id:%d",
@@ -173,7 +173,7 @@ void cb_serv_heartbeat_handler(void *arg)
                 if(block->cmdid == CMD_MD5SUM)
                 {
                     tasktable->md5sum(tasktable);
-                    //DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
+                    DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_MD5", block->id);
                     n = sprintf(buf, "md5sum %s\r\nmd5:%s\r\n\r\n", 
                             task->destfile,
                             task->md5); 
