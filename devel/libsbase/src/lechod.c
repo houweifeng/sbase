@@ -13,21 +13,25 @@
 SBASE *sbase = NULL;
 dictionary *dict = NULL;
 
-int cb_packet_reader(CONN *conn, BUFFER *buffer)
+int cb_packet_reader(CONN *conn, SDATA *buffer)
 {
 }
 
-void cb_packet_handler(CONN *conn, BUFFER *packet)
+void cb_packet_handler(CONN *conn, SDATA *packet)
 {
 	if(conn && conn->push_chunk)
-		conn->push_chunk((CONN *)conn, ((BUFFER *)packet)->data, packet->size);
+		conn->push_chunk((CONN *)conn, ((SDATA *)packet)->data, packet->ndata);
 }
 
-void cb_data_handler(CONN *conn, BUFFER *packet, CHUNK *chunk, BUFFER *cache)
+void cb_data_handler(CONN *conn, SDATA *packet, SDATA *cache, SDATA *chunk)
 {
 }
 
-void cb_oob_handler(CONN *conn, BUFFER *oob)
+void cb_file_handler(CONN *conn, SDATA *packet, SDATA *cache, char *file)
+{
+}
+
+void cb_oob_handler(CONN *conn, SDATA *oob)
 {
 }
 
@@ -133,6 +137,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->ops.cb_packet_reader = &cb_packet_reader;
 	service->ops.cb_packet_handler = &cb_packet_handler;
 	service->ops.cb_data_handler = &cb_data_handler;
+	service->ops.cb_file_handler = &cb_file_handler;
 	service->ops.cb_oob_handler = &cb_oob_handler;
 	/* server */
 	fprintf(stdout, "Parsing for server...\n");

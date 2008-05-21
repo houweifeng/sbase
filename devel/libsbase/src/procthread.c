@@ -1,7 +1,6 @@
 #include <evbase.h>
 #include "sbase.h"
 #include "procthread.h"
-#include "buffer.h"
 #include "queue.h"
 #include "timer.h"
 #include "message.h"
