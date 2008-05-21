@@ -5,7 +5,6 @@
 #include "logger.h"
 #include "service.h"
 #include "procthread.h"
-#include "buffer.h"
 #include "message.h"
 
 
@@ -41,7 +40,7 @@ SBASE *sbase_init()
         sb->evbase		    = evbase_init();
         sb->message_queue	= queue_init();
         TIMER_INIT(sb->timer);
-        sb->evbase->set_evops(sb->evbase, EOP_POLL);
+        //sb->evbase->set_evops(sb->evbase, EOP_POLL);
     }
     return sb;
 }
@@ -192,16 +191,16 @@ running:
                 sb->services[j]->run(sb->services[j]);	
             }
         }	
+        TIMER_INIT(timer);
         sb->running_status = 1;
         if(sb->working_mode != WORKING_PROC)
         {
             if(seconds > 0) 
             {
-                TIMER_INIT(timer);
+                TIMER_SAMPLE(timer);
                 while(sb->running_status)
                 {
-                    TIMER_SAMPLE(timer);
-                    if(PT_SEC_USED(timer) >= seconds) sb->stop(sb);
+                    if(TIMER_CHECK(timer, seconds) == 0) sb->stop(sb);
                     sb->evbase->loop(sb->evbase, 0, NULL);
                     sbase_state(sb);
                     usleep(sb->sleep_usec);
@@ -226,9 +225,7 @@ running:
                 TIMER_SAMPLE(timer);
                 while(sb->running_status)
                 {
-                    TIMER_SAMPLE(timer);
-                    if(PT_SEC_USED(timer) >= seconds) sb->stop(sb);
-
+                    if(TIMER_CHECK(timer, seconds) == 0) sb->stop(sb);
                     sb->evbase->loop(sb->evbase, 0, NULL);
                     sb->running_once(sb);
                     sbase_state(sb);

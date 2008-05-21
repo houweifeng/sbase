@@ -1,315 +1,84 @@
+#include <stdio.h>
+#include <fcntl.h>
 #include "chunk.h"
-
-/* Initialize struct CHUNK */
-CHUNK *chunk_init()
-{
-	CHUNK *chunk = (CHUNK *)calloc(1, sizeof(CHUNK));
-	if(chunk)
-	{
-		chunk->set	= chk_set;
-		chunk->append	= chk_append;
-		chunk->fill	= chk_fill;
-		chunk->send	= chk_send;
-		chunk->reset	= chk_reset;
-		chunk->clean	= chk_clean;
-		chunk->buf	= buffer_init();
-#ifdef HAVE_PTHREAD
-	chunk->mutex	= calloc(1, sizeof(pthread_mutex_t));
-        if(chunk->mutex) pthread_mutex_init((pthread_mutex_t *)chunk->mutex, NULL);
-#endif
-	}
-	return chunk;
-}
-
-/* Initialzie CHUNK */
-int chk_set(CHUNK *chunk, int id, int type, char *filename, long long  offset, long long  len)
-{
-	if(chunk)
-	{	
-		chunk->reset(chunk);
-#ifdef HAVE_PTHREAD
-        if(chunk->mutex) pthread_mutex_lock((pthread_mutex_t *)chunk->mutex);
-#endif
-
-		chunk->id = id;
-		chunk->type = type;
-		if(chunk->buf == NULL)
-		{
-			chunk->buf = buffer_init();
-		}
-		else
-		{
-			chunk->buf->reset(chunk->buf);	
-		}
-		chunk->file.fd = -1;
-		if(filename)strcpy(chunk->file.name, filename);
-		chunk->offset = offset ;
-		chunk->len = len;
-#ifdef HAVE_PTHREAD
-        if(chunk->mutex) pthread_mutex_unlock((pthread_mutex_t *)chunk->mutex);
-#endif
-
-	}
-	return 0;	
-}
-
-/* append data to CHUNK BUFFER */
-int chk_append(CHUNK *chunk, void *data, size_t len)
-{
-	int ret = -1;
-	if(chunk)
-	{
-#ifdef HAVE_PTHREAD
-		if(chunk->mutex) pthread_mutex_lock((pthread_mutex_t *)chunk->mutex);
-#endif
-		if(chunk->buf && chunk->buf->push(chunk->buf, data, len) == 0 )
-		{
-			chunk->len += len;
-			ret = 0;
-		}
-#ifdef HAVE_PTHREAD
-		if(chunk->mutex) pthread_mutex_unlock((pthread_mutex_t *)chunk->mutex);
-#endif
-
-	}
-	return ret;
-}
-
-#ifndef CLOSE_FD
-#define CLOSE_FD(_fd){if(_fd > 0 ){close(_fd);} _fd = -1;}
-#endif
-
-/* fill CHUNK with data */
-int chk_fill(CHUNK *chunk, void *data, size_t len)
-{
-	int n = 0;
-	size_t size;
-	if(chunk == NULL ) return -1;
-	if(chunk->len <= 0 ) return 0;
-#ifdef HAVE_PTHREAD
-	if(chunk->mutex) pthread_mutex_lock((pthread_mutex_t *)chunk->mutex);
-#endif
-	switch(chunk->type)	
-	{
-		case MEM_CHUNK :
-			{
-				size = (chunk->len > len)? len : chunk->len;
-				if( (n = chunk->buf->push(chunk->buf, data , (size_t)size)) != 0 )
-				{	
-					n = -1;
-				}
-				else
-				{
-					chunk->len  -= size * 1ll;
-					n = (int)size;
-				}
-				break;
-			}	
-		case FILE_CHUNK :
-			{
-				if( chunk->file.fd < 0 
-						&& (chunk->file.fd = open(chunk->file.name,
-								O_CREAT |O_RDWR, 0644)) < 0 )
-				{
-					n = -1;
-					break;
-				}
-				if(lseek(chunk->file.fd, chunk->offset, SEEK_SET) == -1)
-				{
-					n = -1;
-					CLOSE_FD(chunk->file.fd);
-					break;
-				}
-				size = (chunk->len > len)? len : chunk->len;
-				if((n = write(chunk->file.fd, data, size) ) > 0 )
-				{
-					chunk->offset += n * 1ll;
-					chunk->len  -= n * 1ll;
-				}
-				CLOSE_FD(chunk->file.fd);
-				break;
-			}
-		default :
-			n = -1;
-	}
-#ifdef HAVE_PTHREAD
-	if(chunk->mutex) pthread_mutex_unlock((pthread_mutex_t *)chunk->mutex);
-#endif
-	return n;
-}	
-
-/* write CHUNK data to fd */
-int chk_send(CHUNK *chunk, int fd, size_t buf_size)
-{
-	int n = 0, len = 0;
-	size_t m_size = 0;
-	void *data = NULL;
-	void *buf = NULL;
-
-	if(chunk == NULL ) return -1;
-	if(chunk->len <= 0ll ) return -1;
-#ifdef HAVE_PTHREAD
-	if(chunk->mutex) pthread_mutex_lock((pthread_mutex_t *)chunk->mutex);
-#endif
-	switch(chunk->type)	
-	{
-		case MEM_CHUNK :
-			{
-				if( (n = write(fd, ((char *)(chunk->buf->data) + chunk->offset),
-								chunk->len)) < 0 )
-				{	
-					n = -1;
-				}
-				else
-				{
-					chunk->offset  += n * 1ll;
-					chunk->len  -= n * 1ll;
-				}
-				break;
-			}	
-		case FILE_CHUNK :
-			{
-				if(chunk->file.fd < 0 )
-				{
-					if( (chunk->file.fd = open(chunk->file.name, O_RDONLY)) < 0 )
-					{
-						n = -1;
-						goto end;
-					}
-				}
-				if(lseek(chunk->file.fd, (off_t) chunk->offset, SEEK_SET) == -1)
-				{
-					n = -1;
-					fprintf(stderr, "LSEEK %u failed, %s\n",
-							chunk->offset, strerror(errno));
-					goto end;
-				}
-				m_size = (chunk->len > (buf_size * 1ll))
-					? buf_size : ((chunk->len) * 1u);
-#ifdef _USE_MMAP
-				if( (data = mmap(NULL, m_size, PROT_READ, MAP_PRIVATE,
-								chunk->file.fd, 0)) == MAP_FAILED)
-				{
-					n = -1;
-					fprintf(stderr, "MMAP %d size:%u failed, %s\n",
-							chunk->file.fd, m_size, strerror(errno));
-					goto end;
-				}
-#else
-				data = buf = (void *)calloc(1, m_size);
-				if(( len = read(chunk->file.fd, data, m_size)) < 0 )
-				{
-					n = -1;
-					fprintf(stderr, "READ %d failed, %s\n", 
-							chunk->file.fd, strerror(errno));
-					goto end;
-				}
-				else
-				{
-					m_size = len;
-				}
-#endif
-				if((n = write(fd, data, m_size) ) < 0 )
-				{
-					n = -1;
-					fprintf(stderr, "WRITE %d failed, %s\n",
-							chunk->file.fd, strerror(errno));
-					goto end;
-				}
-				else
-				{
-					chunk->offset += n * 1ll;
-					chunk->len  -= n * 1ll;
-				}
-#ifdef _USE_MMAP
-				munmap(data, m_size);
-#endif
-end:
-				{
-					if(buf) free(buf);
-					CLOSE_FD(chunk->file.fd);
-				}
-				break;
-			}
-		default :
-			return n = -1;
-	}
-#ifdef HAVE_PTHREAD
-	if(chunk->mutex) pthread_mutex_unlock((pthread_mutex_t *)chunk->mutex);
-#endif
-
-	return n;
-}
-
-/* reset CHUNK */
-void chk_reset(CHUNK *chunk)
-{
-	if(chunk)
-	{
-#ifdef HAVE_PTHREAD
-		if(chunk->mutex) pthread_mutex_lock((pthread_mutex_t *)chunk->mutex);
-#endif
-		switch(chunk->type)
-		{
-			case MEM_CHUNK :
-				{
-					chunk->buf->reset(chunk->buf);
-				}
-			case FILE_CHUNK :
-				{
-					CLOSE_FD(chunk->file.fd);
-					break;
-				}
-			default :
-				break;
-
-		}
-		chunk->id = 0;
-		chunk->type = 0;
-		chunk->offset = 0ll;
-		chunk->len = 0ll;
-#ifdef HAVE_PTHREAD
-		if(chunk->mutex) pthread_mutex_unlock((pthread_mutex_t *)chunk->mutex);
-#endif
-
-	}
-}
-
-/* clean CHUNK buffer data and close opened fd */
-void chk_clean(CHUNK **chunk)
-{
-	if((*chunk) == NULL) return ;
-	//chunk->reset(chunk);
-        if((*chunk)->buf)
-        {
-                (*chunk)->buf->clean(&(*chunk)->buf);
-        }
-#ifdef HAVE_PTHREAD
-	if((*chunk)->mutex)
-	{
-		pthread_mutex_unlock((pthread_mutex_t *)(*chunk)->mutex);
-		pthread_mutex_destroy((pthread_mutex_t *)(*chunk)->mutex);
-		free((*chunk)->mutex);
-	}	
-#endif
-        free((*chunk));
-        (*chunk) = NULL;
-        return ;
-}
-
 #ifdef _DEBUG_CHUNK
-int main()
+const char *str="dslfasd;lfl;sdfl;sdfl;ds;dfl;dskfa;ldskfl;dskfl;dkfl;dkfl;dfl;dskfl;dskf;d\n";
+int main(int argc, char **argv)
 {
-	CHUNK *chunk = chunk_init();
-	char *s = "d,f.ma.sdfmds.fm;ldsmf.ds,f.ds,f/.df";
-	if(chunk)
-	{
-		chunk->set(chunk, 0, MEM_CHUNK, NULL, 0, 160);
-		CHUNK_VIEW(chunk);
-		chunk->fill(chunk, (void *)s, strlen(s));
-		CHUNK_VIEW(chunk);
-		chunk->send(chunk, 0, 32);
-		chunk->clean(&chunk);
-	}		
-}	
+    void *chunk = NULL;
+    int fd = -1, tmpfd = -1, n = 0;
+    char *file = "/tmp/chunk.txt", *tempfile = "/tmp/temp.txt";
+
+    CK_INIT(chunk);
+    /* mem chunk push */
+    CK_MEM(chunk, 1024);
+    CK_MEM_COPY(chunk, str, strlen(str));
+    if((fd = open(file, O_CREAT|O_RDWR, 0644)) > 0)
+    {
+        if((n = CK_WRITE(chunk, fd)) > 0)
+        {
+            fprintf(stdout, "Wrote %d to file[%s] left:%lld status:%d\n", 
+                    n, file, CK_LEFT(chunk), CK_STATUS(chunk));
+        }
+        close(fd);
+    }
+    /* mem chunk read */
+    CK_RESET(chunk);
+    CK_MEM(chunk, 1024);
+    if((fd = open(file, O_CREAT|O_RDWR, 0644)) > 0)
+    {
+        if((n = CK_READ(chunk, fd)) > 0)
+            fprintf(stdout, "Read %d from file[%s] left:%lld status:%d\n", 
+                    n, file, CK_LEFT(chunk), CK_STATUS(chunk));
+        close(fd);
+    }
+    /* mem chunk fill */
+    CK_RESET(chunk);
+    n = strlen(str);
+    CK_MEM(chunk, n);
+    if((n = CK_MEM_FILL(chunk, str, n - 10)) > 0)
+    {
+        fprintf(stdout, "Filled %d bytes from %d block left %lld status %d\n", 
+                n, strlen(str), CK_LEFT(chunk), CK_STATUS(chunk));
+    }
+
+    CK_FILE(chunk, tempfile, 32, 32);
+    /* file chunk read */
+    if((fd = open(file, O_CREAT|O_RDONLY, 0644)) > 0)
+    {
+        fprintf(stdout, "Ready from read to file:%s\n",file);
+        if((n = CK_READ_TO_FILE(chunk, fd)) > 0)
+        {
+            fprintf(stdout, "Read %d bytes from file %s to file %s left:%lld status:%d\n", 
+                    n, file, tempfile, CK_LEFT(chunk), CK_STATUS(chunk));
+        }
+        close(fd);
+    }
+    CK_RESET(chunk);
+    CK_FILE(chunk, file, 0, 32);
+    /* file chunk write */
+    if((fd = open(tempfile, O_CREAT|O_WRONLY, 0644)) > 0)
+    {
+        fprintf(stdout, "Ready write from file:%s\n", file);
+        if((n = CK_WRITE_FROM_FILE(chunk, fd)) > 0)
+        {
+            fprintf(stdout, "Wrote %d bytes from file %s to file %s left:%lld status:%d\n", 
+                    n, file, tempfile, CK_LEFT(chunk), CK_STATUS(chunk));
+        }
+        close(fd);
+    }
+    /* fill to chunk file from buffer */
+    n = strlen(str);
+    CK_RESET(chunk);
+    CK_FILE(chunk, tempfile, 128, n);
+    fprintf(stdout, "Ready  fill file:%s %d bytes\n", tempfile, n);
+    if((n = CK_FILE_FILL(chunk, str, n)) > 0)
+    {
+        fprintf(stdout, "Filled %d bytes to file:%s left:%lld status:%d\n",
+                n, tempfile, CK_LEFT(chunk), CK_STATUS(chunk));
+    }
+    CK_CLEAN(chunk); 
+    return 0;
+}
 #endif
+

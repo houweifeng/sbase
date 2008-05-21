@@ -10,7 +10,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#ifdef HAVE_PTHREAD
 #include "mutex.h"
+#else
+#define MUTEX_INIT(ptr)
+#define MUTEX_LOCK(ptr)
+#define MUTEX_UNLOCK(ptr)
+#define MUTEX_DESTROY(ptr)
+#endif
+
 #ifndef _LOGGER_H
 #define _LOGGER_H
 #ifdef __cplusplus
@@ -19,7 +27,7 @@ extern "C" {
 
 #ifndef _TYPEDEF_LOGGER
 #define _TYPEDEF_LOGGER
-#define LOGGER_FILENAME_LIMIT  	256
+#define LOGGER_FILENAME_LIMIT  	1024
 #define LOGGER_LINE_LIMIT  	    512000
 #define __DEBUG__		0
 #define	__WARN__ 		1

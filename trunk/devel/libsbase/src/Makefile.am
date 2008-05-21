@@ -9,8 +9,8 @@ service.c \
 service.h \
 utils/mutex.h \
 utils/mutex.c \
-utils/buffer.c \
-utils/buffer.h \
+utils/memb.c \
+utils/memb.h \
 utils/chunk.c \
 utils/chunk.h \
 utils/logger.c \
@@ -21,9 +21,6 @@ utils/queue.c \
 utils/queue.h \
 utils/timer.c \
 utils/timer.h 
-EXTRA_DIST = utils/tree.h \
-utils/cache.c \
-utils/cache.h 
 
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 libsbase_la_LDFLAGS = -levbase
