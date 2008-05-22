@@ -37,6 +37,7 @@ SERVICE *service_init()
 int service_set(SERVICE *service)
 {
 	int opt = 1;
+	int fd = 0;
 	if(service)
 	{
 		//service->running_status = 1;	
@@ -62,6 +63,7 @@ int service_set(SERVICE *service)
         else
             goto client_setting;
 server_setting:
+        DEBUG_LOGGER(service->logger, "Setting service[%s]\n", service->name);
 		/* INET setting  */
 		if((service->fd = socket(service->family, service->socket_type, 0)) <= 0 )
 		{
@@ -104,7 +106,21 @@ server_setting:
 					E_READ | E_PERSIST, (void *)service, service->event_handler);
 			service->evbase->add(service->evbase, service->event);
 		}
-		return 0;
+		if((fd = socket(service->family, service->socket_type, 0)) > 0 
+			&& connect(fd, (struct sockaddr *)&(service->sa), (socklen_t)sizeof(struct sockaddr)) == 0)
+		{
+			DEBUG_LOGGER(service->logger, "Connecting via %d to %s:%d test successed",
+					fd, service->ip, service->port);
+			shutdown(fd, SHUT_RDWR);
+			close(fd);
+			return 0;
+		}
+		else
+		{
+			FATAL_LOGGER(service->logger, "Connecting via fd[%d]  to %s:%d is failed, %s",
+					fd, service->ip, service->port, strerror(errno));
+			return -1;
+		}
 client_setting:
         DEBUG_LOGGER(service->logger, "Setting client[%s]\n", service->name);
         service->sa.sin_family = service->family;
@@ -269,7 +285,7 @@ void service_event_handler(int event_fd, short event, void *arg)
 {
 	struct sockaddr_in rsa;
 	int fd = 0;
-	socklen_t rsa_len ;
+	socklen_t rsa_len = sizeof(struct sockaddr);
 	SERVICE *service = (SERVICE *)arg;
 	if(service)
 	{
@@ -470,7 +486,7 @@ CONN *service_newconn(SERVICE *service, int family, char *ip,
 {
     CONN *conn = NULL;
     struct sockaddr_in sa, *psa = NULL, lsa;
-    socklen_t lsa_len ;
+    socklen_t lsa_len = sizeof(struct sockaddr);
     int fd = 0, i = 0;
 
     if(service)
