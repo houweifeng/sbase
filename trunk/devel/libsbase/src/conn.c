@@ -76,6 +76,7 @@ CONN *conn_init(char *ip, int port)
         conn->chunk_reader	        = conn_chunk_reader;
         conn->recv_chunk	        = conn_recv_chunk;
         conn->recv_file		        = conn_recv_file;
+        conn->save_cache	        = conn_save_cache;
         conn->push_chunk	        = conn_push_chunk;
         conn->push_file	            = conn_push_file;
         conn->data_handler	        = conn_data_handler;
@@ -456,6 +457,20 @@ void conn_recv_file(CONN *conn, char *filename,
         conn->chunk_reader(conn);
         CONN_CHUNK_READ(conn, n);
     } 
+}
+
+/* Save cache */
+int conn_save_cache(CONN *conn, void *data, size_t size)
+{
+	/* Check connection and transaction state */
+	CONN_CHECK_RET(conn, -1);
+	if(conn && data && size > 0)
+	{
+		MB_RESET(conn->cache);
+		MB_PUSH(conn->cache, data, size);
+		return 0;
+	}
+	return -1;
 }
 
 /* Push Chunk */
