@@ -9,49 +9,49 @@
 /* Initialize service */
 SERVICE *service_init()
 {
-	SERVICE *service = (SERVICE *)calloc(1, sizeof(SERVICE));
-	if(service)
-	{
-		service->event_handler	    = service_event_handler;
-		service->set		        = service_set;
-		service->run		        = service_run;
-		service->newtask		    = service_newtask;
-		service->newtransaction		= service_newtransaction;
-		service->addconn	        = service_addconn;
+    SERVICE *service = (SERVICE *)calloc(1, sizeof(SERVICE));
+    if(service)
+    {
+        service->event_handler	    = service_event_handler;
+        service->set		        = service_set;
+        service->run		        = service_run;
+        service->newtask		    = service_newtask;
+        service->newtransaction		= service_newtransaction;
+        service->addconn	        = service_addconn;
         service->newconn            = service_newconn;
         service->getconn            = service_getconn;
         service->pushconn           = service_pushconn;
         service->popconn            = service_popconn;
         service->active_heartbeat    = service_active_heartbeat;
         service->state_conns        = service_state_conns;
-		service->terminate	        = service_terminate;
-		service->clean		        = service_clean;
-		service->event 		        = ev_init();
-		TIMER_INIT(service->timer);
-		MUTEX_INIT(service->mutex);
-	}
-	return service;
+        service->terminate	        = service_terminate;
+        service->clean		        = service_clean;
+        service->event 		        = ev_init();
+        TIMER_INIT(service->timer);
+        MUTEX_INIT(service->mutex);
+    }
+    return service;
 }
 
 /* Set service  */
 int service_set(SERVICE *service)
 {
-	int opt = 1;
-	int fd = 0;
-	if(service)
-	{
-		//service->running_status = 1;	
-		/* Setting logger */
-		if(service->logfile)
-		{
-			LOGGER_INIT(service->logger, service->logfile);
-			DEBUG_LOGGER(service->logger, "Setting service[%d] log to %s", 
+    int opt = 1;
+    int fd = 0;
+    if(service)
+    {
+        //service->running_status = 1;	
+        /* Setting logger */
+        if(service->logfile)
+        {
+            LOGGER_INIT(service->logger, service->logfile);
+            DEBUG_LOGGER(service->logger, "Setting service[%d] log to %s", 
                     service->name, service->logfile);
-		}
+        }
         if(service->evlogfile)
         {
-			LOGGER_INIT(service->evlogger, service->evlogfile);
-			DEBUG_LOGGER(service->evlogger, "Setting service[%d] evlog to %s", 
+            LOGGER_INIT(service->evlogger, service->evlogfile);
+            DEBUG_LOGGER(service->evlogger, "Setting service[%d] evlog to %s", 
                     service->name, service->evlogfile);
         }
         /* Initialize conns array */
@@ -64,71 +64,74 @@ int service_set(SERVICE *service)
             goto client_setting;
 server_setting:
         DEBUG_LOGGER(service->logger, "Setting service[%s]\n", service->name);
-		/* INET setting  */
-		if((service->fd = socket(service->family, service->socket_type, 0)) <= 0 )
-		{
-			FATAL_LOGGER(service->logger, "Initialize socket failed, %s", strerror(errno));
-			return -1;
-		}
+        /* INET setting  */
+        if((service->fd = socket(service->family, service->socket_type, 0)) <= 0 )
+        {
+            FATAL_LOGGER(service->logger, "Initialize socket failed, %s", strerror(errno));
+            return -1;
+        }
         service->sa.sin_family = service->family;
-		service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
-		service->sa.sin_port = htons(service->port); 
-		//setsockopt 
-		setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, (socklen_t)sizeof(opt) );
+        service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):htonl(INADDR_ANY);
+        service->sa.sin_port = htons(service->port); 
+        //setsockopt 
+        setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, (socklen_t)sizeof(opt) );
         //set non-block
         fcntl(service->fd, F_SETFL, O_NONBLOCK);
-		//Bind 
-		if(bind(service->fd, (struct sockaddr *)&(service->sa), 
+        //Bind 
+        if(bind(service->fd, (struct sockaddr *)&(service->sa), 
                     (socklen_t)sizeof(struct sockaddr)) != 0 )
-		{
-			FATAL_LOGGER(service->logger, "Bind fd[%d] to %s:%d failed, %s",
-					service->fd, service->ip, service->port, strerror(errno));
-			return -1;
-		}
-		//Listen
-		if(listen(service->fd, service->backlog) != 0)
-		{
-			FATAL_LOGGER(service->logger, "Listen fd[%d] On %s:%d failed, %s",
-					service->fd, service->ip, service->port, strerror(errno));	
-			return -1;
-		}
-		/* Event base */
-		//service->ev_eventbase = ev_init();
-		if(service->evbase == NULL)
-		{
-			 FATAL_LOGGER(service->logger, "Eventbase on fd[%d]  %s:%d is NULL",
-                                        service->fd, service->ip, service->port);
-			return -1;
-		}
-		if(service->event)
-		{
-			service->event->set(service->event, service->fd,
-					E_READ | E_PERSIST, (void *)service, service->event_handler);
-			service->evbase->add(service->evbase, service->event);
-		}
-		if((fd = socket(service->family, service->socket_type, 0)) > 0 
-			&& connect(fd, (struct sockaddr *)&(service->sa), (socklen_t)sizeof(struct sockaddr)) == 0)
-		{
-			DEBUG_LOGGER(service->logger, "Connecting via %d to %s:%d test successed",
-					fd, service->ip, service->port);
-			shutdown(fd, SHUT_RDWR);
-			close(fd);
-			return 0;
-		}
-		else
-		{
-			FATAL_LOGGER(service->logger, "Connecting via fd[%d]  to %s:%d is failed, %s",
-					fd, service->ip, service->port, strerror(errno));
-			return -1;
-		}
+        {
+            FATAL_LOGGER(service->logger, "Bind fd[%d] to %s:%d failed, %s",
+                    service->fd, service->ip, service->port, strerror(errno));
+            return -1;
+        }
+        //Listen
+        if(listen(service->fd, service->backlog) != 0)
+        {
+            FATAL_LOGGER(service->logger, "Listen fd[%d] On %s:%d failed, %s",
+                    service->fd, service->ip, service->port, strerror(errno));	
+            return -1;
+        }
+        /* Event base */
+        //service->ev_eventbase = ev_init();
+        if(service->evbase == NULL)
+        {
+            FATAL_LOGGER(service->logger, "Eventbase on fd[%d]  %s:%d is NULL",
+                    service->fd, service->ip, service->port);
+            return -1;
+        }
+        if(service->event)
+        {
+            service->event->set(service->event, service->fd,
+                    E_READ | E_PERSIST, (void *)service, service->event_handler);
+            service->evbase->add(service->evbase, service->event);
+        }
+        /*
+        if((fd = socket(service->family, service->socket_type, 0)) > 0 
+                && connect(fd, (struct sockaddr *)&(service->sa), 
+                    (socklen_t)sizeof(struct sockaddr)) == 0)
+        {
+            DEBUG_LOGGER(service->logger, "Connecting via %d to %s:%d test successed",
+                    fd, service->ip, service->port);
+            shutdown(fd, SHUT_RDWR);
+            close(fd);
+            return 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Connecting via fd[%d]  to %s:%d is failed, %s",
+                    fd, service->ip, service->port, strerror(errno));
+            return -1;
+        }*/
+        return 0;
 client_setting:
         DEBUG_LOGGER(service->logger, "Setting client[%s]\n", service->name);
         service->sa.sin_family = service->family;
-		service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):INADDR_ANY;
-		service->sa.sin_port = htons(service->port); 
+        service->sa.sin_addr.s_addr = (service->ip)?inet_addr(service->ip):htonl(INADDR_ANY);
+        service->sa.sin_port = htons(service->port); 
         return 0;
-	}
-	return -1;
+    }
+    return -1;
 }
 #ifdef HAVE_PTHREAD
 #define NEW_PROCTHREAD(id, pthid, pth, logger)                                              \
@@ -149,47 +152,47 @@ client_setting:
 /* Run service */
 void service_run(SERVICE *service)
 {
-	int i = 0, fd = 0;
+    int i = 0, fd = 0;
 #ifdef HAVE_PTHREAD
-	pthread_t procthread_id;
+    pthread_t procthread_id;
 #endif
-	/* Running */
-	if(service)
-	{
-	DEBUG_LOGGER(service->logger, "service[%s] using WORKING_MODE[%d]", 
-	service->name, service->working_mode);
+    /* Running */
+    if(service)
+    {
+        DEBUG_LOGGER(service->logger, "service[%s] using WORKING_MODE[%d]", 
+                service->name, service->working_mode);
 #ifdef	HAVE_PTHREAD
-		if(service->working_mode == WORKING_PROC) 
-			goto work_proc_init;
-		else 
-			goto work_thread_init;
-		return ;
+        if(service->working_mode == WORKING_PROC) 
+            goto work_proc_init;
+        else 
+            goto work_thread_init;
+        return ;
 #endif
 work_proc_init:
-		/* Initialize procthread(s) */
-		if((service->procthread = procthread_init()))
-		{
-			service->procthread->logger = service->logger;
-			if(service->procthread->evbase)
-				service->procthread->evbase->clean(&(service->procthread->evbase));
-			service->procthread->evbase = service->evbase;
-			if(service->message_queue && service->procthread->message_queue)
-			{
-				CLEAN_QUEUE(service->procthread->message_queue);
-				service->procthread->message_queue = service->message_queue;
-				DEBUG_LOGGER(service->logger, 
-				 "Replaced procthread[%08x]->message_queue with service[%08x]->message_queue[%08x]",
-				 service->procthread, service, service->message_queue);
-			}
-			service->procthread->service = service;
-			service->running_status = 1;
-		}
-		else
-		{
-			FATAL_LOGGER(service->logger, "Initialize procthreads failed, %s",
-					strerror(errno));
-			exit(EXIT_FAILURE);
-		}	
+        /* Initialize procthread(s) */
+        if((service->procthread = procthread_init()))
+        {
+            service->procthread->logger = service->logger;
+            if(service->procthread->evbase)
+                service->procthread->evbase->clean(&(service->procthread->evbase));
+            service->procthread->evbase = service->evbase;
+            if(service->message_queue && service->procthread->message_queue)
+            {
+                CLEAN_QUEUE(service->procthread->message_queue);
+                service->procthread->message_queue = service->message_queue;
+                DEBUG_LOGGER(service->logger, 
+                        "Replaced procthread[%08x]->message_queue with service[%08x]->message_queue[%08x]",
+                        service->procthread, service, service->message_queue);
+            }
+            service->procthread->service = service;
+            service->running_status = 1;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize procthreads failed, %s",
+                    strerror(errno));
+            exit(EXIT_FAILURE);
+        }	
         goto end;
 work_thread_init:
         /* Initialize Threads */
@@ -249,79 +252,79 @@ work_thread_init:
             }
         }
         goto end ;
-    /* client connection initialize */
+        /* client connection initialize */
 end:
         /*
-        if(service->service_type == S_SERVICE)
-        {
-               service->newconn(service, service->ip, service->port); 
-        }
-        */
+           if(service->service_type == S_SERVICE)
+           {
+           service->newconn(service, service->ip, service->port); 
+           }
+           */
         /*
-        if(service->service_type == C_SERVICE)
-        {
-            for(i = 0; i < service->connections_limit; i++)
-            {
-				if(service->newconn(service, NULL, -1))
-				{
-                    DEBUG_LOGGER(service->logger, "Connected to %s:%d via %d",
-                            service->ip, service->port, fd);
-                }
-                else
-                {
-                    ERROR_LOGGER(service->logger, "Connectting to %s:%d via %d failed, %s",
-                            service->ip, service->port, fd, strerror(errno));
-					break;
-                }
-            }
-        }
-        */
+           if(service->service_type == C_SERVICE)
+           {
+           for(i = 0; i < service->connections_limit; i++)
+           {
+           if(service->newconn(service, NULL, -1))
+           {
+           DEBUG_LOGGER(service->logger, "Connected to %s:%d via %d",
+           service->ip, service->port, fd);
+           }
+           else
+           {
+           ERROR_LOGGER(service->logger, "Connectting to %s:%d via %d failed, %s",
+           service->ip, service->port, fd, strerror(errno));
+           break;
+           }
+           }
+           }
+           */
         return ; 
-	}
+    }
 }
 
 /* Event handler */
 void service_event_handler(int event_fd, short event, void *arg)
 {
-	struct sockaddr_in rsa;
-	int fd = 0;
-	socklen_t rsa_len = sizeof(struct sockaddr);
-	SERVICE *service = (SERVICE *)arg;
-	if(service)
-	{
-		if(event_fd != service->fd) 
-		{
-			FATAL_LOGGER(service->logger, "Invalid event_fd[%d] not match daemon fd[%d]",
-				event_fd, service->fd);
-			return ;
-		}
-		if(event & E_READ)
-		{
-			if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0 )	
-			{
-				DEBUG_LOGGER(service->logger, "Accept new connection[%d] from %s:%d",
-					fd, inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port));			
-				service->addconn(service, fd, &rsa, NULL);
-				return ;
-			}
-			else
-			{
-				FATAL_LOGGER(service->logger, "Accept new connection[%d] failed, %s",
-					fd, strerror(errno));
-			}
-		}
-	}
-	return ;
+    struct sockaddr_in rsa;
+    int fd = 0;
+    socklen_t rsa_len = sizeof(struct sockaddr);
+    SERVICE *service = (SERVICE *)arg;
+    if(service)
+    {
+        if(event_fd != service->fd) 
+        {
+            FATAL_LOGGER(service->logger, "Invalid event_fd[%d] not match daemon fd[%d]",
+                    event_fd, service->fd);
+            return ;
+        }
+        if(event & E_READ)
+        {
+            if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0 )	
+            {
+                DEBUG_LOGGER(service->logger, "Accept new connection[%d] from %s:%d",
+                        fd, inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port));			
+                service->addconn(service, fd, &rsa, NULL);
+                return ;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "Accept new connection[%d] failed, %s",
+                        fd, strerror(errno));
+            }
+        }
+    }
+    return ;
 }
 
 /* Add new conn */
 CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa, CALLBACK_OPS *ops)
 {
-	CONN *conn = NULL;
-	char *ip = NULL;
-	int port = 0;
-	int index = 0;
-	if(service)
+    CONN *conn = NULL;
+    char *ip = NULL;
+    int port = 0;
+    int index = 0;
+    if(service)
     {
         /*Check Connections Count */
         if(service->running_connections >= service->max_connections)
@@ -358,7 +361,7 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa, CALLBA
             DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthread[%d]",
                     conn->fd, conn->ip, conn->port, getpid());
             service->procthread->addconn(service->procthread, conn);
-			return conn;
+            return conn;
         }
         //fprintf(stdout, "%dOK:%08x %s:%d\n", __LINE__, conn, ip, port);
         /* Add connection to procthread pool */
@@ -368,10 +371,10 @@ CONN * service_addconn(SERVICE *service, int fd,  struct sockaddr_in *sa, CALLBA
             DEBUG_LOGGER(service->logger, "Adding connection[%d] on %s:%d to procthreads[%d]",
                     conn->fd, conn->ip, conn->port, index);
             service->procthreads[index]->addconn(service->procthreads[index], conn);
-			return conn;
+            return conn;
         }
     }
-	return conn;
+    return conn;
 }
 
 /* check service hearbeat handler */
@@ -379,8 +382,8 @@ void service_active_heartbeat(SERVICE *service)
 {
     if(service)
     {
-		if(service->heartbeat_interval > 0
-            && TIMER_CHECK(service->timer, service->heartbeat_interval) == 0)
+        if(service->heartbeat_interval > 0
+                && TIMER_CHECK(service->timer, service->heartbeat_interval) == 0)
         {
             if(service->cb_heartbeat_handler)
             {
@@ -422,7 +425,7 @@ void service_newtransaction(SERVICE *service, CONN *conn, int tid)
 {
     PROCTHREAD *pth = NULL;
     int index = 0;
-    
+
     if(service && conn && conn->fd > 0)
     {
         /* Add transaction for procthread */
@@ -450,24 +453,24 @@ void service_newtransaction(SERVICE *service, CONN *conn, int tid)
 void service_state_conns(SERVICE *service)
 {
     CONN *conn = NULL;
-	int i = 0, num = 0;
+    int i = 0, num = 0;
     if(service)
     {
-		if(service->service_type == C_SERVICE
+        if(service->service_type == C_SERVICE
                 && service->running_connections < service->connections_limit)
-		{
-			num = service->connections_limit - service->running_connections;
+        {
+            num = service->connections_limit - service->running_connections;
             DEBUG_LOGGER(service->logger, "limit:%d running:%d", 
                     service->connections_limit, service->running_connections);
             //       num, service->running_connections);
-			while(i++ < num)
-			{
-				if(service->newconn(service, -1, NULL, -1, -1, NULL) == NULL)
+            while(i++ < num)
+            {
+                if(service->newconn(service, -1, NULL, -1, -1, NULL) == NULL)
                 {
-					break;
+                    break;
                 }
-			}
-		}
+            }
+        }
         i = 0;
         while(i < service->running_connections)
         {
@@ -507,24 +510,25 @@ CONN *service_newconn(SERVICE *service, int family, char *ip,
             fd = socket(service->family, service->socket_type, 0);
         else
             fd = socket(service->family, sock_type, 0);
-        fcntl(fd, F_SETFL, O_NONBLOCK);
-        if(fd > 0 && (connect(fd, (struct sockaddr *)psa, 
-                        sizeof(struct sockaddr )) == 0) || errno == EINPROGRESS)
-        //sizeof(struct sockaddr )) == 0 || errno == EINPROGRESS))
+        //fcntl(fd, F_SETFL, O_NONBLOCK);
+        if(fd > 0 && connect(fd, (struct sockaddr *)psa, sizeof(struct sockaddr)) == 0)
+        //if(fd > 0 && (connect(fd, (struct sockaddr *)psa,
+         //               sizeof(struct sockaddr )) == 0 || errno == EINPROGRESS))
         {
             DEBUG_LOGGER(service->logger, "Ready for connection %s:%d via %d",
                     inet_ntoa(psa->sin_addr), ntohs(psa->sin_port), fd);
             getsockname(fd, (struct sockaddr *)&(lsa), &(lsa_len));
+               conn = service->addconn(service, fd, &lsa, ops);
             /*
-            conn = service->addconn(service, fd, &lsa, ops);
-            */
             if((conn = service->addconn(service, fd, &lsa, ops)))
                 conn->status = CONN_STATUS_READY;
+               */
         }
         else
         {
             ERROR_LOGGER(service->logger, "Connectting to %s:%d via %d failed, %s",
                     inet_ntoa(psa->sin_addr), ntohs(psa->sin_port), fd, strerror(errno));
+            if(fd > 0)close(fd);
         }
     }
     return conn;
@@ -533,45 +537,45 @@ CONN *service_newconn(SERVICE *service, int family, char *ip,
 /* POP connections from connections pool */
 void service_popconn(SERVICE *service, int index)
 {
-	if(service)
-	{
-		MUTEX_LOCK(service->mutex);
-		if(service->connections && index >= 0)
-		{
+    if(service)
+    {
+        MUTEX_LOCK(service->mutex);
+        if(service->connections && index >= 0)
+        {
             DEBUG_LOGGER(service->logger, "Pop connection[%d] %s:%d index[%d]", 
-                service->connections[index]->fd, service->connections[index]->ip,
-                service->connections[index]->port, index);
-			service->connections[index] = NULL;
-			service->running_connections--;
-		}
-		MUTEX_UNLOCK(service->mutex);
-	}
-	return ;
+                    service->connections[index]->fd, service->connections[index]->ip,
+                    service->connections[index]->port, index);
+            service->connections[index] = NULL;
+            service->running_connections--;
+        }
+        MUTEX_UNLOCK(service->mutex);
+    }
+    return ;
 }
 
 /* PUSH connections to connections pool */
 void service_pushconn(SERVICE *service, CONN *conn)
 {
-	int i = 0;
-	if(service && conn)
-	{
-		MUTEX_LOCK(service->mutex);
-		while(i < service->max_connections && service->connections)
-		{
-			if(service->connections[i] == NULL)
-			{
-				service->connections[i] = conn;
-				conn->index = i;
-				service->running_connections++;
-				break;
-			}
-			i++;
-		}
+    int i = 0;
+    if(service && conn)
+    {
+        MUTEX_LOCK(service->mutex);
+        while(i < service->max_connections && service->connections)
+        {
+            if(service->connections[i] == NULL)
+            {
+                service->connections[i] = conn;
+                conn->index = i;
+                service->running_connections++;
+                break;
+            }
+            i++;
+        }
         DEBUG_LOGGER(service->logger, "Pushed connection[%d] %s:%d to index[%d]", 
                 conn->fd, conn->ip, conn->port, conn->index);
-		MUTEX_UNLOCK(service->mutex);
-	}
-	return ;
+        MUTEX_UNLOCK(service->mutex);
+    }
+    return ;
 }
 
 /* get free connection */
@@ -583,18 +587,18 @@ CONN *service_getconn(SERVICE *service)
 
     if(service && service->connections && service->running_connections > 0)
     {
-		MUTEX_LOCK(service->mutex);
+        MUTEX_LOCK(service->mutex);
         //select free connection 
         for( i = 0; i < service->max_connections; i++)
         {
             conn = service->connections[i];
-            if(conn && conn->start_cstate(conn) == 0)
+            if(conn && conn->status != CONN_STATUS_READY && conn->start_cstate(conn) == 0)
             {
                 break;
             }
             conn = NULL;
         }
-		MUTEX_UNLOCK(service->mutex);
+        MUTEX_UNLOCK(service->mutex);
     }
     return conn;
 }
@@ -667,8 +671,8 @@ void service_clean(SERVICE **service)
         if((*service)->event) 
             (*service)->event->clean(&(*service)->event);
         TIMER_CLEAN((*service)->timer);
-		if((*service)->mutex)
-			MUTEX_DESTROY((*service)->mutex);
+        if((*service)->mutex)
+            MUTEX_DESTROY((*service)->mutex);
         free((*service));
         (*service) = NULL;
     }		

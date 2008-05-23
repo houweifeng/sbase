@@ -195,7 +195,7 @@ int main(int argc, char **argv)
     if((evbase = evbase_init()))
     {
         LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
-        //evbase->set_evops(evbase, EOP_SELECT);
+        evbase->set_evops(evbase, EOP_POLL);
         while((fd = socket(AF_INET, sock_type, 0)) > 0 && fd < conn_num)
         {
             /* Connect */
