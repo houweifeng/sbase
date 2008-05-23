@@ -42,8 +42,8 @@ SERVICE *serv = NULL;
 static dictionary *dict = NULL;
 static TASKTABLE *tasktable = NULL;
 static LOGGER *daemon_logger = NULL;
-static unsigned long long global_timeout_times = 60000000llu;
-static unsigned long long nheartbeat = 0;
+static long long global_timeout_times = 60000000;
+static long long nheartbeat = 0;
 
 #define GET_RESPID(p, end, n, respid)                                               \
 {                                                                                   \
@@ -134,9 +134,9 @@ void cb_serv_heartbeat_handler(void *arg)
 
     if(serv && transport && tasktable)
     {
-        //DEBUG_LOGGER(daemon_logger, "Heartbeat:%llu connections:%d", 
+        //DEBUG_LOGGER(daemon_logger, "Heartbeat:%ll connections:%d", 
         //        nheartbeat++, transport->running_connections);
-        while((c_conn = transport->getconn(transport)))
+        if((c_conn = transport->getconn(transport)))
         {
             //break;
             //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
@@ -145,6 +145,7 @@ void cb_serv_heartbeat_handler(void *arg)
             {
                 //DEBUG_LOGGER(daemon_logger, "running_task_id:%d running_task.id:%d",
                  //tasktable->running_task_id, tasktable->running_task.id);
+                c_conn->set_timeout(c_conn, global_timeout_times);
                 taskid = tasktable->running_task_id;
                 task = &(tasktable->running_task);
                 //transaction confirm
@@ -153,18 +154,18 @@ void cb_serv_heartbeat_handler(void *arg)
                 {
                     DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_TRNCATE %s", 
                             block->id, task->destfile);
-                    n = sprintf(buf, "truncate %s\r\nsize:%llu\r\n\r\n",
+                    n = sprintf(buf, "truncate %s\r\nsize:%lld\r\n\r\n",
                             task->destfile, block->size); 
-                    DEBUG_LOGGER(daemon_logger, "truncate %s offset:%llu size:%llu on %d",
+                    DEBUG_LOGGER(daemon_logger, "truncate %s offset:%lld size:%lld on %d",
                             task->destfile, block->offset, block->size, c_conn->fd); 
                     c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                 }
                 if(block->cmdid == CMD_PUT)
                 {
                     DEBUG_LOGGER(daemon_logger, "Got block[%d] CMD_PUT", block->id);
-                    n = sprintf(buf, "put %s\r\noffset:%llu\r\nsize:%llu\r\n\r\n",
+                    n = sprintf(buf, "put %s\r\noffset:%lld\r\nsize:%lld\r\n\r\n",
                             task->destfile, block->offset, block->size); 
-                    DEBUG_LOGGER(daemon_logger, "put %s offset:%llu size:%llu on %d",
+                    DEBUG_LOGGER(daemon_logger, "put %s offset:%lld size:%lld on %d",
                             task->destfile, block->offset, block->size, c_conn->fd); 
                     c_conn->push_chunk((CONN *)c_conn, (void *)buf, n);
                     c_conn->push_file((CONN *)c_conn, task->file, 
@@ -189,9 +190,9 @@ void cb_serv_heartbeat_handler(void *arg)
                  //       "with %d tasks running[%d]",
                  //       c_conn->fd, tasktable->ntask, tasktable->running_task_id);
                 c_conn->over_cstate((CONN *)c_conn);
-                break;
             }
         }
+        /*
         if((n = tasktable->check_timeout(tasktable, global_timeout_times)) > 0)
         {
             if(tasktable->status && tasktable->nblock > 0)
@@ -208,7 +209,7 @@ void cb_serv_heartbeat_handler(void *arg)
             }
             DEBUG_LOGGER(daemon_logger, "%d block is TIMEOUT on task:%d",
                     n, tasktable->running_task_id);
-        }
+        }*/
         //if task is running then log TIMEOUT
     }
     return  ;
@@ -307,7 +308,7 @@ void cb_serv_packet_handler(CONN *conn, SDATA *packet)
             if(taskid >= 0 && taskid < tasktable->ntask 
                     && tasktable->statusout(tasktable, taskid, &task) == 0)
             {
-                if(task.times >= 0llu)
+                if(task.times >= 0)
                     speed = (double )(task.bytes/task.times);
                 n = sprintf(buf, "%d OK\r\nTASKID:%d\r\nSTATUS:%d\r\n SPEED:%8f (Bytes/S)"
                                  "TIMEOUT:%d(times)\r\nRETRY:%d\r\n\r\n", 
@@ -556,7 +557,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     //timeout
     if((p = iniparser_getstr(dict, "DAEMON:timeout")))
     {
-        global_timeout_times = str2llu(p);
+        global_timeout_times = atoll(p);
     }
     //tasklog
     tasklog = iniparser_getstr(dict, "DAEMON:tasklog");

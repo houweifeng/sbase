@@ -10,21 +10,21 @@
 #include "logger.h"
 #define CONN_CHECK_RET(conn, ret)                                                       \
 {                                                                                       \
-        if(conn == NULL ) return ret;                                                   \
-        if(conn->s_state == S_STATE_CLOSE) return ret;                                  \
+    if(conn == NULL ) return ret;                                                   \
+    if(conn->s_state == S_STATE_CLOSE) return ret;                                  \
 }
 #define CONN_CHECK(conn)                                                                \
 {                                                                                       \
-        if(conn == NULL) return ;                                                       \
-        if(conn->s_state == S_STATE_CLOSE) return ;                                     \
+    if(conn == NULL) return ;                                                       \
+    if(conn->s_state == S_STATE_CLOSE) return ;                                     \
 }
 #define CONN_TERMINATE(conn)                                                            \
 {                                                                                       \
-	if(conn)                                                                            \
-	{                                                                                   \
-		conn->s_state = S_STATE_CLOSE;                                                  \
-		conn->push_message(conn, MESSAGE_QUIT);                                         \
-	}                                                                                   \
+    if(conn)                                                                            \
+    {                                                                                   \
+        conn->s_state = S_STATE_CLOSE;                                                  \
+        conn->push_message(conn, MESSAGE_QUIT);                                         \
+    }                                                                                   \
 }
 #define CONN_CHUNK_READ(conn, n)                                                            \
 {                                                                                           \
@@ -44,6 +44,8 @@
         {                                                                                   \
             conn->s_state = S_STATE_DATA_HANDLING;                                          \
             conn->push_message(conn, MESSAGE_DATA);                                         \
+            DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d via %d",        \
+                    CK_SIZE(conn->chunk), conn->ip, conn->port, conn->fd);                  \
         }                                                                                   \
         TIMER_SAMPLE(conn->timer);                                                          \
         return ;                                                                            \
@@ -52,96 +54,99 @@
 /* Initialize CONN */
 CONN *conn_init(char *ip, int port)
 {
-	CONN *conn = (CONN *)calloc(1, sizeof(CONN));		
-	if(port <= 0 ) goto ERROR;
-	if(conn)
-	{
+    CONN *conn = (CONN *)calloc(1, sizeof(CONN));		
+    if(port <= 0 ) goto ERROR;
+    if(conn)
+    {
         TIMER_INIT(conn->timer);
-		MB_INIT(conn->buffer, MB_BLOCK_SIZE);
-		MB_INIT(conn->oob, MB_BLOCK_SIZE);
-		MB_INIT(conn->cache, MB_BLOCK_SIZE);
-		MB_INIT(conn->packet, MB_BLOCK_SIZE);
-		CK_INIT(conn->chunk);
-		conn->send_queue 	        = queue_init();
-		conn->event		            = ev_init();
-		conn->set		            = conn_set;
-		conn->event_handler 	    = conn_event_handler;
-		conn->state_handler 	    = conn_state_handler;
-		conn->read_handler	        = conn_read_handler;
-		conn->write_handler	        = conn_write_handler;
-		conn->packet_reader	        = conn_packet_reader;
-		conn->packet_handler	    = conn_packet_handler;
-		conn->chunk_reader	        = conn_chunk_reader;
-		conn->recv_chunk	        = conn_recv_chunk;
-		conn->recv_file		        = conn_recv_file;
-		conn->push_chunk	        = conn_push_chunk;
-		conn->push_file	            = conn_push_file;
-		conn->data_handler	        = conn_data_handler;
-		conn->transaction_handler	= conn_transaction_handler;
-		conn->push_message	        = conn_push_message;
+        MB_INIT(conn->buffer, MB_BLOCK_SIZE);
+        MB_INIT(conn->oob, MB_BLOCK_SIZE);
+        MB_INIT(conn->cache, MB_BLOCK_SIZE);
+        MB_INIT(conn->packet, MB_BLOCK_SIZE);
+        CK_INIT(conn->chunk);
+        conn->send_queue 	        = queue_init();
+        conn->event		            = ev_init();
+        conn->set		            = conn_set;
+        conn->event_handler 	    = conn_event_handler;
+        conn->state_handler 	    = conn_state_handler;
+        conn->read_handler	        = conn_read_handler;
+        conn->write_handler	        = conn_write_handler;
+        conn->packet_reader	        = conn_packet_reader;
+        conn->packet_handler	    = conn_packet_handler;
+        conn->chunk_reader	        = conn_chunk_reader;
+        conn->recv_chunk	        = conn_recv_chunk;
+        conn->recv_file		        = conn_recv_file;
+        conn->push_chunk	        = conn_push_chunk;
+        conn->push_file	            = conn_push_file;
+        conn->data_handler	        = conn_data_handler;
+        conn->transaction_handler	= conn_transaction_handler;
+        conn->push_message	        = conn_push_message;
         conn->set_timeout           = conn_set_timeout;
         conn->start_cstate          = conn_start_cstate;
         conn->over_cstate           = conn_over_cstate;
-		conn->over 	    	        = conn_over;
-		conn->close 	    	    = conn_close;
-		conn->terminate 	        = conn_terminate;
-		conn->clean 		        = conn_clean;
-		strcpy(conn->ip, ip);
-		conn->port  = port; 
-		conn->sa.sin_family = AF_INET;
-		if(conn->ip == NULL)
-			conn->sa.sin_addr.s_addr     = INADDR_ANY;
-		else 
-			conn->sa.sin_addr.s_addr     = inet_addr(ip);
-		    conn->sa.sin_port            = htons(conn->port);
-	}
-	return conn;
+        conn->over 	    	        = conn_over;
+        conn->close 	    	    = conn_close;
+        conn->terminate 	        = conn_terminate;
+        conn->clean 		        = conn_clean;
+        strcpy(conn->ip, ip);
+        conn->port  = port; 
+        conn->sa.sin_family = AF_INET;
+        if(conn->ip == NULL)
+            conn->sa.sin_addr.s_addr     = INADDR_ANY;
+        else 
+            conn->sa.sin_addr.s_addr     = inet_addr(ip);
+        conn->sa.sin_port            = htons(conn->port);
+    }
+    return conn;
 ERROR:
-	{
-		if(conn) free(conn);
-		conn = NULL;
-		return NULL;	
-	}
+    {
+        if(conn) free(conn);
+        conn = NULL;
+        return NULL;	
+    }
 }
 
 /* Initialize setting  */
 int conn_set(CONN *conn)
 {
-	/*
-	int keep_alive = 1;//设定KeepAlive
-        int keep_idle = 1;//开始首次KeepAlive探测前的TCP空闭时间
-        int keep_interval = 1;//两次KeepAlive探测间的时间间隔
-        int keep_count = 3;//判定断开前的KeepAlive探测次数
-	*/
-	if(conn && conn->fd > 0 )
-	{
-		fcntl(conn->fd, F_SETFL, O_NONBLOCK);
-		/* set keepalive */
-		/*
-		setsockopt(conn->fd, SOL_SOCKET, SO_KEEPALIVE,
-				(void*)&keep_alive, sizeof(keep_alive));
-		setsockopt(conn->fd, SOL_TCP, TCP_KEEPIDLE,
-				(void *)&keep_idle,sizeof(keep_idle));
-		setsockopt(conn->fd,SOL_TCP,TCP_KEEPINTVL,
-				(void *)&keep_interval, sizeof(keep_interval));
-		setsockopt(conn->fd,SOL_TCP,TCP_KEEPCNT,
-				(void *)&keep_count,sizeof(keep_count));
-		*/
-		if(conn->evbase && conn->event)
-		{
-			conn->event->set(conn->event, conn->fd, E_READ|E_PERSIST, (void *)conn, conn->event_handler);
-			conn->evbase->add(conn->evbase, conn->event);
-			return 0;
-		}
-		else
-		{
-			FATAL_LOGGER(conn->logger, "Connection[%08x] fd[%d] EVBASE or Initialize event failed, %s",
-					conn, conn->fd, strerror(errno));	
-			/* Terminate connection */
-			CONN_TERMINATE(conn);
-		}
-	}	
-	return -1;	
+    short flag = 0;
+    /*
+       int keep_alive = 1;//设定KeepAlive
+       int keep_idle = 1;//开始首次KeepAlive探测前的TCP空闭时间
+       int keep_interval = 1;//两次KeepAlive探测间的时间间隔
+       int keep_count = 3;//判定断开前的KeepAlive探测次数
+       */
+    if(conn && conn->fd > 0 )
+    {
+        fcntl(conn->fd, F_SETFL, O_NONBLOCK);
+        /* set keepalive */
+        /*
+           setsockopt(conn->fd, SOL_SOCKET, SO_KEEPALIVE,
+           (void*)&keep_alive, sizeof(keep_alive));
+           setsockopt(conn->fd, SOL_TCP, TCP_KEEPIDLE,
+           (void *)&keep_idle,sizeof(keep_idle));
+           setsockopt(conn->fd,SOL_TCP,TCP_KEEPINTVL,
+           (void *)&keep_interval, sizeof(keep_interval));
+           setsockopt(conn->fd,SOL_TCP,TCP_KEEPCNT,
+           (void *)&keep_count,sizeof(keep_count));
+           */
+        if(conn->evbase && conn->event)
+        {
+            flag = E_READ|E_PERSIST;
+            if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
+            conn->event->set(conn->event, conn->fd, flag, (void *)conn, conn->event_handler);
+            conn->evbase->add(conn->evbase, conn->event);
+            return 0;
+        }
+        else
+        {
+            FATAL_LOGGER(conn->logger, "Connection[%08x] fd[%d] EVBASE or"
+                    "Initialize event failed, %s", conn, conn->fd, strerror(errno));	
+            /* Terminate connection */
+            CONN_TERMINATE(conn);
+        }
+    }	
+    return -1;	
 }
 
 /* Event handler */
@@ -159,6 +164,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
             {
                 if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, &len) != 0 || error != 0)
                 {
+                    ERROR_LOGGER(conn->logger, "socket %d connecting failed, %s", strerror(errno));
                     conn->status = CONN_STATUS_CLOSED;
                     CONN_TERMINATE(conn);          
                     return ;
@@ -199,9 +205,9 @@ void conn_state_handler(CONN *conn)
     {
         if(conn->timeout > 0 && conn->timer && TIMER_CHECK(conn->timer, conn->timeout) == 0)
         {
-                WARN_LOGGER(conn->logger, "Connection[%d] ON %s:%d TIMEOUT",
-                        conn->fd, conn->ip, conn->port);
-                CONN_TERMINATE(conn);
+            WARN_LOGGER(conn->logger, "Connection[%d] ON %s:%d TIMEOUT",
+                    conn->fd, conn->ip, conn->port);
+            CONN_TERMINATE(conn);
         }
     }
 }
@@ -250,46 +256,46 @@ void conn_read_handler(CONN *conn)
 /* Write hanler */
 void conn_write_handler(CONN *conn)
 {
-	int n = 0;
-	CHUNK *cp = NULL;
+    int n = 0;
+    CHUNK *cp = NULL;
 
-	/* Check connection and transaction state */
-	CONN_CHECK(conn);
+    /* Check connection and transaction state */
+    CONN_CHECK(conn);
 
-	if(conn && conn->send_queue)
-	{
-		cp = (CHUNK *)HEAD_QUEUE(conn->send_queue);
-		if(cp)
-		{
+    if(conn && conn->send_queue)
+    {
+        cp = (CHUNK *)HEAD_QUEUE(conn->send_queue);
+        if(cp)
+        {
             if((n = CHUNK_WRITE(cp, conn->fd)) > 0)
             {
-				conn->sent_data_total += n * 1ll;
-				DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
-						"to %s:%d via %d leave %lld",
-						n, conn->sent_data_total, conn->ip, conn->port, conn->fd, CK_LEFT(cp));
-				/* CONN TIMER sample */
-		        TIMER_SAMPLE(conn->timer);
-				if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER )
-				{
-					cp = (CHUNK *)POP_QUEUE(conn->send_queue);	
-					DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it leave %d", 
+                conn->sent_data_total += n * 1ll;
+                DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
+                        "to %s:%d via %d leave %lld",
+                        n, conn->sent_data_total, conn->ip, conn->port, conn->fd, CK_LEFT(cp));
+                /* CONN TIMER sample */
+                TIMER_SAMPLE(conn->timer);
+                if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER )
+                {
+                    cp = (CHUNK *)POP_QUEUE(conn->send_queue);	
+                    DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it leave %d", 
                             cp, TOTAL_QUEUE(conn->send_queue));
                     CK_CLEAN(cp);
-				}
-			}
-			else
-			{
-				FATAL_LOGGER(conn->logger, "Sending data to %s:%d via %d failed, %s",
-						conn->ip, conn->port, conn->fd, strerror(errno));
-				/* Terminate connection */
-				CONN_TERMINATE(conn);
-			}
-		}
-		if(TOTAL_QUEUE(conn->send_queue) <= 0)
-		{
-			conn->event->del(conn->event, E_WRITE);	
-		}
-	}		
+                }
+            }
+            else
+            {
+                FATAL_LOGGER(conn->logger, "Sending data to %s:%d via %d failed, %s",
+                        conn->ip, conn->port, conn->fd, strerror(errno));
+                /* Terminate connection */
+                CONN_TERMINATE(conn);
+            }
+        }
+        if(TOTAL_QUEUE(conn->send_queue) <= 0)
+        {
+            conn->event->del(conn->event, E_WRITE);	
+        }
+    }		
 }
 
 /* Packet reader */
@@ -384,12 +390,12 @@ void conn_packet_handler(CONN *conn)
 /* CHUNK reader */
 void conn_chunk_reader(CONN *conn)
 {
-	int n = 0;
+    int n = 0;
 
-	/* Check connection and transaction state */
+    /* Check connection and transaction state */
     CONN_CHECK(conn);
 
-	if(conn && conn->chunk)
+    if(conn && conn->chunk)
     {
         if(MB_NDATA(conn->buffer) > 0)
         {
@@ -401,6 +407,8 @@ void conn_chunk_reader(CONN *conn)
             {
                 conn->s_state = S_STATE_DATA_HANDLING;
                 conn->push_message(conn, MESSAGE_DATA);
+                DEBUG_LOGGER(conn->logger, "Chunk completed %d bytes from %s:%d via %d",
+                        CK_SIZE(conn->chunk), conn->ip, conn->port, conn->fd);
             }
             if(n > 0)
             {
@@ -433,7 +441,7 @@ void conn_recv_chunk(CONN *conn, size_t size)
 
 /* Receive FILE CHUNK */
 void conn_recv_file(CONN *conn, char *filename,
-         long long  offset, long long  size)
+        long long  offset, long long  size)
 {
     int n = 0;
     /* Check connection and transaction state */
@@ -473,7 +481,7 @@ int conn_push_chunk(CONN *conn, void *data, size_t size)
 
 /* Push File */
 int conn_push_file(CONN *conn, char *filename,
-         long long  offset, long long  size)
+        long long  offset, long long  size)
 {
     CHUNK *cp = NULL;
     /* Check connection and transaction state */
@@ -546,27 +554,27 @@ void conn_transaction_handler(struct _CONN *conn, int tid)
 /* Push message */
 void conn_push_message(CONN *conn, int message_id)
 {
-	MESSAGE *msg = NULL;
-	if(conn)
-	{
-		if((message_id & MESSAGE_ALL) && conn->message_queue && (msg = MESSAGE_INIT()))
-		{
-			msg->msg_id = message_id;
-			msg->fd	= conn->fd;
-			msg->handler = (void *)conn;
-			msg->parent  = (void *)conn->parent;
-			PUSH_QUEUE(conn->message_queue, (void *)msg);
+    MESSAGE *msg = NULL;
+    if(conn)
+    {
+        if((message_id & MESSAGE_ALL) && conn->message_queue && (msg = MESSAGE_INIT()))
+        {
+            msg->msg_id = message_id;
+            msg->fd	= conn->fd;
+            msg->handler = (void *)conn;
+            msg->parent  = (void *)conn->parent;
+            PUSH_QUEUE(conn->message_queue, (void *)msg);
             /*
-			DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] "
-                    "on %s:%d via %d", MESSAGE_DESC(message_id), conn->message_queue, 
-                    conn->ip, conn->port, conn->fd);
-            */
-		}	
-		else
-		{
-			FATAL_LOGGER(conn->logger, "Initialize MESSAGE failed, %s", strerror(errno));
-		}
-	}
+               DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] "
+               "on %s:%d via %d", MESSAGE_DESC(message_id), conn->message_queue, 
+               conn->ip, conn->port, conn->fd);
+               */
+        }	
+        else
+        {
+            FATAL_LOGGER(conn->logger, "Initialize MESSAGE failed, %s", strerror(errno));
+        }
+    }
 }
 
 /* Set timeout */
@@ -581,7 +589,7 @@ void conn_set_timeout(CONN *conn, long long timeout)
 /* Start cstate */
 int conn_start_cstate(CONN *conn)
 {
-	CHUNK *cp = NULL;
+    CHUNK *cp = NULL;
     /* Check connection and transaction state */
     CONN_CHECK_RET(conn, -1);
     if(conn)
@@ -589,16 +597,16 @@ int conn_start_cstate(CONN *conn)
         if(conn->c_state == C_STATE_FREE) 
         {
             conn->c_state = C_STATE_USING;
-			while(TOTAL_QUEUE(conn->send_queue) > 0 )
-			{
-				cp = (CHUNK *)POP_QUEUE(conn->send_queue);
+            while(TOTAL_QUEUE(conn->send_queue) > 0 )
+            {
+                cp = (CHUNK *)POP_QUEUE(conn->send_queue);
                 CK_CLEAN(cp);
-			}
-			MB_RESET(conn->packet);	
-			MB_RESET(conn->cache);	
-			MB_RESET(conn->buffer);	
-			MB_RESET(conn->oob);	
-			CK_RESET(conn->chunk);	
+            }
+            MB_RESET(conn->packet);	
+            MB_RESET(conn->cache);	
+            MB_RESET(conn->buffer);	
+            MB_RESET(conn->oob);	
+            CK_RESET(conn->chunk);	
             return 0;
         }
     }
@@ -618,7 +626,7 @@ void conn_over_cstate(CONN *conn)
 /* Close connection */
 void conn_close(CONN *conn)
 {
-	CONN_TERMINATE(conn);
+    CONN_TERMINATE(conn);
 }
 
 /* Over connection */
@@ -653,25 +661,25 @@ void conn_terminate(CONN *conn)
 /* Clean Connection */
 void conn_clean(CONN **conn)
 {
-	CHUNK *cp = NULL;
-	if((*conn))
-	{
-		/* Clean event */
-		if((*conn)->event) (*conn)->event->clean(&((*conn)->event));
-		/* Clean BUFFER */
-		MB_CLEAN((*conn)->buffer);
-		/* Clean OOB */
-		MB_CLEAN((*conn)->oob);
-		/* Clean cache */
-		MB_CLEAN((*conn)->cache);
-		/* Clean packet */
-		MB_CLEAN((*conn)->packet);
-		/* Clean chunk */
-		CK_CLEAN((*conn)->chunk);
+    CHUNK *cp = NULL;
+    if((*conn))
+    {
+        /* Clean event */
+        if((*conn)->event) (*conn)->event->clean(&((*conn)->event));
+        /* Clean BUFFER */
+        MB_CLEAN((*conn)->buffer);
+        /* Clean OOB */
+        MB_CLEAN((*conn)->oob);
+        /* Clean cache */
+        MB_CLEAN((*conn)->cache);
+        /* Clean packet */
+        MB_CLEAN((*conn)->packet);
+        /* Clean chunk */
+        CK_CLEAN((*conn)->chunk);
         /* Clean timer */
         TIMER_CLEAN((*conn)->timer);
-		/* Clean send queue */
-		if((*conn)->send_queue)
+        /* Clean send queue */
+        if((*conn)->send_queue)
         {
             while((cp = (CHUNK *)POP_QUEUE((*conn)->send_queue)))
             {
@@ -679,7 +687,7 @@ void conn_clean(CONN **conn)
             }
             CLEAN_QUEUE((*conn)->send_queue);
         }
-		free((*conn));
-		(*conn) = NULL;
-	}	
+        free((*conn));
+        (*conn) = NULL;
+    }	
 }

@@ -47,7 +47,7 @@ int tasktable_discard(TASKTABLE *tasktable, int taskid)
     TASK task  = {0};
     int ret = -1;
     int fd = -1;
-    unsigned long long offset = 0llu;
+    long long offset = 0;
 
     if(tasktable)
     {
@@ -56,7 +56,7 @@ int tasktable_discard(TASKTABLE *tasktable, int taskid)
         {
             if((fd = open(tasktable->taskfile, O_RDWR)) > 0) 
             {
-                offset = taskid * sizeof(TASK) * 1llu;
+                offset = taskid * sizeof(TASK);
                 if(lseek(fd, offset, SEEK_SET) == offset)
                 {
                     if(read(fd, &task, sizeof(TASK)) == sizeof(TASK) 
@@ -80,7 +80,7 @@ int tasktable_discard(TASKTABLE *tasktable, int taskid)
 int tasktable_ready(TASKTABLE *tasktable)
 {
     int i = 0;
-    unsigned long long offset = 0llu, size = 0llu;
+    long long offset = 0, size = 0;
     struct stat st;
     int nblock = 0;
     int ret = -1;
@@ -111,21 +111,21 @@ int tasktable_ready(TASKTABLE *tasktable)
             }
             tasktable->nblock = nblock;
             memset(tasktable->status, 0, sizeof(TBLOCK) * nblock);
-            size = st.st_size * 1llu;
+            size = st.st_size;
             i = 0;
             //for truncate commond 
-            tasktable->status[i].offset = 0llu;
-            tasktable->status[i].size = st.st_size * 1llu;
+            tasktable->status[i].offset = 0;
+            tasktable->status[i].size = st.st_size;
             tasktable->status[i].id = i;
             tasktable->status[i].cmdid = CMD_TRUNCATE;
             i++;
             //for block list
-            offset = 0llu;
-            while(size > 0llu )
+            offset = 0;
+            while(size > 0 )
             {
-                tasktable->status[i].offset     = offset * 1llu;
-                tasktable->status[i].size       = tasktable->block_size * 1llu;
-                if(size < tasktable->block_size * 1llu)
+                tasktable->status[i].offset     = offset;
+                tasktable->status[i].size       = tasktable->block_size;
+                if(size < tasktable->block_size)
                     tasktable->status[i].size   = size;
                 size -= tasktable->status[i].size;
                 offset += tasktable->status[i].size;
@@ -133,8 +133,8 @@ int tasktable_ready(TASKTABLE *tasktable)
                 tasktable->status[i].id   = i++;
             }
             //last block for md5sum
-            tasktable->status[i].offset = 0llu;
-            tasktable->status[i].size = st.st_size * 1llu;
+            tasktable->status[i].offset = 0;
+            tasktable->status[i].size = st.st_size;
             tasktable->status[i].id = i;
             tasktable->status[i].cmdid = CMD_MD5SUM;
             //dump all blocks 
@@ -152,14 +152,14 @@ end:
 int tasktable_statusout(TASKTABLE *tasktable, int taskid, TASK *task)
 {
     int fd = -1;
-    unsigned long long offset = 0llu;
+    long long offset = 0;
     int ret = -1;
 
     if(tasktable && taskid >= 0 && taskid < tasktable->ntask)
     {
         if((fd = open(tasktable->taskfile, O_RDONLY)) > 0)    
         {
-            offset = sizeof(TASK) * taskid * 1llu;
+            offset = sizeof(TASK) * taskid;
             if(lseek(fd, offset, SEEK_SET) == offset 
                     && read(fd, task, sizeof(TASK)) == sizeof(TASK))
             {
@@ -201,15 +201,15 @@ int tasktable_dump_task(TASKTABLE *tasktable)
     int fd = 0;
     int i = 0;
     int ret = -1;
-    unsigned long long offset = 0llu;
+    long long offset = 0;
 
     if(tasktable && tasktable->running_task.id >= 0 
             && tasktable->running_task.id < tasktable->ntask)
     {
         if((fd = open(tasktable->taskfile, O_RDWR)) > 0)
         {
-            offset = sizeof(TASK) * tasktable->running_task.id * 1llu; 
-            //DEBUG_LOGGER(tasktable->logger, "Ready for dump running_task:%d offset:%llu\n", 
+            offset = sizeof(TASK) * tasktable->running_task.id; 
+            //DEBUG_LOGGER(tasktable->logger, "Ready for dump running_task:%d offset:%lld\n", 
             //    tasktable->running_task.id, offset);
             if(lseek(fd, offset, SEEK_SET) == offset)
             {
@@ -221,7 +221,7 @@ int tasktable_dump_task(TASKTABLE *tasktable)
             }
             else
             {
-                DEBUG_LOGGER(tasktable->logger, "LSEEK %s offset:%llu failed, %s\n", 
+                DEBUG_LOGGER(tasktable->logger, "LSEEK %s offset:%lld failed, %s\n", 
                         tasktable->taskfile, offset, strerror(errno));
             }
             close(fd);
@@ -276,7 +276,7 @@ int tasktable_dump_status(TASKTABLE *tasktable, int blockid)
     int i = 0;
     int fd = 0;
     int ret = -1;
-    unsigned long long offset = 0llu;
+    long long offset = 0;
 
     if(tasktable && tasktable->status && (taskid = tasktable->running_task.id) >= 0)
     {
@@ -284,10 +284,10 @@ int tasktable_dump_status(TASKTABLE *tasktable, int blockid)
         {
             if((fd = open(tasktable->statusfile, O_RDWR)) > 0)
             {
-                offset = 0llu;
-                offset += sizeof(int) * 1llu;
-                offset += sizeof(int) * 1llu;
-                offset += sizeof(TBLOCK) * blockid * 1llu;
+                offset = 0;
+                offset += sizeof(int) * 1;
+                offset += sizeof(int) * 1;
+                offset += sizeof(TBLOCK) * blockid * 1;
                 if(lseek(fd, offset, SEEK_SET) == offset)
                 {
                     write(fd, &(tasktable->status[i]), sizeof(TBLOCK));
@@ -339,17 +339,17 @@ int tasktable_resume_status(TASKTABLE *tasktable)
 }
 
 /* check timeout */
-int tasktable_check_timeout(TASKTABLE *tasktable, unsigned long long timeout)
+int tasktable_check_timeout(TASKTABLE *tasktable, long long timeout)
 {
     int i = 0, n = 0;
     struct timeval tv;
-    unsigned long long times = 0llu;
+    long long times = 0;
 
     if(tasktable && tasktable->status)
     {
         MUTEX_LOCK(tasktable->mutex);
         gettimeofday(&tv, NULL);
-        times = tv.tv_sec * 1000000llu + tv.tv_usec;
+        times = tv.tv_sec * 1000000 + tv.tv_usec;
         for(i = 0; i < tasktable->nblock; i++)  
         {
             if(tasktable->status[i].status == BLOCK_STATUS_WORKING
@@ -376,7 +376,7 @@ int tasktable_check_status(TASKTABLE *tasktable)
     TASK task = {0};
     int fd = -1;
     int ret = -1;
-    unsigned long long offset = 0llu;
+    long long offset = 0;
 
     if(tasktable)
     {
@@ -388,7 +388,7 @@ int tasktable_check_status(TASKTABLE *tasktable)
             if((fd = open(tasktable->taskfile, O_RDONLY)) > 0) 
             {
                 //DEBUG_LOGGER(tasktable->logger, "taskfile fd:%d\n", fd);
-                offset = sizeof(TASK ) * (tasktable->running_task_id+1) * 1llu;
+                offset = sizeof(TASK ) * (tasktable->running_task_id+1) * 1;
                 if(lseek(fd, offset, SEEK_SET) == offset)
                 {
                     while(read(fd, &(tasktable->running_task), sizeof(TASK)) == sizeof(TASK))
@@ -404,11 +404,11 @@ int tasktable_check_status(TASKTABLE *tasktable)
                             break;
                         }
                     }
-                    //DEBUG_LOGGER(tasktable->logger, "taskfile fd:%d offset:%llu \n", fd, offset);
+                    //DEBUG_LOGGER(tasktable->logger, "taskfile fd:%d offset:%lld \n", fd, offset);
                 }
                 else
                 {
-                    DEBUG_LOGGER(tasktable->logger, "LSEEK taskfile %s offset:%llu failed, %s", 
+                    DEBUG_LOGGER(tasktable->logger, "LSEEK taskfile %s offset:%lld failed, %s", 
                             tasktable->taskfile, offset, strerror(errno));
                 }
                 close(fd);
@@ -517,7 +517,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
             {
             */
                 gettimeofday(&tv, NULL);
-                block->times = tv.tv_sec * 1000000llu + tv.tv_usec;
+                block->times = tv.tv_sec * 1000000 + tv.tv_usec;
                 block->sid = sid;
                 block->arg = arg;
             //}
@@ -532,7 +532,7 @@ TBLOCK *tasktable_pop_block(TASKTABLE *tasktable, int sid, void *arg)
 void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int sid)
 {
     struct timeval tv;
-    unsigned long long times = 0llu;
+    long long times = 0;
     double speed = 0.0;
 
     if(tasktable && blockid >= 0 && blockid < tasktable->nblock
@@ -543,8 +543,8 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int 
         if(status == BLOCK_STATUS_OVER)
         {
             gettimeofday(&tv, NULL);
-            times = tv.tv_sec * 1000000llu + tv.tv_usec - tasktable->status[blockid].times;
-            if(times > 0llu)
+            times = tv.tv_sec * 1000000 + tv.tv_usec - tasktable->status[blockid].times;
+            if(times > 0)
             {
                 tasktable->running_task.times += times;
                 tasktable->running_task.bytes += tasktable->status[blockid].size;
@@ -566,12 +566,12 @@ void tasktable_update_status(TASKTABLE *tasktable, int blockid, int status, int 
                 //   status, blockid, sid, status, blockid, sid);
                 tasktable->times += tasktable->running_task.times;
                 tasktable->bytes += tasktable->running_task.bytes;
-                if(tasktable->running_task.times > 0llu)
+                if(tasktable->running_task.times > 0)
                 {
-                    speed = (double )(tasktable->running_task.bytes * 1000000llu
+                    speed = (double )(tasktable->running_task.bytes * 1000000
                             / tasktable->running_task.times);
                 }
-                DEBUG_LOGGER(tasktable->logger, "OVER %d %llu/%llu (%f) %s",
+                DEBUG_LOGGER(tasktable->logger, "OVER %d %lld/%lld (%f) %s",
                         tasktable->running_task.id, tasktable->running_task.bytes,
                         tasktable->running_task.times, speed,
                         tasktable->running_task.file);
