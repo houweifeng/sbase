@@ -276,6 +276,7 @@ int main(int argc, char **argv)
     int port = 0;
     int connection_limit = 0;
     int fd = 0;
+    int sockfd = 0;
     int opt = 1;
     int i = 0;
     int nprocess = 0;
@@ -301,22 +302,42 @@ int main(int argc, char **argv)
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
     /* Initialize global vars */
     memset(events, 0, sizeof(EVENT *) * CONN_MAX);
-    /* Initialize inet */ 
-    lfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
-    setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
-            (char *)&opt, (socklen_t) sizeof(opt) );
     memset(&sa, 0, sizeof(struct sockaddr_in));	
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = INADDR_ANY;
     sa.sin_port = htons(port);
     sa_len = sizeof(struct sockaddr);
+    /* Initialize inet */ 
+    lfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
+    if(setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
+            (char *)&opt, (socklen_t) sizeof(opt)) != 0)
+    {
+        fprintf(stderr, "setsockopt[SO_REUSEADDR] on fd[%d] failed, %s", fd, strerror(errno));
+        _exit(-1);
+    }
+
     /* Bind */
     if(bind(lfd, (struct sockaddr *)&sa, sa_len ) != 0 )
     {
         SHOW_LOG("Binding failed, %s", strerror(errno));
         return ;
     }
+    /*
+    sockfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
+    if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+            (char *)&opt, (socklen_t) sizeof(opt)) != 0)
+    {
+        fprintf(stderr, "setsockopt[SO_REUSEADDR] on fd[%d] failed, %s", fd, strerror(errno));
+        _exit(-1);
+    }
+    if(bind(sockfd, (struct sockaddr *)&sa, sa_len ) != 0 )
+    {
+        SHOW_LOG("Binding failed, %s", strerror(errno));
+        return ;
+    }
+    */
     /* set FD NON-BLOCK */
+    /**/
     if(fcntl(lfd, F_SETFL, O_NONBLOCK) != 0 )
     {
         SHOW_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
