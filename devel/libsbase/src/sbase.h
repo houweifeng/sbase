@@ -390,6 +390,7 @@ typedef struct _CONN
         void      (*chunk_reader)(struct _CONN *);
         void      (*recv_chunk)(struct _CONN *, size_t);
         void      (*recv_file)(struct _CONN *, char *, long long , long long );
+        int       (*save_cache)(struct _CONN *, void *, size_t);
         int       (*push_chunk)(struct _CONN *, void *, size_t);
         int       (*push_file)(struct _CONN *, char *, long long , long long );
         void      (*data_handler)(struct _CONN *);

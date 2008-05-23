@@ -38,6 +38,8 @@ void conn_chunk_reader(struct _CONN *);
 void conn_recv_chunk(struct _CONN *, size_t);
 /* Receive FILE CHUNK */
 void conn_recv_file(struct _CONN *,  char *, long long ,  long long );
+/* Save cache */
+int conn_save_cache(struct _CONN *, void *, size_t );
 /* Push Chunk */
 int conn_push_chunk(struct _CONN *, void *, size_t );
 /* Push file */
