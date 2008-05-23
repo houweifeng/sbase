@@ -68,6 +68,20 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
         if((ev_flags & E_READ))
         {
             //rfd = dup(fd);
+            rfd = socket(AF_INET, SOCK_DGRAM, 0);
+            setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR,
+                    (char *)&opt, (socklen_t) sizeof(int) );
+            if(bind(rfd, (struct sockaddr *)&sa, sizeof(struct sockaddr)) == 0)
+            {
+                SHOW_LOG("Binded %d to %s:%d ",
+                        rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port));
+            }
+            else
+            {
+                FATAL_LOG("Bind %d to %s:%d failed, %s",
+                        rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
+                goto err_end;
+            }
             rsa_len = sizeof(struct sockaddr);
             memset(&rsa, 0 , rsa_len);
             if(( n = recvfrom(fd, buffer[rfd], EV_BUF_SIZE, 0, 
@@ -76,20 +90,6 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                 buffer[rfd][n] = 0;
                 SHOW_LOG("Received %d bytes from %s:%d via %d, %s",
                         n, inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd, buffer[rfd]);
-                rfd = socket(AF_INET, SOCK_DGRAM, 0);
-                setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR,
-                        (char *)&opt, (socklen_t) sizeof(int) );
-                if(bind(rfd, (struct sockaddr *)&sa, sizeof(struct sockaddr)) == 0)
-                {
-                    SHOW_LOG("Binded %d to %s:%d ",
-                            rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port));
-                }
-                else
-                {
-                    FATAL_LOG("Bind %d to %s:%d failed, %s",
-                            rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
-                    goto err_end;
-                }
                 if(connect(rfd, (struct sockaddr *)&rsa, rsa_len) == 0)
                 {
                     SHOW_LOG("Connected %s:%d via %d",
