@@ -14,13 +14,13 @@
 #include "evbase.h"
 #include "logger.h"
 #include "log.h"
-#define CONN_MAX 10240
+#define CONN_MAX 65536
 #define EV_BUF_SIZE 1024
 static int max_connections = 0;
 static int connections = 0;
 static int lfd = 0;
 static struct sockaddr_in sa = {0};	
-static socklen_t sa_len = sizeof(struct sockaddr *);
+static socklen_t sa_len = sizeof(struct sockaddr_in);
 static EVBASE *evbase = NULL;
 static char buffer[CONN_MAX][EV_BUF_SIZE];
 static EVENT *events[CONN_MAX];
@@ -37,6 +37,11 @@ int setrlimiter(char *name, int rlimit, int nset)
     {
         if(getrlimit(rlimit, &rlim) == -1)
             return -1;
+        else
+        {
+            fprintf(stdout, "getrlimit %s cur[%d] max[%ld]\n", 
+                    name, rlim.rlim_cur, rlim.rlim_max);
+        }
         if(rlim.rlim_cur > nset && rlim.rlim_max > nset)
             return 0;
         rlim.rlim_cur = nset;
@@ -68,10 +73,18 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
         if((ev_flags & E_READ))
         {
             //rfd = dup(fd);
-            rfd = socket(AF_INET, SOCK_DGRAM, 0);
-            setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR,
-                    (char *)&opt, (socklen_t) sizeof(int) );
-            if(bind(rfd, (struct sockaddr *)&sa, sizeof(struct sockaddr)) == 0)
+            /*
+            if((rfd = socket(AF_INET, SOCK_DGRAM, 0)) <= 0 
+                || setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR, 
+                    (char *)&opt, (socklen_t) sizeof(int)) != 0
+                || setsockname(rfd, (struct sockaddr *)&sa, sa_len) != 0 )
+            {
+                FATAL_LOG("Bind %d to %s:%d failed, %s",
+                    rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
+                return ;
+            }*/
+            /**/
+            if(bind(rfd, (struct sockaddr *)&sa, sizeof(struct sockaddr *)) == 0)
             {
                 SHOW_LOG("Binded %d to %s:%d ",
                         rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port));
@@ -82,7 +95,8 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                         rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
                 goto err_end;
             }
-            rsa_len = sizeof(struct sockaddr);
+            /**/
+            rsa_len = sizeof(struct sockaddr_in);
             memset(&rsa, 0 , rsa_len);
             if(( n = recvfrom(fd, buffer[rfd], EV_BUF_SIZE, 0, 
                             (struct sockaddr *)&rsa, &rsa_len)) > 0 )
@@ -103,7 +117,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                 }
 
                 if((n = sendto(rfd, buffer[rfd], strlen(buffer[rfd]), 0, 
-                                (struct sockaddr *)&rsa, sizeof(struct sockaddr))) > 0 )
+                                (struct sockaddr *)&rsa, sizeof(struct sockaddr_in))) > 0 )
                     //if( n = write(rfd, buffer[rfd], strlen(buffer[rfd])) > 0)
                 {
                     SHOW_LOG("Sent %d to %s:%d via %d", 
@@ -191,7 +205,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 {
     int rfd = 0 ;
     struct 	sockaddr_in rsa;
-    socklen_t rsa_len = sizeof(struct sockaddr);
+    socklen_t rsa_len = sizeof(struct sockaddr_in);
     int n = 0;
     if(fd == lfd )
     {
@@ -306,7 +320,7 @@ int main(int argc, char **argv)
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = INADDR_ANY;
     sa.sin_port = htons(port);
-    sa_len = sizeof(struct sockaddr);
+    sa_len = sizeof(struct sockaddr_in );
     /* Initialize inet */ 
     lfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
     if(setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
