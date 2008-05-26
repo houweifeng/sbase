@@ -10,6 +10,7 @@ extern "C" {
 typedef struct _QUEUE
 {
     int pos;
+    int total;
     int left;
     int count;
     int newcount;
@@ -20,6 +21,7 @@ typedef struct _QUEUE
 }QUEUE;
 
 #define Q(ptr) ((QUEUE *)ptr)
+#define QTOTAL(ptr) ((Q(ptr)->total))
 #define QNTAB(ptr) ((Q(ptr)->newtable))
 #define QTAB(ptr) ((Q(ptr)->table))
 #define QTI(ptr, type, n) (((type *)(Q(ptr)->table))[n])
@@ -31,6 +33,8 @@ typedef struct _QUEUE
 #define QCOUNT(ptr) (Q(ptr)->count)
 #define QNCOUNT(ptr) (Q(ptr)->newcount)
 #define QUEUE_INIT() ((calloc(1, sizeof(QUEUE)))) 
+#define QUEUE_HEAD(ptr, type, dptr) ((ptr && QTOTAL(ptr) > 0                                \
+            && memcpy(dptr, &(QTI(ptr, type, QHEAD(ptr))), sizeof(type)))? 0 : -1)
 #define QUEUE_RESIZE(ptr, type)                                                             \
 {                                                                                           \
     if(QLEFT(ptr) <= 0)                                                                     \
@@ -61,6 +65,7 @@ typedef struct _QUEUE
         }                                                                                   \
     }                                                                                       \
 }
+
 #define QUEUE_PUSH(ptr, type, dptr)                                                         \
 {                                                                                           \
     if(ptr && dptr)                                                                         \
@@ -70,14 +75,16 @@ typedef struct _QUEUE
         {                                                                                   \
             if(QTAIL(ptr) == QCOUNT(ptr)) QTAIL(ptr) = 0;                                   \
             memcpy(&(QTI(ptr, type, QTAIL(ptr))), dptr, sizeof(type));                      \
-            QTAIL(ptr)++;QLEFT(ptr)--;                                                      \
+            QTAIL(ptr)++;QLEFT(ptr)--;QTOTAL(ptr)++;                                        \
         }                                                                                   \
     }                                                                                       \
 }
+
 #define QUEUE_POP(ptr, type, dptr) ((ptr && QLEFT(ptr) < QCOUNT(ptr)                        \
         && (QHEAD(ptr) = ((QHEAD(ptr) == QCOUNT(ptr))? 0 : QHEAD(ptr))) >= 0                \
         && memcpy(dptr, &(QTI(ptr, type, QHEAD(ptr))), sizeof(type))                        \
-        && QHEAD(ptr)++ >= 0 && QLEFT(ptr)++ >= 0 )? 0: -1)                                 
+        && QHEAD(ptr)++ >= 0 && QLEFT(ptr)++ >= 0 && QTOTAL(ptr)--  >= 0)? 0: -1)           
+
 #define QUEUE_RESET(ptr)                                                                    \
 {                                                                                           \
     if(ptr)                                                                                 \

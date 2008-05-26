@@ -38,7 +38,7 @@ SBASE *sbase_init()
         sb->stop        	= sbase_stop;
         sb->clean		    = sbase_clean;
         sb->evbase		    = evbase_init();
-        sb->message_queue	= queue_init();
+        sb->message_queue	= QUEUE_INIT();
         TIMER_INIT(sb->timer);
 	sb->setrlimit(sb, "RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);
         //sb->evbase->set_evops(sb->evbase, EOP_POLL);

@@ -64,7 +64,7 @@ CONN *conn_init(char *ip, int port)
         MB_INIT(conn->cache, MB_BLOCK_SIZE);
         MB_INIT(conn->packet, MB_BLOCK_SIZE);
         CK_INIT(conn->chunk);
-        conn->send_queue 	        = queue_init();
+        conn->send_queue 	        = QUEUE_INIT();
         conn->event		            = ev_init();
         conn->set		            = conn_set;
         conn->event_handler 	    = conn_event_handler;
@@ -267,8 +267,7 @@ void conn_write_handler(CONN *conn)
 
     if(conn && conn->send_queue)
     {
-        cp = (CHUNK *)HEAD_QUEUE(conn->send_queue);
-        if(cp)
+        if(QUEUE_HEAD(conn->send_queue, (CHUNK *), &cp) == 0)
         {
             if((n = CHUNK_WRITE(cp, conn->fd)) > 0)
             {
@@ -280,10 +279,12 @@ void conn_write_handler(CONN *conn)
                 TIMER_SAMPLE(conn->timer);
                 if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER )
                 {
-                    cp = (CHUNK *)POP_QUEUE(conn->send_queue);	
-                    DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it leave %d", 
-                            cp, TOTAL_QUEUE(conn->send_queue));
-                    CK_CLEAN(cp);
+                    if(QUEUE_POP(conn->send_queue, (CHUNK *), &cp) == 0)
+                    {
+                        DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] and clean it leave %d", 
+                                cp, QTOTAL(conn->send_queue));
+                        CK_CLEAN(cp);
+                    }
                 }
             }
             else
@@ -418,7 +419,6 @@ void conn_chunk_reader(CONN *conn)
                 DEBUG_LOGGER(conn->logger, "Filled  %d byte(s) left:%lld to CHUNK from buffer "
                         "on conn[%s:%d] via %d", n, CK_LEFT(conn->chunk), 
                         conn->ip, conn->port, conn->fd);
-
             }
         }	
     }	
@@ -464,15 +464,15 @@ void conn_recv_file(CONN *conn, char *filename,
 /* Save cache */
 int conn_save_cache(CONN *conn, void *data, size_t size)
 {
-	/* Check connection and transaction state */
-	CONN_CHECK_RET(conn, -1);
-	if(conn && data && size > 0)
-	{
-		MB_RESET(conn->cache);
-		MB_PUSH(conn->cache, data, size);
-		return 0;
-	}
-	return -1;
+    /* Check connection and transaction state */
+    CONN_CHECK_RET(conn, -1);
+    if(conn && data && size > 0)
+    {
+        MB_RESET(conn->cache);
+        MB_PUSH(conn->cache, data, size);
+        return 0;
+    }
+    return -1;
 }
 
 /* Push Chunk */
@@ -489,9 +489,9 @@ int conn_push_chunk(CONN *conn, void *data, size_t size)
         {
             CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
-            PUSH_QUEUE(conn->send_queue, (void *)cp);
+            QUEUE_PUSH(conn->send_queue, (CHUNK *), &cp);
         }
-        if(TOTAL_QUEUE(conn->send_queue) > 0 ) 
+        if(QTOTAL(conn->send_queue) > 0 ) 
             conn->event->add(conn->event, E_WRITE);	
     }	
 }
@@ -510,11 +510,11 @@ int conn_push_file(CONN *conn, char *filename,
         if(cp)
         {
             CK_FILE(cp, filename, offset, size);
-            PUSH_QUEUE(conn->send_queue, (void *)cp);
-            if((TOTAL_QUEUE(conn->send_queue)) > 0 ) conn->event->add(conn->event, E_WRITE);	
+            QUEUE_PUSH(conn->send_queue, (CHUNK *), &cp);
+            if((QTOTAL(conn->send_queue)) > 0 ) conn->event->add(conn->event, E_WRITE);	
             DEBUG_LOGGER(conn->logger, 
                     "Pushed file\"%s\" [%lld][%lld] to send_queue (total %d) on %s:%d via %d\n",
-                    filename, offset, size, TOTAL_QUEUE(conn->send_queue), 
+                    filename, offset, size, QTOTAL(conn->send_queue), 
                     conn->ip, conn->port, conn->fd);
         }
     }
@@ -580,7 +580,7 @@ void conn_push_message(CONN *conn, int message_id)
             msg.fd	= conn->fd;
             msg.handler = (void *)conn;
             msg.parent  = (void *)conn->parent;
-	    QUEUE_PUSH(conn->message_queue, MESSAGE, &msg);
+            QUEUE_PUSH(conn->message_queue, MESSAGE, &msg);
             /*
                DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] "
                "on %s:%d via %d", MESSAGE_DESC(message_id), conn->message_queue, 
@@ -614,11 +614,7 @@ int conn_start_cstate(CONN *conn)
         if(conn->c_state == C_STATE_FREE) 
         {
             conn->c_state = C_STATE_USING;
-            while(TOTAL_QUEUE(conn->send_queue) > 0 )
-            {
-                cp = (CHUNK *)POP_QUEUE(conn->send_queue);
-                CK_CLEAN(cp);
-            }
+            while(QUEUE_POP(conn->send_queue, (CHUNK *), &cp) == 0){CK_CLEAN(cp);}
             MB_RESET(conn->packet);	
             MB_RESET(conn->cache);	
             MB_RESET(conn->buffer);	
@@ -698,11 +694,7 @@ void conn_clean(CONN **conn)
         /* Clean send queue */
         if((*conn)->send_queue)
         {
-            while((cp = (CHUNK *)POP_QUEUE((*conn)->send_queue)))
-            {
-                if(cp) CK_CLEAN(cp);
-            }
-            CLEAN_QUEUE((*conn)->send_queue);
+            while(QUEUE_POP(conn->send_queue, (CHUNK *), &cp) == 0){CK_CLEAN(cp);}
         }
         free((*conn));
         (*conn) = NULL;

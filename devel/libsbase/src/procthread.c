@@ -15,17 +15,17 @@ PROCTHREAD *procthread_init()
 	{
 		TIMER_INIT(pth->timer);
 		pth->message_queue		    = QUEUE_INIT();
-		pth->run			    = procthread_run;
+		pth->run			        = procthread_run;
 		pth->running_once		    = procthread_running_once;
 		pth->dstate		            = procthread_dstate;
-		pth->heartbeat		            = procthread_heartbeat;
-		pth->newtask		            = procthread_newtask;
+		pth->heartbeat		        = procthread_heartbeat;
+		pth->newtask		        = procthread_newtask;
 		pth->newtransaction		    = procthread_newtransaction;
 		pth->addconn			    = procthread_addconn;
 		pth->add_connection		    = procthread_add_connection;
-		pth->terminate_connection	    = procthread_terminate_connection;
+		pth->terminate_connection	= procthread_terminate_connection;
 		pth->terminate			    = procthread_terminate;
-		pth->clean			    = procthread_clean;
+		pth->clean			        = procthread_clean;
 		pth->running_status		    = 1;
 	}
 	return pth;
@@ -34,55 +34,54 @@ PROCTHREAD *procthread_init()
 /* Running once for message queue */
 void procthread_running_once(PROCTHREAD *pth)
 {
-    MESSAGE *msg = NULL;
+    MESSAGE msg = NULL;
     CONN    *conn = NULL;
     PROCTHREAD *parent = NULL;
     if(pth)
     {
-        msg = (MESSAGE *)POP_QUEUE(pth->message_queue);
-        if(msg)
+        if(QUEUE_POP(pth->message, MESSAGE, &msg) == 0)
         {
             DEBUG_LOGGER(pth->logger, "Got message[%s] id[%d] handler[%08x] parent[%08x]",
-                    MESSAGE_DESC(msg->msg_id), msg->msg_id, msg->handler, msg->parent);
-            if(!(msg->msg_id & MESSAGE_ALL))
+                    MESSAGE_DESC(msg.msg_id), msg.msg_id, msg.handler, msg.parent);
+            if(!(msg.msg_id & MESSAGE_ALL))
             {
-                WARN_LOGGER(pth->logger, "Unkown message[%d]", msg->msg_id);
+                WARN_LOGGER(pth->logger, "Unkown message[%d]", msg.msg_id);
                 goto next;
             }
             //NEW task 
-            if(msg->msg_id == MESSAGE_TASK || msg->msg_id == MESSAGE_HEARTBEAT)
+            if(msg.msg_id == MESSAGE_TASK || msg.msg_id == MESSAGE_HEARTBEAT)
             {
-                if(msg->handler)
+                if(msg.handler)
                 {
-                    ((FUNCALL)(msg->handler))(msg->arg);
+                    ((FUNCALL)(msg.handler))(msg.arg);
                 }
                 goto next;
             }
             //daemon state
-            if(msg->msg_id == MESSAGE_DSTATE)
+            if(msg.msg_id == MESSAGE_DSTATE)
             {
                 DEBUG_LOGGER(pth->logger, "daemon[%08x] state", pth);
                 if(pth->service && pth->service->state_conns)
                     pth->service->state_conns(pth->service);
                 goto next;
             }
-            conn = (CONN *)msg->handler;
-            parent = (PROCTHREAD *)msg->parent;
+            conn = (CONN *)msg.handler;
+            parent = (PROCTHREAD *)msg.parent;
             if(conn == NULL || parent == NULL 
-                    || msg->fd != conn->fd || pth->service == NULL )
+                    || msg.fd != conn->fd || pth->service == NULL )
             {
                 WARN_LOGGER(pth->logger, 
                         "Invalid MESSAGE[%08x] msg_id[%d] fd[%d] handler[%08x] parent[%08x]",
-                        msg, msg->msg_id, msg->fd, conn, parent);
+                        msg, msg.msg_id, msg.fd, conn, parent);
                 goto next;
             }
             /*
                     */
             DEBUG_LOGGER(pth->logger, 
                     "Got message[%s] On service[%s] procthread[%08x] connection[%d] %s:%d",
-                    MESSAGE_DESC(msg->msg_id), pth->service->name, 
+                    MESSAGE_DESC(msg.msg_id), pth->service->name, 
                     pth, conn->fd, conn->ip, conn->port);
-            switch(msg->msg_id)
+            switch(msg.msg_id)
             {
                 /* NEW connection */
                 case MESSAGE_NEW_SESSION :
@@ -90,7 +89,7 @@ void procthread_running_once(PROCTHREAD *pth)
                     break;
                     /* Close connection */
                 case MESSAGE_QUIT :
-                    if(pth->connections[msg->fd])
+                    if(pth->connections[msg.fd])
                         pth->terminate_connection(pth, conn);
                     break;
                 case MESSAGE_INPUT :
@@ -106,7 +105,7 @@ void procthread_running_once(PROCTHREAD *pth)
                     conn->data_handler(conn);
                     break;
                 case MESSAGE_TRANSACTION :
-                    conn->transaction_handler(conn, msg->tid);
+                    conn->transaction_handler(conn, msg.tid);
                     break;
                 case MESSAGE_STATE :
                     conn->state_handler(conn);
@@ -115,9 +114,6 @@ void procthread_running_once(PROCTHREAD *pth)
                     break;
             }
 next:
-            //DEBUG_LOGGER(pth->logger, "message[%s] id[%d] over", 
-            //        MESSAGE_DESC(msg->msg_id), msg->msg_id);
-            MESSAGE_CLEAN(msg);
         }
     }
 }
@@ -125,15 +121,12 @@ next:
 /* Running procthread */
 void procthread_run(void *arg)
 {
-	MESSAGE *msg = NULL;
-	CONN	*conn = NULL;
-	struct sockaddr_in sa;
 	PROCTHREAD *pth = (PROCTHREAD *)arg;
 
 	while(pth->running_status)
 	{
 		//pth->evbase->loop(pth->evbase, 0, NULL);
-		if(TOTAL_QUEUE(pth->message_queue) > 0)pth->running_once(pth);
+		if(QTOTAL(pth->message_queue) > 0)pth->running_once(pth);
 		usleep(pth->service->sleep_usec);
 	}
 }
@@ -141,16 +134,13 @@ void procthread_run(void *arg)
 /* check state for daemon */
 void procthread_dstate(PROCTHREAD *pth)
 {
-	MESSAGE *msg = NULL;
+	MESSAGE msg = {0};
 	if(pth && pth->message_queue)
     {
-        if((msg = MESSAGE_INIT()))
-        {
-            msg->msg_id = MESSAGE_DSTATE;
-            msg->parent  = (void *)pth;
-            PUSH_QUEUE(pth->message_queue, msg);
-            //DEBUG_LOGGER(pth->logger, "Added message DSTATE to PROCTHREAD[%d]", pth->index);
-        }
+        msg.msg_id = MESSAGE_DSTATE;
+        msg.parent  = (void *)pth;
+        QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
+        //DEBUG_LOGGER(pth->logger, "Added message sSTATE to PROCTHREAD[%d]", pth->index);
     }
 }
 
@@ -158,17 +148,14 @@ void procthread_dstate(PROCTHREAD *pth)
 /* execute  heartbeat*/
 void procthread_heartbeat(PROCTHREAD *pth)
 {
-	MESSAGE *msg = NULL;
+	MESSAGE msg = {0};
 	if(pth && pth->message_queue)
     {
-        if((msg = MESSAGE_INIT()))
-        {
-            msg->msg_id = MESSAGE_HEARTBEAT;
-            msg->handler = pth->service->cb_heartbeat_handler;
-            msg->parent  = (void *)pth;
-            PUSH_QUEUE(pth->message_queue, msg);
-            //DEBUG_LOGGER(pth->logger, "Added message HEARTBEAT to PROCTHREAD[%d]", pth->index);
-        }
+        msg.msg_id = MESSAGE_HEARTBEAT;
+        msg.handler = pth->service->cb_heartbeat_handler;
+        msg.parent  = (void *)pth;
+        QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
+        //DEBUG_LOGGER(pth->logger, "Added message HEARTBEAT to PROCTHREAD[%d]", pth->index);
     }
     return ;
 }
@@ -176,58 +163,49 @@ void procthread_heartbeat(PROCTHREAD *pth)
 /* add new task */
 void procthread_newtask(PROCTHREAD *pth, FUNCALL taskhandler, void *arg)
 {
-    MESSAGE *msg = NULL;
+    MESSAGE msg = {0};
     if(pth && pth->message_queue && taskhandler)
     {
-        if((msg = MESSAGE_INIT()))
-        {
-            msg->msg_id = MESSAGE_TASK;
-            msg->handler = (void *)taskhandler;
-            msg->arg    = (void *)arg;
-            msg->parent  = (void *)pth;
-            PUSH_QUEUE(pth->message_queue, msg);
-            DEBUG_LOGGER(pth->logger, "Added message TASK to PROCTHREAD[%d]", pth->index);
-        }
+        msg.msg_id = MESSAGE_TASK;
+        msg.handler = (void *)taskhandler;
+        msg.arg    = (void *)arg;
+        msg.parent  = (void *)pth;
+        QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
+        DEBUG_LOGGER(pth->logger, "Added message TASK to PROCTHREAD[%d]", pth->index);
     }
-
 }
 
 /* add new transaction */
 void procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
 {
-	MESSAGE *msg = NULL;
+	MESSAGE msg = {0};
 	if(pth && pth->message_queue && conn)
     {
-        if((msg = MESSAGE_INIT()))
-        {
-            msg->msg_id = MESSAGE_TRANSACTION;
-            msg->fd = conn->fd;
-            msg->tid = tid;
-            msg->handler = conn;
-            msg->parent  = (void *)pth;
-            PUSH_QUEUE(pth->message_queue, msg);
-            DEBUG_LOGGER(pth->logger, "Added message TRANSACTION[%d] to %s:%d via %d total %d",
-                    tid, conn->ip, conn->port, conn->fd, ((QUEUE *)pth->message_queue)->total);
-        }
+        msg.msg_id = MESSAGE_TRANSACTION;
+        msg.fd = conn->fd;
+        msg.tid = tid;
+        msg.handler = conn;
+        msg.parent  = (void *)pth;
+        QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
+        DEBUG_LOGGER(pth->logger, "Added message TRANSACTION[%d] to %s:%d via %d total %d",
+                tid, conn->ip, conn->port, conn->fd, ((QUEUE *)pth->message_queue)->total);
     }
 }
 
 /* Add connection msg */
 void procthread_addconn(PROCTHREAD *pth, CONN *conn)
 {
-	MESSAGE *msg = NULL;
+	MESSAGE msg = {0};
 	//DEBUG_LOGGER(pth->logger, "Adding NEW CONN[%08x] IN PROCTHREAD[%08x]", conn, pth);
 	if(pth && pth->message_queue && conn)
     {
-        if((msg = MESSAGE_INIT()))
-        {
-            msg->msg_id = MESSAGE_NEW_SESSION;
-            msg->fd = conn->fd;
-            msg->handler = conn;
-            msg->parent  = (void *)pth;
-            PUSH_QUEUE(pth->message_queue, msg);
+            msg.msg_id = MESSAGE_NEW_SESSION;
+            msg.fd = conn->fd;
+            msg.handler = conn;
+            msg.parent  = (void *)pth;
+            QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
             DEBUG_LOGGER(pth->logger, "Added message for NEW_SESSION[%d] %s:%d total %d",
-                    conn->fd, conn->ip, conn->port, ((QUEUE *)pth->message_queue)->total);
+                    conn->fd, conn->ip, conn->port, QTOTAL(pth->message_queue));
         }
     }	
     return ;
@@ -320,6 +298,7 @@ void procthread_clean(PROCTHREAD **pth)
 			(*pth)->connections = NULL;
 		}
 		/* Clean message queue */
+        QUEUE_CLEAN((*pth)->message_queue);
 		/* Clean Timer */
 		TIMER_CLEAN((*pth)->timer);
 		(*pth) = NULL;

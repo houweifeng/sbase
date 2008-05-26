@@ -22,7 +22,7 @@ SERVICE *service_init()
         service->getconn            = service_getconn;
         service->pushconn           = service_pushconn;
         service->popconn            = service_popconn;
-        service->active_heartbeat    = service_active_heartbeat;
+        service->active_heartbeat   = service_active_heartbeat;
         service->state_conns        = service_state_conns;
         service->terminate	        = service_terminate;
         service->clean		        = service_clean;
