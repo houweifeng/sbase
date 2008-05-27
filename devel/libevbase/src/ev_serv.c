@@ -391,7 +391,7 @@ running:
     if((evbase = evbase_init()))
     {
         evbase->set_logfile(evbase, "/tmp/ev_server.log");
-        evbase->set_evops(evbase, EOP_POLL);
+        //evbase->set_evops(evbase, EOP_POLL);
         if((event = ev_init()))
         {
             SHOW_LOG("Initialized event ");
