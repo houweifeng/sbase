@@ -195,7 +195,7 @@ int main(int argc, char **argv)
     if((evbase = evbase_init()))
     {
         LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
-        evbase->set_evops(evbase, EOP_POLL);
+        //evbase->set_evops(evbase, EOP_POLL);
         while((fd = socket(AF_INET, sock_type, 0)) > 0 && fd < conn_num)
         {
             /* Connect */
@@ -216,7 +216,7 @@ int main(int argc, char **argv)
                                 (void *)events[fd], &ev_udp_handler);
                     }
                     evbase->add(evbase, events[fd]);
-                    sprintf(buffer[fd], "%d:client message", fd);
+                    sprintf(buffer[fd], "%d:client message\r\n", fd);
                 }
                 lsa_len = sizeof(struct sockaddr);
                 memset(&lsa, 0, lsa_len);
