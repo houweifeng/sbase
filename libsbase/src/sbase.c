@@ -1,39 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/resource.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <string.h>
-#include <fcntl.h>
-#include <errno.h>
 #include "sbase.h"
 #include "logger.h"
-/* sbase event handler */
-void sbase_event_handler(int ev_fd, short event, void *arg)
-{
-	int fd;
-	struct sockaddr_in sa;
-	socklen_t sa_len = sizeof(sa);
-	SBASE *sbase = (SBASE *)arg;
-
-	if(ev_fd == sbase->fd)
-	{
-		if(event & E_READ)
-		{
-			if((fd = accept(ev_fd, (struct sockaddr *)&sa, &sa_len)) > 0)
-			{
-				fprintf(stdout, "Accepted new connection[%s:%d] via %d\n", 
-					inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), fd);	
-			}
-			else
-			{
-				fprintf(stderr, "Accept new connection failed, %s\n", strerror(errno));
-			}
-		}	
-	}
-}
-
 /* set resource limit */
 int sbase_setrlimit(SBASE *sb, char *name, int rlimit, int nset)
 {

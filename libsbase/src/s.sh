@@ -1,2 +1,2 @@
 #!/bin/bash
-gcc -o sd *.c -I utils/  -levbase -g && ./sd
+gcc -o sd *.c -I utils/  -D_DEBUG -levbase -g && ./sd
