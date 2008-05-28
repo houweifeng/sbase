@@ -73,31 +73,15 @@ int sbase_set_evlog(SBASE *sbase, char *evlogfile)
 }
 
 /* add service to sbase */
-int sbase_add_service(SBASE *sbase, void *service)
+int sbase_add_service(SBASE *sbase, SERVICE  *service)
 {
-	struct sockaddr_in sa;
-	int opt = 1;
-	EVENT *event = NULL;
 	if(sbase)
 	{
-		if((sbase->fd = socket(AF_INET, SOCK_STREAM, 0)) > 0 && fcntl(sbase->fd, F_SETFL, O_NONBLOCK) == 0)
-		{
-			memset(&sa, 0, sizeof(sa));
-			sa.sin_family = AF_INET;
-			sa.sin_addr.s_addr = INADDR_ANY;
-			sa.sin_port = htons(3721);
-			if(setsockopt(sbase->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int)) == 0
-			&& bind(sbase->fd, (struct sockaddr *)&sa, sizeof(sa)) == 0 && listen(sbase->fd, 65536) == 0)
-			{
-				if((event = ev_init()))
-				{
-					event->set(event, sbase->fd, E_READ|E_PERSIST, sbase, (void *)sbase_event_handler);
-					sbase->evbase->add(sbase->evbase, event);
-					fprintf(stdout, "bind %d to 0.0.0.0:%d successed\n", sbase->fd, 3721);
-					return 0;
-				}
-			}
-		}	
+        if(service)
+        {
+            service->evbase = sbase->evbase;
+            return service->set(service);
+        }
 	}
 	return -1;
 }
@@ -127,13 +111,12 @@ SBASE *sbase_init()
 	if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
 	{
 		sbase->evbase        	= evbase_init();
-		sbase->event_handler 	= sbase_event_handler;
 		sbase->setrlimit     	= sbase_setrlimit;
-		sbase->set_log		= sbase_set_log;
-		sbase->set_evlog	= sbase_set_evlog;
-		sbase->add_service	= sbase_add_service;
-		sbase->running 		= sbase_running;
-		sbase->stop 		= sbase_stop;
+		sbase->set_log		    = sbase_set_log;
+		sbase->set_evlog	    = sbase_set_evlog;
+		sbase->add_service	    = sbase_add_service;
+		sbase->running 		    = sbase_running;
+		sbase->stop 		    = sbase_stop;
 	}
 	return sbase;
 }

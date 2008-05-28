@@ -10,17 +10,18 @@ int main()
 //    sbase->working_mode = 0;
   //  sbase->max_procthreads = 1;
     sbase->usec_sleep = 10000;
-    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, SB_CONN_MAX);
-/*
+    //sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, SB_CONN_MAX);
+    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 12240);
     SERVICE *service = service_init();
     service->service_type = S_SERVICE;
     service->family = AF_INET;
-    service->socket_type = SOCK_STREAM;
-    service->name = "sd";
+    service->sock_type = SOCK_STREAM;
+    service->service_name = "sd";
     service->ip = NULL;
     service->port = 1418;
-    service->max_procthreads = 2;
     service->set_log(service, "/tmp/sd.log");
+/*
+    service->max_procthreads = 2;
     service->sleep_usec = 10000;
     service->heartbeat_interval = 100000;
     service->max_connections = 65536;
@@ -34,7 +35,7 @@ int main()
     service->ops.cb_file_handler = &cb_file_handler;
     service->ops.cb_oob_handler = &cb_oob_handler;
 */
-    if(sbase->add_service(sbase, NULL) == 0)
+    if(sbase->add_service(sbase, service) == 0)
         sbase->running(sbase, 0);
     else 
         fprintf(stderr, "add service failed, %s", strerror(errno));
