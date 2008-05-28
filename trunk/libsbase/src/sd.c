@@ -9,17 +9,20 @@ int main()
     SBASE *sbase = sbase_init();
 //    sbase->working_mode = 0;
   //  sbase->max_procthreads = 1;
-    sbase->usec_sleep = 10000;
+    sbase->usec_sleep = 100;
     //sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, SB_CONN_MAX);
-    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 12240);
-    SERVICE *service = service_init();
-    service->service_type = S_SERVICE;
-    service->family = AF_INET;
-    service->sock_type = SOCK_STREAM;
-    service->service_name = "sd";
-    service->ip = NULL;
-    service->port = 1418;
-    service->set_log(service, "/tmp/sd.log");
+    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
+    SERVICE *service = NULL;
+    if((service = service_init()))
+    {
+	    service->service_type = S_SERVICE;
+	    service->family = AF_INET;
+	    service->sock_type = SOCK_STREAM;
+	    service->service_name = "sd";
+	    service->ip = NULL;
+	    service->port = 1418;
+	    service->set_log(service, "/tmp/sd.log");
+    }
 /*
     service->max_procthreads = 2;
     service->sleep_usec = 10000;

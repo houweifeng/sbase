@@ -47,6 +47,7 @@ int service_set_log(SERVICE *service, char *logfile)
     if(service && logfile)
     {
         LOGGER_INIT(service->logger, logfile);
+	DEBUG_LOGGER(service->logger, "Initialize logger %s", logfile);
         return 0;
     }
     return -1;
