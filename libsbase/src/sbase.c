@@ -1,3 +1,8 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/resource.h>
+#include <string.h>
+#include <errno.h>
 #include "sbase.h"
 #include "logger.h"
 /* set resource limit */
@@ -15,12 +20,13 @@ int sbase_setrlimit(SBASE *sb, char *name, int rlimit, int nset)
 		rlim.rlim_max = nset;
 		if((ret = setrlimit(rlimit, &rlim)) == 0)
 		{
-			DEBUG_LOGGER(sb->logger, "setrlimit %s cur[%ld] max[%ld]",  
+			fprintf(stdout, "setrlimit %s cur[%ld] max[%ld]\n",  
 					name, rlim.rlim_cur, rlim.rlim_max);
+            ret = 0;
 		}
 		else
 		{
-			FATAL_LOGGER(sb->logger, "setrlimit %s cur[%ld] max[%ld] failed, %s",
+			fprintf(stderr, "setrlimit %s cur[%ld] max[%ld] failed, %s\n",
 					name, rlim.rlim_cur, rlim.rlim_max, strerror(errno));
 		}
 	}

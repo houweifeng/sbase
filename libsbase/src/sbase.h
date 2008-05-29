@@ -15,8 +15,12 @@
 extern "C" {
 #endif
 #define SB_CONN_MAX    65536
+/* service type */
 #define S_SERVICE      0x00
 #define C_SERVICE      0x01
+/* working mode */
+#define WORKING_PROC    0x00
+#define WORKING_THREAD  0x01
 struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
@@ -46,6 +50,9 @@ SBASE *sbase_init();
 /* service */
 typedef struct _SERVICE
 {
+    /* global */
+    SBASE *sbase;
+
     /* working mode */
     int working_mode;
     struct _PROCTHREAD *daemon;
@@ -91,11 +98,41 @@ typedef struct _SERVICE
     void *logger;
     int (*set_log)(struct _SERVICE *service, char *logfile);
 
+    /* transaction and task */
+    
+    /* async dns */
+
     /* clean */
     void (*clean)(struct _SERVICE **pservice);
 
 }SERVICE;
+/* Initialize service */
 SERVICE *service_init();
+/* procthread */
+typedef struct _PROCTHREAD
+{
+    /* global */
+    SERVICE *service;
+    int index;
+
+    /* message queue */
+    void *message_queue;
+
+    /* evbase */
+    EVBASE *evbase;
+
+    /* connection */
+    struct _CONN **connections;
+
+    /* logger */
+    void *logger;
+
+    /* normal */
+    void (*run)(struct _PROCTHREAD *procthread, void *arg);
+    void (*stop)(struct _PROCTHREAD *procthread);
+}PROCTHREAD;
+/* Initialize procthread */
+PROCTHREAD *procthread_init();
 #ifdef __cplusplus
  }
 #endif
