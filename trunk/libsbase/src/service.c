@@ -36,9 +36,95 @@ int service_set(SERVICE *service)
     return ret;
 }
 
+#ifdef HAVE_PTHREAD
+#define NEW_PROCTHREAD(ns, id, pthid, pth, logger)                                          \
+{                                                                                           \
+    if(pthread_create(&pthid, NULL, (void *)(pth->run), (void *)pth) == 0)                  \
+    {                                                                                       \
+        DEBUG_LOGGER(logger, "Created %s[%d] ID[%08x]", ns, id, pthid);                     \
+    }                                                                                       \
+    else                                                                                    \
+    {                                                                                       \
+        FATAL_LOGGER(logger, "Create %s[%d] failed, %s", ns, id, strerror(errno));          \
+        exit(EXIT_FAILURE);                                                                 \
+    }                                                                                       \
+}
+#else
+#define NEW_PROCTHREAD(ns, id, pthid, pth, logger)
+#endif
+
 /* running */
 int service_run(SERVICE *service)
 {
+    int ret = -1;
+    int i = 0;
+
+    if(service)
+    {
+        if(service->working_mode == WORKING_PROC)
+        {
+            if((service->daemon = procthread_init()))
+            {
+                service->daemon->logger = service->logger;
+                service->daemon->evbase = service->evbase;
+                service->daemon->message_queue = service->message_queue;
+                service->daemon->service = service;
+                ret = 0;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
+                        service->working_mode, strerror(errno));
+            }
+        }
+        else if(service->working_mode == WORKING_THREAD)
+        {
+            if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)calloc(
+                            service->nprocthreads, sizeof(PROCTHREAD *))))
+            {
+                for(i = 0; i < service->nprocthreads; i++)
+                {
+                    if((service->procthreads[i] = procthread_init()))
+                    {
+                        service->procthreads[i]->service = service;
+                        service->procthreads[i]->logger = service->logger;
+                        service->procthreads[i]->evbase = service->evbase;
+                    }
+                    else
+                    {
+                        FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
+                                strerror(errno));
+                        exit(EXIT_FAILURE);
+                    }
+                    NEW_PROCTHREAD("procthreads", i, procthread_id, 
+                            service->procthreads[i], service->logger);
+                }
+            }
+            if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)calloc(
+                            service->ndaemons, sizeof(PROCTHREAD *))))
+            {
+                for(i = 0; i < service->ndaemons; i++)
+                {
+                    if((service->daemons[i] = procthread_init()))
+                    {
+                        service->daemons[i]->service = service;
+                        service->daemons[i]->logger = service->logger;
+                        service->daemons[i]->evbase = service->evbase;
+                    }
+                    else
+                    {
+                        FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
+                                strerror(errno));
+                        exit(EXIT_FAILURE);
+                    }
+                    NEW_PROCTHREAD("daemons", i, procthread_id, 
+                            service->daemons[i], service->logger);
+                }
+            }
+        }
+        return ret;
+    }
+    return ret;
 }
 
 /* set logfile  */

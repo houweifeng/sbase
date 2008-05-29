@@ -11,7 +11,11 @@ int main()
   //  sbase->max_procthreads = 1;
     sbase->usec_sleep = 100;
     //sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, SB_CONN_MAX);
-    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
+    if(sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 10000) == -1)
+    {
+        fprintf(stderr, "set rlimit failed, %s\n", strerror(errno));
+        _exit(-1);
+    }
     SERVICE *service = NULL;
     if((service = service_init()))
     {
