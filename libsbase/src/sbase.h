@@ -15,6 +15,7 @@
 extern "C" {
 #endif
 #define SB_CONN_MAX    65536
+#define SB_IP_MAX      16
 /* service type */
 #define S_SERVICE      0x00
 #define C_SERVICE      0x01
@@ -25,6 +26,7 @@ struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
+typedef void (*CALLBACK)(void *);
 typedef struct _SBASE
 {
 	int fd;
@@ -123,16 +125,39 @@ typedef struct _PROCTHREAD
 
     /* connection */
     struct _CONN **connections;
+    int (*addconn)(struct _PROCTHREAD *procthread, struct _CONN *conn);
+    int (*add_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
+    int (*terminate_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
 
     /* logger */
     void *logger;
 
     /* normal */
-    void (*run)(struct _PROCTHREAD *procthread, void *arg);
-    void (*stop)(struct _PROCTHREAD *procthread);
+    void (*run)(void *arg);
+    void (*terminate)(struct _PROCTHREAD *procthread);
+    void (*clean)(struct _PROCTHREAD **procthread);
 }PROCTHREAD;
 /* Initialize procthread */
 PROCTHREAD *procthread_init();
+
+typedef struct _CONN
+{
+    /* global */
+    int index;
+
+    /* evbase */
+    EVBASE *evbase;
+    EVENT *event;
+
+    /* conenction */
+    char ip[SB_IP_MAX];
+    int  port;
+    char lip[SB_IP_MAX];
+    int  lport;
+
+    /* callback sets */
+
+}CONN;
 #ifdef __cplusplus
  }
 #endif
