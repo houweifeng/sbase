@@ -22,10 +22,50 @@ extern "C" {
 /* working mode */
 #define WORKING_PROC    0x00
 #define WORKING_THREAD  0x01
+/* connection status */
+#define CONN_STATUS_READY       1
+#define CONN_STATUS_CONNECTED   2
+#define CONN_STATUS_CLOSED      4
+/* connection running state */
+#ifndef S_STATES
+#define S_STATE_READY           0x00
+#define S_STATE_READ_CHUNK      0x02
+#define S_STATE_WRITE_STATE     0x04
+#define S_STATE_PACKET_HANDLING 0x08
+#define S_STATE_DATA_HANDLING   0x10
+#define S_STATE_REQ             0x12
+#define S_STATE_CLOSE           0x64
+#define S_STATES    (S_STATE_READY & S_STATE_READ_CHUNK & S_STATE_WRITE_STATE \
+        S_STATE_PACKET_HANDLING & S_STATE_DATA_HANDLING & S_STATE_REQ & S_STATE_CLOSE )
+#endif
 struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
+typedef struct _CB_DATA
+{
+    char *data;
+    int ndata;
+}CB_DATA;
+#define PCB(ptr) ((CB_DATA *)ptr)
+typedef struct _SESSION
+{
+    /* packet */
+    int  packet_type;
+    int  packet_length;
+    char *packet_delimiter;
+    int  packet_delimiter_length;
+    int  buffer_size;
+
+    /* methods */
+    int (*error_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
+    int (*packet_reader)(struct _CONN *, CB_DATA *buffer);
+    int (*packet_handler)(struct _CONN *, CB_DATA *packet);
+    int (*data_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
+    int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache);
+    int (*oob_handler)(struct _CONN *, CB_DATA *oob);
+}SESSION;
+
 typedef void (*CALLBACK)(void *);
 typedef struct _SBASE
 {
@@ -94,6 +134,8 @@ typedef struct _SERVICE
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
             char *ip, int port);
     struct _CONN *(*getconn)(struct _SERVICE *service);
+    struct _CONN *(*pushconn)(struct _SERVICE *service, struct _CONN *conn);
+    struct _CONN *(*popconn)(struct _SERVICE *service, struct _CONN *conn);
     
     /* timer and logger */
     void *timer;
@@ -103,6 +145,9 @@ typedef struct _SERVICE
     /* transaction and task */
     
     /* async dns */
+
+    /* service default session option */
+    SESSION session;
 
     /* clean */
     void (*clean)(struct _SERVICE **pservice);
@@ -144,20 +189,90 @@ typedef struct _CONN
 {
     /* global */
     int index;
+    void *parent;
+
+    /* conenction */
+    int fd;
+    char ip[SB_IP_MAX];
+    int  port;
+    int (*set)(struct _CONN *);
+    int (*close)(struct _CONN *);
+    int (*terminate)(struct _CONN *);
+
+    /* packet */
+    int packet_type;
+    int packet_length;
+    char *packet_delimiter;
+    int packet_delimiter_length;
+    int buffer_size;
+
+    /* connection bytes stats */
+    long long   recv_oob_total;
+    long long   sent_oob_total;
+    long long   recv_data_total;
+    long long   sent_data_total;
 
     /* evbase */
     EVBASE *evbase;
     EVENT *event;
 
-    /* conenction */
-    char ip[SB_IP_MAX];
-    int  port;
-    char lip[SB_IP_MAX];
-    int  lport;
+    /* buffer */
+    void *buffer;
+    void *packet;
+    void *cache;
+    void *chunk;
+    void *oob;
 
-    /* callback sets */
+    /* logger and timer */
+    void *logger;
+    void *timer;
 
+    /* queue */
+    void *send_queue;
+
+    /* message queue */
+    void *message_queue;
+
+    /* client state */
+    int c_state;
+    int c_id;
+    int (*start_cstate)(struct _CONN *);
+    int (*over_cstate)(struct _CONN *);
+
+    /* transaction */
+    int s_id;
+    int s_state;
+
+    /* timeout */
+    int timeout;
+    int (*set_timeout)(struct _CONN *, int timeout_usec);
+  
+    /* message */
+    int (*push_message)(struct _CONN *, int message_id);
+
+    /* session */
+    int (*read_handler)(struct _CONN *);
+    int (*write_handler)(struct _CONN *);
+    int (*packet_reader)(struct _CONN *);
+    int (*packet_handler)(struct _CONN *);
+    int (*oob_handler)(struct _CONN *);
+    int (*data_handler)(struct _CONN *);
+    int (*save_cache)(struct _CONN *, void *data, int size);
+
+    /* chunk */
+    int (*chunk_reader)(struct _CONN *);
+    int (*recv_chunk)(struct _CONN *, int size);
+    int (*recv_file)(struct _CONN *, char *file, long long offset, long long size);
+    int (*push_chunk)(struct _CONN *, void *data, int size);
+    int (*push_file)(struct _CONN *, char *file, long long offset, long long size);
+
+    /* session option and callback  */
+    SESSION session;
+
+    /* normal */
+    void (*clean)(struct _CONN **pconn);
 }CONN;
+CONN *conn_init();
 #ifdef __cplusplus
  }
 #endif
