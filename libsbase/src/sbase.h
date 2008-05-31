@@ -69,9 +69,12 @@ typedef struct _SESSION
 typedef void (*CALLBACK)(void *);
 typedef struct _SBASE
 {
-	int fd;
+    /* base option */
 	int usec_sleep;
+    int running_status;
 	EVBASE *evbase;
+    struct _SERVICE **service;
+    int running_service;
 
 	/* timer && logger */
 	void *logger;
@@ -85,6 +88,7 @@ typedef struct _SBASE
 	int(*add_service)(struct _SBASE *, struct _SERVICE *);
 	int(*running)(struct _SBASE *, int );
 	int(*stop)(struct _SBASE *);
+	void(*clean)(struct _SBASE **);
 }SBASE;
 /* Initialize sbase */
 SBASE *sbase_init();
@@ -132,10 +136,11 @@ typedef struct _SERVICE
     int running_connections;
     struct _CONN **connections;
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
-            char *ip, int port);
+            char *ip, int port, SESSION *session);
+    struct _CONN *(*addconn)(struct _SERVICE *service, int fd, char *ip, int port, SESSION *);
     struct _CONN *(*getconn)(struct _SERVICE *service);
     struct _CONN *(*pushconn)(struct _SERVICE *service, struct _CONN *conn);
-    struct _CONN *(*popconn)(struct _SERVICE *service, struct _CONN *conn);
+    struct _CONN *(*popconn)(struct _SERVICE *service, int);
     
     /* timer and logger */
     void *timer;

@@ -37,11 +37,25 @@ int sbase_setrlimit(SBASE *sb, char *name, int rlimit, int nset)
 /* set sbase log */
 int sbase_set_log(SBASE *sbase, char *logfile)
 {
+    int ret = -1;
+    if(sbase && logfile)
+    {
+        LOGGER_INIT(sbase->logger, logfile);
+        ret = 0;
+    }
+    return ret;
 }
 
 /* set evbase log */
 int sbase_set_evlog(SBASE *sbase, char *evlogfile)
 {
+    int ret = -1;
+    if(sbase && evlogfile && sbase->evbase)
+    {
+        LOGGER_INIT(sbase->evbase->logger, evlogfile);
+        ret = 0;
+    }
+    return ret;
 }
 
 /* add service to sbase */
@@ -61,19 +75,39 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
 /* running all service */
 int sbase_running(SBASE *sbase, int useconds)
 {
+    int ret = -1;
 	if(sbase)
 	{
-		while(1)
+        sbase->running_status = 1;
+		while(sbase->running_status)
 		{
 			sbase->evbase->loop(sbase->evbase, 0, NULL);
 			usleep(sbase->usec_sleep);
 		}
+        ret = 0;
 	}
+    return ret;
 }
 
 /* stop all service */
 int sbase_stop(SBASE *sbase)
 {
+    int ret = -1;
+    if(sbase)
+    {
+        sbase->running_status = 0;
+    }
+    return ret;
+}
+
+/* clean sbase */
+void sbase_clean(SBASE **psbase)
+{
+    if(*psbase)
+    {
+        free(*psbase);
+        *psbase = NULL;
+    }
 }
 
 /* Initialize sbase */
@@ -89,6 +123,7 @@ SBASE *sbase_init()
 		sbase->add_service	    = sbase_add_service;
 		sbase->running 		    = sbase_running;
 		sbase->stop 		    = sbase_stop;
+		sbase->clean 		    = sbase_clean;
 	}
 	return sbase;
 }
