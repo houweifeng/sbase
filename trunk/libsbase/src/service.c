@@ -1,6 +1,8 @@
+#include <errno.h>
 #include "sbase.h"
 #include "logger.h"
 #include "service.h"
+
 /* set service */
 int service_set(SERVICE *service)
 {
@@ -133,7 +135,7 @@ int service_set_log(SERVICE *service, char *logfile)
     if(service && logfile)
     {
         LOGGER_INIT(service->logger, logfile);
-	DEBUG_LOGGER(service->logger, "Initialize logger %s", logfile);
+	    DEBUG_LOGGER(service->logger, "Initialize logger %s", logfile);
         return 0;
     }
     return -1;
@@ -169,6 +171,69 @@ void service_event_handler(int event_fd, short flag, void *arg)
     return ;
 }
 
+/* new connection */
+CONN *service_newconn(SERVICE *service, int inet_family, int socket_type, 
+                char *inet_ip, int inet_port, SESSION *session)
+{
+    CONN *conn = NULL;
+    struct sockaddr_in rsa;
+    int fd = -1, family = -1, sock_type = -1, port = -1;
+    char *ip = NULL;
+    SESSION *sess = NULL;
+
+    if(service)
+    {
+        family  = (inet_family > 0 ) ? inet_family : service->family;
+        sock_type = (socket_type > 0 ) ? socket_type : service->sock_type;
+        ip = (inet_ip) ? inet_ip : service->ip;
+        port  = (inet_port > 0 ) ? inet_port : service->port;
+        sess = (session) ? session : &(service->session);
+        if((fd = socket(family, sock_type, 0)) > 0)
+        {
+            rsa.sin_family = family;
+            rsa.sin_addr.s_addr = inet_addr(ip);
+            rsa.sin_port = htons(port);
+            if(fcntl(fd, F_SETFL, O_NONBLOCK) == 0 
+                    && (connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
+                        || errno == EINPROGRESS))
+            {
+                conn = service->addconn(service, fd, ip, port, session);
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%08x] failed, %s",
+                        ip, port, fd, sess, strerror(errno));
+            }
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "socket(%d, %d, 0) failed, %s", 
+                    family, sock_type, strerror(errno));
+        }
+    }
+    return conn;
+}
+
+/* add new connection */
+CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *session)
+{
+}
+
+/* push connection to connections pool */
+int service_pushconn(SERVICE *service, CONN *conn)
+{
+}
+
+/* pop connection from connections pool with index */
+int service_popconn(SERVICE *service, int index)
+{
+}
+
+/* get connection with free state */
+CONN *service_getconn(SERVICE *service)
+{
+}
+
 /* stop service */
 int service_stop(SERVICE *service)
 {
@@ -183,6 +248,8 @@ void service_clean(SERVICE **pservice)
 {
     if(*pservice)
     {
+        free(*pservice);
+        *pservice = NULL;
     }
 }
 
@@ -194,8 +261,8 @@ SERVICE *service_init()
     {
         service->set        = service_set;
         service->run        = service_run;
-        service->stop       = service_stop;
         service->set_log    = service_set_log;
+        service->stop       = service_stop;
         service->clean      = service_clean;
     }
     return service;
