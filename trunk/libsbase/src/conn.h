@@ -59,6 +59,9 @@ int conn_recv_file(CONN *conn, char *file, long long offset, long long size);
 /* push chunk file */
 int conn_push_file(CONN *conn, char *file, long long offset, long long size);
 
+/* set session options */
+int conn_set_session(CONN *conn, SESSION *session);
+
 /* clean connection */
 void conn_clean(CONN **pconn);
 #endif

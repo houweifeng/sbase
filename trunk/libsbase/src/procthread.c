@@ -77,4 +77,5 @@ PROCTHREAD *procthread_init()
         pth->terminate               = procthread_terminate;
         pth->clean                   = procthread_clean;
     }
+    return pth;
 }

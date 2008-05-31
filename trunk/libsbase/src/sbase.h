@@ -4,6 +4,7 @@
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/types.h>
 #include <string.h>
 #include <fcntl.h>
@@ -73,7 +74,7 @@ typedef struct _SBASE
 	int usec_sleep;
     int running_status;
 	EVBASE *evbase;
-    struct _SERVICE **service;
+    struct _SERVICE **services;
     int running_service;
 
 	/* timer && logger */
@@ -204,13 +205,6 @@ typedef struct _CONN
     int (*close)(struct _CONN *);
     int (*terminate)(struct _CONN *);
 
-    /* packet */
-    int packet_type;
-    int packet_length;
-    char *packet_delimiter;
-    int packet_delimiter_length;
-    int buffer_size;
-
     /* connection bytes stats */
     long long   recv_oob_total;
     long long   sent_oob_total;
@@ -273,6 +267,7 @@ typedef struct _CONN
 
     /* session option and callback  */
     SESSION session;
+    int (*set_session)(struct _CONN *, SESSION *session);
 
     /* normal */
     void (*clean)(struct _CONN **pconn);

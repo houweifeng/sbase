@@ -2,6 +2,7 @@
 #include "sbase.h"
 #include "logger.h"
 #include "service.h"
+#include "queue.h"
 
 /* set service */
 int service_set(SERVICE *service)
@@ -67,9 +68,13 @@ int service_run(SERVICE *service)
         {
             if((service->daemon = procthread_init()))
             {
-                service->daemon->logger = service->logger;
                 service->daemon->evbase = service->evbase;
-                service->daemon->message_queue = service->message_queue;
+                service->daemon->logger = service->logger;
+                if(service->daemon->message_queue)
+                {
+                    QUEUE_CLEAN(service->daemon->message_queue);
+                    service->daemon->message_queue = service->message_queue;
+                }
                 service->daemon->service = service;
                 ret = 0;
             }
@@ -146,8 +151,11 @@ void service_event_handler(int event_fd, short flag, void *arg)
 {
     struct sockaddr_in rsa;
     socklen_t rsa_len = sizeof(rsa);
-    int fd = -1;
     SERVICE *service = (SERVICE *)arg;
+    CONN *conn = NULL;
+    int fd = -1;
+    char *ip = NULL;
+    int port = -1;
 
     if(service)
     {
@@ -157,8 +165,13 @@ void service_event_handler(int event_fd, short flag, void *arg)
             {
                 if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
                 {
-                    DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d\n",
-                            inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), fd);
+                    ip = inet_ntoa(rsa.sin_addr);
+                    port = ntohs(rsa.sin_port);
+                    if((conn = service_addconn(service, fd, ip, port, &(service->session))))
+                    {
+                        DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d",
+                                ip, port, fd);
+                    }
                 }
                 else
                 {
@@ -227,7 +240,7 @@ CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *ses
         {
             conn->logger    = service->logger;
             conn->evbase    = service->evbase;
-            memcpy(&(conn->session), session, sizeof(SESSION));
+            conn->set_session(conn, session);
             /* add  to procthread */
             if(service->working_mode == WORKING_PROC)
             {

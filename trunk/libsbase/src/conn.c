@@ -100,6 +100,19 @@ int conn_push_file(CONN *conn, char *file, long long offset, long long size)
 {
 }
 
+/* set session options */
+int conn_set_session(CONN *conn, SESSION *session)
+{
+    int ret = -1;
+
+    if(conn && session)
+    {
+        memcpy(&(conn->session), session, sizeof(SESSION));
+        ret = 0;
+    }
+    return ret;
+}
+
 /* clean connection */
 void conn_clean(CONN **pconn)
 {
@@ -140,6 +153,7 @@ CONN *conn_init(int fd, char *ip, int port)
         conn->push_chunk            = conn_push_chunk;
         conn->recv_file             = conn_recv_file;
         conn->push_file             = conn_push_file;
+        conn->set_session           = conn_set_session;
         conn->clean                 = conn_clean;
     }
     return conn;
