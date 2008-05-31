@@ -238,7 +238,7 @@ typedef struct _CONN
     /* message queue */
     void *message_queue;
 
-    /* client state */
+    /* client transaction state */
     int c_state;
     int c_id;
     int (*start_cstate)(struct _CONN *);
@@ -277,7 +277,7 @@ typedef struct _CONN
     /* normal */
     void (*clean)(struct _CONN **pconn);
 }CONN;
-CONN *conn_init();
+CONN *conn_init(int fd, char *ip, int port);
 #ifdef __cplusplus
  }
 #endif

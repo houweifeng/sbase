@@ -217,6 +217,48 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
 /* add new connection */
 CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *session)
 {
+    PROCTHREAD *procthread = NULL;
+    CONN *conn = NULL;
+    int index = 0;
+
+    if(service && fd > 0 && ip && port > 0 && session)
+    {
+        if((conn = conn_init(fd, ip, port)))
+        {
+            conn->logger    = service->logger;
+            conn->evbase    = service->evbase;
+            memcpy(&(conn->session), session, sizeof(SESSION));
+            /* add  to procthread */
+            if(service->working_mode == WORKING_PROC)
+            {
+                if(service->daemon && service->daemon->addconn)
+                {
+                    service->daemon->addconn(service->daemon, conn);
+                }
+                else
+                {
+                    conn->clean(&conn);
+                    FATAL_LOGGER(service->logger, "can not add connection[%s:%d] "
+                            "via %d  to service[%s]", ip, port, fd, service->service_name);
+                }
+            }
+            else if(service->working_mode == WORKING_THREAD)
+            {
+                index = fd % service->nprocthreads;
+                if(service->procthreads && (procthread = service->procthreads[index]))
+                {
+                    procthread->addconn(procthread, conn);   
+                }
+                else
+                {
+                    conn->clean(&conn);
+                    FATAL_LOGGER(service->logger, "can not add connection[%s:%d] "
+                            "via %d  to service[%s]", ip, port, fd, service->service_name);
+                }
+            }
+        }
+    }
+    return conn;
 }
 
 /* push connection to connections pool */
