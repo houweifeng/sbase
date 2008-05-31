@@ -66,7 +66,12 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
         if(service)
         {
             service->evbase = sbase->evbase;
-            return service->set(service);
+            if((sbase->services = (SERVICE **)realloc(sbase->services, 
+                            (sbase->running_service + 1) * sizeof(SERVICE *))))
+            {
+                sbase->services[sbase->running_service++] = service;
+                return service->set(service);
+            }
         }
 	}
 	return -1;
@@ -76,8 +81,22 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
 int sbase_running(SBASE *sbase, int useconds)
 {
     int ret = -1;
+    int i = 0;
+    SERVICE *service = NULL;
+
 	if(sbase)
 	{
+        //running all service 
+        if(sbase->services)
+        {
+            for(i = 0; i < sbase->running_service; i++)
+            {
+                if((service = sbase->services[i]))
+                    service->run(service);
+            }
+        }
+
+        //running sbase 
         sbase->running_status = 1;
 		while(sbase->running_status)
 		{
