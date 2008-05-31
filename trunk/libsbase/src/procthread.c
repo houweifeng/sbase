@@ -1,5 +1,7 @@
 #include "procthread.h"
 #include "queue.h"
+#include "logger.h"
+#include "message.h"
 
 /* run procthread */
 void procthread_run(void *arg)
@@ -9,6 +11,9 @@ void procthread_run(void *arg)
     if(procthread)
     {
     }
+#ifdef HAVE_PTHREAD
+    pthread_exit();
+#endif
 }
 
 /* add new task */
@@ -24,6 +29,17 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
 /* Add connection message */
 int procthread_addconn(PROCTHREAD *pth, CONN *conn)
 {
+    MESSAGE msg = {0};
+    if(pth && conn)
+    {
+        msg.fd          = MESSAGE_NEW_SESSION;
+        msg.fd          = conn->fd;
+        msg.handler     = (void *)conn;
+        msg.parent      = (void *)pth;
+        QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
+        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%s:%d] via %d", 
+                MESSAGE_DESC(MESSAGE_NEW_SESSION), conn->ip, conn->port, conn->fd);
+    }
 }
 
 /* Add new connection */
