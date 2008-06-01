@@ -16,6 +16,7 @@ int service_set(SERVICE *service)
         service->sa.sin_family = service->family;
         service->sa.sin_addr.s_addr = (p)? inet_addr(p):INADDR_ANY;
         service->sa.sin_port = htons(service->port);
+        service->connections = (CONN **)calloc(service->connections_limit, sizeof(CONN *));
         if(service->backlog <= 0) service->backlog = SB_CONN_MAX;
         if(service->service_type == S_SERVICE)
         {
@@ -55,7 +56,13 @@ int service_set(SERVICE *service)
 #else
 #define NEW_PROCTHREAD(ns, id, pthid, pth, logger)
 #endif
-
+#define PROCTHREAD_SET(service, pth)                                                        \
+{                                                                                           \
+    pth->service = service;                                                                 \
+    pth->evbase = service->evbase;                                                          \
+    pth->logger = service->logger;                                                          \
+    pth->usec_sleep = service->usec_sleep;                                                  \
+}
 /* running */
 int service_run(SERVICE *service)
 {
@@ -68,8 +75,7 @@ int service_run(SERVICE *service)
         {
             if((service->daemon = procthread_init()))
             {
-                service->daemon->evbase = service->evbase;
-                service->daemon->logger = service->logger;
+                PROCTHREAD_SET(service, service->daemon);
                 if(service->daemon->message_queue)
                 {
                     QUEUE_CLEAN(service->daemon->message_queue);
@@ -93,9 +99,7 @@ int service_run(SERVICE *service)
                 {
                     if((service->procthreads[i] = procthread_init()))
                     {
-                        service->procthreads[i]->service = service;
-                        service->procthreads[i]->logger = service->logger;
-                        service->procthreads[i]->evbase = service->evbase;
+                        PROCTHREAD_SET(service, service->procthreads[i]);
                     }
                     else
                     {
@@ -114,9 +118,7 @@ int service_run(SERVICE *service)
                 {
                     if((service->daemons[i] = procthread_init()))
                     {
-                        service->daemons[i]->service = service;
-                        service->daemons[i]->logger = service->logger;
-                        service->daemons[i]->evbase = service->evbase;
+                        PROCTHREAD_SET(service, service->daemons[i]);
                     }
                     else
                     {
@@ -277,25 +279,119 @@ CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *ses
 /* push connection to connections pool */
 int service_pushconn(SERVICE *service, CONN *conn)
 {
+    int ret = -1, i = 0;
+
+    if(service && conn && service->connections)
+    {
+        for(i = 0; i < service->connections_limit; i++)
+        {
+            if(service->connections[i] == NULL)
+            {
+                service->connections[i] = conn;
+                conn->index = i;
+                service->running_connections++;
+                if(i > service->index_max) service->index_max = i;
+                ret = 0;
+                break;
+            }
+        }
+    }
+    return ret;
 }
 
 /* pop connection from connections pool with index */
-int service_popconn(SERVICE *service, int index)
+int service_popconn(SERVICE *service, CONN *conn)
 {
+    int ret = -1;
+
+    if(service && service->connections && conn)
+    {
+        if(conn->index >= 0 && conn->index <= service->index_max
+                && service->connections[conn->index] == conn)
+        {
+            service->connections[conn->index] = NULL;
+            service->running_connections--;
+            if(service->index_max == conn->index) 
+                service->index_max--;
+            ret = 0;
+        }
+    }
+    return ret;
 }
 
 /* get connection with free state */
 CONN *service_getconn(SERVICE *service)
 {
+    CONN *conn = NULL;
+    int i = 0;
+
+    if(service)
+    {
+        for(i = 0; i < service->index_max; i++)
+        {
+            if((conn = service->connections[i]) && conn->status == CONN_STATUS_FREE
+                    && conn->c_state == C_STATE_FREE)
+            {
+                conn->start_cstate(conn);
+                break;
+            }
+            conn = NULL;
+        }
+    }
+    return conn;
 }
 
 /* stop service */
-int service_stop(SERVICE *service)
+void service_stop(SERVICE *service)
 {
+    int i = 0;
+    CONN *conn = NULL;
+
     if(service)
     {
+        //stop all connections 
+        if(service->connections && service->running_connections > 0 && service->index_max > 0)
+        {
+            for(i = 0; i < service->index_max; i++)
+            {
+                if((conn = service->connections[i]))
+                {
+                    conn->close(conn);
+                }
+            }
+        }
+        //stop all procthreads
+        if(service->working_mode == WORKING_PROC)
+        {
+            if(service->daemon)
+            {
+                service->daemon->stop(service->daemon);
+            }
+        }
+        else if(service->working_mode == WORKING_THREAD)
+        {
+            if(service->procthreads && service->nprocthreads)
+            {
+                for(i = 0; i < service->nprocthreads; i++)
+                {
+                    if(service->procthreads[i])
+                    {
+                        service->procthreads[i]->stop(service->procthreads[i]);
+                    }
+                }
+            }
+            if(service->daemons && service->ndaemons)
+            {
+                for(i = 0; i < service->ndaemons; i++)
+                {
+                    if(service->daemons[i])
+                    {
+                        service->daemons[i]->stop(service->daemons[i]);
+                    }
+                }
+            }
+        }
     }
-    return -1;
 }
 
 /* service clean */
@@ -303,6 +399,7 @@ void service_clean(SERVICE **pservice)
 {
     if(*pservice)
     {
+        if((*pservice)->connections) free((*pservice)->connections);
         free(*pservice);
         *pservice = NULL;
     }
@@ -318,6 +415,11 @@ SERVICE *service_init()
         service->run        = service_run;
         service->set_log    = service_set_log;
         service->stop       = service_stop;
+        service->newconn    = service_newconn;
+        service->addconn    = service_addconn;
+        service->pushconn   = service_pushconn;
+        service->popconn    = service_popconn;
+        service->getconn    = service_getconn;
         service->clean      = service_clean;
     }
     return service;

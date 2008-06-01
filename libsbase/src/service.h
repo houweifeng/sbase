@@ -9,7 +9,7 @@ int service_set(SERVICE *service);
 /* run service */
 int service_run(SERVICE *service);
 /* stop service */
-int service_stop(SERVICE *service);
+void service_stop(SERVICE *service);
 /* new connection */
 CONN *service_newconn(SERVICE *service, int inet_family, int socket_type, 
         char *ip, int port, SESSION *session);
@@ -18,7 +18,7 @@ CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *ses
 /* push connection to connections pool */
 int service_pushconn(SERVICE *service, CONN *conn);
 /* pop connection from connections pool */
-int service_popconn(SERVICE *service, int index);
+int service_popconn(SERVICE *service, CONN *conn);
 /* get free connection */
 CONN *service_getconn(SERVICE *service);
 /* set log */

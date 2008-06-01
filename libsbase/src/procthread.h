@@ -18,6 +18,9 @@ int procthread_add_connection(PROCTHREAD *, CONN *);
 /* Terminate connection */
 int procthread_terminate_connection(PROCTHREAD *, CONN *);
 
+/* Add stop message on procthread */
+void procthread_stop(PROCTHREAD *);
+
 /* Terminate procthread */
 void procthread_terminate(PROCTHREAD *);
 

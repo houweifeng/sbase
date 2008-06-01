@@ -70,6 +70,8 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
         {
             service->evbase = sbase->evbase;
             service->message_queue = sbase->message_queue;
+            service->usec_sleep = sbase->usec_sleep;
+            service->connections_limit = sbase->connections_limit;
             if((sbase->services = (SERVICE **)realloc(sbase->services, 
                             (sbase->running_service + 1) * sizeof(SERVICE *))))
             {
@@ -105,14 +107,13 @@ int sbase_running(SBASE *sbase, int useconds)
 }
 
 /* stop all service */
-int sbase_stop(SBASE *sbase)
+void sbase_stop(SBASE *sbase)
 {
-    int ret = -1;
     if(sbase)
     {
         sbase->running_status = 0;
     }
-    return ret;
+    return ;
 }
 
 /* clean sbase */
@@ -144,6 +145,7 @@ SBASE *sbase_init()
 		sbase->running 		    = sbase_running;
 		sbase->stop 		    = sbase_stop;
 		sbase->clean 		    = sbase_clean;
+        sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
 	}
 	return sbase;
 }
