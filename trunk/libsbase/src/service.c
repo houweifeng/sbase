@@ -63,6 +63,7 @@ int service_set(SERVICE *service)
     pth->logger = service->logger;                                                          \
     pth->usec_sleep = service->usec_sleep;                                                  \
 }
+
 /* running */
 int service_run(SERVICE *service)
 {
@@ -81,6 +82,9 @@ int service_run(SERVICE *service)
                     QUEUE_CLEAN(service->daemon->message_queue);
                     service->daemon->message_queue = service->message_queue;
                 }
+                
+                DEBUG_LOGGER(service->logger, "sbase->q[%08x] service->q[%08x] daemon->q[%08x]",
+                        service->sbase->message_queue, service->message_queue, service->daemon->message_queue);
                 service->daemon->service = service;
                 ret = 0;
             }
@@ -292,6 +296,9 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 service->running_connections++;
                 if(i > service->index_max) service->index_max = i;
                 ret = 0;
+                DEBUG_LOGGER(service->logger, "Added new connection[%s:%d] via %d "
+                        "index[%d] of total %d", conn->ip, conn->port, conn->fd, 
+                        conn->index, service->running_connections);
                 break;
             }
         }
@@ -314,6 +321,9 @@ int service_popconn(SERVICE *service, CONN *conn)
             if(service->index_max == conn->index) 
                 service->index_max--;
             ret = 0;
+            DEBUG_LOGGER(service->logger, "Removed new connection[%s:%d] via %d "
+                    "index[%d] of total %d", conn->ip, conn->port, conn->fd, 
+                    conn->index, service->running_connections);
         }
     }
     return ret;

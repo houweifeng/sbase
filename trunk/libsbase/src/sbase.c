@@ -69,9 +69,11 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
         if(service)
         {
             service->evbase = sbase->evbase;
+            service->sbase  = sbase;
             service->message_queue = sbase->message_queue;
             service->usec_sleep = sbase->usec_sleep;
             service->connections_limit = sbase->connections_limit;
+            if(service->logger == NULL) service->logger = sbase->logger;
             if((sbase->services = (SERVICE **)realloc(sbase->services, 
                             (sbase->running_service + 1) * sizeof(SERVICE *))))
             {
@@ -99,7 +101,13 @@ int sbase_running(SBASE *sbase, int useconds)
 			sbase->evbase->loop(sbase->evbase, 0, NULL);
 			usleep(sbase->usec_sleep);
             if(QTOTAL(sbase->message_queue) > 0)
+            {
+                DEBUG_LOGGER(sbase->logger, "message_total:%d", QTOTAL(sbase->message_queue));
                 message_handler(sbase->message_queue, sbase->logger);
+                DEBUG_LOGGER(sbase->logger, "message_total:%d", QTOTAL(sbase->message_queue));
+            }
+            /*
+            */
 		}
         ret = 0;
 	}

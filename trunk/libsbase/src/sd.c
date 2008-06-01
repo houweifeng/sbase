@@ -16,6 +16,7 @@ int main()
         fprintf(stderr, "set rlimit failed, %s\n", strerror(errno));
         _exit(-1);
     }
+	sbase->set_log(sbase, "/tmp/sd.log");
     SERVICE *service = NULL;
     if((service = service_init()))
     {
@@ -25,7 +26,6 @@ int main()
 	    service->service_name = "sd";
 	    service->ip = NULL;
 	    service->port = 1418;
-	    service->set_log(service, "/tmp/sd.log");
     }
 /*
     service->max_procthreads = 2;
