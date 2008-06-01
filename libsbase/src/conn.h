@@ -8,11 +8,17 @@ int conn_set(CONN *conn);
 /* close connection */
 int conn_close(CONN *conn);
 
+/* over connection */
+int conn_over(CONN *conn);
+
 /* terminate connection */
 int conn_terminate(CONN *conn);
 
 /* set timeout */
 int conn_set_timeout(CONN *conn, int timeout_usec);
+
+/* set session options */
+int conn_set_session(CONN *conn, SESSION *session);
 
 /* start client transaction state */
 int conn_start_cstate(CONN *conn);

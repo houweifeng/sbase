@@ -71,13 +71,14 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
 
     if(pth && pth->message_queue && conn)
     {
-        msg.fd          = MESSAGE_NEW_SESSION;
+        msg.msg_id      = MESSAGE_NEW_SESSION;
         msg.fd          = conn->fd;
         msg.handler     = (void *)conn;
         msg.parent      = (void *)pth;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
-        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%s:%d] via %d", 
-                MESSAGE_DESC(MESSAGE_NEW_SESSION), conn->ip, conn->port, conn->fd);
+        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%s:%d] via %d total %d", 
+                MESSAGE_DESC(MESSAGE_NEW_SESSION), conn->ip, conn->port, 
+                conn->fd, QTOTAL(pth->message_queue));
         ret = 0;
     }
     return ret;
@@ -121,7 +122,7 @@ void procthread_stop(PROCTHREAD *pth)
 
     if(pth && pth->message_queue)
     {
-        msg.fd          = MESSAGE_STOP;
+        msg.msg_id      = MESSAGE_STOP;
         msg.parent      = (void *)pth;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
         DEBUG_LOGGER(pth->logger, "Ready for stopping procthread[%d]", pth->index);
@@ -134,6 +135,7 @@ void procthread_terminate(PROCTHREAD *pth)
 {
     if(pth)
     {
+        DEBUG_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
         pth->running_status = 0;
     }
 }

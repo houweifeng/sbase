@@ -26,6 +26,13 @@ void message_handler(void *message_queue, void *logger)
                     msg.msg_id, msg.handler, msg.parent, msg.fd);
             goto end;
         }
+        conn = (CONN *)msg.handler;
+        pth = (PROCTHREAD *)msg.parent;
+        if(msg.msg_id == MESSAGE_STOP && pth)
+        {
+            pth->stop(pth);
+            goto end;
+        }
         //task and heartbeat
         if(msg.msg_id == MESSAGE_TASK || msg.msg_id == MESSAGE_HEARTBEAT)
         {
@@ -35,8 +42,6 @@ void message_handler(void *message_queue, void *logger)
             }
             goto end;
         }
-        conn = (CONN *)msg.handler;
-        pth = (PROCTHREAD *)msg.parent;
         if(conn == NULL || pth == NULL || msg.fd != conn->fd || pth->service == NULL)
         {
             ERROR_LOGGER(logger, "Invalid MESSAGE[%08x] msg_id[%d] fd[%d] handler[%08x] "

@@ -26,11 +26,13 @@ extern "C" {
 /* connection status */
 #define CONN_STATUS_FREE        0x00
 #define CONN_STATUS_READY       0x01
+#define CONN_STATUS_CONNECTED   0x02
 #define CONN_STATUS_WORKING     0x04
 #define CONN_STATUS_CLOSED      0x08
 /* client running status */
 #define C_STATE_FREE            0x00
 #define C_STATE_WORKING         0x02
+#define C_STATE_USING           0x04
 /* connection running state */
 #ifndef S_STATES
 #define S_STATE_READY           0x00
@@ -216,6 +218,7 @@ typedef struct _CONN
     int  port;
     int (*set)(struct _CONN *);
     int (*close)(struct _CONN *);
+    int (*over)(struct _CONN *);
     int (*terminate)(struct _CONN *);
 
     /* connection bytes stats */
