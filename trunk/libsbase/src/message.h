@@ -50,6 +50,7 @@ typedef struct _MESSAGE
     int             tid;
 }MESSAGE;
 int get_msg_no(int message_id);
+void message_handler(void *message_queue, void *logger);
 /* Initialize message */
 #define MESSAGE_INIT() ((MESSAGE *)calloc(1, sizeof(MESSAGE)))
 #define MESSAGE_CLEAN(ptr) {if(ptr){free(ptr);ptr = NULL;}}
