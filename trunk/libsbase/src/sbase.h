@@ -24,9 +24,13 @@ extern "C" {
 #define WORKING_PROC    0x00
 #define WORKING_THREAD  0x01
 /* connection status */
-#define CONN_STATUS_READY       1
-#define CONN_STATUS_CONNECTED   2
-#define CONN_STATUS_CLOSED      4
+#define CONN_STATUS_FREE        0x00
+#define CONN_STATUS_READY       0x01
+#define CONN_STATUS_WORKING     0x04
+#define CONN_STATUS_CLOSED      0x08
+/* client running status */
+#define C_STATE_FREE            0x00
+#define C_STATE_WORKING         0x02
 /* connection running state */
 #ifndef S_STATES
 #define S_STATE_READY           0x00
@@ -71,6 +75,7 @@ typedef void (*CALLBACK)(void *);
 typedef struct _SBASE
 {
     /* base option */
+    int connections_limit;
 	int usec_sleep;
     int running_status;
 	EVBASE *evbase;
@@ -86,13 +91,13 @@ typedef struct _SBASE
 
 	int (*setrlimit)(struct _SBASE *, char *, int , int);
 	
-	int(*set_log)(struct _SBASE *, char *);
-	int(*set_evlog)(struct _SBASE *, char *);
+	int  (*set_log)(struct _SBASE *, char *);
+	int  (*set_evlog)(struct _SBASE *, char *);
 	
-	int(*add_service)(struct _SBASE *, struct _SERVICE *);
-	int(*running)(struct _SBASE *, int );
-	int(*stop)(struct _SBASE *);
-	void(*clean)(struct _SBASE **);
+	int  (*add_service)(struct _SBASE *, struct _SERVICE *);
+	int  (*running)(struct _SBASE *, int );
+	void (*stop)(struct _SBASE *);
+	void (*clean)(struct _SBASE **);
 }SBASE;
 /* Initialize sbase */
 SBASE *sbase_init();
@@ -101,6 +106,7 @@ SBASE *sbase_init();
 typedef struct _SERVICE
 {
     /* global */
+	int usec_sleep;
     SBASE *sbase;
 
     /* working mode */
@@ -124,9 +130,9 @@ typedef struct _SERVICE
     /* service option */
     int service_type;
     char *service_name;
-    int (*set)(struct _SERVICE *service);
-    int (*run)(struct _SERVICE *service);
-    int (*stop)(struct _SERVICE *service);
+    int  (*set)(struct _SERVICE *service);
+    int  (*run)(struct _SERVICE *service);
+    void (*stop)(struct _SERVICE *service);
 
     /* event option */
     EVBASE *evbase;
@@ -137,14 +143,15 @@ typedef struct _SERVICE
 
     /* connections option */
     int connections_limit; 
+    int index_max;
     int running_connections;
     struct _CONN **connections;
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
             char *ip, int port, SESSION *session);
     struct _CONN *(*addconn)(struct _SERVICE *service, int fd, char *ip, int port, SESSION *);
     struct _CONN *(*getconn)(struct _SERVICE *service);
-    struct _CONN *(*pushconn)(struct _SERVICE *service, struct _CONN *conn);
-    struct _CONN *(*popconn)(struct _SERVICE *service, int);
+    int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
+    int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
     
     /* timer and logger */
     void *timer;
@@ -169,6 +176,8 @@ typedef struct _PROCTHREAD
 {
     /* global */
     SERVICE *service;
+    int running_status;
+	int usec_sleep;
     int index;
 
     /* message queue */
@@ -188,6 +197,7 @@ typedef struct _PROCTHREAD
 
     /* normal */
     void (*run)(void *arg);
+    void (*stop)(struct _PROCTHREAD *procthread);
     void (*terminate)(struct _PROCTHREAD *procthread);
     void (*clean)(struct _PROCTHREAD **procthread);
 }PROCTHREAD;
@@ -236,6 +246,7 @@ typedef struct _CONN
     void *message_queue;
 
     /* client transaction state */
+    int status;
     int c_state;
     int c_id;
     int (*start_cstate)(struct _CONN *);
