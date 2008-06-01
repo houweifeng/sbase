@@ -81,6 +81,9 @@ typedef struct _SBASE
 	void *logger;
     void *timer;
 
+    /* message queue for proc mode */
+    void *message_queue;
+
 	int (*setrlimit)(struct _SBASE *, char *, int , int);
 	
 	int(*set_log)(struct _SBASE *, char *);

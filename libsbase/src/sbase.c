@@ -5,6 +5,9 @@
 #include <errno.h>
 #include "sbase.h"
 #include "logger.h"
+#include "queue.h"
+#include "message.h"
+
 /* set resource limit */
 int sbase_setrlimit(SBASE *sb, char *name, int rlimit, int nset)
 {
@@ -66,11 +69,12 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
         if(service)
         {
             service->evbase = sbase->evbase;
+            service->message_queue = sbase->message_queue;
             if((sbase->services = (SERVICE **)realloc(sbase->services, 
                             (sbase->running_service + 1) * sizeof(SERVICE *))))
             {
                 sbase->services[sbase->running_service++] = service;
-                return service->set(service);
+                return ((service->set(service) == 0)? service->run(service) : -1);
             }
         }
 	}
@@ -86,22 +90,14 @@ int sbase_running(SBASE *sbase, int useconds)
 
 	if(sbase)
 	{
-        //running all service 
-        if(sbase->services)
-        {
-            for(i = 0; i < sbase->running_service; i++)
-            {
-                if((service = sbase->services[i]))
-                    service->run(service);
-            }
-        }
-
         //running sbase 
         sbase->running_status = 1;
 		while(sbase->running_status)
 		{
 			sbase->evbase->loop(sbase->evbase, 0, NULL);
 			usleep(sbase->usec_sleep);
+            if(QTOTAL(sbase->message_queue) > 0)
+                message_handler(sbase->message_queue, sbase->logger);
 		}
         ret = 0;
 	}
@@ -124,6 +120,10 @@ void sbase_clean(SBASE **psbase)
 {
     if(*psbase)
     {
+        if((*psbase)->services) free((*psbase)->services);
+        if((*psbase)->logger) LOGGER_CLEAN((*psbase)->services);
+        if((*psbase)->evbase) (*psbase)->evbase->clean(&((*psbase)->evbase));
+        if((*psbase)->message_queue) QUEUE_CLEAN((*psbase)->message_queue);
         free(*psbase);
         *psbase = NULL;
     }
@@ -135,6 +135,7 @@ SBASE *sbase_init()
 	SBASE *sbase = NULL;
 	if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
 	{
+        sbase->message_queue    = QUEUE_INIT();
 		sbase->evbase        	= evbase_init();
 		sbase->setrlimit     	= sbase_setrlimit;
 		sbase->set_log		    = sbase_set_log;
