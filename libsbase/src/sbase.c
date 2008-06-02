@@ -55,7 +55,7 @@ int sbase_set_evlog(SBASE *sbase, char *evlogfile)
     int ret = -1;
     if(sbase && evlogfile && sbase->evbase)
     {
-        LOGGER_INIT(sbase->evbase->logger, evlogfile);
+        sbase->evbase->set_logfile(sbase->evbase, evlogfile);
         ret = 0;
     }
     return ret;
@@ -99,15 +99,11 @@ int sbase_running(SBASE *sbase, int useconds)
 		while(sbase->running_status)
 		{
 			sbase->evbase->loop(sbase->evbase, 0, NULL);
-			usleep(sbase->usec_sleep);
             if(QTOTAL(sbase->message_queue) > 0)
             {
-                DEBUG_LOGGER(sbase->logger, "message_total:%d", QTOTAL(sbase->message_queue));
                 message_handler(sbase->message_queue, sbase->logger);
-                DEBUG_LOGGER(sbase->logger, "message_total:%d", QTOTAL(sbase->message_queue));
             }
-            /*
-            */
+			usleep(sbase->usec_sleep);
 		}
         ret = 0;
 	}

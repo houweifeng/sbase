@@ -3,13 +3,22 @@
 #include <errno.h>
 #include <sys/resource.h>
 #include "sbase.h"
-
+int sd_packet_handler(CONN *conn, CB_DATA *packet)
+{
+    return conn->push_chunk(conn, packet->data, packet->ndata);
+}
+int sd_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
+{
+    return 0;
+}
 int main()
 {
+    SESSION session = {0};
     SBASE *sbase = sbase_init();
 //    sbase->working_mode = 0;
   //  sbase->max_procthreads = 1;
     sbase->usec_sleep = 100;
+    sbase->connections_limit = 65536;
     //sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, SB_CONN_MAX);
     if(sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 10000) == -1)
     {
@@ -17,6 +26,7 @@ int main()
         _exit(-1);
     }
 	sbase->set_log(sbase, "/tmp/sd.log");
+	//sbase->set_evlog(sbase, "/tmp/evsd.log");
     SERVICE *service = NULL;
     if((service = service_init()))
     {
@@ -26,6 +36,12 @@ int main()
 	    service->service_name = "sd";
 	    service->ip = NULL;
 	    service->port = 1418;
+        session.packet_type = PACKET_DELIMITER;
+        session.packet_delimiter = "\r\n\r\n";
+        session.packet_delimiter_length = 4;
+        session.packet_handler = &sd_packet_handler;
+        session.buffer_size = 2097152;
+        service->set_session(service, &session);
     }
 /*
     service->max_procthreads = 2;

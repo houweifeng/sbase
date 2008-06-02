@@ -351,6 +351,17 @@ CONN *service_getconn(SERVICE *service)
     return conn;
 }
 
+/* set service session */
+int service_set_session(SERVICE *service, SESSION *session)
+{
+    if(service && session)
+    {
+        memcpy(&(service->session), session, sizeof(SESSION));
+        return 0;
+    }
+    return -1;
+}
+
 /* stop service */
 void service_stop(SERVICE *service)
 {
@@ -430,6 +441,7 @@ SERVICE *service_init()
         service->pushconn   = service_pushconn;
         service->popconn    = service_popconn;
         service->getconn    = service_getconn;
+        service->set_session = service_set_session;
         service->clean      = service_clean;
     }
     return service;

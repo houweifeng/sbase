@@ -91,6 +91,7 @@ typedef struct _MEMB
     if(ptr)                                                                                     \
     {                                                                                           \
         MB_LEFT(ptr) = MB_SIZE(ptr);                                                            \
+        MB_NDATA(ptr) = 0;                                                                      \
         MB_END(ptr)  = MB_DATA(ptr);                                                            \
     }                                                                                           \
 }
