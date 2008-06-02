@@ -70,4 +70,6 @@ int conn_set_session(CONN *conn, SESSION *session);
 
 /* clean connection */
 void conn_clean(CONN **pconn);
+/* event handler */
+void conn_event_handler(int event_fd, short event, void *arg);
 #endif

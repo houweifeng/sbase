@@ -42,9 +42,14 @@ extern "C" {
 #define S_STATE_DATA_HANDLING   0x10
 #define S_STATE_REQ             0x12
 #define S_STATE_CLOSE           0x64
-#define S_STATES    (S_STATE_READY & S_STATE_READ_CHUNK & S_STATE_WRITE_STATE \
-        S_STATE_PACKET_HANDLING & S_STATE_DATA_HANDLING & S_STATE_REQ & S_STATE_CLOSE )
+#define S_STATES    (S_STATE_READY | S_STATE_READ_CHUNK | S_STATE_WRITE_STATE \
+        S_STATE_PACKET_HANDLING | S_STATE_DATA_HANDLING | S_STATE_REQ | S_STATE_CLOSE )
 #endif
+/* packet type list*/
+#define PACKET_CUSTOMIZED       0x01
+#define PACKET_CERTAIN_LENGTH   0x02
+#define PACKET_DELIMITER        0x04
+#define PACKET_ALL (PACKET_CUSTOMIZED | PACKET_CERTAIN_LENGTH | PACKET_DELIMITER)
 struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
@@ -166,6 +171,7 @@ typedef struct _SERVICE
 
     /* service default session option */
     SESSION session;
+    int (*set_session)(struct _SERVICE *, SESSION *);
 
     /* clean */
     void (*clean)(struct _SERVICE **pservice);

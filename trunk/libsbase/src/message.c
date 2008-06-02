@@ -20,18 +20,19 @@ void message_handler(void *message_queue, void *logger)
     if(message_queue && QTOTAL(message_queue) > 0 
             && QUEUE_POP(message_queue, MESSAGE, &msg) == 0)
     {
+        DEBUG_LOGGER(logger, "Got message[%d] fd[%d] handler[%08x] parent[%08x]", msg.msg_id, msg.fd, msg.handler, msg.parent);
         if(!(msg.msg_id & MESSAGE_ALL)) 
         {
             FATAL_LOGGER(logger, "Invalid message[%d] handler[%08x] parent[%08x] fd[%d]",
                     msg.msg_id, msg.handler, msg.parent, msg.fd);
-            goto end;
+            goto next;
         }
-        conn = (CONN *)msg.handler;
-        pth = (PROCTHREAD *)msg.parent;
+        conn = (CONN *)(msg.handler);
+        pth = (PROCTHREAD *)(msg.parent);
         if(msg.msg_id == MESSAGE_STOP && pth)
         {
             pth->stop(pth);
-            goto end;
+            goto next;
         }
         //task and heartbeat
         if(msg.msg_id == MESSAGE_TASK || msg.msg_id == MESSAGE_HEARTBEAT)
@@ -40,13 +41,13 @@ void message_handler(void *message_queue, void *logger)
             {
                 ((CALLBACK)(msg.handler))(msg.arg);
             }
-            goto end;
+            goto next;
         }
         if(conn == NULL || pth == NULL || msg.fd != conn->fd || pth->service == NULL)
         {
-            ERROR_LOGGER(logger, "Invalid MESSAGE[%08x] msg_id[%d] fd[%d] handler[%08x] "
-                    "parent[%08x]", msg, msg.msg_id, msg.fd, conn, pth);
-            goto end;
+            ERROR_LOGGER(logger, "Invalid MESSAGE[%d] fd[%d] handler[%08x] "
+                    "parent[%08x]", msg.msg_id, msg.fd, conn, pth);
+            goto next;
         }
         DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%08x] "
                 "connection[%d] %s:%d", MESSAGE_DESC(msg.msg_id), pth->service->service_name,
@@ -79,7 +80,8 @@ void message_handler(void *message_queue, void *logger)
                 //conn->state_handler(conn);
                 break;
         }
+next: 
+        usleep(1);
     }
-end:
     return ;
 }

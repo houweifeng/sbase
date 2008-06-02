@@ -21,6 +21,8 @@ int service_pushconn(SERVICE *service, CONN *conn);
 int service_popconn(SERVICE *service, CONN *conn);
 /* get free connection */
 CONN *service_getconn(SERVICE *service);
+/* set service session */
+int service_set_session(SERVICE *service, SESSION *session);
 /* set log */
 int service_set_log(SERVICE *service, char *logfile);
 void service_event_handler(int, short, void *);
