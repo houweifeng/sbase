@@ -15,12 +15,9 @@ int main()
 {
     SESSION session = {0};
     SBASE *sbase = sbase_init();
-    sbase->ndaemons = 1;
-//    sbase->working_mode = 0;
-  //  sbase->max_procthreads = 1;
+    sbase->nchilds = 1;
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
-    //sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, SB_CONN_MAX);
     if(sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 10240) == -1)
     {
         fprintf(stderr, "set rlimit failed, %s\n", strerror(errno));
@@ -31,7 +28,7 @@ int main()
     SERVICE *service = NULL;
     if((service = service_init()))
     {
-        service->working_mode = 0;
+        service->working_mode = 1;
         service->nprocthreads = 4;
         service->ndaemons = 4;
 	    service->service_type = S_SERVICE;
