@@ -32,7 +32,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
     int op = 0;
     struct epoll_event ep_event = {0, {0}};
     int ev_flags = 0;
-    if(evbase && event && event->ev_fd > 0 )
+    if(evbase && event && event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
     {
         event->ev_base = evbase;
         /* Delete OLD garbage */
@@ -73,7 +73,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
     int op = 0;
     struct epoll_event ep_event = {0, {0}};
     int ev_flags = 0;
-    if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd )
+    if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd )
     {
         if(event->ev_flags & E_READ)
         {
@@ -103,7 +103,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
 int evepoll_del(EVBASE *evbase, EVENT *event)
 {
     struct epoll_event ep_event = {0, {0}};
-    if(evbase && event && event->ev_fd > 0 && event->ev_fd <= evbase->maxfd)
+    if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
         ep_event.data.fd = event->ev_fd;
         ep_event.events = 0;
