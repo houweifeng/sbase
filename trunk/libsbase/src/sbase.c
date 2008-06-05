@@ -120,8 +120,8 @@ int sbase_running(SBASE *sbase, int useconds)
             return 0;
         }
 running:
-        //reset evbase
-        sbase->evbase->reset(sbase->evbase);
+        //evbase 
+        sbase->evbase           = evbase_init();
         //running services
         if(sbase->services)
         {
@@ -188,7 +188,6 @@ SBASE *sbase_init()
 	if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
 	{
         TIMER_INIT(sbase->timer);
-        sbase->evbase           = evbase_init();
         sbase->message_queue    = QUEUE_INIT();
 		sbase->setrlimit     	= sbase_setrlimit;
 		sbase->set_log		    = sbase_set_log;

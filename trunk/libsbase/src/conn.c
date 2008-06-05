@@ -110,6 +110,7 @@ int conn_set(CONN *conn)
             flag = E_READ|E_PERSIST;
             if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
             conn->event->set(conn->event, conn->fd, flag, (void *)conn, &conn_event_handler);
+            DEBUG_LOGGER(conn->logger, "%s:%d via %d", conn->ip, conn->port, conn->fd);
             conn->evbase->add(conn->evbase, conn->event);
             return 0;
         }

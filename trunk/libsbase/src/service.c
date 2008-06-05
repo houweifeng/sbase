@@ -341,7 +341,7 @@ int service_popconn(SERVICE *service, CONN *conn)
             if(service->index_max == conn->index) 
                 service->index_max--;
             ret = 0;
-            DEBUG_LOGGER(service->logger, "Removed new connection[%s:%d] via %d "
+            DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] via %d "
                     "index[%d] of total %d", conn->ip, conn->port, conn->fd, 
                     conn->index, service->running_connections);
         }

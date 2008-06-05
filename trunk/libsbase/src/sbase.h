@@ -84,7 +84,6 @@ typedef void (CALLBACK)(void *);
 typedef struct _SBASE
 {
     /* base option */
-    int working_mode;
     int ndaemons;
     int connections_limit;
 	int usec_sleep;
