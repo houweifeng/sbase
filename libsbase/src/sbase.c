@@ -95,7 +95,7 @@ int sbase_running(SBASE *sbase, int useconds)
 
 	if(sbase)
     {
-        if(sbase->nchilds > SB_NDAEMONS_MAX) sbase->ndaemons = SB_NDAEMONS_MAX;
+        if(sbase->nchilds > SB_NDAEMONS_MAX) sbase->nchilds = SB_NDAEMONS_MAX;
         //nproc
         if(sbase->nchilds > 0)
         {
