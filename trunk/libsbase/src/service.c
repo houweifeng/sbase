@@ -66,6 +66,9 @@ int service_run(SERVICE *service)
 {
     int ret = -1;
     int i = 0;
+#ifdef HAVE_PTHREAD
+    pthread_t procthread_id ;
+#endif
 
     if(service)
     {

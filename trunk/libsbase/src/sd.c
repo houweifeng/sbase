@@ -19,7 +19,7 @@ int main()
     sbase->ndaemons = 1;
 //    sbase->working_mode = 0;
   //  sbase->max_procthreads = 1;
-    sbase->usec_sleep = 100;
+    sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
     //sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, SB_CONN_MAX);
     if(sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 10000) == -1)
