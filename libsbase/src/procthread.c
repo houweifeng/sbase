@@ -91,11 +91,17 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && conn)
     {
+            DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
+                    conn->ip, conn->port, conn->fd);
         conn->message_queue = pth->message_queue;
         conn->parent = pth;
         if(conn->set(conn) == 0)
         {
+            DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
+                    conn->ip, conn->port, conn->fd);
             ret = pth->service->pushconn(pth->service, conn);
+            DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
+                    conn->ip, conn->port, conn->fd);
         }
     }
     return ret;

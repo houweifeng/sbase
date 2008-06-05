@@ -61,14 +61,14 @@ typedef struct _LOGGER
 #define THREADID() (0)
 #endif
 #define PL(ptr) ((LOGGER *)ptr)
-#define PLF(ptr) ((LOGGER *)ptr)->file
-#define PLP(ptr) ((LOGGER *)ptr)->p
-#define PLTV(ptr) ((LOGGER *)ptr)->tv
-#define PLTP(ptr) ((LOGGER *)ptr)->timep
-#define PLID(ptr) ((LOGGER *)ptr)->id
-#define PLFD(ptr) ((LOGGER *)ptr)->fd
-#define PLB(ptr) ((LOGGER *)ptr)->buf
-#define PLPS(ptr) ((LOGGER *)ptr)->ps
+#define PLF(ptr) (PL(ptr)->file)
+#define PLP(ptr) (PL(ptr)->p)
+#define PLTV(ptr) (PL(ptr)->tv)
+#define PLTP(ptr) (PL(ptr)->timep)
+#define PLID(ptr) (PL(ptr)->id)
+#define PLFD(ptr) (PL(ptr)->fd)
+#define PLB(ptr) (PL(ptr)->buf)
+#define PLPS(ptr) (PL(ptr)->ps)
 #define LOGGER_INIT(ptr, lp)                                                        \
 {                                                                                   \
     if((ptr = (LOGGER *)calloc(1, sizeof(LOGGER))))                                 \
