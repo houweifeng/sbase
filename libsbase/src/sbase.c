@@ -149,7 +149,7 @@ SBASE *sbase_init()
 		sbase->running 		    = sbase_running;
 		sbase->stop 		    = sbase_stop;
 		sbase->clean 		    = sbase_clean;
-        sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
+        //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
 	}
 	return sbase;
 }

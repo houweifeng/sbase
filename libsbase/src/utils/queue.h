@@ -33,6 +33,7 @@ typedef struct _QUEUE
 #define QCOUNT(ptr) (Q(ptr)->count)
 #define QNCOUNT(ptr) (Q(ptr)->newcount)
 #define QUEUE_INIT() ((calloc(1, sizeof(QUEUE)))) 
+//                fprintf(stdout, "head:%d tail:%d\n", QHEAD(ptr), QTAIL(ptr));
 #define QUEUE_RESIZE(ptr, type)                                                             \
 {                                                                                           \
     if(QLEFT(ptr) <= 0)                                                                     \
@@ -43,7 +44,7 @@ typedef struct _QUEUE
             if(QTAB(ptr) && QCOUNT(ptr) > 0)                                                \
             {                                                                               \
                 QPOS(ptr) = 0;                                                              \
-                while(QHEAD(ptr) != QTAIL(ptr))                                             \
+                while(QPOS(ptr) < QCOUNT(ptr))                                              \
                 {                                                                           \
                     if(QHEAD(ptr) == QCOUNT(ptr)) QHEAD(ptr) = 0;                           \
                     memcpy(&(QNTI(ptr, type, QPOS(ptr))),                                   \

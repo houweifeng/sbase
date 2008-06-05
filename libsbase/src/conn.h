@@ -68,6 +68,9 @@ int conn_push_file(CONN *conn, char *file, long long offset, long long size);
 /* set session options */
 int conn_set_session(CONN *conn, SESSION *session);
 
+/* transaction handler */
+int conn_transaction_handler(CONN *conn, int tid);
+
 /* clean connection */
 void conn_clean(CONN **pconn);
 /* event handler */

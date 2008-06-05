@@ -76,9 +76,10 @@ typedef struct _SESSION
     int (*data_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache);
     int (*oob_handler)(struct _CONN *, CB_DATA *oob);
+    int (*transaction_handler)(struct _CONN *, int tid);
 }SESSION;
 
-typedef void (*CALLBACK)(void *);
+typedef void (CALLBACK)(void *);
 typedef struct _SBASE
 {
     /* base option */
@@ -166,7 +167,10 @@ typedef struct _SERVICE
     int (*set_log)(struct _SERVICE *service, char *logfile);
 
     /* transaction and task */
-    
+    int ntask;
+    int (*newtask)(struct _SERVICE *, CALLBACK *, void *arg); 
+    int (*newtransaction)(struct _SERVICE *, struct _CONN *, int tid);
+
     /* async dns */
 
     /* service default session option */
@@ -202,6 +206,10 @@ typedef struct _PROCTHREAD
 
     /* logger */
     void *logger;
+
+    /* task and transaction */
+    int (*newtask)(struct _PROCTHREAD *, CALLBACK *, void *arg); 
+    int (*newtransaction)(struct _PROCTHREAD *, struct _CONN *, int tid);
 
     /* normal */
     void (*run)(void *arg);
@@ -279,6 +287,7 @@ typedef struct _CONN
     int (*packet_handler)(struct _CONN *);
     int (*oob_handler)(struct _CONN *);
     int (*data_handler)(struct _CONN *);
+    int (*transaction_handler)(struct _CONN *, int );
     int (*save_cache)(struct _CONN *, void *data, int size);
 
     /* chunk */
