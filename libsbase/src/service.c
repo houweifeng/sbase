@@ -77,72 +77,81 @@ int service_run(SERVICE *service)
                     (void *)service, (void *)&service_event_handler);
             ret = service->evbase->add(service->evbase, service->event);
         }
+        if(service->working_mode == WORKING_THREAD)
+            goto running_threads;
+        else 
+            goto running_proc;
+        return ret;
+running_proc:
         //procthreads setting 
-        if(service->working_mode == WORKING_PROC)
+        if((service->daemon = procthread_init()))
         {
-            if((service->daemon = procthread_init()))
+            PROCTHREAD_SET(service, service->daemon);
+            if(service->daemon->message_queue)
             {
-                PROCTHREAD_SET(service, service->daemon);
-                if(service->daemon->message_queue)
-                {
-                    QUEUE_CLEAN(service->daemon->message_queue);
-                    service->daemon->message_queue = service->message_queue;
-                }
-                
-                DEBUG_LOGGER(service->logger, "sbase->q[%08x] service->q[%08x] daemon->q[%08x]",
-                        service->sbase->message_queue, service->message_queue, service->daemon->message_queue);
-                service->daemon->service = service;
-                ret = 0;
+                QUEUE_CLEAN(service->daemon->message_queue);
+                service->daemon->message_queue = service->message_queue;
             }
-            else
+
+            DEBUG_LOGGER(service->logger, "sbase->q[%08x] service->q[%08x] daemon->q[%08x]",
+                    service->sbase->message_queue, service->message_queue, 
+                    service->daemon->message_queue);
+            service->daemon->service = service;
+            ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
+                    service->working_mode, strerror(errno));
+        }
+        return ret;
+running_threads:
+#ifdef HAVE_PTHREAD
+        if(service->nprocthreads > SB_NDAEMONS_MAX) service->nprocthreads = SB_NDAEMONS_MAX;
+        if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)calloc(
+                        service->nprocthreads, sizeof(PROCTHREAD *))))
+        {
+            for(i = 0; i < service->nprocthreads; i++)
             {
-                FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
-                        service->working_mode, strerror(errno));
+                if((service->procthreads[i] = procthread_init()))
+                {
+                    PROCTHREAD_SET(service, service->procthreads[i]);
+                }
+                else
+                {
+                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
+                            strerror(errno));
+                    exit(EXIT_FAILURE);
+                }
+                NEW_PROCTHREAD("procthreads", i, procthread_id, 
+                        service->procthreads[i], service->logger);
             }
         }
-        else if(service->working_mode == WORKING_THREAD)
+        if(service->ndaemons > SB_NDAEMONS_MAX) service->ndaemons = SB_NDAEMONS_MAX;
+        if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)calloc(
+                        service->ndaemons, sizeof(PROCTHREAD *))))
         {
-            if(service->nprocthreads > SB_NDAEMONS_MAX) service->nprocthreads = SB_NDAEMONS_MAX;
-            if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)calloc(
-                            service->nprocthreads, sizeof(PROCTHREAD *))))
+            for(i = 0; i < service->ndaemons; i++)
             {
-                for(i = 0; i < service->nprocthreads; i++)
+                if((service->daemons[i] = procthread_init()))
                 {
-                    if((service->procthreads[i] = procthread_init()))
-                    {
-                        PROCTHREAD_SET(service, service->procthreads[i]);
-                    }
-                    else
-                    {
-                        FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
-                                strerror(errno));
-                        exit(EXIT_FAILURE);
-                    }
-                    NEW_PROCTHREAD("procthreads", i, procthread_id, 
-                            service->procthreads[i], service->logger);
+                    PROCTHREAD_SET(service, service->daemons[i]);
                 }
-            }
-            if(service->ndaemons > SB_NDAEMONS_MAX) service->ndaemons = SB_NDAEMONS_MAX;
-            if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)calloc(
-                            service->ndaemons, sizeof(PROCTHREAD *))))
-            {
-                for(i = 0; i < service->ndaemons; i++)
+                else
                 {
-                    if((service->daemons[i] = procthread_init()))
-                    {
-                        PROCTHREAD_SET(service, service->daemons[i]);
-                    }
-                    else
-                    {
-                        FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
-                                strerror(errno));
-                        exit(EXIT_FAILURE);
-                    }
-                    NEW_PROCTHREAD("daemons", i, procthread_id, 
-                            service->daemons[i], service->logger);
+                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
+                            strerror(errno));
+                    exit(EXIT_FAILURE);
                 }
+                NEW_PROCTHREAD("daemons", i, procthread_id, 
+                        service->daemons[i], service->logger);
             }
         }
+        return ret;
+#else
+        service->working_mode = WORKING_PROC;
+        goto running_proc;
+#endif
         return ret;
     }
     return ret;

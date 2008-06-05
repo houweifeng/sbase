@@ -16,7 +16,7 @@ int main()
     SESSION session = {0};
     SBASE *sbase = sbase_init();
     sbase->working_mode = 0;
-    sbase->ndaemons = 8;
+    sbase->ndaemons = 1;
 //    sbase->working_mode = 0;
   //  sbase->max_procthreads = 1;
     sbase->usec_sleep = 100;
@@ -32,6 +32,7 @@ int main()
     SERVICE *service = NULL;
     if((service = service_init()))
     {
+        service->working_mode = 1;
         service->nprocthreads = 4;
         service->ndaemons = 4;
 	    service->service_type = S_SERVICE;
