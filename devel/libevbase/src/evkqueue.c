@@ -12,25 +12,36 @@
 /* Initialize evkqueue  */
 int evkqueue_init(EVBASE *evbase)
 {
-	int max_fd = EV_MAX_FD;
-	struct rlimit rlim;
-	if(evbase)
-	{
-		if((evbase->efd = kqueue()) == -1) 
-			return -1;
-		if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
-				&& rlim.rlim_cur != RLIM_INFINITY )
-		{
-			max_fd = rlim.rlim_cur;
-		}
-		if((evbase->evs		= calloc(max_fd, sizeof(struct kevent))) == NULL) 
+    int max_fd = EV_MAX_FD;
+    struct rlimit rlim;
+    struct kevent event = {0}, kev = {0};
+
+    if(evbase)
+    {
+        if((evbase->efd = kqueue()) == -1) 
+            return -1;
+        EV_SET(&kev, -1, EVFILT_READ, EV_ADD, 0, 0, NULL);
+        if(kevent(evbase->efd, &kev, 1, &event, 1, NULL) != 1
+                || event.ident != -1 || event.flags != EV_ERROR)
+        {
+            close(evbase->efd);
+            fprintf(stderr, "kevent test failed, %s\n", strerror(errno));
+            return -1;
+        }
+
+        if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
+                && rlim.rlim_cur != RLIM_INFINITY )
+        {
+            max_fd = rlim.rlim_cur;
+        }
+        if((evbase->evs		= calloc(max_fd, sizeof(struct kevent))) == NULL) 
             return -1;
         if((evbase->evlist  = (EVENT **)calloc(max_fd, sizeof(EVENT *))) == NULL)
             return -1;
-		evbase->allowed = max_fd;
-		return 0;
-	}
-	return -1;
+        evbase->allowed = max_fd;
+        return 0;
+    }
+    return -1;
 }
 
 /* Add new event to evbase */
@@ -45,7 +56,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             memset(&kqev, 0, sizeof(struct kevent));
             kqev.ident  = event->ev_fd;
             kqev.filter = EVFILT_READ;
-            kqev.flags  = EV_ADD|EV_CLEAR;
+            kqev.flags  = EV_ADD;
             kqev.udata  = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
@@ -56,7 +67,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             memset(&kqev, 0, sizeof(struct kevent));
             kqev.ident     = event->ev_fd;
             kqev.filter    = EVFILT_WRITE;
-            kqev.flags     = EV_ADD|EV_CLEAR;
+            kqev.flags     = EV_ADD;
             kqev.udata     = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
@@ -89,7 +100,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         kqev.udata      = (void *)event;
         if(add_ev_flags & E_READ)
         {
-            kqev.flags      = EV_ADD|EV_CLEAR;
+            kqev.flags      = EV_ADD;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             kqev.filter     = EVFILT_READ;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
@@ -108,7 +119,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         {
             kqev.flags      = EV_ADD;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
-            kqev.filter     = EVFILT_WRITE|EV_CLEAR;
+            kqev.filter     = EVFILT_WRITE;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
                 ERROR_LOGGER(evbase->logger, "adding EVFILT_WRITE flags[%d] on fd[%d] failed, %s", 
@@ -118,7 +129,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             else
             {
                 DEBUG_LOGGER(evbase->logger, "added EVFILT_WRITE flags[%d] on fd[%d]",
-                    kqev.flags, kqev.ident);
+                        kqev.flags, kqev.ident);
             }
         }
         if(del_ev_flags & E_READ)
@@ -134,7 +145,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             else
             {
                 DEBUG_LOGGER(evbase->logger, "deleted EVFILT_READ flags[%d] on %d",
-                    kqev.flags, kqev.ident);
+                        kqev.flags, kqev.ident);
             }
         }
         if(del_ev_flags & E_WRITE)
@@ -150,7 +161,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             else
             {
                 DEBUG_LOGGER(evbase->logger, "deleted EVFILT_WRITE flags[%d] on %d",
-                    kqev.flags, kqev.ident);
+                        kqev.flags, kqev.ident);
             }
         }
         evbase->evlist[event->ev_fd] = event;
