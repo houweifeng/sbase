@@ -14,17 +14,17 @@ int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
 {
 }
 
-void lechod_packet_handler(CONN *conn, CB_DATA *packet)
+int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 {
 	if(conn && conn->push_chunk)
 		conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
 }
 
-void lechod_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
+int lechod_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
 }
 
-void lechod_oob_handler(CONN *conn, CB_DATA *oob)
+int lechod_oob_handler(CONN *conn, CB_DATA *oob)
 {
 }
 
@@ -42,7 +42,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	/* SBASE */
 	sbase->nchilds = iniparser_getint(dict, "SBASE:nchilds", 0);
 	sbase->connections_limit = iniparser_getint(dict, "SBASE:connections_limit", SB_CONN_MAX);
-	sbase->sleep_usec = iniparser_getint(dict, "SBASE:sleep_usec", SB_SLEEP_USEC);
+	sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
 	sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
 	sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
 	/* LECHOD */
@@ -57,13 +57,13 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->port = iniparser_getint(dict, "LECHOD:service_port", 80);
 	service->working_mode = iniparser_getint(dict, "LECHOD:working_mode", WORKING_PROC);
 	service->service_type = iniparser_getint(dict, "LECHOD:service_type", C_SERVICE);
-	service->name = iniparser_getstr(dict, "LECHOD:service_name");
+	service->service_name = iniparser_getstr(dict, "LECHOD:service_name");
 	service->nprocthreads = iniparser_getint(dict, "LECHOD:nprocthreads", 1);
 	service->ndaemons = iniparser_getint(dict, "LECHOD:ndaemons", 0);
 	service->set_log(service, iniparser_getstr(dict, "LECHOD:logfile"));
-    service->session.packet_type = iniparser_getint(dict, "LECHOD:packet_type",PACKET_DELIMITER);
+    	service->session.packet_type = iniparser_getint(dict, "LECHOD:packet_type",PACKET_DELIMITER);
 	service->session.packet_delimiter = iniparser_getstr(dict, "LECHOD:packet_delimiter");
-	p = s = service->packet_delimiter;
+	p = s = service->session.packet_delimiter;
 	while(*p != 0 )
 	{
 		if(*p == '\\' && *(p+1) == 'n')
@@ -80,7 +80,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 			*s++ = *p++;
 	}
 	*s++ = 0;
-	service->session.packet_delimiter_length = strlen(service->packet_delimiter);
+	service->session.packet_delimiter_length = strlen(service->session.packet_delimiter);
 	service->session.buffer_size = iniparser_getint(dict, "LECHOD:buffer_size", SB_BUF_SIZE);
 	service->session.packet_reader = &lechod_packet_reader;
 	service->session.packet_handler = &lechod_packet_handler;

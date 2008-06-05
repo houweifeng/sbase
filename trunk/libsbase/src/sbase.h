@@ -19,7 +19,7 @@ extern "C" {
 #define SB_IP_MAX      16
 #define SB_NDAEMONS_MAX 64
 #define SB_BUF_SIZE     65536
-#define SB_SLEEP_USEC   1000
+#define SB_USEC_SLEEP   1000
 /* service type */
 #define S_SERVICE      0x00
 #define C_SERVICE      0x01
