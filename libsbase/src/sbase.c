@@ -95,11 +95,11 @@ int sbase_running(SBASE *sbase, int useconds)
 
 	if(sbase)
     {
-        if(sbase->ndaemons > SB_NDAEMONS_MAX) sbase->ndaemons = SB_NDAEMONS_MAX;
+        if(sbase->nchilds > SB_NDAEMONS_MAX) sbase->ndaemons = SB_NDAEMONS_MAX;
         //nproc
-        if(sbase->ndaemons > 0)
+        if(sbase->nchilds > 0)
         {
-            for(i = 0; i < sbase->ndaemons; i++)
+            for(i = 0; i < sbase->nchilds; i++)
             {
                 pid = fork();
                 switch (pid)
