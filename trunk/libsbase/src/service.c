@@ -362,6 +362,61 @@ int service_set_session(SERVICE *service, SESSION *session)
     return -1;
 }
 
+/* new task */
+int service_newtask(SERVICE *service, CALLBACK *task_handler, void *arg)
+{
+    PROCTHREAD *pth = NULL;
+    int index = 0, ret = -1;
+
+    if(service)
+    {
+        /* Add task for procthread */
+        if(service->working_mode == WORKING_PROC && service->daemon)
+            pth = service->daemon;
+        else if(service->working_mode == WORKING_THREAD && service->daemons)
+        {
+            index = service->ntask % service->ndaemons;
+            pth = service->daemons[index];
+        }
+        if(pth)
+        {
+            pth->newtask(pth, task_handler, arg);
+            service->ntask++;
+            ret = 0;
+        }
+    }
+    return ret;
+}
+
+/* add new transaction */
+int service_newtransaction(SERVICE *service, CONN *conn, int tid)
+{
+    PROCTHREAD *pth = NULL;
+    int index = 0, ret = -1;
+
+    if(service && conn && conn->fd > 0)
+    {
+        /* Add transaction for procthread */
+        if(service->working_mode == WORKING_PROC && service->daemon)
+        {
+            DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthread[%d]",
+                    tid, conn->ip, conn->port, getpid());
+            return service->daemon->newtransaction(service->daemon, conn, tid);
+        }
+        /* Add transaction to procthread pool */
+        if(service->working_mode == WORKING_THREAD && service->procthreads)
+        {
+            index = conn->fd % service->nprocthreads;
+            pth = service->procthreads[index];
+            DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthreads[%d]",
+                    tid, conn->ip, conn->port, index);
+            if(pth && pth->newtransaction)
+                return pth->newtransaction(pth, conn, tid);
+        }
+    }
+    return ret;
+}
+
 /* stop service */
 void service_stop(SERVICE *service)
 {
@@ -421,6 +476,7 @@ void service_clean(SERVICE **pservice)
     if(*pservice)
     {
         if((*pservice)->connections) free((*pservice)->connections);
+        if((*pservice)->logger) LOGGER_CLEAN((*pservice)->logger);
         free(*pservice);
         *pservice = NULL;
     }
@@ -432,17 +488,19 @@ SERVICE *service_init()
     SERVICE *service = NULL;
     if((service = (SERVICE *)calloc(1, sizeof(SERVICE))))
     {
-        service->set        = service_set;
-        service->run        = service_run;
-        service->set_log    = service_set_log;
-        service->stop       = service_stop;
-        service->newconn    = service_newconn;
-        service->addconn    = service_addconn;
-        service->pushconn   = service_pushconn;
-        service->popconn    = service_popconn;
-        service->getconn    = service_getconn;
-        service->set_session = service_set_session;
-        service->clean      = service_clean;
+        service->set                = service_set;
+        service->run                = service_run;
+        service->set_log            = service_set_log;
+        service->stop               = service_stop;
+        service->newconn            = service_newconn;
+        service->addconn            = service_addconn;
+        service->pushconn           = service_pushconn;
+        service->popconn            = service_popconn;
+        service->getconn            = service_getconn;
+        service->set_session        = service_set_session;
+        service->newtask            = service_newtask;
+        service->newtransaction     = service_newtransaction;
+        service->clean              = service_clean;
     }
     return service;
 }

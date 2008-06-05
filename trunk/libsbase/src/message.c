@@ -16,11 +16,11 @@ void message_handler(void *message_queue, void *logger)
     PROCTHREAD *pth = NULL;
     CONN *conn = NULL;
     MESSAGE msg = {0};
+    int fd = -1;
 
     if(message_queue && QTOTAL(message_queue) > 0 
             && QUEUE_POP(message_queue, MESSAGE, &msg) == 0)
     {
-        DEBUG_LOGGER(logger, "Got message[%d] fd[%d] handler[%08x] parent[%08x]", msg.msg_id, msg.fd, msg.handler, msg.parent);
         if(!(msg.msg_id & MESSAGE_ALL)) 
         {
             FATAL_LOGGER(logger, "Invalid message[%d] handler[%08x] parent[%08x] fd[%d]",
@@ -39,14 +39,15 @@ void message_handler(void *message_queue, void *logger)
         {
             if(msg.handler)
             {
-                ((CALLBACK)(msg.handler))(msg.arg);
+                ((CALLBACK *)(msg.handler))(msg.arg);
             }
             goto next;
         }
+        if(conn) fd = conn->fd;
         if(conn == NULL || pth == NULL || msg.fd != conn->fd || pth->service == NULL)
         {
-            ERROR_LOGGER(logger, "Invalid MESSAGE[%d] fd[%d] handler[%08x] "
-                    "parent[%08x]", msg.msg_id, msg.fd, conn, pth);
+            ERROR_LOGGER(logger, "Invalid MESSAGE[%d] fd[%d] conn->fd[%d] handler[%08x] "
+                    "parent[%08x] service[%08x]", msg.msg_id, msg.fd, fd, conn, pth, pth->service);
             goto next;
         }
         DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%08x] "
@@ -74,7 +75,7 @@ void message_handler(void *message_queue, void *logger)
                 conn->data_handler(conn);
                 break;
             case MESSAGE_TRANSACTION :
-                //conn->transaction_handler(conn, msg.tid);
+                conn->transaction_handler(conn, msg.tid);
                 break;
             case MESSAGE_STATE :
                 //conn->state_handler(conn);

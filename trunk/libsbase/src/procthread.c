@@ -165,6 +165,8 @@ PROCTHREAD *procthread_init()
         pth->run                     = procthread_run;
         pth->addconn                 = procthread_addconn;
         pth->add_connection          = procthread_add_connection;
+        pth->newtask                 = procthread_newtask;
+        pth->newtransaction          = procthread_newtransaction;
         pth->terminate_connection    = procthread_terminate_connection;
         pth->stop                    = procthread_stop;
         pth->terminate               = procthread_terminate;

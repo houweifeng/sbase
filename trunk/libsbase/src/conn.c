@@ -82,17 +82,17 @@ void conn_event_handler(int event_fd, short event, void *arg)
             }
             if(event & E_READ)
             {
-                DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
+                //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
                 conn->read_handler(conn);
                 //conn->push_message(conn, MESSAGE_INPUT);
-                DEBUG_LOGGER(conn->logger, "E_READ:%d on %d OVER ", E_READ, event_fd);
+                //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d OVER ", E_READ, event_fd);
             }
             if(event & E_WRITE)
             {
                 //conn->push_message(conn, MESSAGE_OUTPUT);
-                 DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
+                //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
                  conn->write_handler(conn);
-                 DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
+                //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
         }
     }
@@ -259,7 +259,7 @@ int conn_read_handler(CONN *conn)
                     n, conn->recv_oob_total, conn->ip, conn->port, conn->fd);
             conn->oob_handler(conn);
             /* CONN TIMER sample */
-            //TIMER_SAMPLE(conn->timer);
+            TIMER_SAMPLE(conn->timer);
             return (ret = 0);
         }
         /* Receive to chunk with chunk_read_state before reading to buffer */
@@ -612,6 +612,23 @@ int conn_set_session(CONN *conn, SESSION *session)
     return ret;
 }
 
+/* transaction handler */
+int conn_transaction_handler(CONN *conn, int tid)
+{
+
+    int ret = -1;
+    CONN_CHECK_RET(conn, ret);
+
+    if(conn)
+    {
+        if(conn && conn->session.transaction_handler)
+        {
+            ret = conn->session.transaction_handler(conn, tid);
+        }
+    }
+    return ret;
+}
+
 /* clean connection */
 void conn_clean(CONN **pconn)
 {
@@ -635,6 +652,7 @@ void conn_clean(CONN **pconn)
         if((*pconn)->send_queue)
         {
             while(QUEUE_POP((*pconn)->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
+            QUEUE_CLEAN((*pconn)->send_queue);
         }
         free(*pconn);
         (*pconn) = NULL;
@@ -674,6 +692,7 @@ CONN *conn_init(int fd, char *ip, int port)
         conn->packet_handler        = conn_packet_handler;
         conn->oob_handler           = conn_oob_handler;
         conn->data_handler          = conn_data_handler;
+        conn->transaction_handler   = conn_transaction_handler;
         conn->save_cache            = conn_save_cache;
         conn->chunk_reader          = conn_chunk_reader;
         conn->recv_chunk            = conn_recv_chunk;

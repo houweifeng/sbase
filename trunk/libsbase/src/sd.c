@@ -26,7 +26,7 @@ int main()
         _exit(-1);
     }
 	sbase->set_log(sbase, "/tmp/sd.log");
-	//sbase->set_evlog(sbase, "/tmp/evsd.log");
+	sbase->set_evlog(sbase, "/tmp/evsd.log");
     SERVICE *service = NULL;
     if((service = service_init()))
     {

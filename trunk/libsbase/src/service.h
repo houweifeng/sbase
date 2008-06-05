@@ -23,6 +23,8 @@ int service_popconn(SERVICE *service, CONN *conn);
 CONN *service_getconn(SERVICE *service);
 /* set service session */
 int service_set_session(SERVICE *service, SESSION *session);
+/* new task */
+int service_newtask(SERVICE *service, CALLBACK *callback, void *arg);
 /* set log */
 int service_set_log(SERVICE *service, char *logfile);
 void service_event_handler(int, short, void *);
