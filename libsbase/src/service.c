@@ -24,14 +24,11 @@ int service_set(SERVICE *service)
                 && fcntl(service->fd, F_SETFL, O_NONBLOCK) == 0
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
                 && bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa)) == 0
-                && listen(service->fd, service->backlog) == 0 
-                && service->evbase && (service->event = ev_init()))
+                && listen(service->fd, service->backlog) == 0) 
             {
-                service->event->set(service->event, service->fd, E_READ|E_PERSIST,
-                        (void *)service, (void *)&service_event_handler);
-                ret = service->evbase->add(service->evbase, service->event);
+                ret = 0;
             }
-        
+                  
         }else if(service->service_type == C_SERVICE)
         {
             ret = 0;
@@ -72,6 +69,15 @@ int service_run(SERVICE *service)
 
     if(service)
     {
+        //evbase setting 
+        if(service->service_type == S_SERVICE 
+                && service->evbase && (service->event = ev_init()))
+        {
+            service->event->set(service->event, service->fd, E_READ|E_PERSIST,
+                    (void *)service, (void *)&service_event_handler);
+            ret = service->evbase->add(service->evbase, service->event);
+        }
+        //procthreads setting 
         if(service->working_mode == WORKING_PROC)
         {
             if((service->daemon = procthread_init()))
@@ -96,6 +102,7 @@ int service_run(SERVICE *service)
         }
         else if(service->working_mode == WORKING_THREAD)
         {
+            if(service->nprocthreads > SB_NDAEMONS_MAX) service->nprocthreads = SB_NDAEMONS_MAX;
             if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)calloc(
                             service->nprocthreads, sizeof(PROCTHREAD *))))
             {
@@ -115,6 +122,7 @@ int service_run(SERVICE *service)
                             service->procthreads[i], service->logger);
                 }
             }
+            if(service->ndaemons > SB_NDAEMONS_MAX) service->ndaemons = SB_NDAEMONS_MAX;
             if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)calloc(
                             service->ndaemons, sizeof(PROCTHREAD *))))
             {

@@ -17,6 +17,7 @@ extern "C" {
 #endif
 #define SB_CONN_MAX    65536
 #define SB_IP_MAX      16
+#define SB_NDAEMONS_MAX 64
 /* service type */
 #define S_SERVICE      0x00
 #define C_SERVICE      0x01
@@ -83,12 +84,14 @@ typedef void (CALLBACK)(void *);
 typedef struct _SBASE
 {
     /* base option */
+    int working_mode;
+    int ndaemons;
     int connections_limit;
 	int usec_sleep;
     int running_status;
 	EVBASE *evbase;
     struct _SERVICE **services;
-    int running_service;
+    int running_services;
 
 	/* timer && logger */
 	void *logger;
@@ -103,7 +106,7 @@ typedef struct _SBASE
 	int  (*set_evlog)(struct _SBASE *, char *);
 	
 	int  (*add_service)(struct _SBASE *, struct _SERVICE *);
-	int  (*running)(struct _SBASE *, int );
+    int  (*running)(struct _SBASE *, int time_usec);
 	void (*stop)(struct _SBASE *);
 	void (*clean)(struct _SBASE **);
 }SBASE;

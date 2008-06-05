@@ -25,6 +25,8 @@ CONN *service_getconn(SERVICE *service);
 int service_set_session(SERVICE *service, SESSION *session);
 /* new task */
 int service_newtask(SERVICE *service, CALLBACK *callback, void *arg);
+/* add new transaction */
+int service_newtransaction(SERVICE *service, CONN *conn, int tid);
 /* set log */
 int service_set_log(SERVICE *service, char *logfile);
 void service_event_handler(int, short, void *);
