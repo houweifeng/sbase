@@ -14,7 +14,11 @@
 #include "evbase.h"
 #include "logger.h"
 #include "log.h"
+#ifdef HAVE_EVKQUEUE
+#define CONN_MAX 10240
+#else
 #define CONN_MAX 65536
+#endif
 #define EV_BUF_SIZE 1024
 static int max_connections = 0;
 static int connections = 0;
