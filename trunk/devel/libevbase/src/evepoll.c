@@ -191,31 +191,14 @@ void evepoll_reset(EVBASE *evbase)
 {
     if(evbase)
     {
-        if(evbase->ev_fds)
-        {
-            free(evbase->ev_fds);
-            evbase->ev_fds = NULL;
-        }
-        if(evbase->ev_read_fds)
-        {
-            free(evbase->ev_read_fds);
-            evbase->ev_read_fds = NULL;
-        }
-        if(evbase->ev_write_fds)
-        {
-            free(evbase->ev_write_fds);
-            evbase->ev_write_fds = NULL;
-        }
-        if(evbase->evs)
-        {
-            free(evbase->evs);
-            evbase->evs = NULL;
-        }
-        evbase->nfd = 0;
-        evbase->maxfd = 0;
-        evbase->nevent = 0;
-        evbase->allowed = 0;
         close(evbase->efd);
+        evbase->efd = epoll_create(evbase->allowed);
+        evbase->nfd = 0;
+        evbase->nevent = 0;
+        evbase->maxfd = 0;
+        memset(evbase->evs, 0, evbase->allowed * sizeof(struct epoll_event));
+        memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
+        DEBUG_LOGGER(evbase->logger, "Reset evbase[%08x]", evbase);
     }
 }
 
