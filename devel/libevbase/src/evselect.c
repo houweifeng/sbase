@@ -34,7 +34,7 @@ int evselect_init(EVBASE *evbase)
 int evselect_add(EVBASE *evbase, EVENT *event)
 {
     short ev_flags = 0;
-    if(evbase && event && event->ev_fd >= 0)
+    if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         event->ev_base = evbase;
         if(evbase->ev_read_fds && (event->ev_flags & E_READ))

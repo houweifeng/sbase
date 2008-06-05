@@ -29,7 +29,8 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
 {
     struct pollfd *ev = NULL;
     short ev_flags = 0;
-    if(evbase && event && event->ev_fd >= 0 && evbase->ev_fds && evbase->evlist)
+    if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed
+            && evbase->ev_fds && evbase->evlist)
     {
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);

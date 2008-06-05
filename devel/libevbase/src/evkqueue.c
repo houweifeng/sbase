@@ -48,7 +48,7 @@ int evkqueue_init(EVBASE *evbase)
 int evkqueue_add(EVBASE *evbase, EVENT *event)
 {
     struct kevent kqev;
-    if(evbase && event && evbase->evs && event->ev_fd >= 0)
+    if(evbase && event && evbase->evs && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         event->ev_base = evbase;
         if(event->ev_flags & E_READ)
