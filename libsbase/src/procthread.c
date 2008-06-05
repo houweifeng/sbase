@@ -19,7 +19,7 @@ void procthread_run(void *arg)
         }
     }
 #ifdef HAVE_PTHREAD
-    pthread_exit();
+    pthread_exit(NULL);
 #endif
 }
 
