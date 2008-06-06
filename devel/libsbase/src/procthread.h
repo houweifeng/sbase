@@ -24,6 +24,9 @@ void procthread_stop(PROCTHREAD *);
 /* Terminate procthread */
 void procthread_terminate(PROCTHREAD *);
 
+/* active heartbeat */
+void procthread_active_heartbeat(PROCTHREAD *,  CALLBACK *handler, void *arg);
+
 /* Clean procthread */
 void procthread_clean(PROCTHREAD **);
 #endif

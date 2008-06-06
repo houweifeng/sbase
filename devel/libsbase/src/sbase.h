@@ -93,6 +93,7 @@ typedef struct _SBASE
 	EVBASE *evbase;
     struct _SERVICE **services;
     int running_services;
+    long long nheartbeat;
 
 	/* timer && logger */
 	void *logger;
@@ -122,7 +123,6 @@ typedef struct _SERVICE
     SBASE *sbase;
 
     /* heartbeat */
-    long long nheartbeat;
     /* running heartbeat_handler when looped hearbeat_interval times*/
     int heartbeat_interval;
     void *heartbeat_arg;
@@ -223,6 +223,9 @@ typedef struct _PROCTHREAD
     /* task and transaction */
     int (*newtask)(struct _PROCTHREAD *, CALLBACK *, void *arg); 
     int (*newtransaction)(struct _PROCTHREAD *, struct _CONN *, int tid);
+
+    /* heartbeat */
+    void (*active_heartbeat)(struct _PROCTHREAD *,  CALLBACK *handler, void *arg);
 
     /* normal */
     void (*run)(void *arg);

@@ -146,6 +146,24 @@ void procthread_terminate(PROCTHREAD *pth)
     }
 }
 
+/* active heartbeat */
+void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
+{
+    MESSAGE msg = {0};
+
+    if(pth && pth->message_queue)
+    {
+        msg.msg_id      = MESSAGE_HEARTBEAT;
+        msg.parent      = (void *)pth;
+        msg.handler     = (void *)handler;
+        msg.arg         = (void *)arg;
+        QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
+        DEBUG_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
+    }
+    return ;
+
+}
+
 /* clean procthread */
 void procthread_clean(PROCTHREAD **ppth)
 {
@@ -176,6 +194,7 @@ PROCTHREAD *procthread_init()
         pth->terminate_connection    = procthread_terminate_connection;
         pth->stop                    = procthread_stop;
         pth->terminate               = procthread_terminate;
+        pth->active_heartbeat        = procthread_active_heartbeat;
         pth->clean                   = procthread_clean;
     }
     return pth;

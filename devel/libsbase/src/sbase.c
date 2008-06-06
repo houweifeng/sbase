@@ -140,12 +140,25 @@ running:
         {
             //running evbase 
             sbase->evbase->loop(sbase->evbase, 0, NULL);
+            sbase->nheartbeat++;
+            //check heartbeat
+            i = sbase->running_services;
+            while(i  > 0)
+            {
+                if(sbase->services[i] && sbase->services[i]->heartbeat_interval > 0
+                        && (sbase->nheartbeat % sbase->services[i]->heartbeat_interval) == 0)
+                {
+                    sbase->services[i]->active_heartbeat(sbase->services[i]);
+                }
+                --i;
+            }
+            usleep(sbase->usec_sleep);
             //running message queue
             if(QTOTAL(sbase->message_queue) > 0)
             {
                 message_handler(sbase->message_queue, sbase->logger);
             }
-            //running time
+            //running and check timeout
             if(useconds > 0 && TIMER_CHECK(sbase->timer, useconds)  == 0)
             {
                 break;
