@@ -41,7 +41,7 @@ SERVICE *transport = NULL;
 SERVICE *serv = NULL;
 static dictionary *dict = NULL;
 static TASKTABLE *tasktable = NULL;
-static LOGGER *daemon_logger = NULL;
+static void *daemon_logger = NULL;
 static long long global_timeout_times = 60000000;
 static long long nheartbeat = 0;
 
@@ -358,187 +358,101 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		fprintf(stderr, "Initializing conf:%s failed, %s\n", conf, strerror(errno));
 		_exit(-1);
 	}
-	/* SBASE */
-	fprintf(stdout, "Parsing SBASE...\n");
-	sbase->working_mode = iniparser_getint(dict, "SBASE:working_mode", WORKING_PROC);
-	sbase->max_procthreads = iniparser_getint(dict, "SBASE:max_procthreads", 1);
-	if(sbase->max_procthreads > MAX_PROCTHREADS)
-		sbase->max_procthreads = MAX_PROCTHREADS;
-	sbase->sleep_usec = iniparser_getint(dict, "SBASE:sleep_usec", MIN_SLEEP_USEC);
-	if((logfile = iniparser_getstr(dict, "SBASE:logfile")) == NULL)
-		logfile = SBASE_LOG;
-	fprintf(stdout, "Parsing LOG[%s]...\n", logfile);
-	fprintf(stdout, "SBASE[%08x] sbase->evbase:%08x ...\n", sbase, sbase->evbase);
-	sbase->set_log(sbase, logfile);
-	if((logfile = iniparser_getstr(dict, "SBASE:evlogfile")))
-	    sbase->set_evlog(sbase, logfile);
+    /* SBASE */
+    sbase->nchilds = iniparser_getint(dict, "SBASE:nchilds", 0);
+    sbase->connections_limit = iniparser_getint(dict, "SBASE:connections_limit", SB_CONN_MAX);
+    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
+    sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
+    sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
+    sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
+
 	/* TRANSPORT */
 	fprintf(stdout, "Parsing LQFTP...\n");
 	if((transport = service_init()) == NULL)
 	{
 		fprintf(stderr, "Initialize transport failed, %s", strerror(errno));
 		_exit(-1);
-	}
-    /* service type */
-    transport->service_type = iniparser_getint(dict, "TRANSPORT:service_type", 1);
-	/* INET protocol family */
-	n = iniparser_getint(dict, "TRANSPORT:inet_family", 0);
-	switch(n)
-	{
-		case 0:
-			transport->family = AF_INET;
-			break;
-		case 1:
-			transport->family = AF_INET6;
-			break;
-		default:
-			fprintf(stderr, "Illegal INET family :%d \n", n);
-			_exit(-1);
-	}
-	/* socket type */
-	n = iniparser_getint(dict, "TRANSPORT:socket_type", 0);
-	switch(n)
-	{
-		case 0:
-			transport->socket_type = SOCK_STREAM;
-			break;
-		case 1:
-			transport->socket_type = SOCK_DGRAM;
-			break;
-		default:
-			fprintf(stderr, "Illegal socket type :%d \n", n);
-			_exit(-1);
-	}
-	/* transport name and ip and port */
-	transport->name = iniparser_getstr(dict, "TRANSPORT:service_name");
-	transport->ip = iniparser_getstr(dict, "TRANSPORT:service_ip");
-	if(transport->ip && transport->ip[0] == 0 )
-		transport->ip = NULL;
-	transport->port = iniparser_getint(dict, "TRANSPORT:service_port", 80);
-	transport->max_procthreads = iniparser_getint(dict, "TRANSPORT:max_procthreads", 1);
-	transport->sleep_usec = iniparser_getint(dict, "TRANSPORT:sleep_usec", 100);
-	transport->heartbeat_interval = iniparser_getint(dict, "TRANSPORT:heartbeat_interval", 10000000);
-    /* connections number */
-	transport->connections_limit = iniparser_getint(dict, "TRANSPORT:connections_limit", 32);
-	logfile = iniparser_getstr(dict, "TRANSPORT:logfile");
-	if(logfile == NULL)
-		logfile = LQFTP_LOG;
-	transport->logfile = logfile;
-	logfile = iniparser_getstr(dict, "TRANSPORT:evlogfile");
-	transport->evlogfile = logfile;
-	transport->max_connections = iniparser_getint(dict, 
-            "TRANSPORT:max_connections", MAX_CONNECTIONS);
-	transport->packet_type = PACKET_DELIMITER;
-	transport->packet_delimiter = iniparser_getstr(dict, "TRANSPORT:packet_delimiter");
-	p = s = transport->packet_delimiter;
-	while(*p != 0 )
-	{
-		if(*p == '\\' && *(p+1) == 'n')
-		{
-			*s++ = '\n';
-			p += 2;
-		}
-		else if (*p == '\\' && *(p+1) == 'r')
-		{
-			*s++ = '\r';
-			p += 2;
-		}
-		else
-			*s++ = *p++;
-	}
-	*s++ = 0;
-	transport->packet_delimiter_length = strlen(transport->packet_delimiter);
-	transport->buffer_size = iniparser_getint(dict, "TRANSPORT:buffer_size", SB_BUF_SIZE);
-	transport->ops.cb_packet_reader = &cb_transport_packet_reader;
-	transport->ops.cb_packet_handler = &cb_transport_packet_handler;
-	transport->ops.cb_data_handler = &cb_transport_data_handler;
-	transport->ops.cb_oob_handler = &cb_transport_oob_handler;
-	transport->ops.cb_error_handler = &cb_transport_error_handler;
-	/* server */
-	fprintf(stdout, "Parsing for transport...\n");
+    }
+    transport->family = iniparser_getint(dict, "TRANSPORT:inet_family", AF_INET);
+    transport->sock_type = iniparser_getint(dict, "TRANSPORT:socket_type", SOCK_STREAM);
+    transport->ip = iniparser_getstr(dict, "TRANSPORT:transport_ip");
+    transport->port = iniparser_getint(dict, "TRANSPORT:transport_port", 80);
+    transport->working_mode = iniparser_getint(dict, "TRANSPORT:working_mode", WORKING_PROC);
+    transport->transport_type = iniparser_getint(dict, "TRANSPORT:transport_type", C_SERVICE);
+    transport->transport_name = iniparser_getstr(dict, "TRANSPORT:transport_name");
+    transport->nprocthreads = iniparser_getint(dict, "TRANSPORT:nprocthreads", 1);
+    transport->ndaemons = iniparser_getint(dict, "TRANSPORT:ndaemons", 0);
+    transport->set_log(transport, iniparser_getstr(dict, "TRANSPORT:logfile"));
+    transport->session.packet_type = iniparser_getint(dict, "TRANSPORT:packet_type",
+            PACKET_DELIMITER);
+    transport->session.packet_delimiter = iniparser_getstr(dict, "TRANSPORT:packet_delimiter");
+    p = s = transport->session.packet_delimiter;
+    while(*p != 0 )
+    {
+        if(*p == '\\' && *(p+1) == 'n')
+        {
+            *s++ = '\n';
+            p += 2;
+        }
+        else if (*p == '\\' && *(p+1) == 'r')
+        {
+            *s++ = '\r';
+            p += 2;
+        }
+        else
+            *s++ = *p++;
+    }
+    *s++ = 0;
+    transport->session.packet_delimiter_length = strlen(transport->session.packet_delimiter);
+    transport->session.buffer_size = iniparser_getint(dict, "TRANSPORT:buffer_size", SB_BUF_SIZE);
+    transport->session.packet_reader = &cb_transport_packet_reader;
+    transport->session.packet_handler = &cb_transport_packet_handler;
+    transport->session.data_handler = &cb_transport_data_handler;
+    transport->session.oob_handler = &cb_transport_oob_handler;
 
     /* DAEMON */
     if((serv = service_init()) == NULL)
 	{
 		fprintf(stderr, "Initialize serv failed, %s", strerror(errno));
 		_exit(-1);
-	}
-    /* service type */
-	serv->service_type = iniparser_getint(dict, "DAEMON:service_type", 0);
-	/* INET protocol family */
-	n = iniparser_getint(dict, "DAEMON:inet_family", 0);
-	/* INET protocol family */
-	n = iniparser_getint(dict, "DAEMON:inet_family", 0);
-	switch(n)
-	{
-		case 0:
-			serv->family = AF_INET;
-			break;
-		case 1:
-			serv->family = AF_INET6;
-			break;
-		default:
-			fprintf(stderr, "Illegal INET family :%d \n", n);
-			_exit(-1);
-	}
-	/* socket type */
-	n = iniparser_getint(dict, "DAEMON:socket_type", 0);
-	switch(n)
-	{
-		case 0:
-			serv->socket_type = SOCK_STREAM;
-			break;
-		case 1:
-			serv->socket_type = SOCK_DGRAM;
-			break;
-		default:
-			fprintf(stderr, "Illegal socket type :%d \n", n);
-			_exit(-1);
-	}
-	/* serv name and ip and port */
-	serv->name = iniparser_getstr(dict, "DAEMON:service_name");
-	serv->ip = iniparser_getstr(dict, "DAEMON:service_ip");
-	if(serv->ip && serv->ip[0] == 0 )
-		serv->ip = NULL;
-	serv->port = iniparser_getint(dict, "DAEMON:service_port", 80);
-	serv->max_procthreads = iniparser_getint(dict, "DAEMON:max_procthreads", 1);
-	serv->sleep_usec = iniparser_getint(dict, "DAEMON:sleep_usec", 100);
-	serv->heartbeat_interval = iniparser_getint(dict, "DAEMON:heartbeat_interval", 1000000);
-	logfile = iniparser_getstr(dict, "DAEMON:logfile");
-	if(logfile == NULL)
-		logfile = LQFTP_LOG;
-	serv->logfile = logfile;
-	logfile = iniparser_getstr(dict, "DAEMON:evlogfile");
-	serv->evlogfile = logfile;
-	serv->max_connections = iniparser_getint(dict, 
-            "DAEMON:max_connections", MAX_CONNECTIONS);
-	serv->packet_type = PACKET_DELIMITER;
-	serv->packet_delimiter = iniparser_getstr(dict, "DAEMON:packet_delimiter");
-	p = s = serv->packet_delimiter;
-	while(*p != 0 )
-	{
-		if(*p == '\\' && *(p+1) == 'n')
-		{
-			*s++ = '\n';
-			p += 2;
-		}
-		else if (*p == '\\' && *(p+1) == 'r')
-		{
-			*s++ = '\r';
-			p += 2;
-		}
-		else
-			*s++ = *p++;
-	}
-	*s++ = 0;
-	serv->packet_delimiter_length = strlen(serv->packet_delimiter);
-	serv->buffer_size = iniparser_getint(dict, "DAEMON:buffer_size", SB_BUF_SIZE);
-	serv->ops.cb_packet_reader = &cb_serv_packet_reader;
-	serv->ops.cb_packet_handler = &cb_serv_packet_handler;
-	serv->ops.cb_data_handler = &cb_serv_data_handler;
-	serv->ops.cb_oob_handler = &cb_serv_oob_handler;
-	serv->cb_heartbeat_handler = &cb_serv_heartbeat_handler;
-        /* server */
+    }
+    service->family = iniparser_getint(dict, "DAEMON:inet_family", AF_INET);
+    service->sock_type = iniparser_getint(dict, "DAEMON:socket_type", SOCK_STREAM);
+    service->ip = iniparser_getstr(dict, "DAEMON:service_ip");
+    service->port = iniparser_getint(dict, "DAEMON:service_port", 80);
+    service->working_mode = iniparser_getint(dict, "DAEMON:working_mode", WORKING_PROC);
+    service->service_type = iniparser_getint(dict, "DAEMON:service_type", C_SERVICE);
+    service->service_name = iniparser_getstr(dict, "DAEMON:service_name");
+    service->nprocthreads = iniparser_getint(dict, "DAEMON:nprocthreads", 1);
+    service->ndaemons = iniparser_getint(dict, "DAEMON:ndaemons", 0);
+    service->set_log(service, iniparser_getstr(dict, "DAEMON:logfile"));
+    service->session.packet_type = iniparser_getint(dict, "DAEMON:packet_type",PACKET_DELIMITER);
+    service->session.packet_delimiter = iniparser_getstr(dict, "DAEMON:packet_delimiter");
+    p = s = service->session.packet_delimiter;
+    while(*p != 0 )
+    {
+        if(*p == '\\' && *(p+1) == 'n')
+        {
+            *s++ = '\n';
+            p += 2;
+        }
+        else if (*p == '\\' && *(p+1) == 'r')
+        {
+            *s++ = '\r';
+            p += 2;
+        }
+        else
+            *s++ = *p++;
+    }
+    *s++ = 0;
+    service->session.packet_delimiter_length = strlen(service->session.packet_delimiter);
+    service->session.buffer_size = iniparser_getint(dict, "DAEMON:buffer_size", SB_BUF_SIZE);
+    service->session.packet_reader = &cb_serv_packet_reader;
+    service->session.packet_handler = &cb_serv_packet_handler;
+    service->session.data_handler = &cb_serv_data_handler;
+    service->session.oob_handler = &cb_serv_oob_handler;
+
+    /* server */
 	if((ret = sbase->add_service(sbase, serv)) != 0)
 	{
 		fprintf(stderr, "Initiailize service[%s] failed, %s\n", serv->name, strerror(errno));
@@ -550,7 +464,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 		return ret;
 	}
     //logger 
-	daemon_logger = logger_init(iniparser_getstr(dict, "DAEMON:access_log"));
+	LOGGER_INIT(daemon_logger, iniparser_getstr(dict, "DAEMON:access_log"));
     //task and block status file
 	taskfile = iniparser_getstr(dict, "DAEMON:taskfile");
     statusfile = iniparser_getstr(dict, "DAEMON:statusfile");
