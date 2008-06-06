@@ -42,6 +42,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	/* SBASE */
 	sbase->nchilds = iniparser_getint(dict, "SBASE:nchilds", 0);
 	sbase->connections_limit = iniparser_getint(dict, "SBASE:connections_limit", SB_CONN_MAX);
+    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
 	sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
 	sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
 	sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
