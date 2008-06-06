@@ -1,0 +1,16 @@
+homepage : http://sbase.googlecode.com
+
+install :
+./configure --enable-debug
+make 
+
+test & demo :
+
+./src/lechod -c doc/rc.lechod.ini 
+
+required libevbase 0.0.14 from http://sbase.googlecode.com/files/libevbase-0.0.14.tar.gz
+
+NOTE: if you want to build rpm , look doc/libsbase.spec
+
+
+
