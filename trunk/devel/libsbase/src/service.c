@@ -110,6 +110,20 @@ running_proc:
         return ret;
 running_threads:
 #ifdef HAVE_PTHREAD
+        //daemon 
+        if((service->daemon = procthread_init()))
+        {
+            PROCTHREAD_SET(service, service->daemon);
+            NEW_PROCTHREAD("daemon", 0, procthread_id, service->daemon, service->logger);
+            ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
+                    service->working_mode, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
         if(service->nprocthreads > SB_NDAEMONS_MAX) service->nprocthreads = SB_NDAEMONS_MAX;
         if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)calloc(
                         service->nprocthreads, sizeof(PROCTHREAD *))))
@@ -505,9 +519,10 @@ void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, vo
 /* active heartbeat */
 void service_active_heartbeat(SERVICE *service)
 {
-    if(service && service->heartbeat_handler)
+    if(service && service->daemon)
     {
-        service->heartbeat_handler(service->heartbeat_arg);
+        service->daemon->active_heartbeat(service->daemon, 
+                service->heartbeat_handler, service->heartbeat_arg);
     }
     return ;
 }
@@ -542,8 +557,8 @@ SERVICE *service_init()
         service->set_session        = service_set_session;
         service->newtask            = service_newtask;
         service->newtransaction     = service_newtransaction;
-        servuce->set_heartbeat      = service_set_heartbeat;
-        servuce->active_heartbeat   = service_active_heartbeat;
+        service->set_heartbeat      = service_set_heartbeat;
+        service->active_heartbeat   = service_active_heartbeat;
         service->clean              = service_clean;
     }
     return service;
