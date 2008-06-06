@@ -490,6 +490,28 @@ void service_stop(SERVICE *service)
     }
 }
 
+/* heartbeat handler */
+void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, void *arg)
+{
+    if(service)
+    {
+        service->heartbeat_interval = interval;
+        service->heartbeat_handler = handler;
+        service->heartbeat_arg = arg;
+    }
+    return ;
+}
+
+/* active heartbeat */
+void service_active_heartbeat(SERVICE *service)
+{
+    if(service && service->heartbeat_handler)
+    {
+        service->heartbeat_handler(service->heartbeat_arg);
+    }
+    return ;
+}
+
 /* service clean */
 void service_clean(SERVICE **pservice)
 {
@@ -520,6 +542,8 @@ SERVICE *service_init()
         service->set_session        = service_set_session;
         service->newtask            = service_newtask;
         service->newtransaction     = service_newtransaction;
+        servuce->set_heartbeat      = service_set_heartbeat;
+        servuce->active_heartbeat   = service_active_heartbeat;
         service->clean              = service_clean;
     }
     return service;

@@ -29,7 +29,13 @@ int service_newtask(SERVICE *service, CALLBACK *callback, void *arg);
 int service_newtransaction(SERVICE *service, CONN *conn, int tid);
 /* set log */
 int service_set_log(SERVICE *service, char *logfile);
+/* event handler */
 void service_event_handler(int, short, void *);
+/* heartbeat handler */
+void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, void *arg);
+/* active heartbeat */
+void service_active_heartbeat(SERVICE *service);
+/* clean service */
 void service_clean(SERVICE **pservice);
 #ifdef __cplusplus
  }

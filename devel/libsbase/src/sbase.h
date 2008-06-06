@@ -121,6 +121,15 @@ typedef struct _SERVICE
 	int usec_sleep;
     SBASE *sbase;
 
+    /* heartbeat */
+    long long nheartbeat;
+    /* running heartbeat_handler when looped hearbeat_interval times*/
+    int heartbeat_interval;
+    void *heartbeat_arg;
+    CALLBACK *heartbeat_handler;
+    void (*set_heartbeat)(struct _SERVICE *, int interval, CALLBACK *handler, void *arg);
+    void (*active_heartbeat)(struct _SERVICE *);
+
     /* working mode */
     int working_mode;
     struct _PROCTHREAD *daemon;
