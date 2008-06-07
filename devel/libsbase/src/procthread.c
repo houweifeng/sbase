@@ -96,6 +96,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
                 conn->ip, conn->port, conn->fd);
         conn->message_queue = pth->message_queue;
+        conn->evbase        = pth->evbase;
         conn->parent = pth;
         if(conn->set(conn) == 0)
         {
