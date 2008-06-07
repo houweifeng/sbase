@@ -140,7 +140,7 @@ void cb_serv_heartbeat_handler(void *arg)
     {
         //DEBUG_LOGGER(daemon_logger, "Heartbeat:%ll connections:%d", 
         //        nheartbeat++, transport->running_connections);
-        if((c_conn = transport->getconn(transport)))
+        while((c_conn = transport->getconn(transport)))
         {
             //break;
             //DEBUG_LOGGER(daemon_logger, "Got connection[%08x][%d][%d]", 
