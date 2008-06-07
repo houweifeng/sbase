@@ -6,6 +6,12 @@
 #include <unistd.h>
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
+#include "mutex.h"
+#else
+#define MUTEX_INIT(ptr)
+#define MUTEX_LOCK(ptr)
+#define MUTEX_UNLOCK(ptr)
+#define MUTEX_DESTROY(ptr)
 #endif
 
 #ifndef _TIMER_H
@@ -16,86 +22,101 @@ extern "C" {
 
 #ifndef _TYPEDEF_TIMER
 #define _TYPEDEF_TIMER
+typedef void (*TCALLBACK)(void *);
+typedef struct _TNODE
+{
+    TCALLBACK *timeout_callback;
+    void *arg;
+    long long usec;
+}TNODE;
 typedef struct _TIMER 
 {
 	struct timeval tv;
 	time_t start_sec;
-	uint64_t start_usec;
+	long long start_usec;
 	time_t sec_used;
-	uint64_t usec_used;
+	long long usec_used;
 	time_t  last_sec;
-	uint64_t last_usec;
+	long long last_usec;
 	time_t last_sec_used;
-        uint64_t last_usec_used;
-
+    long long last_usec_used;
+    TNODE *timeout_list;
+    int ntimeout;
+    int n;
 	void *mutex;
-
-	void (*reset)(struct _TIMER *);
-	int  (*check)(struct _TIMER *, uint32_t );
-	void (*sample)(struct _TIMER *);
-	void (*clean)(struct _TIMER **);
-	void (*callback)(void);
-	
 }TIMER;
-/* Initialize timer */
-TIMER *timer_init();
+#define PT(ptr) ((TIMER *)ptr)
+#define PT_SEC_U(ptr) ((PT(ptr))?PT(ptr)->sec_used:0)
+#define PT_USEC_U(ptr) ((PT(ptr))?PT(ptr)->usec_used:0)
+#define PT_L_SEC(ptr) ((PT(ptr))?PT(ptr)->last_sec:0)
+#define PT_LU_SEC(ptr) ((PT(ptr))?PT(ptr)->last_sec_used:0)
+#define PT_L_USEC(ptr) ((PT(ptr))?PT(ptr)->last_usec:0)
+#define PT_LU_USEC(ptr) ((PT(ptr))?PT(ptr)->last_usec_used:0)
+#define PT_N(ptr) (PT(ptr)->n)
+#define PT_NT(ptr) (PT(ptr)->ntimeout)
+#define TIMER_INIT(ptr)                                                         \
+do{                                                                               \
+    if((ptr = (calloc(1, sizeof(TIMER)))))                                      \
+    {                                                                           \
+        gettimeofday(&(PT(ptr)->tv), NULL);                                     \
+        PT(ptr)->start_sec    = PT(ptr)->tv.tv_sec;                             \
+        PT(ptr)->start_usec   = PT(ptr)->tv.tv_sec * 1000000ll                  \
+            + PT(ptr)->tv.tv_usec * 1ll;                                        \
+        PT(ptr)->last_sec     = PT(ptr)->start_sec;                             \
+        PT(ptr)->last_usec    = PT(ptr)->start_usec;                            \
+        MUTEX_INIT(PT(ptr)->mutex);                                             \
+    }                                                                           \
+}while(0)                                                                      
+#define TIMER_SAMPLE(ptr)                                                       \
+do{                                                                               \
+    if(ptr)                                                                     \
+    {                                                                           \
+        MUTEX_LOCK(PT(ptr)->mutex);                                             \
+        gettimeofday(&(PT(ptr)->tv), NULL);                                     \
+        PT(ptr)->last_sec_used    = PT(ptr)->tv.tv_sec - PT(ptr)->last_sec;     \
+        PT(ptr)->last_usec_used   = PT(ptr)->tv.tv_sec * 1000000ll              \
+            + PT(ptr)->tv.tv_usec - PT(ptr)->last_usec;                         \
+        PT(ptr)->last_sec         = PT(ptr)->tv.tv_sec;                         \
+        PT(ptr)->last_usec        = PT(ptr)->tv.tv_sec * 1000000ll              \
+            + PT(ptr)->tv.tv_usec;                                              \
+        PT(ptr)->sec_used     = PT(ptr)->tv.tv_sec - PT(ptr)->start_sec;        \
+        PT(ptr)->usec_used    = PT(ptr)->last_usec - PT(ptr)->start_usec;       \
+        MUTEX_UNLOCK(PT(ptr)->mutex);                                           \
+    }                                                                           \
+}while(0)
+#define TIMER_RESET(ptr)                                                        \
+do{                                                                               \
+    if(ptr)                                                                     \
+    {                                                                           \
+        gettimeofday(&(PT(ptr)->tv), NULL);                                     \
+        PT(ptr)->start_sec    = PT(ptr)->tv.tv_sec;                             \
+        PT(ptr)->start_usec   = PT(ptr)->tv.tv_sec * 1000000ll                  \
+            + PT(ptr)->tv.tv_usec * 1ll;                                        \
+        PT(ptr)->last_sec     = PT(ptr)->start_sec;                             \
+        PT(ptr)->last_usec    = PT(ptr)->start_usec;                            \
+        PT(ptr)->last_sec_used     = 0ll;                                       \
+        PT(ptr)->last_usec_used    = 0ll;                                       \
+    }                                                                           \
+}while(0)
+
+#define TIMER_CHECK(ptr, interval)                                              \
+    (PT(ptr) && (gettimeofday(&(PT(ptr)->tv), NULL) == 0                        \
+     && ((PT(ptr)->tv.tv_sec * 1000000ll + PT(ptr)->tv.tv_usec)                 \
+        - PT(ptr)->last_usec) > interval) ? 0 : -1)
+
+#define TIMER_CLEAN(ptr)                                                        \
+do{                                                                               \
+    if(ptr)                                                                     \
+    {                                                                           \
+        MUTEX_DESTROY(PT(ptr)->mutex);                                          \
+        free(ptr);                                                              \
+        ptr = NULL;                                                             \
+    }                                                                           \
+}while(0)
 #endif 
-/* Reset timer */
-void timer_reset(TIMER *);
-/* Check timer and Run callback */
-int timer_check(TIMER *, uint32_t );
-/* TIMER  gettime */
-void timer_sample(TIMER *);
-/* Clean Timer */
-void timer_clean(TIMER **);
-/* VIEW timer */
-#define TIMER_VIEW(_timer) \
-{ \
-	if(_timer) \
-	{ \
-		printf("timerptr:%08x\n" \
-				"timer->start_sec:%u\n" \
-				"timer->start_usec:%llu\n" \
-				"timer->tv.tv_sec:%u\n" \
-				"timer->tv.tv_usec:%u\n" \
-				"timer->sec_used:%u\n" \
-				"timer->usec_used:%llu\n" \
-                                "timer->last_sec:%u\n" \
-                                "timer->last_usec:%llu\n" \
-                                "timer->last_sec_used:%u\n" \
-                                "timer->last_usec_used:%llu\n" \
-				"timer->reset():%08x\n" \
-				"timer->check():%08x\n" \
-				"timer->sample():%08x\n" \
-				"timer->clean():%08x\n\n", \
-				_timer, \
-				_timer->start_sec, \
-				_timer->start_usec, \
-				_timer->tv.tv_sec, \
-				_timer->tv.tv_usec, \
-				_timer->sec_used, \
-				_timer->usec_used, \
-				_timer->last_sec, \
-				_timer->last_usec, \
-                                _timer->last_sec_used, \
-                                _timer->last_usec_used, \
-				_timer->reset, \
-				_timer->check, \
-				_timer->sample, \
-				_timer->clean); \
-	} \
-}
-#define PTIMER(timer) ((TIMER *)timer)
-#define CLEAN_TIMER(timer) ((TIMER *)timer)->clean((TIMER **)&timer)
-#define RESET_TIMER(timer) ((TIMER *)timer)->reset((TIMER *)timer)
-#define SAMPLE_TIMER(timer) ((TIMER *)timer)->reset((TIMER *)timer)
-#define CHECK_TIMER(timer, interval) ((TIMER *)timer)->check((TIMER *)timer, interval)
-#define LAST_SEC_TIMER(timer) ((TIMER *)timer)->last_sec
-#define LAST_USEC_TIMER(timer) ((TIMER *)timer)->last_usec
 
 #ifdef __cplusplus
  }
 #endif
 
 #endif
-
