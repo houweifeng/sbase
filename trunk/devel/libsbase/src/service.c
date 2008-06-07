@@ -22,14 +22,14 @@ int service_set(SERVICE *service)
         if(service->service_type == S_SERVICE)
         {
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0 
-                && fcntl(service->fd, F_SETFL, O_NONBLOCK) == 0
-                && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
-                && bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa)) == 0
-                && listen(service->fd, service->backlog) == 0) 
+                    && fcntl(service->fd, F_SETFL, O_NONBLOCK) == 0
+                    && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+                    && bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa)) == 0
+                    && listen(service->fd, service->backlog) == 0) 
             {
                 ret = 0;
             }
-                  
+
         }else if(service->service_type == C_SERVICE)
         {
             ret = 0;
@@ -178,8 +178,8 @@ int service_set_log(SERVICE *service, char *logfile)
     if(service && logfile)
     {
         LOGGER_INIT(service->logger, logfile);
-	    DEBUG_LOGGER(service->logger, "Initialize logger %s", logfile);
-	service->is_inside_logger = 1;
+        DEBUG_LOGGER(service->logger, "Initialize logger %s", logfile);
+        service->is_inside_logger = 1;
         return 0;
     }
     return -1;
@@ -225,7 +225,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
 
 /* new connection */
 CONN *service_newconn(SERVICE *service, int inet_family, int socket_type, 
-                char *inet_ip, int inet_port, SESSION *session)
+        char *inet_ip, int inet_port, SESSION *session)
 {
     CONN *conn = NULL;
     struct sockaddr_in rsa;
@@ -249,7 +249,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                     && (connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
                         || errno == EINPROGRESS))
             {
-                conn = service->addconn(service, fd, ip, port, session);
+                conn = service->addconn(service, fd, ip, port, sess);
             }
             else
             {
@@ -459,60 +459,90 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
 /* stop service */
 void service_stop(SERVICE *service)
 {
-	int i = 0;
-	CONN *conn = NULL;
+    int i = 0;
+    CONN *conn = NULL;
 
-	if(service)
-	{
-		//stop all connections 
-		if(service->connections && service->running_connections > 0 && service->index_max > 0)
-		{
-			for(i = 0; i < service->index_max; i++)
-			{
-				if((conn = service->connections[i]))
-				{
-					conn->close(conn);
-				}
-			}
-		}
-		//stop all procthreads
-		if(service->daemon)
-		{
-			service->daemon->stop(service->daemon);
+    if(service)
+    {
+        //stop all connections 
+        if(service->connections && service->running_connections > 0 && service->index_max > 0)
+        {
+            for(i = 0; i < service->index_max; i++)
+            {
+                if((conn = service->connections[i]))
+                {
+                    conn->close(conn);
+                }
+            }
+        }
+        //stop all procthreads
+        if(service->daemon)
+        {
+            service->daemon->stop(service->daemon);
 #ifdef HAVE_PTHREAD
-			pthread_join((pthread_t)service->daemon->threadid, NULL);
+            pthread_join((pthread_t)service->daemon->threadid, NULL);
 #endif
-		}
-		if(service->procthreads && service->nprocthreads)
-		{
-			for(i = 0; i < service->nprocthreads; i++)
-			{
-				if(service->procthreads[i])
-				{
-					service->procthreads[i]->stop(service->procthreads[i]);
+        }
+        if(service->procthreads && service->nprocthreads)
+        {
+            for(i = 0; i < service->nprocthreads; i++)
+            {
+                if(service->procthreads[i])
+                {
+                    service->procthreads[i]->stop(service->procthreads[i]);
 #ifdef HAVE_PTHREAD
-					pthread_join((pthread_t)(service->procthreads[i]->threadid), NULL);
+                    pthread_join((pthread_t)(service->procthreads[i]->threadid), NULL);
 #endif
-				}
-			}
-		}
-		if(service->daemons && service->ndaemons)
-		{
-			for(i = 0; i < service->ndaemons; i++)
-			{
-				if(service->daemons[i])
-				{
-					service->daemons[i]->stop(service->daemons[i]);
+                }
+            }
+        }
+        if(service->daemons && service->ndaemons)
+        {
+            for(i = 0; i < service->ndaemons; i++)
+            {
+                if(service->daemons[i])
+                {
+                    service->daemons[i]->stop(service->daemons[i]);
 #ifdef HAVE_PTHREAD
-					pthread_join((pthread_t)(service->daemons[i]->threadid), NULL);
+                    pthread_join((pthread_t)(service->daemons[i]->threadid), NULL);
 #endif
-				}
-			}
-		}
-		//remove event
-		service->event->destroy(service->event);
-		close(service->fd);
-	}
+                }
+            }
+        }
+        //remove event
+        service->event->destroy(service->event);
+        close(service->fd);
+    }
+}
+
+/* state check */
+void service_state(SERVICE *service)
+{
+    int n = 0;
+
+    if(service)
+    {
+        if(service->service_type == C_SERVICE)
+        {
+            if(service->running_connections < service->client_connections_limit)
+            {
+                DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",
+                        service->ip, service->port, service->client_connections_limit,
+                        service->running_connections);
+                n = service->client_connections_limit - service->running_connections;
+                while(n > 0)
+                {
+                    if(service->newconn(service, -1, -1, NULL, -1, NULL) == NULL)
+                    {
+                        FATAL_LOGGER(service->logger, "connect to %s:%d failed, %s", 
+                                service->ip, service->port, strerror(errno));
+                            break;
+                    }
+                    n--;
+                }
+            }
+        }
+    }
 }
 
 /* heartbeat handler */
@@ -532,6 +562,8 @@ void service_active_heartbeat(SERVICE *service)
 {
     if(service && service->daemon)
     {
+        service_state(service);
+        DEBUG_LOGGER(service->logger, "Ready for active heartbeat");
         service->daemon->active_heartbeat(service->daemon, 
                 service->heartbeat_handler, service->heartbeat_arg);
     }
@@ -541,40 +573,40 @@ void service_active_heartbeat(SERVICE *service)
 /* service clean */
 void service_clean(SERVICE **pservice)
 {
-	int i = 0;
+    int i = 0;
 
-	if(pservice && *pservice)
-	{
-		if((*pservice)->connections) free((*pservice)->connections);
-		if((*pservice)->is_inside_logger && (*pservice)->logger) LOGGER_CLEAN((*pservice)->logger);
-		if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
-		if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
-		if((*pservice)->procthreads && (*pservice)->nprocthreads)
-		{
-			for(i = 0; i < (*pservice)->nprocthreads; i++)
-			{
-				if((*pservice)->procthreads[i])
-				{
-					(*pservice)->procthreads[i]->clean(&((*pservice)->procthreads[i]));
-				}
-			}
-			free((*pservice)->procthreads);
-		}
-		if((*pservice)->daemons && (*pservice)->ndaemons)
-		{
-			for(i = 0; i < (*pservice)->ndaemons; i++)
-			{
-				if((*pservice)->daemons[i])
-				{
-					(*pservice)->daemons[i]->clean(&((*pservice)->daemons[i]));
-				}
-			}
-			free((*pservice)->daemons);
-		}
-		MUTEX_DESTROY((*pservice)->mutex);
-		free(*pservice);
-		*pservice = NULL;
-	}
+    if(pservice && *pservice)
+    {
+        if((*pservice)->connections) free((*pservice)->connections);
+        if((*pservice)->is_inside_logger && (*pservice)->logger) LOGGER_CLEAN((*pservice)->logger);
+        if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
+        if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
+        if((*pservice)->procthreads && (*pservice)->nprocthreads)
+        {
+            for(i = 0; i < (*pservice)->nprocthreads; i++)
+            {
+                if((*pservice)->procthreads[i])
+                {
+                    (*pservice)->procthreads[i]->clean(&((*pservice)->procthreads[i]));
+                }
+            }
+            free((*pservice)->procthreads);
+        }
+        if((*pservice)->daemons && (*pservice)->ndaemons)
+        {
+            for(i = 0; i < (*pservice)->ndaemons; i++)
+            {
+                if((*pservice)->daemons[i])
+                {
+                    (*pservice)->daemons[i]->clean(&((*pservice)->daemons[i]));
+                }
+            }
+            free((*pservice)->daemons);
+        }
+        MUTEX_DESTROY((*pservice)->mutex);
+        free(*pservice);
+        *pservice = NULL;
+    }
 }
 
 /* Initialize service */

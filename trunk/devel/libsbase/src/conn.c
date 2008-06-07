@@ -91,7 +91,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
             {
                 //conn->push_message(conn, MESSAGE_OUTPUT);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
-                 conn->write_handler(conn);
+                conn->write_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
         }
@@ -549,8 +549,8 @@ int conn_push_chunk(CONN *conn, void *data, int size)
         }
         if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
         DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d] to send_queue "
-                    "total %d on %s:%d via %d ", size, QTOTAL(conn->send_queue), 
-                    conn->ip, conn->port, conn->fd);
+                "total %d on %s:%d via %d ", size, QTOTAL(conn->send_queue), 
+                conn->ip, conn->port, conn->fd);
         ret = 0;
     }
     return ret;

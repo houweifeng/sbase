@@ -69,8 +69,8 @@ int sbase_set_evlog(SBASE *sbase, char *evlogfile)
 /* add service to sbase */
 int sbase_add_service(SBASE *sbase, SERVICE  *service)
 {
-	if(sbase)
-	{
+    if(sbase)
+    {
         if(service)
         {
             service->evbase = sbase->evbase;
@@ -86,8 +86,8 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
                 return service->set(service);
             }
         }
-	}
-	return -1;
+    }
+    return -1;
 }
 
 /* running all service */
@@ -97,7 +97,7 @@ int sbase_running(SBASE *sbase, int useconds)
     pid_t pid = 0;
     SERVICE *service = NULL;
 
-	if(sbase)
+    if(sbase)
     {
         if(sbase->nchilds > SB_NDAEMONS_MAX) sbase->nchilds = SB_NDAEMONS_MAX;
         //nproc
@@ -146,15 +146,15 @@ running:
             sbase->evbase->loop(sbase->evbase, 0, NULL);
             sbase->nheartbeat++;
             //check heartbeat
-            i = sbase->running_services;
-            while(i  > 0)
+            i = 0;
+            while(i < sbase->running_services)
             {
                 if(sbase->services[i] && sbase->services[i]->heartbeat_interval > 0
                         && (sbase->nheartbeat % sbase->services[i]->heartbeat_interval) == 0)
                 {
                     sbase->services[i]->active_heartbeat(sbase->services[i]);
                 }
-                --i;
+                ++i;
             }
             usleep(sbase->usec_sleep);
             //running message queue
@@ -182,13 +182,13 @@ void sbase_stop(SBASE *sbase)
     if(sbase)
     {
         sbase->running_status = 0;
-	for(i = 0; i < sbase->running_services; i++)
-	{
-		if(sbase->services[i])
-		{
-			sbase->services[i]->stop(sbase->services[i]);
-		}
-	}
+        for(i = 0; i < sbase->running_services; i++)
+        {
+            if(sbase->services[i])
+            {
+                sbase->services[i]->stop(sbase->services[i]);
+            }
+        }
     }
     return ;
 }
@@ -201,14 +201,14 @@ void sbase_clean(SBASE **psbase)
     if(psbase && *psbase)
     {
         if((*psbase)->services) 
-	{
-		for(i = 0; i < (*psbase)->running_services; i++)
-		{
-			if((*psbase)->services[i])
-				(*psbase)->services[i]->clean(&((*psbase)->services[i]));
-		}
-		free((*psbase)->services);
-	}
+        {
+            for(i = 0; i < (*psbase)->running_services; i++)
+            {
+                if((*psbase)->services[i])
+                    (*psbase)->services[i]->clean(&((*psbase)->services[i]));
+            }
+            free((*psbase)->services);
+        }
         if((*psbase)->timer) TIMER_CLEAN((*psbase)->timer);
         if((*psbase)->logger) LOGGER_CLEAN((*psbase)->logger);
         if((*psbase)->evbase) (*psbase)->evbase->clean(&((*psbase)->evbase));
@@ -221,18 +221,18 @@ void sbase_clean(SBASE **psbase)
 /* Initialize sbase */
 SBASE *sbase_init()
 {
-	SBASE *sbase = NULL;
-	if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
-	{
-		TIMER_INIT(sbase->timer);
-		QUEUE_INIT(sbase->message_queue);
-		sbase->set_log		    = sbase_set_log;
-		sbase->set_evlog	    = sbase_set_evlog;
-		sbase->add_service	    = sbase_add_service;
-		sbase->running 		    = sbase_running;
-		sbase->stop 		    = sbase_stop;
-		sbase->clean 		    = sbase_clean;
-		//sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
-	}
-	return sbase;
+    SBASE *sbase = NULL;
+    if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
+    {
+        TIMER_INIT(sbase->timer);
+        QUEUE_INIT(sbase->message_queue);
+        sbase->set_log		    = sbase_set_log;
+        sbase->set_evlog	    = sbase_set_evlog;
+        sbase->add_service	    = sbase_add_service;
+        sbase->running 		    = sbase_running;
+        sbase->stop 		    = sbase_stop;
+        sbase->clean 		    = sbase_clean;
+        //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
+    }
+    return sbase;
 }
