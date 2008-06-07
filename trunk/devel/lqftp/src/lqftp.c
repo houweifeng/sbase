@@ -64,7 +64,7 @@ static long long nheartbeat = 0;
 
 //functions
 //error handler for cstate
-void cb_transport_error_handler(CONN *conn)
+int cb_transport_error_handler(CONN *conn)
 {
     int blockid = -1;
     if(conn)
@@ -78,11 +78,11 @@ void cb_transport_error_handler(CONN *conn)
 }
 
 //
-int cb_transport_packet_reader(CONN *conn, SDATA *buffer)
+int cb_transport_packet_reader(CONN *conn, CB_DATA *buffer)
 {
 }
 
-void cb_transport_packet_handler(CONN *conn, SDATA *packet)
+int cb_transport_packet_handler(CONN *conn, CB_DATA *packet)
 {        
     char *p = NULL, *end = NULL;
     int respid = -1, n = 0;
@@ -109,16 +109,20 @@ void cb_transport_packet_handler(CONN *conn, SDATA *packet)
         tasktable->update_status(tasktable, blockid, status, conn->fd);
 		DEBUG_LOGGER(daemon_logger, "action over on %d blockid:%d status:%d", 
 				conn->fd, conn->c_id, status);
+        return 0;
     }
+    return -1;
 }
 
-void cb_transport_data_handler(CONN *conn, SDATA *packet, 
-        SDATA *chunk, SDATA *cache)
+int cb_transport_data_handler(CONN *conn, CB_DATA *packet, 
+        CB_DATA *chunk, CB_DATA *cache)
 {
+    return -1;
 }
 
-void cb_transport_oob_handler(CONN *conn, SDATA *oob)
+int cb_transport_oob_handler(CONN *conn, CB_DATA *oob)
 {
+    return -1;
 }
 
 void cb_serv_heartbeat_handler(void *arg)
@@ -215,11 +219,11 @@ void cb_serv_heartbeat_handler(void *arg)
     return  ;
 }
 
-int cb_serv_packet_reader(CONN *conn, SDATA *buffer)
+int cb_serv_packet_reader(CONN *conn, CB_DATA *buffer)
 {
 }
 
-void cb_serv_packet_handler(CONN *conn, SDATA *packet)
+int cb_serv_packet_handler(CONN *conn, CB_DATA *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL;
     char file[PATH_MAX_SIZE], destfile[PATH_MAX_SIZE], buf[SBUF_SIZE];
@@ -295,7 +299,7 @@ void cb_serv_packet_handler(CONN *conn, SDATA *packet)
                     n = sprintf(buf, "%d OK\r\ntaskid:%ld\r\n\r\n", RESP_OK_CODE, taskid);
                     //fprintf(stdout, "conn:%08x %08x\n", conn, conn->push_chunk);
                     conn->push_chunk(conn, (void *)buf, n);
-                    return;
+                    return 0;
                 }
                 //fprintf(stdout, "stat %s failed, %s\n", file, strerror(errno));
             }
@@ -315,32 +319,32 @@ void cb_serv_packet_handler(CONN *conn, SDATA *packet)
                                  RESP_OK_CODE, taskid, task.status, speed,
                                  task.timeout, task.nretry);
                 conn->push_chunk((CONN *)conn, (void *)buf, n);
-                return;
+                return 0;
             }
             else
             {
                 n = sprintf(buf, "%d invalid taskid %d\r\n\r\n", RESP_INVALID_TASK_CODE, taskid);
                 conn->push_chunk((CONN *)conn, (void *)buf, n);
-                return;
+                return 0;
             }
         }
 bad_req_err:
         conn->push_chunk((CONN *)conn, (void *)RESP_BAD_REQ, strlen(RESP_BAD_REQ));
     }
-    return ;
+    return -1;
 }
 
-void cb_serv_data_handler(CONN *conn, SDATA *packet, 
-        SDATA *cache, SDATA *chunk)
+int cb_serv_data_handler(CONN *conn, CB_DATA *packet, 
+        CB_DATA *cache, CB_DATA *chunk)
 {
 }
 
-void cb_serv_file_handler(CONN *conn, SDATA *packet, 
-        SDATA *cache, SDATA *chunk)
+int cb_serv_file_handler(CONN *conn, CB_DATA *packet, 
+        CB_DATA *cache, CB_DATA *chunk)
 {
 }
 
-void cb_serv_oob_handler(CONN *conn, SDATA *oob)
+int cb_serv_oob_handler(CONN *conn, CB_DATA *oob)
 {
 }
 
@@ -349,9 +353,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 {
 	char *logfile = NULL, *s = NULL, *p = NULL, 
          *tasklog = NULL, *taskfile = NULL, *statusfile = NULL;
-	int n = 0;
-	int ret = 0;
-    int block_size = 0;
+	int n = 0, heartbeat_interval = 0, ret = 0, block_size = 0;
 
 	if((dict = iniparser_new(conf)) == NULL)
 	{
@@ -361,7 +363,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
     /* SBASE */
     sbase->nchilds = iniparser_getint(dict, "SBASE:nchilds", 0);
     sbase->connections_limit = iniparser_getint(dict, "SBASE:connections_limit", SB_CONN_MAX);
-    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
     sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
     sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
     sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
@@ -378,8 +379,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
     transport->ip = iniparser_getstr(dict, "TRANSPORT:transport_ip");
     transport->port = iniparser_getint(dict, "TRANSPORT:transport_port", 80);
     transport->working_mode = iniparser_getint(dict, "TRANSPORT:working_mode", WORKING_PROC);
-    transport->transport_type = iniparser_getint(dict, "TRANSPORT:transport_type", C_SERVICE);
-    transport->transport_name = iniparser_getstr(dict, "TRANSPORT:transport_name");
+    transport->service_type = iniparser_getint(dict, "TRANSPORT:transport_type", C_SERVICE);
+    transport->service_name = iniparser_getstr(dict, "TRANSPORT:transport_name");
     transport->nprocthreads = iniparser_getint(dict, "TRANSPORT:nprocthreads", 1);
     transport->ndaemons = iniparser_getint(dict, "TRANSPORT:ndaemons", 0);
     transport->set_log(transport, iniparser_getstr(dict, "TRANSPORT:logfile"));
@@ -409,26 +410,27 @@ int sbase_initialize(SBASE *sbase, char *conf)
     transport->session.packet_handler = &cb_transport_packet_handler;
     transport->session.data_handler = &cb_transport_data_handler;
     transport->session.oob_handler = &cb_transport_oob_handler;
-
+    transport->client_connections_limit = iniparser_getint(dict, 
+            "TRANSPORT:client_connections_limit", 8);
     /* DAEMON */
     if((serv = service_init()) == NULL)
 	{
 		fprintf(stderr, "Initialize serv failed, %s", strerror(errno));
 		_exit(-1);
     }
-    service->family = iniparser_getint(dict, "DAEMON:inet_family", AF_INET);
-    service->sock_type = iniparser_getint(dict, "DAEMON:socket_type", SOCK_STREAM);
-    service->ip = iniparser_getstr(dict, "DAEMON:service_ip");
-    service->port = iniparser_getint(dict, "DAEMON:service_port", 80);
-    service->working_mode = iniparser_getint(dict, "DAEMON:working_mode", WORKING_PROC);
-    service->service_type = iniparser_getint(dict, "DAEMON:service_type", C_SERVICE);
-    service->service_name = iniparser_getstr(dict, "DAEMON:service_name");
-    service->nprocthreads = iniparser_getint(dict, "DAEMON:nprocthreads", 1);
-    service->ndaemons = iniparser_getint(dict, "DAEMON:ndaemons", 0);
-    service->set_log(service, iniparser_getstr(dict, "DAEMON:logfile"));
-    service->session.packet_type = iniparser_getint(dict, "DAEMON:packet_type",PACKET_DELIMITER);
-    service->session.packet_delimiter = iniparser_getstr(dict, "DAEMON:packet_delimiter");
-    p = s = service->session.packet_delimiter;
+    serv->family = iniparser_getint(dict, "DAEMON:inet_family", AF_INET);
+    serv->sock_type = iniparser_getint(dict, "DAEMON:socket_type", SOCK_STREAM);
+    serv->ip = iniparser_getstr(dict, "DAEMON:service_ip");
+    serv->port = iniparser_getint(dict, "DAEMON:service_port", 80);
+    serv->working_mode = iniparser_getint(dict, "DAEMON:working_mode", WORKING_PROC);
+    serv->service_type = iniparser_getint(dict, "DAEMON:service_type", C_SERVICE);
+    serv->service_name = iniparser_getstr(dict, "DAEMON:service_name");
+    serv->nprocthreads = iniparser_getint(dict, "DAEMON:nprocthreads", 1);
+    serv->ndaemons = iniparser_getint(dict, "DAEMON:ndaemons", 0);
+    serv->set_log(serv, iniparser_getstr(dict, "DAEMON:logfile"));
+    serv->session.packet_type = iniparser_getint(dict, "DAEMON:packet_type",PACKET_DELIMITER);
+    serv->session.packet_delimiter = iniparser_getstr(dict, "DAEMON:packet_delimiter");
+    p = s = serv->session.packet_delimiter;
     while(*p != 0 )
     {
         if(*p == '\\' && *(p+1) == 'n')
@@ -445,22 +447,25 @@ int sbase_initialize(SBASE *sbase, char *conf)
             *s++ = *p++;
     }
     *s++ = 0;
-    service->session.packet_delimiter_length = strlen(service->session.packet_delimiter);
-    service->session.buffer_size = iniparser_getint(dict, "DAEMON:buffer_size", SB_BUF_SIZE);
-    service->session.packet_reader = &cb_serv_packet_reader;
-    service->session.packet_handler = &cb_serv_packet_handler;
-    service->session.data_handler = &cb_serv_data_handler;
-    service->session.oob_handler = &cb_serv_oob_handler;
-
+    serv->session.packet_delimiter_length = strlen(serv->session.packet_delimiter);
+    serv->session.buffer_size = iniparser_getint(dict, "DAEMON:buffer_size", SB_BUF_SIZE);
+    serv->session.packet_reader = &cb_serv_packet_reader;
+    serv->session.packet_handler = &cb_serv_packet_handler;
+    serv->session.data_handler = &cb_serv_data_handler;
+    serv->session.oob_handler = &cb_serv_oob_handler;
+    heartbeat_interval = iniparser_getint(dict, "DAEMON:heartbeat_interval", SB_HEARTBEAT_INTERVAL);
+    serv->set_heartbeat(serv, heartbeat_interval, &cb_serv_heartbeat_handler, NULL);
     /* server */
 	if((ret = sbase->add_service(sbase, serv)) != 0)
 	{
-		fprintf(stderr, "Initiailize service[%s] failed, %s\n", serv->name, strerror(errno));
+		fprintf(stderr, "Initiailize service[%s] failed, %s\n", 
+                serv->service_name, strerror(errno));
 		return ret;
 	}
 	if((ret = sbase->add_service(sbase, transport)) != 0)
 	{
-		fprintf(stderr, "Initiailize service[%s] failed, %s\n", transport->name, strerror(errno));
+		fprintf(stderr, "Initiailize service[%s] failed, %s\n", 
+                transport->service_name, strerror(errno));
 		return ret;
 	}
     //logger 
@@ -503,51 +508,55 @@ static void cb_stop(int sig){
 
 int main(int argc, char **argv)
 {
-	pid_t pid;
-	char *conf = NULL;
+    pid_t pid;
+    char *conf = NULL;
 
-	/* get configure file */
-	if(getopt(argc, argv, "c:") != 'c')
-        {
-                fprintf(stderr, "Usage:%s -c config_file\n", argv[0]);
-                _exit(-1);
-        }       
-	conf = optarg;
-	// locale
-	setlocale(LC_ALL, "C");
-	// signal
-	signal(SIGTERM, &cb_stop);
-	signal(SIGINT,  &cb_stop);
-	signal(SIGHUP,  &cb_stop);
-	signal(SIGPIPE, SIG_IGN);
-	pid = fork();
-	switch (pid) {
-		case -1:
-			perror("fork()");
-			exit(EXIT_FAILURE);
-			break;
-		case 0: //child process
-			if(setsid() == -1)
-				exit(EXIT_FAILURE);
-			break;
-		default://parent
-			_exit(EXIT_SUCCESS);
-			break;
-	}
-
-	if((sbase = sbase_init()) == NULL)
-        {
+    /* get configure file */
+    if(getopt(argc, argv, "c:") != 'c')
+    {
+        fprintf(stderr, "Usage:%s -c config_file\n", argv[0]);
+        _exit(-1);
+    }       
+    conf = optarg;
+    // locale
+    setlocale(LC_ALL, "C");
+    // signal
+    signal(SIGTERM, &cb_stop);
+    signal(SIGINT,  &cb_stop);
+    signal(SIGHUP,  &cb_stop);
+    signal(SIGPIPE, SIG_IGN);
+    pid = fork();
+    switch (pid) {
+        case -1:
+            perror("fork()");
+            exit(EXIT_FAILURE);
+            break;
+        case 0: //child process
+            if(setsid() == -1)
                 exit(EXIT_FAILURE);
-                return -1;
-        }
-        fprintf(stdout, "Initializing from configure file:%s\n", conf);
-        /* Initialize sbase */
-        if(sbase_initialize(sbase, conf) != 0 )
-        {
-                fprintf(stderr, "Initialize from configure file failed\n");
-                return -1;
-        }
-        fprintf(stdout, "Initialized successed\n");
-        //sbase->running(sbase, 3600);
-        sbase->running(sbase, 0);
+            break;
+        default://parent
+            _exit(EXIT_SUCCESS);
+            break;
+    }
+
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 10240);
+    if((sbase = sbase_init()) == NULL)
+    {
+        exit(EXIT_FAILURE);
+        return -1;
+    }
+    fprintf(stdout, "Initializing from configure file:%s\n", conf);
+    /* Initialize sbase */
+    if(sbase_initialize(sbase, conf) != 0 )
+    {
+        fprintf(stderr, "Initialize from configure file failed\n");
+        return -1;
+    }
+    fprintf(stdout, "Initialized successed\n");
+    //sbase->running(sbase, 3600);
+    sbase->running(sbase, 0);
+    sbase->stop(sbase);
+    sbase->clean(&sbase);
+
 }

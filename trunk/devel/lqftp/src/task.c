@@ -641,7 +641,7 @@ TASKTABLE *tasktable_init(char *taskfile, char *statusfile, char *logfile)
         tasktable->clean            = tasktable_clean;
         tasktable->running_task_id = -1;
         tasktable->running_task.id = -1;
-        tasktable->logger = logger_init(logfile);
+        LOGGER_INIT(tasktable->logger, logfile);
         strcpy(tasktable->taskfile, taskfile);
         tasktable->resume_task(tasktable);
         strcpy(tasktable->statusfile, statusfile);

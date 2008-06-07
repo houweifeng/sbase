@@ -190,7 +190,7 @@ int truncate_file(char *file, unsigned long long size)
     return truncate(file, size);
 }
 
-void cb_packet_handler(CONN *conn, CB_DATA *packet)
+int cb_packet_handler(CONN *conn, CB_DATA *packet)
 {
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0, is_valid_offset = 0;
@@ -296,7 +296,7 @@ op_truncate:
             ERROR_LOGGER(lqftpd_logger, "Truncate %s failed, %s", fullpath, strerror(errno));
             RESPONSE(conn, RESP_SERVER_ERROR);
         }
-    return;
+    return -1;
 
 op_put:
         if(nplist == 0)
@@ -338,7 +338,7 @@ op_put:
             conn->recv_file((CONN *)conn, fullpath, offset, size);
         }
 		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
-        return;
+        return -1;
 op_del:
         if(access(fullpath, F_OK) == 0 )
         {
@@ -357,7 +357,7 @@ op_del:
         {
             RESPONSE(conn, RESP_FILE_NOT_EXISTS);
         }
-        return;
+        return -1;
 
 op_md5sum:
         if(nplist == 0)
@@ -412,28 +412,31 @@ op_md5sum:
             ERROR_LOGGER(lqftpd_logger, "File %s is not exists", fullpath);
             RESPONSE(conn, RESP_FILE_NOT_EXISTS);
         }
-        return;
+        return -1;
     }
 }
 
-void cb_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
+int cb_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
     if(conn)
     {
         RESPONSE(conn, RESP_OK);
     }
+    return -1;
 }
 
-void cb_file_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
+int cb_file_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache)
 {
     if(conn)
     {
         RESPONSE(conn, RESP_OK);
     }
+    return -1;
 }
 
-void cb_oob_handler(CONN *conn, CB_DATA *oob)
+int cb_oob_handler(CONN *conn, CB_DATA *oob)
 {
+    return -1;
 }
 
 /* Initialize from ini file */
@@ -450,7 +453,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	/* SBASE */
 	sbase->nchilds = iniparser_getint(dict, "SBASE:nchilds", 0);
 	sbase->connections_limit = iniparser_getint(dict, "SBASE:connections_limit", SB_CONN_MAX);
-    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
 	sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
 	sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
 	sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
@@ -497,9 +499,9 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->session.file_handler = &cb_file_handler;
 	service->session.oob_handler = &cb_oob_handler;
     if( (p = iniparser_getstr(dict, "LQFTPD:access_log")))
-        LOGGER_INIT(lqftpd_logger);
+        LOGGER_INIT(lqftpd_logger, p);
     else
-        LOGGER_INIT(LQFTPD_LOG);
+        LOGGER_INIT(lqftpd_logger, LQFTPD_LOG);
     document_root = iniparser_getstr(dict, "LQFTPD:server_root");
     if( (p = iniparser_getstr(dict, "LQFTPD:histlist"))) histlist = p;
     if((p = iniparser_getstr(dict, "LQFTPD:qlist"))) qlist = p;
@@ -554,6 +556,7 @@ int main(int argc, char **argv)
 	}
 
 
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 10240);
 	if((sbase = sbase_init()) == NULL)
     {
                 exit(EXIT_FAILURE);
@@ -569,4 +572,6 @@ int main(int argc, char **argv)
     fprintf(stdout, "Initialized successed\n");
     //sbase->running(sbase, 3600);
     sbase->running(sbase, 0);
+    sbase->stop(sbase);
+    sbase->clean(&sbase);
 }
