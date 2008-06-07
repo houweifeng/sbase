@@ -102,8 +102,6 @@ typedef struct _SBASE
     /* message queue for proc mode */
     void *message_queue;
 
-	int (*setrlimit)(struct _SBASE *, char *, int , int);
-	
 	int  (*set_log)(struct _SBASE *, char *);
 	int  (*set_evlog)(struct _SBASE *, char *);
 	
@@ -113,6 +111,7 @@ typedef struct _SBASE
 	void (*clean)(struct _SBASE **);
 }SBASE;
 /* Initialize sbase */
+int setrlimiter(char *name, int rlimid, int nset);
 SBASE *sbase_init();
 
 /* service */
@@ -178,6 +177,7 @@ typedef struct _SERVICE
     /* timer and logger */
     void *timer;
     void *logger;
+    int  is_inside_logger;
     int (*set_log)(struct _SERVICE *service, char *logfile);
 
     /* transaction and task */
@@ -205,6 +205,7 @@ typedef struct _PROCTHREAD
     int running_status;
 	int usec_sleep;
     int index;
+    long threadid;
 
     /* message queue */
     void *message_queue;

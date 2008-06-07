@@ -10,6 +10,7 @@ void procthread_run(void *arg)
 
     if(pth)
     {
+	DEBUG_LOGGER(pth->logger, "Ready for running thread[%08x]", pth->threadid);
         pth->running_status = 1;
         while(pth->running_status)
         {
@@ -145,6 +146,7 @@ void procthread_terminate(PROCTHREAD *pth)
         DEBUG_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
         pth->running_status = 0;
     }
+    return ;
 }
 
 /* active heartbeat */
@@ -168,7 +170,7 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 /* clean procthread */
 void procthread_clean(PROCTHREAD **ppth)
 {
-    if(*ppth)
+    if(ppth && *ppth)
     {
         if((*ppth)->service->working_mode != WORKING_PROC)
         {

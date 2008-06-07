@@ -636,7 +636,7 @@ void conn_clean(CONN **pconn)
 {
     CHUNK *cp = NULL;
 
-    if(*pconn)
+    if(pconn && *pconn)
     {
         if((*pconn)->timer) {TIMER_CLEAN((*pconn)->timer);}
         if((*pconn)->event) (*pconn)->event->clean(&((*pconn)->event));

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
+#include <sys/resource.h>
 #include <sbase.h>
 #include "iniparser.h"
 
@@ -42,7 +43,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	/* SBASE */
 	sbase->nchilds = iniparser_getint(dict, "SBASE:nchilds", 0);
 	sbase->connections_limit = iniparser_getint(dict, "SBASE:connections_limit", SB_CONN_MAX);
-    sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
 	sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
 	sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
 	sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
@@ -123,6 +123,7 @@ int main(int argc, char **argv)
     signal(SIGINT,  &lechod_stop);
     signal(SIGHUP,  &lechod_stop);
     signal(SIGPIPE, SIG_IGN);
+/*
     pid = fork();
     switch (pid) {
         case -1:
@@ -137,8 +138,8 @@ int main(int argc, char **argv)
             _exit(EXIT_SUCCESS);
             break;
     }
-
-
+*/
+    //setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);
@@ -152,6 +153,10 @@ int main(int argc, char **argv)
         return -1;
     }
     fprintf(stdout, "Initialized successed\n");
+    //sbase->running(sbase, 0);
     //sbase->running(sbase, 3600);
-    sbase->running(sbase, 0);
+    sbase->running(sbase, 60000000);
+    sbase->stop(sbase);
+    sbase->clean(&sbase);
+    if(dict)iniparser_free(dict);
 }

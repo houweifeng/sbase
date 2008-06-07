@@ -31,7 +31,7 @@ void message_handler(void *message_queue, void *logger)
         pth = (PROCTHREAD *)(msg.parent);
         if(msg.msg_id == MESSAGE_STOP && pth)
         {
-            pth->stop(pth);
+            pth->terminate(pth);
             goto next;
         }
         //task and heartbeat
