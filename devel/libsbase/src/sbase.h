@@ -20,6 +20,7 @@ extern "C" {
 #define SB_NDAEMONS_MAX 64
 #define SB_BUF_SIZE     65536
 #define SB_USEC_SLEEP   1000
+#define SB_HEARTBEAT_INTERVAL 1000
 /* service type */
 #define S_SERVICE      0x00
 #define C_SERVICE      0x01
@@ -166,7 +167,10 @@ typedef struct _SERVICE
     int connections_limit; 
     int index_max;
     int running_connections;
+    int nconnection;
     struct _CONN **connections;
+    /* C_SERVICE ONLY */
+    int client_connections_limit;
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
             char *ip, int port, SESSION *session);
     struct _CONN *(*addconn)(struct _SERVICE *service, int fd, char *ip, int port, SESSION *);

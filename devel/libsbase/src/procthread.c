@@ -10,7 +10,7 @@ void procthread_run(void *arg)
 
     if(pth)
     {
-	DEBUG_LOGGER(pth->logger, "Ready for running thread[%08x]", pth->threadid);
+        DEBUG_LOGGER(pth->logger, "Ready for running thread[%08x]", pth->threadid);
         pth->running_status = 1;
         while(pth->running_status)
         {
@@ -93,8 +93,8 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && conn)
     {
-            DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
-                    conn->ip, conn->port, conn->fd);
+        DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
+                conn->ip, conn->port, conn->fd);
         conn->message_queue = pth->message_queue;
         conn->parent = pth;
         if(conn->set(conn) == 0)

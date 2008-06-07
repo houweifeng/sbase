@@ -33,6 +33,8 @@ int service_set_log(SERVICE *service, char *logfile);
 void service_event_handler(int, short, void *);
 /* heartbeat handler */
 void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, void *arg);
+/* state check */
+void service_state(SERVICE *service);
 /* active heartbeat */
 void service_active_heartbeat(SERVICE *service);
 /* clean service */
