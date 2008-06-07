@@ -376,11 +376,11 @@ int sbase_initialize(SBASE *sbase, char *conf)
     }
     transport->family = iniparser_getint(dict, "TRANSPORT:inet_family", AF_INET);
     transport->sock_type = iniparser_getint(dict, "TRANSPORT:socket_type", SOCK_STREAM);
-    transport->ip = iniparser_getstr(dict, "TRANSPORT:transport_ip");
-    transport->port = iniparser_getint(dict, "TRANSPORT:transport_port", 80);
+    transport->ip = iniparser_getstr(dict, "TRANSPORT:service_ip");
+    transport->port = iniparser_getint(dict, "TRANSPORT:service_port", 80);
     transport->working_mode = iniparser_getint(dict, "TRANSPORT:working_mode", WORKING_PROC);
-    transport->service_type = iniparser_getint(dict, "TRANSPORT:transport_type", C_SERVICE);
-    transport->service_name = iniparser_getstr(dict, "TRANSPORT:transport_name");
+    transport->service_type = iniparser_getint(dict, "TRANSPORT:service_type", C_SERVICE);
+    transport->service_name = iniparser_getstr(dict, "TRANSPORT:sevvice_name");
     transport->nprocthreads = iniparser_getint(dict, "TRANSPORT:nprocthreads", 1);
     transport->ndaemons = iniparser_getint(dict, "TRANSPORT:ndaemons", 0);
     transport->set_log(transport, iniparser_getstr(dict, "TRANSPORT:logfile"));
@@ -412,6 +412,9 @@ int sbase_initialize(SBASE *sbase, char *conf)
     transport->session.oob_handler = &cb_transport_oob_handler;
     transport->client_connections_limit = iniparser_getint(dict, 
             "TRANSPORT:client_connections_limit", 8);
+    heartbeat_interval = iniparser_getint(dict, "TRANSPORT:heartbeat_interval", 
+            SB_HEARTBEAT_INTERVAL);
+    transport->set_heartbeat(transport, heartbeat_interval, NULL, NULL);
     /* DAEMON */
     if((serv = service_init()) == NULL)
 	{
