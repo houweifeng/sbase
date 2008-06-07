@@ -228,7 +228,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
         char *inet_ip, int inet_port, SESSION *session)
 {
     CONN *conn = NULL;
-    struct sockaddr_in rsa;
+    struct sockaddr_in rsa, lsa;
+    socklen_t lsa_len = sizeof(lsa);
     int fd = -1, family = -1, sock_type = -1, port = -1;
     char *ip = NULL;
     SESSION *sess = NULL;
@@ -249,7 +250,11 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                     && (connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
                         || errno == EINPROGRESS))
             {
-                conn = service->addconn(service, fd, ip, port, sess);
+                getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
+                ip = inet_ntoa(lsa.sin_addr);
+                port = ntohs(lsa.sin_port);
+                if((conn = service->addconn(service, fd, ip, port, sess)))
+                    conn->status = CONN_STATUS_READY; 
             }
             else
             {
@@ -278,7 +283,6 @@ CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *ses
         if((conn = conn_init(fd, ip, port)))
         {
             conn->logger    = service->logger;
-            conn->evbase    = service->evbase;
             conn->set_session(conn, session);
             /* add  to procthread */
             if(service->working_mode == WORKING_PROC)
@@ -380,6 +384,8 @@ CONN *service_getconn(SERVICE *service)
             if((conn = service->connections[i]) && conn->status == CONN_STATUS_FREE
                     && conn->c_state == C_STATE_FREE)
             {
+                DEBUG_LOGGER(service->logger, "Got connection[%s:%d] via %d", 
+                        conn->ip, conn->port, conn->fd);
                 conn->start_cstate(conn);
                 break;
             }

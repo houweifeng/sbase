@@ -71,7 +71,10 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     CONN_TERMINATE(conn);          
                     return ;
                 }
-                conn->status = CONN_STATUS_CONNECTED;
+                DEBUG_LOGGER(conn->logger, "Connection[%s:%d] via %d is OK",
+                        conn->ip, conn->port, conn->fd);
+                conn->status = CONN_STATUS_FREE;
+                return ;
             }
             if(event & E_CLOSE)
             {
@@ -269,8 +272,10 @@ int conn_read_handler(CONN *conn)
         /* Receive normal data */
         if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
         {
-            FATAL_LOGGER(conn->logger, "Reading %d bytes left:%d data from %s:%d via %d failed, %s",
-                    n, MB_LEFT(conn->buffer), conn->ip, conn->port, conn->fd, strerror(errno));
+            FATAL_LOGGER(conn->logger, "Reading %d bytes ptr:%08x left:%d "
+                    "data from %s:%d via %d failed, %s",
+                    n, MB_END(conn->buffer), MB_LEFT(conn->buffer), 
+                    conn->ip, conn->port, conn->fd, strerror(errno));
             /* Terminate connection */
             CONN_TERMINATE(conn);
             return (ret = 0);
@@ -525,7 +530,7 @@ int conn_recv_chunk(CONN *conn, int size)
         CK_MEM(conn->chunk, size);
         conn->s_state = S_STATE_READ_CHUNK;
         conn->chunk_reader(conn);
-        CONN_CHUNK_READ(conn, n);
+        //CONN_CHUNK_READ(conn, n);
         ret = 0;
     }
     return ret;
@@ -571,7 +576,7 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
         CK_SET_BSIZE(conn->chunk, conn->session.buffer_size);
         conn->s_state = S_STATE_READ_CHUNK;
         conn->chunk_reader(conn);
-        CONN_CHUNK_READ(conn, n);
+        //CONN_CHUNK_READ(conn, n);
         ret = 0;
     }
     return ret;
