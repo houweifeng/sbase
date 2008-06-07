@@ -123,7 +123,6 @@ int main(int argc, char **argv)
     signal(SIGINT,  &lechod_stop);
     signal(SIGHUP,  &lechod_stop);
     signal(SIGPIPE, SIG_IGN);
-/*
     pid = fork();
     switch (pid) {
         case -1:
@@ -138,7 +137,6 @@ int main(int argc, char **argv)
             _exit(EXIT_SUCCESS);
             break;
     }
-*/
     //setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
     if((sbase = sbase_init()) == NULL)
     {
@@ -153,9 +151,9 @@ int main(int argc, char **argv)
         return -1;
     }
     fprintf(stdout, "Initialized successed\n");
-    //sbase->running(sbase, 0);
+    sbase->running(sbase, 0);
     //sbase->running(sbase, 3600);
-    sbase->running(sbase, 60000000);
+    //sbase->running(sbase, 60000000);
     sbase->stop(sbase);
     sbase->clean(&sbase);
     if(dict)iniparser_free(dict);
