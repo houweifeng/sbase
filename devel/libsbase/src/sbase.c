@@ -9,34 +9,38 @@
 #include "message.h"
 #include "timer.h"
 
-/* set resource limit */
-int sbase_setrlimit(SBASE *sb, char *name, int rlimit, int nset)
+/* set rlimit */
+int setrlimiter(char *name, int rlimit, int nset)
 {
-	int ret = -1;
-	struct rlimit rlim;
-	if(sb)
-	{
-		if(getrlimit(rlimit, &rlim) == -1)
-			return -1;
-		if(rlim.rlim_cur > nset && rlim.rlim_max > nset)
-			return 0;
-		rlim.rlim_cur = nset;
-		rlim.rlim_max = nset;
-		if((ret = setrlimit(rlimit, &rlim)) == 0)
-		{
-			fprintf(stdout, "setrlimit %s cur[%ld] max[%ld]\n",  
-					name, rlim.rlim_cur, rlim.rlim_max);
-            ret = 0;
-		}
-		else
-		{
-			fprintf(stderr, "setrlimit %s cur[%ld] max[%ld] failed, %s\n",
-					name, rlim.rlim_cur, rlim.rlim_max, strerror(errno));
-		}
-	}
-	return ret;
+    int ret = -1;
+    struct rlimit rlim;
+    if(name)
+    {
+        if(getrlimit(rlimit, &rlim) == -1)
+            return -1;
+        else
+        {
+            fprintf(stdout, "getrlimit %s cur[%d] max[%ld]\n",
+                    name, rlim.rlim_cur, rlim.rlim_max);
+        }
+        if(rlim.rlim_cur > nset && rlim.rlim_max > nset)
+            return 0;
+        rlim.rlim_cur = nset;
+        rlim.rlim_max = nset;
+        if((ret = setrlimit(rlimit, &rlim)) == 0)
+        {
+            fprintf(stdout, "setrlimit %s cur[%ld] max[%ld]\n",
+                    name, rlim.rlim_cur, rlim.rlim_max);
+            return 0;
+        }
+        else
+        {
+            fprintf(stderr, "setrlimit %s cur[%ld] max[%ld] failed, %s\n",
+                    name, rlim.rlim_cur, rlim.rlim_max, strerror(errno));
+        }
+    }
+    return ret;
 }
-
 
 /* set sbase log */
 int sbase_set_log(SBASE *sbase, char *logfile)
@@ -173,9 +177,18 @@ running:
 /* stop all service */
 void sbase_stop(SBASE *sbase)
 {
+    int i = 0;
+
     if(sbase)
     {
         sbase->running_status = 0;
+	for(i = 0; i < sbase->running_services; i++)
+	{
+		if(sbase->services[i])
+		{
+			sbase->services[i]->stop(sbase->services[i]);
+		}
+	}
     }
     return ;
 }
@@ -183,10 +196,21 @@ void sbase_stop(SBASE *sbase)
 /* clean sbase */
 void sbase_clean(SBASE **psbase)
 {
-    if(*psbase)
+    int i = 0;
+
+    if(psbase && *psbase)
     {
-        if((*psbase)->services) free((*psbase)->services);
-        if((*psbase)->logger) LOGGER_CLEAN((*psbase)->services);
+        if((*psbase)->services) 
+	{
+		for(i = 0; i < (*psbase)->running_services; i++)
+		{
+			if((*psbase)->services[i])
+				(*psbase)->services[i]->clean(&((*psbase)->services[i]));
+		}
+		free((*psbase)->services);
+	}
+        if((*psbase)->timer) TIMER_CLEAN((*psbase)->timer);
+        if((*psbase)->logger) LOGGER_CLEAN((*psbase)->logger);
         if((*psbase)->evbase) (*psbase)->evbase->clean(&((*psbase)->evbase));
         if((*psbase)->message_queue) QUEUE_CLEAN((*psbase)->message_queue);
         free(*psbase);
@@ -200,16 +224,15 @@ SBASE *sbase_init()
 	SBASE *sbase = NULL;
 	if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
 	{
-        TIMER_INIT(sbase->timer);
-        QUEUE_INIT(sbase->message_queue);
-		sbase->setrlimit     	= sbase_setrlimit;
+		TIMER_INIT(sbase->timer);
+		QUEUE_INIT(sbase->message_queue);
 		sbase->set_log		    = sbase_set_log;
 		sbase->set_evlog	    = sbase_set_evlog;
 		sbase->add_service	    = sbase_add_service;
 		sbase->running 		    = sbase_running;
 		sbase->stop 		    = sbase_stop;
 		sbase->clean 		    = sbase_clean;
-        //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
+		//sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
 	}
 	return sbase;
 }

@@ -41,7 +41,7 @@ int service_set(SERVICE *service)
 #ifdef HAVE_PTHREAD
 #define NEW_PROCTHREAD(ns, id, pthid, pth, logger)                                          \
 {                                                                                           \
-    if(pthread_create(&pthid, NULL, (void *)(pth->run), (void *)pth) == 0)                  \
+    if(pthread_create((pthread_t *)&pthid, NULL, (void *)(pth->run), (void *)pth) == 0)     \
     {                                                                                       \
         DEBUG_LOGGER(logger, "Created %s[%d] ID[%08x]", ns, id, pthid);                     \
     }                                                                                       \
@@ -66,9 +66,6 @@ int service_run(SERVICE *service)
 {
     int ret = -1;
     int i = 0;
-#ifdef HAVE_PTHREAD
-    pthread_t procthread_id ;
-#endif
 
     if(service)
     {
@@ -115,7 +112,7 @@ running_threads:
         if((service->daemon = procthread_init()))
         {
             PROCTHREAD_SET(service, service->daemon);
-            NEW_PROCTHREAD("daemon", 0, procthread_id, service->daemon, service->logger);
+            NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
             ret = 0;
         }
         else
@@ -141,7 +138,7 @@ running_threads:
                             strerror(errno));
                     exit(EXIT_FAILURE);
                 }
-                NEW_PROCTHREAD("procthreads", i, procthread_id, 
+                NEW_PROCTHREAD("procthreads", i, service->procthreads[i]->threadid, 
                         service->procthreads[i], service->logger);
             }
         }
@@ -161,7 +158,7 @@ running_threads:
                             strerror(errno));
                     exit(EXIT_FAILURE);
                 }
-                NEW_PROCTHREAD("daemons", i, procthread_id, 
+                NEW_PROCTHREAD("daemons", i, service->daemons[i]->threadid,
                         service->daemons[i], service->logger);
             }
         }
@@ -182,6 +179,7 @@ int service_set_log(SERVICE *service, char *logfile)
     {
         LOGGER_INIT(service->logger, logfile);
 	    DEBUG_LOGGER(service->logger, "Initialize logger %s", logfile);
+	service->is_inside_logger = 1;
         return 0;
     }
     return -1;
@@ -461,54 +459,60 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
 /* stop service */
 void service_stop(SERVICE *service)
 {
-    int i = 0;
-    CONN *conn = NULL;
+	int i = 0;
+	CONN *conn = NULL;
 
-    if(service)
-    {
-        //stop all connections 
-        if(service->connections && service->running_connections > 0 && service->index_max > 0)
-        {
-            for(i = 0; i < service->index_max; i++)
-            {
-                if((conn = service->connections[i]))
-                {
-                    conn->close(conn);
-                }
-            }
-        }
-        //stop all procthreads
-        if(service->working_mode == WORKING_PROC)
-        {
-            if(service->daemon)
-            {
-                service->daemon->stop(service->daemon);
-            }
-        }
-        else if(service->working_mode == WORKING_THREAD)
-        {
-            if(service->procthreads && service->nprocthreads)
-            {
-                for(i = 0; i < service->nprocthreads; i++)
-                {
-                    if(service->procthreads[i])
-                    {
-                        service->procthreads[i]->stop(service->procthreads[i]);
-                    }
-                }
-            }
-            if(service->daemons && service->ndaemons)
-            {
-                for(i = 0; i < service->ndaemons; i++)
-                {
-                    if(service->daemons[i])
-                    {
-                        service->daemons[i]->stop(service->daemons[i]);
-                    }
-                }
-            }
-        }
-    }
+	if(service)
+	{
+		//stop all connections 
+		if(service->connections && service->running_connections > 0 && service->index_max > 0)
+		{
+			for(i = 0; i < service->index_max; i++)
+			{
+				if((conn = service->connections[i]))
+				{
+					conn->close(conn);
+				}
+			}
+		}
+		//stop all procthreads
+		if(service->daemon)
+		{
+			service->daemon->stop(service->daemon);
+#ifdef HAVE_PTHREAD
+			pthread_join((pthread_t)service->daemon->threadid, NULL);
+#endif
+		}
+		if(service->procthreads && service->nprocthreads)
+		{
+			for(i = 0; i < service->nprocthreads; i++)
+			{
+				if(service->procthreads[i])
+				{
+					service->procthreads[i]->stop(service->procthreads[i]);
+#ifdef HAVE_PTHREAD
+					pthread_join((pthread_t)(service->procthreads[i]->threadid), NULL);
+#endif
+				}
+			}
+		}
+		if(service->daemons && service->ndaemons)
+		{
+			for(i = 0; i < service->ndaemons; i++)
+			{
+				if(service->daemons[i])
+				{
+					service->daemons[i]->stop(service->daemons[i]);
+#ifdef HAVE_PTHREAD
+					pthread_join((pthread_t)(service->daemons[i]->threadid), NULL);
+#endif
+				}
+			}
+		}
+		//remove event
+		service->event->destroy(service->event);
+		close(service->fd);
+	}
 }
 
 /* heartbeat handler */
@@ -537,14 +541,40 @@ void service_active_heartbeat(SERVICE *service)
 /* service clean */
 void service_clean(SERVICE **pservice)
 {
-    if(*pservice)
-    {
-        if((*pservice)->connections) free((*pservice)->connections);
-        if((*pservice)->logger) LOGGER_CLEAN((*pservice)->logger);
-        MUTEX_DESTROY((*pservice)->mutex);
-        free(*pservice);
-        *pservice = NULL;
-    }
+	int i = 0;
+
+	if(pservice && *pservice)
+	{
+		if((*pservice)->connections) free((*pservice)->connections);
+		if((*pservice)->is_inside_logger && (*pservice)->logger) LOGGER_CLEAN((*pservice)->logger);
+		if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
+		if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
+		if((*pservice)->procthreads && (*pservice)->nprocthreads)
+		{
+			for(i = 0; i < (*pservice)->nprocthreads; i++)
+			{
+				if((*pservice)->procthreads[i])
+				{
+					(*pservice)->procthreads[i]->clean(&((*pservice)->procthreads[i]));
+				}
+			}
+			free((*pservice)->procthreads);
+		}
+		if((*pservice)->daemons && (*pservice)->ndaemons)
+		{
+			for(i = 0; i < (*pservice)->ndaemons; i++)
+			{
+				if((*pservice)->daemons[i])
+				{
+					(*pservice)->daemons[i]->clean(&((*pservice)->daemons[i]));
+				}
+			}
+			free((*pservice)->daemons);
+		}
+		MUTEX_DESTROY((*pservice)->mutex);
+		free(*pservice);
+		*pservice = NULL;
+	}
 }
 
 /* Initialize service */

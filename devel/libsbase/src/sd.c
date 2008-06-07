@@ -14,15 +14,13 @@ int sd_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 int main()
 {
     SESSION session = {0};
-    SBASE *sbase = sbase_init();
+    SBASE *sbase = NULL;
+
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
+    sbase = sbase_init();
     sbase->nchilds = 1;
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
-    if(sbase->setrlimit(sbase, "RLIMIT_NOFILE", RLIMIT_NOFILE, 10240) == -1)
-    {
-        fprintf(stderr, "set rlimit failed, %s\n", strerror(errno));
-        _exit(-1);
-    }
 	sbase->set_log(sbase, "/tmp/sd.log");
 	sbase->set_evlog(sbase, "/tmp/evsd.log");
     SERVICE *service = NULL;
