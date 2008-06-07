@@ -677,7 +677,7 @@ CONN *conn_init(int fd, char *ip, int port)
         MB_INIT(conn->cache, MB_BLOCK_SIZE);
         MB_INIT(conn->oob, MB_BLOCK_SIZE);
         CK_INIT(conn->chunk);
-        conn->send_queue            = QUEUE_INIT();
+        QUEUE_INIT(conn->send_queue);
         conn->event                 = ev_init();
         conn->set                   = conn_set;
         conn->close                 = conn_close;

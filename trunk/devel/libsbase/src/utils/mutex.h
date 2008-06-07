@@ -20,12 +20,22 @@ int mutex_destroy(MUTEX **mutex);
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
 #define MT(ptr) ((pthread_mutex_t *)ptr)
-#define MUTEX_INIT(mlock) {         \
-    if((mlock = (pthread_mutex_t *)calloc(1, sizeof(pthread_mutex_t)))) \
-        pthread_mutex_init(MT(mlock), NULL);}
+#define MUTEX_INIT(mlock) 												\
+do{         														\
+    if((mlock = (pthread_mutex_t *)calloc(1, sizeof(pthread_mutex_t)))) 						\
+        pthread_mutex_init(MT(mlock), NULL);										\
+}while(0)
 #define MUTEX_LOCK(mlock) ((mlock) ? pthread_mutex_lock(MT(mlock)): -1)
 #define MUTEX_UNLOCK(mlock) ((mlock) ? pthread_mutex_unlock(MT(mlock)): -1)
-#define MUTEX_DESTROY(mlock) {if(mlock) pthread_mutex_destroy(MT(mlock)); free(mlock);mlock = NULL;}
+#define MUTEX_DESTROY(mlock) 												\
+do{															\
+	if(mlock)													\
+	{														\
+		pthread_mutex_destroy(MT(mlock)); 									\
+		free(MT(mlock));											\
+		mlock = NULL;												\
+	}														\
+}while(0)
 #else
 #define MUTEX_INIT(mlock) ((mlock = mutex_init()))
 #define MUTEX_LOCK(mlock) (mutex_lock(mlock))

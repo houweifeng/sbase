@@ -121,6 +121,7 @@ typedef struct _SERVICE
     /* global */
 	int usec_sleep;
     SBASE *sbase;
+    void *mutex;
 
     /* heartbeat */
     /* running heartbeat_handler when looped hearbeat_interval times*/

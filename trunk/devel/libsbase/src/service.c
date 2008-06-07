@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "service.h"
 #include "queue.h"
+#include "mutex.h"
 
 /* set service */
 int service_set(SERVICE *service)
@@ -56,7 +57,6 @@ int service_set(SERVICE *service)
 #define PROCTHREAD_SET(service, pth)                                                        \
 {                                                                                           \
     pth->service = service;                                                                 \
-    pth->evbase = service->evbase;                                                          \
     pth->logger = service->logger;                                                          \
     pth->usec_sleep = service->usec_sleep;                                                  \
 }
@@ -94,8 +94,9 @@ running_proc:
             {
                 QUEUE_CLEAN(service->daemon->message_queue);
                 service->daemon->message_queue = service->message_queue;
+                service->daemon->evbase->clean(&(service->daemon->evbase));
+                service->daemon->evbase = service->evbase;
             }
-
             DEBUG_LOGGER(service->logger, "sbase->q[%08x] service->q[%08x] daemon->q[%08x]",
                     service->sbase->message_queue, service->message_queue, 
                     service->daemon->message_queue);
@@ -321,6 +322,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
 
     if(service && conn && service->connections)
     {
+        MUTEX_LOCK(service->mutex);
         for(i = 0; i < service->connections_limit; i++)
         {
             if(service->connections[i] == NULL)
@@ -336,6 +338,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 break;
             }
         }
+        MUTEX_UNLOCK(service->mutex);
     }
     return ret;
 }
@@ -347,6 +350,7 @@ int service_popconn(SERVICE *service, CONN *conn)
 
     if(service && service->connections && conn)
     {
+        MUTEX_LOCK(service->mutex);
         if(conn->index >= 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
@@ -359,6 +363,7 @@ int service_popconn(SERVICE *service, CONN *conn)
                     "index[%d] of total %d", conn->ip, conn->port, conn->fd, 
                     conn->index, service->running_connections);
         }
+        MUTEX_UNLOCK(service->mutex);
     }
     return ret;
 }
@@ -371,6 +376,7 @@ CONN *service_getconn(SERVICE *service)
 
     if(service)
     {
+        MUTEX_LOCK(service->mutex);
         for(i = 0; i < service->index_max; i++)
         {
             if((conn = service->connections[i]) && conn->status == CONN_STATUS_FREE
@@ -381,6 +387,7 @@ CONN *service_getconn(SERVICE *service)
             }
             conn = NULL;
         }
+        MUTEX_UNLOCK(service->mutex);
     }
     return conn;
 }
@@ -534,6 +541,7 @@ void service_clean(SERVICE **pservice)
     {
         if((*pservice)->connections) free((*pservice)->connections);
         if((*pservice)->logger) LOGGER_CLEAN((*pservice)->logger);
+        MUTEX_DESTROY((*pservice)->mutex);
         free(*pservice);
         *pservice = NULL;
     }
@@ -545,6 +553,7 @@ SERVICE *service_init()
     SERVICE *service = NULL;
     if((service = (SERVICE *)calloc(1, sizeof(SERVICE))))
     {
+        MUTEX_INIT(service->mutex);
         service->set                = service_set;
         service->run                = service_run;
         service->set_log            = service_set_log;

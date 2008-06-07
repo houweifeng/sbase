@@ -201,7 +201,7 @@ SBASE *sbase_init()
 	if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
 	{
         TIMER_INIT(sbase->timer);
-        sbase->message_queue    = QUEUE_INIT();
+        QUEUE_INIT(sbase->message_queue);
 		sbase->setrlimit     	= sbase_setrlimit;
 		sbase->set_log		    = sbase_set_log;
 		sbase->set_evlog	    = sbase_set_evlog;

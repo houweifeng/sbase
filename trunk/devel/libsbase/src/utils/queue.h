@@ -1,6 +1,14 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_PTHREAD
+#include "mutex.h"
+#else
+#define MUTEX_INIT(ptr)
+#define MUTEX_LOCK(ptr) (0)
+#define MUTEX_UNLOCK(ptr) (0)
+#define MUTEX_DESTROY(ptr) (0)
+#endif
 #ifndef _QUEUE_H
 #define _QUEUE_H
 #ifdef __cplusplus
@@ -18,6 +26,7 @@ typedef struct _QUEUE
     int tail;
     void *table;
     void *newtable;
+    void *mutex;
 }QUEUE;
 
 #define Q(ptr) ((QUEUE *)ptr)
@@ -32,10 +41,18 @@ typedef struct _QUEUE
 #define QLEFT(ptr) (Q(ptr)->left)
 #define QCOUNT(ptr) (Q(ptr)->count)
 #define QNCOUNT(ptr) (Q(ptr)->newcount)
-#define QUEUE_INIT() ((calloc(1, sizeof(QUEUE)))) 
+#define QMUTEX(ptr) (Q(ptr)->mutex)
+#define QUEUE_INIT(ptr)                                                                     \
+do                                                                                          \
+{                                                                                           \
+    if((ptr = calloc(1, sizeof(QUEUE))))                                                    \
+    {                                                                                       \
+        MUTEX_INIT(Q(ptr)->mutex);                                                          \
+    }                                                                                       \
+}while(0)
 //                fprintf(stdout, "head:%d tail:%d\n", QHEAD(ptr), QTAIL(ptr));
 #define QUEUE_RESIZE(ptr, type)                                                             \
-{                                                                                           \
+do{                                                                                         \
     if(QLEFT(ptr) <= 0)                                                                     \
     {                                                                                       \
         QNCOUNT(ptr) = QCOUNT(ptr) + QUEUE_BLOCK_SIZE;                                      \
@@ -63,10 +80,11 @@ typedef struct _QUEUE
             QPOS(ptr) = 0;                                                                  \
         }                                                                                   \
     }                                                                                       \
-}
+}while(0)
 
 #define QUEUE_PUSH(ptr, type, dptr)                                                         \
-{                                                                                           \
+do{                                                                                         \
+    MUTEX_LOCK(QMUTEX(ptr));                                                                \
     if(ptr && dptr)                                                                         \
     {                                                                                       \
         QUEUE_RESIZE(ptr, type);                                                            \
@@ -77,34 +95,42 @@ typedef struct _QUEUE
             QTAIL(ptr)++;QLEFT(ptr)--;QTOTAL(ptr)++;                                        \
         }                                                                                   \
     }                                                                                       \
-}
+    MUTEX_UNLOCK(QMUTEX(ptr));                                                              \
+}while(0)
 
 #define QUEUE_POP(ptr, type, dptr) ((ptr && QLEFT(ptr) < QCOUNT(ptr)                        \
+        && MUTEX_LOCK(QMUTEX(ptr)) == 0                                                     \
         && (QHEAD(ptr) = ((QHEAD(ptr) == QCOUNT(ptr))? 0 : QHEAD(ptr))) >= 0                \
         && memcpy(dptr, &(QTI(ptr, type, QHEAD(ptr))), sizeof(type))                        \
-        && QHEAD(ptr)++ >= 0 && QLEFT(ptr)++ >= 0 && QTOTAL(ptr)--  >= 0)? 0: -1)           
+        && QHEAD(ptr)++ >= 0 && QLEFT(ptr)++ >= 0 && QTOTAL(ptr)--  >= 0                    \
+        && MUTEX_UNLOCK(QMUTEX(ptr)) == 0)? 0: -1)
 
 #define QUEUE_HEAD(ptr, type, dptr) ((ptr && QLEFT(ptr) < QCOUNT(ptr)                       \
+        && MUTEX_LOCK(QMUTEX(ptr)) == 0                                                     \
         && (QHEAD(ptr) = ((QHEAD(ptr) == QCOUNT(ptr))? 0 : QHEAD(ptr))) >= 0                \
-        && memcpy(dptr, &(QTI(ptr, type, QHEAD(ptr))), sizeof(type))) ? 0 : -1)             \
+        && memcpy(dptr, &(QTI(ptr, type, QHEAD(ptr))), sizeof(type))                        \
+        && MUTEX_UNLOCK(QMUTEX(ptr)) == 0) ? 0 : -1)
 
 #define QUEUE_RESET(ptr)                                                                    \
-{                                                                                           \
+do{                                                                                         \
+    MUTEX_LOCK(QMUTEX(ptr));                                                                \
     if(ptr)                                                                                 \
     {                                                                                       \
         if(QTAB(ptr)) free(QTAB(ptr));                                                      \
-        memset(ptr, 0, sizeof(QUEUE));                                                      \
+        memset(ptr, 0, (sizeof(QUEUE) - sizeof(void *)));                                   \
     }                                                                                       \
-}
+    MUTEX_UNLOCK(QMUTEX(ptr));                                                              \
+}while(0)
 #define QUEUE_CLEAN(ptr)                                                                    \
-{                                                                                           \
+do{                                                                                         \
     if(ptr)                                                                                 \
     {                                                                                       \
         if(QTAB(ptr)) free(QTAB(ptr));                                                      \
+        MUTEX_DESTROY(QMUTEX(ptr));                                                         \
         free(ptr);                                                                          \
         ptr = NULL;                                                                         \
     }                                                                                       \
-}
+}while(0)
 #ifdef __cplusplus
      }
 #endif
