@@ -74,8 +74,12 @@ int conn_transaction_handler(CONN *conn, int tid);
 /* timeout handler */
 int conn_timeout_handler(CONN *conn);
 
+/* evtimer handler */
+void conn_evtimer_handler(void *arg);
+
 /* clean connection */
 void conn_clean(CONN **pconn);
+
 /* event handler */
 void conn_event_handler(int event_fd, short event, void *arg);
 #endif
