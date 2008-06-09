@@ -6,6 +6,7 @@
 #include "logger.h"
 #include "message.h"
 #include "timer.h"
+#include "evtimer.h"
 
 #define CONN_CHECK_RET(conn, ret)                                                           \
 {                                                                                           \
@@ -107,6 +108,12 @@ int conn_set(CONN *conn)
     short flag = 0;
     if(conn && conn->fd > 0 )
     {
+        //reset buffer
+        if(conn->session.buffer_size > MB_BLOCK_SIZE)
+        {
+            MB_SET_BLOCK_SIZE(conn->buffer, conn->session.buffer_size);
+            MB_RESET(conn->buffer);
+        }
         fcntl(conn->fd, F_SETFL, O_NONBLOCK);
         if(conn->evbase && conn->event)
         {
@@ -164,6 +171,7 @@ int conn_terminate(CONN *conn)
                     conn->ip, conn->port, conn->fd, conn->c_id);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
         }
+        EVTIMER_DEL(conn->evtimer, conn->evid);
         conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing session[%s:%d] via %d",
                 conn->ip, conn->port, conn->fd);
@@ -175,6 +183,17 @@ int conn_terminate(CONN *conn)
     return ret;
 }
 
+void conn_evtimer_handler(void *arg)
+{
+    CONN *conn = (CONN *)arg;
+
+    if(conn)
+    {
+        conn->push_message(conn, MESSAGE_TIMEOUT);
+    }
+    return ;
+}
+
 /* set timeout */
 int conn_set_timeout(CONN *conn, int timeout_usec)
 {
@@ -183,8 +202,20 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
     if(conn && timeout_usec > 0)
     {
         conn->timeout = timeout_usec;
+        EVTIMER_ADD(conn->evtimer, conn->timeout, &conn_evtimer_handler, (void *)conn, conn->evid);
     }
     return ret;
+}
+
+/* timeout handler */
+int conn_timeout_handler(CONN *conn)
+{
+    if(conn)
+    {
+        if(conn->session.timeout_handler)
+            return conn->session.timeout_handler(conn, conn->packet, conn->cache, conn->chunk);
+    }
+    return -1;
 }
 
 /* start client transaction state */
@@ -691,6 +722,7 @@ CONN *conn_init(int fd, char *ip, int port)
         conn->start_cstate          = conn_start_cstate;
         conn->over_cstate           = conn_over_cstate;
         conn->set_timeout           = conn_set_timeout;
+        conn->timeout_handler       = conn_timeout_handler;
         conn->set_session           = conn_set_session;
         conn->push_message          = conn_push_message;
         conn->read_handler          = conn_read_handler;

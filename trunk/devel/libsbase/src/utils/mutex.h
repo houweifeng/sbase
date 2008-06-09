@@ -3,20 +3,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define __MUTEX__WAIT__  100000
-typedef struct _MUTEX
-{
-    int current;
-    int lockid;
-}MUTEX;
-/* Initialize */
-MUTEX *mutex_init();
-/* Lock */
-int mutex_lock(MUTEX *mutex);
-/* Unlock*/
-int mutex_unlock(MUTEX *mutex);
-/* Destroy */
-int mutex_destroy(MUTEX **mutex);
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
 #define MT(ptr) ((pthread_mutex_t *)ptr)
@@ -37,10 +23,30 @@ do{															\
 	}														\
 }while(0)
 #else
+#define __MUTEX__WAIT__  100000
+typedef struct _MUTEX
+{
+    int current;
+    int lockid;
+}MUTEX;
+/* Initialize */
+MUTEX *mutex_init();
+/* Lock */
+int mutex_lock(MUTEX *mutex);
+/* Unlock*/
+int mutex_unlock(MUTEX *mutex);
+/* Destroy */
+int mutex_destroy(MUTEX **mutex);
+#define MUTEX_INIT(mlock) 
+#define MUTEX_LOCK(mlock) (0)
+#define MUTEX_UNLOCK(mlock) (0)
+#define MUTEX_DESTROY(mlock)
+/*
 #define MUTEX_INIT(mlock) ((mlock = mutex_init()))
 #define MUTEX_LOCK(mlock) (mutex_lock(mlock))
 #define MUTEX_UNLOCK(mlock) (mutex_unlock(mlock))
 #define MUTEX_DESTROY(mlock) (mutex_destroy(mlock))
+*/
 #endif
 #ifdef __cplusplus
  }

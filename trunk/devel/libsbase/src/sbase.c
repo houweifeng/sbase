@@ -8,6 +8,7 @@
 #include "queue.h"
 #include "message.h"
 #include "timer.h"
+#include "evtimer.h"
 
 /* set rlimit */
 int setrlimiter(char *name, int rlimit, int nset)
@@ -74,6 +75,7 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
         if(service)
         {
             service->evbase = sbase->evbase;
+            service->evtimer = sbase->evtimer;
             service->sbase  = sbase;
             service->message_queue = sbase->message_queue;
             service->usec_sleep = sbase->usec_sleep;
@@ -145,18 +147,8 @@ running:
             //running evbase 
             sbase->evbase->loop(sbase->evbase, 0, NULL);
             sbase->nheartbeat++;
-            //check heartbeat
-            i = 0;
-            while(i < sbase->running_services)
-            {
-                if(sbase->services[i] && sbase->services[i]->heartbeat_interval > 0
-                        && (sbase->nheartbeat % sbase->services[i]->heartbeat_interval) == 0)
-                {
-                    sbase->services[i]->active_heartbeat(sbase->services[i]);
-                }
-                ++i;
-            }
-            usleep(sbase->usec_sleep);
+            //check evtimer for heartbeat and timeout
+            EVTIMER_CHECK(sbase->evtimer);
             //running message queue
             if(QTOTAL(sbase->message_queue) > 0)
             {
@@ -210,6 +202,7 @@ void sbase_clean(SBASE **psbase)
             free((*psbase)->services);
         }
         if((*psbase)->timer) TIMER_CLEAN((*psbase)->timer);
+        if((*psbase)->evtimer) EVTIMER_CLEAN((*psbase)->evtimer);
         if((*psbase)->logger) LOGGER_CLEAN((*psbase)->logger);
         if((*psbase)->evbase) (*psbase)->evbase->clean(&((*psbase)->evbase));
         if((*psbase)->message_queue) QUEUE_CLEAN((*psbase)->message_queue);
@@ -225,6 +218,7 @@ SBASE *sbase_init()
     if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
     {
         TIMER_INIT(sbase->timer);
+        EVTIMER_INIT(sbase->evtimer);
         QUEUE_INIT(sbase->message_queue);
         sbase->set_log		    = sbase_set_log;
         sbase->set_evlog	    = sbase_set_evlog;

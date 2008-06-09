@@ -71,6 +71,9 @@ int conn_set_session(CONN *conn, SESSION *session);
 /* transaction handler */
 int conn_transaction_handler(CONN *conn, int tid);
 
+/* timeout handler */
+int conn_timeout_handler(CONN *conn);
+
 /* clean connection */
 void conn_clean(CONN **pconn);
 /* event handler */

@@ -34,9 +34,11 @@ void service_event_handler(int, short, void *);
 /* heartbeat handler */
 void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, void *arg);
 /* state check */
-void service_state(SERVICE *service);
+void service_state(void *arg);
 /* active heartbeat */
-void service_active_heartbeat(SERVICE *service);
+void service_active_heartbeat(void *arg);
+/* active evtimer heartbeat */
+void service_evtimer_handler(void *arg);
 /* clean service */
 void service_clean(SERVICE **pservice);
 #ifdef __cplusplus
