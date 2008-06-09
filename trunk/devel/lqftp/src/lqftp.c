@@ -194,6 +194,7 @@ void cb_serv_heartbeat_handler(void *arg)
                  //       "with %d tasks running[%d]",
                  //       c_conn->fd, tasktable->ntask, tasktable->running_task_id);
                 c_conn->over_cstate((CONN *)c_conn);
+                break;
             }
         }
         /*
@@ -380,7 +381,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     transport->port = iniparser_getint(dict, "TRANSPORT:service_port", 80);
     transport->working_mode = iniparser_getint(dict, "TRANSPORT:working_mode", WORKING_PROC);
     transport->service_type = iniparser_getint(dict, "TRANSPORT:service_type", C_SERVICE);
-    transport->service_name = iniparser_getstr(dict, "TRANSPORT:sevvice_name");
+    transport->service_name = iniparser_getstr(dict, "TRANSPORT:service_name");
     transport->nprocthreads = iniparser_getint(dict, "TRANSPORT:nprocthreads", 1);
     transport->ndaemons = iniparser_getint(dict, "TRANSPORT:ndaemons", 0);
     transport->set_log(transport, iniparser_getstr(dict, "TRANSPORT:logfile"));
