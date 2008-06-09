@@ -51,7 +51,23 @@
         return 0;                                                                           \
     }                                                                                       \
 }
-
+/* evtimer setting */
+#define CONN_EVTIMER_SET(conn)                                                              \
+do{                                                                                         \
+    if(conn && conn->evtimer && conn->timeout > 0)                                          \
+    {                                                                                       \
+        if(conn->evid >= 0 )                                                                \
+        {                                                                                   \
+            EVTIMER_UPDATE(conn->evtimer, conn->evid, conn->timeout,                        \
+                    &conn_evtimer_handler, (void *)conn);                                   \
+        }                                                                                   \
+        else                                                                                \
+        {                                                                                   \
+            EVTIMER_ADD(conn->evtimer, conn->timeout,                                       \
+                    &conn_evtimer_handler, (void *)conn, conn->evid);                       \
+        }                                                                                   \
+    }                                                                                       \
+}while(0)
 /* connection event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
@@ -98,6 +114,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 conn->write_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
+            CONN_EVTIMER_SET(conn);
         }
     }
 }
@@ -114,6 +131,7 @@ int conn_set(CONN *conn)
             MB_SET_BLOCK_SIZE(conn->buffer, conn->session.buffer_size);
             MB_RESET(conn->buffer);
         }
+        conn->evid = -1;
         fcntl(conn->fd, F_SETFL, O_NONBLOCK);
         if(conn->evbase && conn->event)
         {
@@ -202,7 +220,7 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
     if(conn && timeout_usec > 0)
     {
         conn->timeout = timeout_usec;
-        EVTIMER_ADD(conn->evtimer, conn->timeout, &conn_evtimer_handler, (void *)conn, conn->evid);
+        CONN_EVTIMER_SET(conn);
     }
     return ret;
 }
@@ -214,6 +232,7 @@ int conn_timeout_handler(CONN *conn)
     {
         if(conn->session.timeout_handler)
             return conn->session.timeout_handler(conn, conn->packet, conn->cache, conn->chunk);
+        CONN_TERMINATE(conn);
     }
     return -1;
 }
@@ -251,6 +270,7 @@ int conn_over_cstate(CONN *conn)
     if(conn)
     {
         conn->c_state = C_STATE_FREE;
+        EVTIMER_DEL(conn->evtimer, conn->evid);
         ret = 0;
     }
     return ret;

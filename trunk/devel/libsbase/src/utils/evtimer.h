@@ -215,7 +215,7 @@ do{                                                                             
         EVTIMER_NOW(ptr);                                                                       \
         while((PEVT_NODE(ptr) = PEVT_HEAD(ptr))  && PEVT_NODE(ptr)->evusec <= PEVT_NOW(ptr))    \
         {                                                                                       \
-            if(PEVT_NODE(ptr)->handler)                                                         \
+            if(PEVT_NODE(ptr)->id >= 0 && PEVT_NODE(ptr)->handler)                              \
             {                                                                                   \
                 PEVT_NODE(ptr)->handler(PEVT_NODE(ptr)->arg);                                   \
             }                                                                                   \
