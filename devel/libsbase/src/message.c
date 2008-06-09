@@ -35,7 +35,8 @@ void message_handler(void *message_queue, void *logger)
             goto next;
         }
         //task and heartbeat
-        if(msg.msg_id == MESSAGE_TASK || msg.msg_id == MESSAGE_HEARTBEAT)
+        if(msg.msg_id == MESSAGE_TASK || msg.msg_id == MESSAGE_HEARTBEAT 
+                || msg.msg_id == MESSAGE_STATE)
         {
             if(msg.handler)
             {
@@ -77,8 +78,8 @@ void message_handler(void *message_queue, void *logger)
             case MESSAGE_TRANSACTION :
                 conn->transaction_handler(conn, msg.tid);
                 break;
-            case MESSAGE_STATE :
-                //conn->state_handler(conn);
+            case MESSAGE_TIMEOUT :
+                conn->timeout_handler(conn);
                 break;
         }
 next: 

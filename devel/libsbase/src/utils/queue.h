@@ -1,14 +1,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_PTHREAD
 #include "mutex.h"
-#else
-#define MUTEX_INIT(ptr)
-#define MUTEX_LOCK(ptr) (0)
-#define MUTEX_UNLOCK(ptr) (0)
-#define MUTEX_DESTROY(ptr) (0)
-#endif
 #ifndef _QUEUE_H
 #define _QUEUE_H
 #ifdef __cplusplus

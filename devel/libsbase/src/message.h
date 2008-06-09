@@ -22,10 +22,11 @@ extern "C" {
 #define MESSAGE_TASK            0x80
 #define MESSAGE_HEARTBEAT       0x100
 #define MESSAGE_STATE           0x200
-#define MESSAGE_STOP            0x400
+#define MESSAGE_TIMEOUT         0x400
+#define MESSAGE_STOP            0x800
 #define MESSAGE_ALL		(MESSAGE_QUIT | MESSAGE_NEW_SESSION | MESSAGE_INPUT | MESSAGE_OUTPUT \
 				| MESSAGE_PACKET | MESSAGE_DATA | MESSAGE_TRANSACTION| MESSAGE_TASK \
-                | MESSAGE_HEARTBEAT | MESSAGE_STATE | MESSAGE_STOP)
+                | MESSAGE_HEARTBEAT | MESSAGE_STATE | MESSAGE_TIMEOUT | MESSAGE_STOP)
 static char *messagelist[] = 
 {
 	"MESSAGE_NEW_SESSION",
@@ -38,6 +39,7 @@ static char *messagelist[] =
 	"MESSAGE_TASK",
 	"MESSAGE_HEARTBEAT",
 	"MESSAGE_STATE",
+	"MESSAGE_TIMEOUT",
 	"MESSAGE_STOP"
 };
 typedef struct _MESSAGE

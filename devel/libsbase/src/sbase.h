@@ -80,6 +80,7 @@ typedef struct _SESSION
     int (*data_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache);
     int (*oob_handler)(struct _CONN *, CB_DATA *oob);
+    int (*timeout_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*transaction_handler)(struct _CONN *, int tid);
 }SESSION;
 
@@ -99,6 +100,9 @@ typedef struct _SBASE
 	/* timer && logger */
 	void *logger;
     void *timer;
+
+    /* evtimer */
+    void *evtimer;
 
     /* message queue for proc mode */
     void *message_queue;
@@ -178,6 +182,10 @@ typedef struct _SERVICE
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
     int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
     
+    /* evtimer */
+    void *evtimer;
+    int evid;
+
     /* timer and logger */
     void *timer;
     void *logger;
@@ -232,6 +240,7 @@ typedef struct _PROCTHREAD
 
     /* heartbeat */
     void (*active_heartbeat)(struct _PROCTHREAD *,  CALLBACK *handler, void *arg);
+    void (*state)(struct _PROCTHREAD *,  CALLBACK *handler, void *arg);
 
     /* normal */
     void (*run)(void *arg);
@@ -267,6 +276,10 @@ typedef struct _CONN
     EVBASE *evbase;
     EVENT *event;
 
+    /* evtimer */
+    void *evtimer;
+    int evid;
+
     /* buffer */
     void *buffer;
     void *packet;
@@ -298,6 +311,7 @@ typedef struct _CONN
     /* timeout */
     int timeout;
     int (*set_timeout)(struct _CONN *, int timeout_usec);
+    int (*timeout_handler)(struct _CONN *);
   
     /* message */
     int (*push_message)(struct _CONN *, int message_id);

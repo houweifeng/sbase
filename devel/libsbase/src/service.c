@@ -4,6 +4,7 @@
 #include "service.h"
 #include "queue.h"
 #include "mutex.h"
+#include "evtimer.h"
 
 /* set service */
 int service_set(SERVICE *service)
@@ -69,6 +70,15 @@ int service_run(SERVICE *service)
 
     if(service)
     {
+        //added to evtimer 
+        if(service->heartbeat_interval > 0)
+        {
+            EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
+                    &service_evtimer_handler, (void *)service, service->evid);
+            DEBUG_LOGGER(service->logger, "Added service[%s] to evtimer[%08x][%d] interval:%d",
+                    service->service_name, service->evtimer, service->evid, 
+                    service->heartbeat_interval);
+        }
         //evbase setting 
         if(service->service_type == S_SERVICE 
                 && service->evbase && (service->event = ev_init()))
@@ -282,6 +292,7 @@ CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *ses
     {
         if((conn = conn_init(fd, ip, port)))
         {
+            conn->evtimer   = service->evtimer;
             conn->logger    = service->logger;
             conn->set_session(conn, session);
             /* add  to procthread */
@@ -384,8 +395,8 @@ CONN *service_getconn(SERVICE *service)
             if((conn = service->connections[i]) && conn->status == CONN_STATUS_FREE
                     && conn->c_state == C_STATE_FREE)
             {
-                DEBUG_LOGGER(service->logger, "Got connection[%s:%d] via %d", 
-                        conn->ip, conn->port, conn->fd);
+                //DEBUG_LOGGER(service->logger, "Got connection[%s:%d] via %d", 
+                //        conn->ip, conn->port, conn->fd);
                 conn->start_cstate(conn);
                 break;
             }
@@ -515,6 +526,7 @@ void service_stop(SERVICE *service)
                 }
             }
         }
+        EVTIMER_DEL(service->evtimer, service->evid);
         //remove event
         service->event->destroy(service->event);
         close(service->fd);
@@ -522,8 +534,9 @@ void service_stop(SERVICE *service)
 }
 
 /* state check */
-void service_state(SERVICE *service)
+void service_state(void *arg)
 {
+    SERVICE *service = (SERVICE *)arg;
     int n = 0;
 
     if(service)
@@ -559,19 +572,42 @@ void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, vo
         service->heartbeat_interval = interval;
         service->heartbeat_handler = handler;
         service->heartbeat_arg = arg;
+        if(service->evtimer)
+        {
+            EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
+                    &service_evtimer_handler, (void *)service, service->evid);
+        }
     }
     return ;
 }
 
 /* active heartbeat */
-void service_active_heartbeat(SERVICE *service)
+void service_active_heartbeat(void *arg)
 {
-    if(service && service->daemon)
+    SERVICE *service = (SERVICE *)arg;
+
+    if(service)
     {
         service_state(service);
-        DEBUG_LOGGER(service->logger, "Ready for active heartbeat");
+        if(service->heartbeat_handler)
+        {
+            service->heartbeat_handler(service->heartbeat_arg);
+        }
+        EVTIMER_UPDATE(service->evtimer, service->evid, service->heartbeat_interval, 
+                &service_evtimer_handler, (void *)service);
+    }
+    return ;
+}
+
+/* active evtimer heartbeat */
+void service_evtimer_handler(void *arg)
+{
+    SERVICE *service = (SERVICE *)arg;
+
+    if(service && service->daemon)
+    {
         service->daemon->active_heartbeat(service->daemon, 
-                service->heartbeat_handler, service->heartbeat_arg);
+                &service_active_heartbeat, (void *)service);
     }
     return ;
 }
@@ -635,7 +671,6 @@ SERVICE *service_init()
         service->newtask            = service_newtask;
         service->newtransaction     = service_newtransaction;
         service->set_heartbeat      = service_set_heartbeat;
-        service->active_heartbeat   = service_active_heartbeat;
         service->clean              = service_clean;
     }
     return service;
