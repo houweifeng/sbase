@@ -163,7 +163,7 @@ void procthread_state(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
         msg.handler     = (void *)handler;
         msg.arg         = (void *)arg;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
-        DEBUG_LOGGER(pth->logger, "Ready for state connections on daemon procthread");
+        //DEBUG_LOGGER(pth->logger, "Ready for state connections on daemon procthread");
     }
     return ;
 }
@@ -180,7 +180,7 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
         msg.handler     = (void *)handler;
         msg.arg         = (void *)arg;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
-        DEBUG_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
+        //DEBUG_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
     }
     return ;
 
