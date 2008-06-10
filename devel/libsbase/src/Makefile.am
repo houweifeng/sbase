@@ -15,6 +15,7 @@ utils/logger.h \
 utils/memb.h \
 utils/mutex.h \
 utils/queue.h \
+utils/evtimer.h \
 utils/timer.h
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
 libsbase_la_LDFLAGS = -levbase
