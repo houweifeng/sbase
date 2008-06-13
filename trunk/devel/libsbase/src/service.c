@@ -585,6 +585,7 @@ void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, vo
 void service_active_heartbeat(void *arg)
 {
     SERVICE *service = (SERVICE *)arg;
+    LOGGER logger = {0};
 
     if(service)
     {
@@ -595,6 +596,8 @@ void service_active_heartbeat(void *arg)
         }
         EVTIMER_UPDATE(service->evtimer, service->evid, service->heartbeat_interval, 
                 &service_evtimer_handler, (void *)service);
+        DEBUG_LOGGER(service->logger, "Over for updating evtimer[%08x][%d] [%08x][%08x] count[%d] q[%d]", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        if(service->evid == 0) EVTIMER_LIST(service->evtimer, stdout);
     }
     return ;
 }
@@ -606,8 +609,10 @@ void service_evtimer_handler(void *arg)
 
     if(service && service->daemon)
     {
+        DEBUG_LOGGER(service->logger, "Ready for activing evtimer[%08x][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
         service->daemon->active_heartbeat(service->daemon, 
                 &service_active_heartbeat, (void *)service);
+        DEBUG_LOGGER(service->logger, "Over for activing evtimer[%08x][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
     }
     return ;
 }
