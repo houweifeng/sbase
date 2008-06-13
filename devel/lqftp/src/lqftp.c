@@ -138,7 +138,7 @@ void cb_serv_heartbeat_handler(void *arg)
 
     if(serv && transport && tasktable)
     {
-        //DEBUG_LOGGER(daemon_logger, "Heartbeat:%ll connections:%d", 
+        //DEBUG_LOGGER(daemon_logger, "Heartbeat:%lld connections:%d", 
         //        nheartbeat++, transport->running_connections);
         while((c_conn = transport->getconn(transport)))
         {
