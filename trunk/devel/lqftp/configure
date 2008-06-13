@@ -4828,37 +4828,6 @@ echo "${ECHO_T}$enable_link_static" >&6; }
 
 
 
-        { echo "$as_me:$LINENO: checking for debugging" >&5
-echo $ECHO_N "checking for debugging... $ECHO_C" >&6; }
-        # Check whether --enable-debug was given.
-if test "${enable_debug+set}" = set; then
-  enableval=$enable_debug;
-fi
-
-        if test -z "$enable_debug" ; then
-                enable_debug="no"
-        elif test "$enable_debug" = "yes" ; then
-                CPPFLAGS="${CPPFLAGS} -g -D_DEBUG"
-        fi
-        { echo "$as_me:$LINENO: result: $enable_debug" >&5
-echo "${ECHO_T}$enable_debug" >&6; }
-	{ echo "$as_me:$LINENO: checking for linking static library " >&5
-echo $ECHO_N "checking for linking static library ... $ECHO_C" >&6; }
-        # Check whether --enable-link_static was given.
-if test "${enable_link_static+set}" = set; then
-  enableval=$enable_link_static;
-fi
-
-        if test -z "$enable_link_static" ; then
-                enable_link_static="no"
-        elif test $enable_link_static = "yes" ; then
-                CPPFLAGS="${CPPFLAGS} -static"
-                LDFLAGS="${LDFLAGS} -static"
-        fi
-        { echo "$as_me:$LINENO: result: $enable_link_static" >&5
-echo "${ECHO_T}$enable_link_static" >&6; }
-
-
 # Checks for library functions.
 
 for ac_header in vfork.h

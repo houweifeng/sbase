@@ -36,7 +36,6 @@ if test "$havepthread" = "yes" ; then
 fi
 AC_CHECK_EXTRA_OPTIONS
 
-AC_CHECK_EXTRA_OPTIONS
 
 # Checks for library functions.
 AC_FUNC_FORK
