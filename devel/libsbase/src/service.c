@@ -594,10 +594,12 @@ void service_active_heartbeat(void *arg)
         {
             service->heartbeat_handler(service->heartbeat_arg);
         }
+        //if(service->evid == 0)fprintf(stdout, "Ready for updating evtimer[%08x][%d] [%08x][%08x] count[%d] q[%d]\n", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        //if(service->evid == 0) EVTIMER_LIST(service->evtimer, stdout);
         EVTIMER_UPDATE(service->evtimer, service->evid, service->heartbeat_interval, 
                 &service_evtimer_handler, (void *)service);
-        DEBUG_LOGGER(service->logger, "Over for updating evtimer[%08x][%d] [%08x][%08x] count[%d] q[%d]", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
-        if(service->evid == 0) EVTIMER_LIST(service->evtimer, stdout);
+        //if(service->evid == 0)fprintf(stdout, "Over for updating evtimer[%08x][%d] [%08x][%08x] count[%d] q[%d]\n", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        //if(service->evid == 0) EVTIMER_LIST(service->evtimer, stdout);
     }
     return ;
 }

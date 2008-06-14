@@ -21,6 +21,7 @@ typedef struct _EVTIMER
    EVTNODE *head;
    EVTNODE *tail;
    EVTNODE *node;
+   EVTNODE vnode;
    int nq;
    int left;
    long long now;
@@ -34,6 +35,7 @@ typedef struct _EVTIMER
 #define PEVT_N(ptr) (((EVTIMER *)ptr)->n)
 #define PEVT_NLIST(ptr) (((EVTIMER *)ptr)->nlist)
 #define PEVT_NODE(ptr) (((EVTIMER *)ptr)->node)
+#define PEVT_VNODE(ptr) (((EVTIMER *)ptr)->vnode)
 #define PEVT_HEAD(ptr) (((EVTIMER *)ptr)->head)
 #define PEVT_TAIL(ptr) (((EVTIMER *)ptr)->tail)
 #define PEVT_EVLIST(ptr) (((EVTIMER *)ptr)->evlist)
@@ -50,33 +52,28 @@ do{                                                                             
     }                                                                                           \
 }while(0)
 
-/* evtimer resort */
-#define EVTIMER_RESORT(ptr, evnode)                                                             \
-{                                                                                               \
-    if(ptr && evnode)                                                                           \
+/* LIST HEAD */
+#define EVTIMER_LHEAD(ptr)                                                                      \
+do{                                                                                             \
+    if(ptr && PEVT_HEAD(ptr))                                                                   \
     {                                                                                           \
-        while(evnode->next && evnode->evusec > evnode->next->evusec)                            \
-        {                                                                                       \
-            if(evnode->prev) evnode->prev->next = evnode->next;                                 \
-            evnode->next->prev = evnode->prev;                                                  \
-            evnode->prev = evnode->next;                                                        \
-            evnode->next = evnode->prev->next;                                                  \
-            evnode->prev->next = evnode;                                                        \
-            if(evnode->next) evnode->next->prev = evnode;                                       \
-        }                                                                                       \
-        while(evnode->prev && evnode->evusec < evnode->prev->evusec)                            \
-        {                                                                                       \
-            if(evnode->next) evnode->next->prev = evnode->prev;                                 \
-            evnode->prev->next = evnode->next;                                                  \
-            evnode->next = evnode->prev;                                                        \
-            evnode->prev = evnode->next->prev;                                                  \
-            evnode->next->prev = evnode;                                                        \
-            if(evnode->prev) evnode->prev->next = evnode;                                       \
-        }                                                                                       \
-        if(evnode->next == NULL) PEVT_TAIL(ptr) = evnode;                                       \
-        if(evnode->prev == NULL) PEVT_HEAD(ptr) = evnode;                                       \
+        fprintf(stdout, "head[%08x] prev:%08x id:%d ison:%d handler:%08x arg:%08x next:%08x\n",     \
+                PEVT_HEAD(ptr), PEVT_HEAD(ptr)->prev, PEVT_HEAD(ptr)->id, PEVT_HEAD(ptr)->ison, \
+                PEVT_HEAD(ptr)->handler, PEVT_HEAD(ptr)->arg, PEVT_HEAD(ptr)->next);            \
     }                                                                                           \
-}
+}while(0)
+/* evtimer list */
+#define EVTIMER_LIST(ptr, fp)                                                                   \
+do{                                                                                             \
+    if(ptr && (PEVT_NODE(ptr) = PEVT_HEAD(ptr)))                                                \
+    {                                                                                           \
+        do{                                                                                     \
+            fprintf(fp, "node[%08x] prev:%08x id:%d ison:%d handler:%08x arg:%08x next:%08x\n", \
+    PEVT_NODE(ptr), PEVT_NODE(ptr)->prev, PEVT_NODE(ptr)->id, PEVT_NODE(ptr)->ison,             \
+                    PEVT_NODE(ptr)->handler, PEVT_NODE(ptr)->arg, PEVT_NODE(ptr)->next);        \
+        }while((PEVT_NODE(ptr) = PEVT_NODE(ptr)->next));                                        \
+    }                                                                                           \
+}while(0)
 
 /* evtimer push */
 #define EVTIMER_PUSH(ptr, evnode)                                                               \
@@ -87,21 +84,18 @@ do{                                                                             
         {                                                                                       \
             PEVT_HEAD(ptr) = evnode;                                                            \
             PEVT_TAIL(ptr) = evnode;                                                            \
-            if(evnode->id == 0) fprintf(stdout, "add evid[%d] as new[%08x][%08x]\n", evnode->id, evnode->prev, evnode->next);                                    \
         }                                                                                       \
         else if(PEVT_HEAD(ptr) && evnode->evusec < PEVT_HEAD(ptr)->evusec)                      \
         {                                                                                       \
             evnode->next = PEVT_HEAD(ptr);                                                      \
             PEVT_HEAD(ptr)->prev = evnode;                                                      \
             PEVT_HEAD(ptr) = evnode;                                                            \
-            if(evnode->id == 0) fprintf(stdout, "add evid[%d] to head[%08x][%08x]\n", evnode->id, evnode->prev, evnode->next);                                    \
         }                                                                                       \
         else if(PEVT_TAIL(ptr) && evnode->evusec >= PEVT_TAIL(ptr)->evusec)                     \
         {                                                                                       \
             evnode->prev = PEVT_TAIL(ptr);                                                      \
             PEVT_TAIL(ptr)->next = evnode;                                                      \
             PEVT_TAIL(ptr) = evnode;                                                            \
-            if(evnode->id == 0) fprintf(stdout, "add evid[%d] to tail[%08x][%08x]\n", evnode->id, evnode->prev, evnode->next);                                    \
         }                                                                                       \
         else if(PEVT_HEAD(ptr) && PEVT_TAIL(ptr) && evnode->evusec >= PEVT_HEAD(ptr)->evusec    \
                 && evnode->evusec < PEVT_TAIL(ptr)->evusec)                                     \
@@ -113,14 +107,13 @@ do{                                                                             
             }                                                                                   \
             if(PEVT_NODE(ptr))                                                                  \
             {                                                                                   \
-            if(evnode->id == 0) fprintf(stdout, "add [%08x] to evnode[%d][%08x][%08x][%08x]\n", evnode, PEVT_NODE(ptr)->id, PEVT_NODE(ptr), PEVT_NODE(ptr)->prev, PEVT_NODE(ptr)->next);                                    \
                 evnode->prev = PEVT_NODE(ptr)->prev;                                            \
                 evnode->next = PEVT_NODE(ptr);                                                  \
                 if(evnode->prev)evnode->prev->next = evnode;                                    \
                 evnode->next->prev = evnode;                                                    \
             }                                                                                   \
-            if(evnode->id == 0) fprintf(stdout, "add [%08x] evid[%d] to middle[%08x][%08x]\n", evnode, evnode->id, evnode->prev, evnode->next);                                    \
         }                                                                                       \
+        if(PEVT_HEAD(ptr)) PEVT_HEAD(ptr)->prev = NULL;                                         \
         evnode->ison = 1;                                                                       \
         PEVT_NQ(ptr)++;                                                                         \
     }                                                                                           \
@@ -174,14 +167,18 @@ do{                                                                             
         PEVT_EVN(ptr, evid)->evusec  = EVTIMER_NOW(ptr) + evtime;                               \
         if(PEVT_EVN(ptr, evid)->ison)                                                           \
         {                                                                                       \
-            EVTIMER_RESORT(ptr, PEVT_EVN(ptr, evid));                                           \
+            if(PEVT_EVN(ptr, evid)->next)                                                       \
+            PEVT_EVN(ptr, evid)->next->prev = PEVT_EVN(ptr, evid)->prev;                        \
+            if(PEVT_EVN(ptr, evid)->prev)                                                       \
+            PEVT_EVN(ptr, evid)->prev->next = PEVT_EVN(ptr, evid)->next;                        \
+            if(PEVT_HEAD(ptr) == PEVT_EVN(ptr, evid))                                           \
+            PEVT_HEAD(ptr) = PEVT_EVN(ptr, evid)->next;                                         \
+            if(PEVT_TAIL(ptr) == PEVT_EVN(ptr, evid))                                           \
+            PEVT_TAIL(ptr) = PEVT_EVN(ptr, evid)->prev;                                         \
         }                                                                                       \
-        else                                                                                    \
-        {                                                                                       \
-            PEVT_EVN(ptr, evid)->next = NULL;                                                   \
-            PEVT_EVN(ptr, evid)->prev = NULL;                                                   \
-            EVTIMER_PUSH(ptr, PEVT_EVN(ptr, evid));                                             \
-        }                                                                                       \
+        PEVT_EVN(ptr, evid)->next = NULL;                                                       \
+        PEVT_EVN(ptr, evid)->prev = NULL;                                                       \
+        EVTIMER_PUSH(ptr, PEVT_EVN(ptr, evid));                                                 \
     }                                                                                           \
     MUTEX_UNLOCK(PEVT(ptr)->mutex);                                                             \
 }while(0)
@@ -193,21 +190,6 @@ do{                                                                             
     if(ptr && evid >= 0 && evid < PEVT_NLIST(ptr) && PEVT_EVLIST(ptr) && PEVT_EVN(ptr, evid))   \
     {                                                                                           \
         PEVT_EVN(ptr, evid)->id      = -1;                                                      \
-    }                                                                                           \
-    MUTEX_UNLOCK(PEVT(ptr)->mutex);                                                             \
-}while(0)
-
-/* evtimer list */
-#define EVTIMER_LIST(ptr, fp)                                                                   \
-do{                                                                                             \
-    MUTEX_LOCK(PEVT(ptr)->mutex);                                                               \
-    if(ptr && (PEVT_NODE(ptr) = PEVT_HEAD(ptr)))                                                \
-    {                                                                                           \
-        do{                                                                                     \
-            fprintf(fp, "node[%08x] prev:%08x id:%d ison:%d handler:%08x arg:%08x next:%08x\n", \
-    PEVT_NODE(ptr), PEVT_NODE(ptr)->prev, PEVT_NODE(ptr)->id, PEVT_NODE(ptr)->ison,             \
-                    PEVT_NODE(ptr)->handler, PEVT_NODE(ptr)->arg, PEVT_NODE(ptr)->next);        \
-        }while((PEVT_NODE(ptr) = PEVT_NODE(ptr)->next));                                        \
     }                                                                                           \
     MUTEX_UNLOCK(PEVT(ptr)->mutex);                                                             \
 }while(0)
