@@ -32,7 +32,12 @@ static char *md5sum_plist[] = {"md5"};
 #define RESP_SERVER_ERROR       "205 service error\r\n\r\n"
 #define RESP_FILE_NOT_EXISTS    "207 file not exists\r\n\r\n"
 #define RESP_INVALID_MD5        "209 invalid md5\r\n\r\n"
-#define RESPONSE(conn, msg) conn->push_chunk((CONN *)conn, (void *)msg, strlen(msg));
+#define RESPONSE(conn, msg)                                                             \
+do                                                                                      \
+{                                                                                       \
+    conn->push_chunk((CONN *)conn, (void *)msg, strlen(msg));                           \
+    DEBUG_LOGGER(lqftpd_logger, "pushed message[%d]", strlen(msg));                     \
+}while(0)
 typedef struct _kitem
 {
     char *key;
@@ -143,7 +148,7 @@ int log_task(char *file)
 }
 
 //check file size and resize it 
-int mod_file_size(char *file, unsigned long long size)
+int mod_file_size(char *file, long long size)
 {
     struct stat st;
     int fd = -1;
@@ -174,7 +179,7 @@ int mod_file_size(char *file, unsigned long long size)
 }
 
 //truncate file 
-int truncate_file(char *file, unsigned long long size)
+int truncate_file(char *file, long long size)
 {
     int fd = -1;
     int ret = -1;
@@ -186,7 +191,7 @@ int truncate_file(char *file, unsigned long long size)
 		else
 			fprintf(stderr, "open %s failed, %s\n", file, strerror(errno));
     }
-	fprintf(stdout, "truncate %s size %llu\n", file, size);
+	//fprintf(stdout, "truncate %s size %lld\n", file, size);
     return truncate(file, size);
 }
 
@@ -195,7 +200,7 @@ int cb_packet_handler(CONN *conn, CB_DATA *packet)
     char *p = NULL, *end = NULL, *np = NULL, path[PATH_MAX_SIZE], fullpath[PATH_MAX_SIZE];
     int i = 0, n = 0, cmdid = -1, is_path_ok = 0, nplist = 0, is_valid_offset = 0;
     kitem plist[PNUM_MAX];
-    unsigned long long  offset = 0llu, size = 0llu;
+    long long  offset = 0, size = 0;
     unsigned char md5[MD5_LEN];
     char md5sum[MD5SUM_SIZE + 1], pmd5sum[MD5SUM_SIZE + 1];
     int fd = -1;
@@ -253,42 +258,40 @@ int cb_packet_handler(CONN *conn, CB_DATA *packet)
         }
 bad_req:
         RESPONSE(conn, RESP_BAD_REQ);
-        return ;
-
+        return -1;
 not_implement:
         RESPONSE(conn, RESP_NOT_IMPLEMENT);
-        return ;
-
+        return -1;
 op_truncate:
         if(pmkdir(fullpath, 0755) != 0 )
         {
             ERROR_LOGGER(lqftpd_logger, "Pmkdir %s failed, %s", fullpath, strerror(errno));
             RESPONSE(conn, RESP_SERVER_ERROR);
-            return ;
+            return -1;
         }
         if(nplist == 0)
         {
-                RESPONSE(conn, RESP_NOT_IMPLEMENT);
-                return ;
+            RESPONSE(conn, RESP_NOT_IMPLEMENT);
+            return -1;
         }    
-        size = 0llu;
+        size = 0;
         for(i = 0; i < nplist; i++)
         {
             if(strncasecmp(plist[i].key, truncate_plist[0], 
                         strlen(truncate_plist[0])) == 0)
             {
-                size = str2llu(plist[i].data); 
+                size = atoll(plist[i].data); 
             }
         }
-        if(size == 0llu)
+        if(size == 0)
         {
             RESPONSE(conn, RESP_BAD_REQ);
-            return ;
+            return -1;
         }
 
         if(truncate_file(fullpath, size) == 0)
         {
-            DEBUG_LOGGER(lqftpd_logger, "truncate file %s size:%llu", fullpath, size);
+            DEBUG_LOGGER(lqftpd_logger, "truncate file %s size:%lld", fullpath, size);
             RESPONSE(conn, RESP_OK);
         }
         else
@@ -296,36 +299,36 @@ op_truncate:
             ERROR_LOGGER(lqftpd_logger, "Truncate %s failed, %s", fullpath, strerror(errno));
             RESPONSE(conn, RESP_SERVER_ERROR);
         }
-    return -1;
+        return -1;
 
 op_put:
         if(nplist == 0)
         {
-                RESPONSE(conn, RESP_NOT_IMPLEMENT);
-                return ;
+            RESPONSE(conn, RESP_NOT_IMPLEMENT);
+            return -1;
         }    
-        offset = 0llu;
-        size = 0llu;
+        offset = 0;
+        size = 0;
         for(i = 0; i < nplist; i++)
         {
             if(strncasecmp(plist[i].key, put_plist[0], strlen(put_plist[0])) == 0)
             {
                 is_valid_offset = 1;
-                offset = str2llu(plist[i].data); 
+                offset = atoll(plist[i].data); 
             }
-			else if(strncasecmp(plist[i].key, put_plist[1], strlen(put_plist[1])) == 0)
+            else if(strncasecmp(plist[i].key, put_plist[1], strlen(put_plist[1])) == 0)
             {
-                size = str2llu(plist[i].data); 
+                size = atoll(plist[i].data); 
             }
-			//fprintf(stdout, "%s %s", plist[i].key, plist[i].data);
+            //fprintf(stdout, "%s %s", plist[i].key, plist[i].data);
         }
-		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
-        if(size == 0llu || is_valid_offset == 0llu)
+        //fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
+        if(size == 0 || is_valid_offset == 0)
         {
             RESPONSE(conn, RESP_BAD_REQ);
-            return ;
+            return -1;
         }
-		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
+        //fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
         //check file size 
         if(pmkdir(fullpath, 0755) != 0 
                 || mod_file_size(fullpath, offset + size) != 0)
@@ -337,7 +340,7 @@ op_put:
         {
             conn->recv_file((CONN *)conn, fullpath, offset, size);
         }
-		//fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
+        //fprintf(stdout, "put %s %ld %ld\n", fullpath, offset, size);
         return -1;
 op_del:
         if(access(fullpath, F_OK) == 0 )
@@ -364,7 +367,7 @@ op_md5sum:
         {
             ERROR_LOGGER(lqftpd_logger, "md5sum %s with bad request", fullpath); 
             RESPONSE(conn, RESP_NOT_IMPLEMENT);
-            return ;
+            return -1;
         }
         memset(pmd5sum, 0, MD5SUM_SIZE+1);
         for(i = 0; i < nplist; i++)
@@ -379,7 +382,7 @@ op_md5sum:
         {
             ERROR_LOGGER(lqftpd_logger, "md5sum %s with bad request", fullpath); 
             RESPONSE(conn, RESP_BAD_REQ);
-            return ;
+            return -1;
         }
         if(access(fullpath, F_OK) == 0 )
         {
@@ -414,6 +417,7 @@ op_md5sum:
         }
         return -1;
     }
+    return 0;
 }
 
 int cb_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
