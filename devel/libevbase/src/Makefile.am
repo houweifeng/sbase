@@ -22,11 +22,15 @@ mutex.h
 
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = evbase.h
-bin_PROGRAMS = ev_serv ev_cli
+bin_PROGRAMS = ev_serv ev_cli evdns_cli
 ev_serv_SOURCES = ev_serv.c evbase.h log.h
 ev_serv_LDFLAGS = -static
 ev_serv_LDADD = libevbase.la
 ev_cli_SOURCES = ev_cli.c evbase.h log.h
 ev_cli_LDFLAGS = -static
 ev_cli_LDADD = libevbase.la
+evdns_cli_SOURCES = evdns_cli.c evbase.h log.h evdns.h evdns.c
+evdns_cli_LDFLAGS = -static
+evdns_cli_LDADD = libevbase.la
+
 

@@ -34,7 +34,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = ev_serv$(EXEEXT) ev_cli$(EXEEXT)
+bin_PROGRAMS = ev_serv$(EXEEXT) ev_cli$(EXEEXT) evdns_cli$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -75,6 +75,12 @@ ev_serv_DEPENDENCIES = libevbase.la
 ev_serv_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(ev_serv_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_evdns_cli_OBJECTS = evdns_cli.$(OBJEXT) evdns.$(OBJEXT)
+evdns_cli_OBJECTS = $(am_evdns_cli_OBJECTS)
+evdns_cli_DEPENDENCIES = libevbase.la
+evdns_cli_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(evdns_cli_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -87,9 +93,10 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libevbase_la_SOURCES) $(ev_cli_SOURCES) $(ev_serv_SOURCES)
+SOURCES = $(libevbase_la_SOURCES) $(ev_cli_SOURCES) $(ev_serv_SOURCES) \
+	$(evdns_cli_SOURCES)
 DIST_SOURCES = $(libevbase_la_SOURCES) $(ev_cli_SOURCES) \
-	$(ev_serv_SOURCES)
+	$(ev_serv_SOURCES) $(evdns_cli_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -230,6 +237,9 @@ ev_serv_LDADD = libevbase.la
 ev_cli_SOURCES = ev_cli.c evbase.h log.h
 ev_cli_LDFLAGS = -static
 ev_cli_LDADD = libevbase.la
+evdns_cli_SOURCES = evdns_cli.c evbase.h log.h evdns.h evdns.c
+evdns_cli_LDFLAGS = -static
+evdns_cli_LDADD = libevbase.la
 all: all-am
 
 .SUFFIXES:
@@ -326,6 +336,9 @@ ev_cli$(EXEEXT): $(ev_cli_OBJECTS) $(ev_cli_DEPENDENCIES)
 ev_serv$(EXEEXT): $(ev_serv_OBJECTS) $(ev_serv_DEPENDENCIES) 
 	@rm -f ev_serv$(EXEEXT)
 	$(ev_serv_LINK) $(ev_serv_OBJECTS) $(ev_serv_LDADD) $(LIBS)
+evdns_cli$(EXEEXT): $(evdns_cli_OBJECTS) $(evdns_cli_DEPENDENCIES) 
+	@rm -f evdns_cli$(EXEEXT)
+	$(evdns_cli_LINK) $(evdns_cli_OBJECTS) $(evdns_cli_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -337,6 +350,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_serv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdevpoll.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdns.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdns_cli.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evepoll.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evkqueue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpoll.Plo@am__quote@
