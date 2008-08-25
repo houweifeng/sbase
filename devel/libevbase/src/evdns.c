@@ -100,8 +100,8 @@ unsigned char *evdns_expand_name(unsigned char *ptr, unsigned char *start,
     return ret;
 }
 
-/* parse A NAME record */
-int evdns_parse_arecord(unsigned char *buf, int nbuf, HOSTENT *hostent)
+/* parse reply record */
+int evdns_parse_reply(unsigned char *buf, int nbuf, HOSTENT *hostent)
 {
     unsigned char *p = NULL, *end = NULL, *s = NULL, *ps = NULL; 
     int i = 0, qdcount = 0, ancount = 0, nscount = 0, arcount = 0, 

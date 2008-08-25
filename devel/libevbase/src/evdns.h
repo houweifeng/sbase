@@ -150,6 +150,6 @@ typedef struct _HOSTENT
 }HOSTENT;
 /* return buffer length*/
 int evdns_make_query(char *hostname, int dnsclass, int type, unsigned short id, int rd, unsigned char *buf);
-/* parse A NAME record */
-int evdns_parse_arecord(unsigned char *buf, int nbuf, HOSTENT *hostent);
+/* parse reply record */
+int evdns_parse_reply(unsigned char *buf, int nbuf, HOSTENT *hostent);
 #endif /* DNS_H */
