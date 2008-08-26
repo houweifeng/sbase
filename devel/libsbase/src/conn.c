@@ -39,9 +39,10 @@
             CONN_TERMINATE(conn);                                                           \
             return -1;                                                                      \
         }                                                                                   \
-        DEBUG_LOGGER(conn->logger, "Read %d bytes left:%lld to chunk  from %s:%d"           \
-                "on %s:%d via %d", n, CK_LEFT(conn->chunk), conn->remote_ip,                \
-                conn->remote_port, conn->local_ip, conn->local_port, conn->fd);             \
+        DEBUG_LOGGER(conn->logger, "Read %d bytes ndata:%d left:%lld to chunk from %s:%d"   \
+                " on %s:%d via %d", n, CK_NDATA(conn->chunk), CK_LEFT(conn->chunk),         \
+                conn->remote_ip, conn->remote_port, conn->local_ip,                         \
+                conn->local_port, conn->fd);                                                \
         if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )                                 \
         {                                                                                   \
             conn->s_state = S_STATE_DATA_HANDLING;                                          \
@@ -95,6 +96,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 conn->status = CONN_STATUS_FREE;
+                return ;
             }
             if(event & E_CLOSE)
             {
@@ -380,9 +382,9 @@ int conn_write_handler(CONN *conn)
                     if(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
                     {
                         DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] to %s:%d "
-                                "on %s:%d via :%d clean it leave %d", cp, 
+                                "on %s:%d via %d clean it leave %d", cp, 
                                 conn->remote_ip, conn->remote_port, conn->local_ip,
-                                conn->local_port, QTOTAL(conn->send_queue));
+                                conn->local_port, conn->fd, QTOTAL(conn->send_queue));
                         CK_CLEAN(cp);
                     }
                 }
@@ -543,7 +545,11 @@ int conn_save_cache(CONN *conn, void *data, int size)
 
     if(conn)
     {
+        MB_RESET(conn->cache);
         MB_PUSH(conn->cache, data, size);
+        DEBUG_LOGGER(conn->logger, "Saved cache size[%d] remote[%s:%d] local[%s:%d] via %d",
+                MB_NDATA(conn->cache), conn->remote_ip, conn->remote_port, 
+                conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
     return ret;
