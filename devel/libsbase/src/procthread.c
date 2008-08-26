@@ -59,8 +59,9 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
         msg.handler = conn;
         msg.parent  = (void *)pth;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
-        DEBUG_LOGGER(pth->logger, "Added message transaction[%d] to %s:%d via %d total %d",
-                tid, conn->ip, conn->port, conn->fd, QTOTAL(pth->message_queue));
+        DEBUG_LOGGER(pth->logger, "Added message transaction[%d] to %s:%d on %s:%d via %d total %d",
+                tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
+                conn->fd, QTOTAL(pth->message_queue));
         ret = 0;
     }
     return ret;
@@ -79,8 +80,9 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
         msg.handler     = (void *)conn;
         msg.parent      = (void *)pth;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
-        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%s:%d] via %d total %d", 
-                MESSAGE_DESC(MESSAGE_NEW_SESSION), conn->ip, conn->port, 
+        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%s:%d] on "
+                "%s:%d via %d total %d", MESSAGE_DESC(MESSAGE_NEW_SESSION),
+                conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port,
                 conn->fd, QTOTAL(pth->message_queue));
         ret = 0;
     }
@@ -94,18 +96,16 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && conn)
     {
-        DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
-                conn->ip, conn->port, conn->fd);
+        DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] on %s:%d via %d to pool",
+        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn->message_queue = pth->message_queue;
         conn->evbase        = pth->evbase;
         conn->parent = pth;
         if(conn->set(conn) == 0)
         {
-            DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
-                    conn->ip, conn->port, conn->fd);
+            DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] on %s:%d via %d to pool",
+                conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             ret = pth->service->pushconn(pth->service, conn);
-            DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] via %d to pool",
-                    conn->ip, conn->port, conn->fd);
         }
     }
     return ret;

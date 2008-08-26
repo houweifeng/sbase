@@ -52,8 +52,9 @@ void message_handler(void *message_queue, void *logger)
             goto next;
         }
         DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%08x] "
-                "connection[%d] %s:%d", MESSAGE_DESC(msg.msg_id), pth->service->service_name,
-                pth, conn->fd, conn->ip, conn->port);
+                "connection[%s:%d] local[%s:%d] via %d", MESSAGE_DESC(msg.msg_id), 
+                pth->service->service_name, pth, conn->remote_ip, conn->remote_port, 
+                conn->local_ip, conn->local_port, conn->fd);
         //message  on connection 
         switch(msg.msg_id)
         {

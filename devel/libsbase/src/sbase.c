@@ -80,7 +80,11 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
             service->message_queue = sbase->message_queue;
             service->usec_sleep = sbase->usec_sleep;
             service->connections_limit = sbase->connections_limit;
-            if(service->logger == NULL) service->logger = sbase->logger;
+            if(service->logger == NULL) 
+            {
+                fprintf(stdout, "replace %s logger with sbase\n", service->service_name);
+                service->logger = sbase->logger;
+            }
             if((sbase->services = (SERVICE **)realloc(sbase->services, 
                             (sbase->running_services + 1) * sizeof(SERVICE *))))
             {
