@@ -177,7 +177,8 @@ typedef struct _SERVICE
     int client_connections_limit;
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
             char *ip, int port, SESSION *session);
-    struct _CONN *(*addconn)(struct _SERVICE *service, int fd, char *ip, int port, SESSION *);
+    struct _CONN *(*addconn)(struct _SERVICE *service, int sock_type, int fd, 
+            char *remote_ip, int remote_port, char *local_ip, int local_port, SESSION *);
     struct _CONN *(*getconn)(struct _SERVICE *service);
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
     int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
@@ -258,9 +259,12 @@ typedef struct _CONN
     void *parent;
 
     /* conenction */
+    int sock_type;
     int fd;
-    char ip[SB_IP_MAX];
-    int  port;
+    char remote_ip[SB_IP_MAX];
+    int remote_port;
+    char local_ip[SB_IP_MAX];
+    int  local_port;
     int (*set)(struct _CONN *);
     int (*close)(struct _CONN *);
     int (*over)(struct _CONN *);
@@ -340,7 +344,7 @@ typedef struct _CONN
     /* normal */
     void (*clean)(struct _CONN **pconn);
 }CONN;
-CONN *conn_init(int fd, char *ip, int port);
+CONN *conn_init();
 #ifdef __cplusplus
  }
 #endif

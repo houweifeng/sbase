@@ -116,9 +116,9 @@ int main(int argc, char **argv)
         _exit(-1);
     }       
     conf = optarg;
-    // locale
+    /* locale */
     setlocale(LC_ALL, "C");
-    // signal
+    /* signal */
     signal(SIGTERM, &lechod_stop);
     signal(SIGINT,  &lechod_stop);
     signal(SIGHUP,  &lechod_stop);
@@ -129,15 +129,15 @@ int main(int argc, char **argv)
             perror("fork()");
             exit(EXIT_FAILURE);
             break;
-        case 0: //child process
+        case 0: /* child process */
             if(setsid() == -1)
                 exit(EXIT_FAILURE);
             break;
-        default://parent
+        default:/* parent */
             _exit(EXIT_SUCCESS);
             break;
     }
-    //setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
+    /*setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536)*/
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);

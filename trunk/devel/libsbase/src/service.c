@@ -216,7 +216,8 @@ void service_event_handler(int event_fd, short flag, void *arg)
                 {
                     ip = inet_ntoa(rsa.sin_addr);
                     port = ntohs(rsa.sin_port);
-                    if((conn = service_addconn(service, fd, ip, port, &(service->session))))
+                    if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
+                                    service->ip, service->port, &(service->session))))
                     {
                         DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d",
                                 ip, port, fd);
@@ -240,36 +241,37 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
     CONN *conn = NULL;
     struct sockaddr_in rsa, lsa;
     socklen_t lsa_len = sizeof(lsa);
-    int fd = -1, family = -1, sock_type = -1, port = -1;
-    char *ip = NULL;
+    int fd = -1, family = -1, sock_type = -1, remote_port = -1, local_port = -1;
+    char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
 
     if(service)
     {
         family  = (inet_family > 0 ) ? inet_family : service->family;
         sock_type = (socket_type > 0 ) ? socket_type : service->sock_type;
-        ip = (inet_ip) ? inet_ip : service->ip;
-        port  = (inet_port > 0 ) ? inet_port : service->port;
+        remote_ip = (inet_ip) ? inet_ip : service->ip;
+        remote_port  = (inet_port > 0 ) ? inet_port : service->port;
         sess = (session) ? session : &(service->session);
         if((fd = socket(family, sock_type, 0)) > 0)
         {
             rsa.sin_family = family;
-            rsa.sin_addr.s_addr = inet_addr(ip);
-            rsa.sin_port = htons(port);
+            rsa.sin_addr.s_addr = inet_addr(remote_ip);
+            rsa.sin_port = htons(remote_port);
             if(fcntl(fd, F_SETFL, O_NONBLOCK) == 0 
                     && (connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
                         || errno == EINPROGRESS))
             {
                 getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
-                ip = inet_ntoa(lsa.sin_addr);
-                port = ntohs(lsa.sin_port);
-                if((conn = service->addconn(service, fd, ip, port, sess)))
+                local_ip    = inet_ntoa(lsa.sin_addr);
+                local_port  = ntohs(lsa.sin_port);
+                if((conn = service->addconn(service, sock_type, fd, remote_ip, remote_port, 
+                                local_ip, local_port, sess)))
                     conn->status = CONN_STATUS_READY; 
             }
             else
             {
                 FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%08x] failed, %s",
-                        ip, port, fd, sess, strerror(errno));
+                        remote_ip, remote_port, fd, sess, strerror(errno));
             }
         }
         else
@@ -282,16 +284,23 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
 }
 
 /* add new connection */
-CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *session)
+CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, int remote_port, 
+        char *local_ip, int local_port, SESSION *session)
 {
     PROCTHREAD *procthread = NULL;
     CONN *conn = NULL;
     int index = 0;
 
-    if(service && fd > 0 && ip && port > 0 && session)
+    if(service && fd > 0 && session)
     {
-        if((conn = conn_init(fd, ip, port)))
+        if((conn = conn_init(fd)))
         {
+            conn->fd = fd;
+            strcpy(conn->remote_ip, remote_ip);
+            conn->remote_port = remote_port;
+            strcpy(conn->local_ip, local_ip);
+            conn->local_port = local_port;
+            conn->sock_type = sock_type;
             conn->evtimer   = service->evtimer;
             conn->logger    = service->logger;
             conn->set_session(conn, session);
@@ -305,8 +314,9 @@ CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *ses
                 else
                 {
                     conn->clean(&conn);
-                    FATAL_LOGGER(service->logger, "can not add connection[%s:%d] "
-                            "via %d  to service[%s]", ip, port, fd, service->service_name);
+                    FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d "
+                            "via %d  to service[%s]", remote_ip, remote_port, 
+                            local_ip, local_port, fd, service->service_name);
                 }
             }
             else if(service->working_mode == WORKING_THREAD)
@@ -319,8 +329,9 @@ CONN *service_addconn(SERVICE *service, int fd, char *ip, int port, SESSION *ses
                 else
                 {
                     conn->clean(&conn);
-                    FATAL_LOGGER(service->logger, "can not add connection[%s:%d] "
-                            "via %d  to service[%s]", ip, port, fd, service->service_name);
+                    FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d "
+                            "via %d  to service[%s]", remote_ip, remote_port, 
+                            local_ip, local_port, fd, service->service_name);
                 }
             }
         }
@@ -345,8 +356,9 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 service->running_connections++;
                 if(i > service->index_max) service->index_max = i;
                 ret = 0;
-                DEBUG_LOGGER(service->logger, "Added new connection[%s:%d] via %d "
-                        "index[%d] of total %d", conn->ip, conn->port, conn->fd, 
+                DEBUG_LOGGER(service->logger, "Added new connection[%s:%d] on %s:%d via %d "
+                        "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
+                        conn->local_ip, conn->local_port, conn->fd, 
                         conn->index, service->running_connections);
                 break;
             }
@@ -372,8 +384,9 @@ int service_popconn(SERVICE *service, CONN *conn)
             if(service->index_max == conn->index) 
                 service->index_max--;
             ret = 0;
-            DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] via %d "
-                    "index[%d] of total %d", conn->ip, conn->port, conn->fd, 
+            DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d "
+                    "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port, conn->fd, 
                     conn->index, service->running_connections);
         }
         MUTEX_UNLOCK(service->mutex);
@@ -395,8 +408,8 @@ CONN *service_getconn(SERVICE *service)
             if((conn = service->connections[i]) && conn->status == CONN_STATUS_FREE
                     && conn->c_state == C_STATE_FREE)
             {
-                //DEBUG_LOGGER(service->logger, "Got connection[%s:%d] via %d", 
-                //        conn->ip, conn->port, conn->fd);
+                //DEBUG_LOGGER(service->logger, "Got connection[%s:%d] on %s:%d via %d", 
+                //conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 conn->start_cstate(conn);
                 break;
             }
@@ -455,8 +468,9 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
         /* Add transaction for procthread */
         if(service->working_mode == WORKING_PROC && service->daemon)
         {
-            DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthread[%d]",
-                    tid, conn->ip, conn->port, getpid());
+            DEBUG_LOGGER(service->logger, "Adding transaction[%d] to %s:%d on %s:%d "
+                    "to procthread[%d]", tid, conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port, getpid());
             return service->daemon->newtransaction(service->daemon, conn, tid);
         }
         /* Add transaction to procthread pool */
@@ -464,8 +478,9 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
         {
             index = conn->fd % service->nprocthreads;
             pth = service->procthreads[index];
-            DEBUG_LOGGER(service->logger, "Adding transaction[%d] on %s:%d to procthreads[%d]",
-                    tid, conn->ip, conn->port, index);
+            DEBUG_LOGGER(service->logger, "Adding transaction[%d] to %s:%d on %s:%d "
+                    "to procthreads[%d]", tid, conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port,index);
             if(pth && pth->newtransaction)
                 return pth->newtransaction(pth, conn, tid);
         }
@@ -611,10 +626,10 @@ void service_evtimer_handler(void *arg)
 
     if(service && service->daemon)
     {
-        DEBUG_LOGGER(service->logger, "Ready for activing evtimer[%08x][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        //DEBUG_LOGGER(service->logger, "Ready for activing evtimer[%08x][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
         service->daemon->active_heartbeat(service->daemon, 
                 &service_active_heartbeat, (void *)service);
-        DEBUG_LOGGER(service->logger, "Over for activing evtimer[%08x][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        //DEBUG_LOGGER(service->logger, "Over for activing evtimer[%08x][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
     }
     return ;
 }
