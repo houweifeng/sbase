@@ -105,6 +105,7 @@ typedef struct _CHUNK * PCHUNK;
             && (CKN(ptr) = ((npdata > CK_LEFT(ptr)) ? CK_LEFT(ptr) : npdata)) > 0           \
             && memcpy(CK_END(ptr), pdata, CKN(ptr)))?                                       \
             (((CK_LEFT(ptr) -= CKN(ptr)) >= 0 && (CK_END(ptr) += CKN(ptr))                  \
+            && (CK_NDATA(ptr) += CKN(ptr)) > 0                                              \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr):-1):-1)
 
 /* push to memory chunk from bufer */
