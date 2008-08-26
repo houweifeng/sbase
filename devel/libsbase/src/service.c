@@ -293,7 +293,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 
     if(service && fd > 0 && session)
     {
-        if((conn = conn_init(fd)))
+        if((conn = conn_init()))
         {
             conn->fd = fd;
             strcpy(conn->remote_ip, remote_ip);

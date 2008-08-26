@@ -225,6 +225,8 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
 
     if(conn && timeout_usec > 0)
     {
+        DEBUG_LOGGER(conn->logger, "evtimer:%08x on %s:%d via %d", 
+                conn->evtimer, conn->local_ip, conn->local_port, conn->fd);
         conn->timeout = timeout_usec;
         CONN_EVTIMER_SET(conn);
     }
@@ -574,7 +576,7 @@ int conn_chunk_reader(CONN *conn)
             {
                 conn->s_state = S_STATE_DATA_HANDLING;
                 conn->push_message(conn, MESSAGE_DATA);
-                DEBUG_LOGGER(conn->logger, "Chunk completed %d bytes from %s:%d on %s:%d via %d",
+                DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d on %s:%d via %d",
                         CK_SIZE(conn->chunk), conn->remote_ip, conn->remote_port, 
                         conn->local_ip, conn->local_port, conn->fd);
             }
@@ -582,8 +584,8 @@ int conn_chunk_reader(CONN *conn)
             {
                 DEBUG_LOGGER(conn->logger, "Filled  %d byte(s) left:%lld to chunk from buffer "
                         "to %s:%d on conn[%s:%d] via %d", n, CK_LEFT(conn->chunk),
-                        conn->remote_ip, conn->remote_port, 
-                        conn->local_ip, conn->local_port, conn->fd);
+                        conn->remote_ip, conn->remote_port, conn->local_ip, 
+                        conn->local_port, conn->fd);
                 ret = 0;
             }
         }
@@ -600,7 +602,7 @@ int conn_recv_chunk(CONN *conn, int size)
 
     if(conn && conn->chunk)
     {
-        DEBUG_LOGGER(conn->logger, "Ready for recv chunk size:%ld from %s:%d on %s:%d via %d",
+        DEBUG_LOGGER(conn->logger, "Ready for recv chunk size:%d from %s:%d on %s:%d via %d",
                 size, conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
         CK_MEM(conn->chunk, size);
