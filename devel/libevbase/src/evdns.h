@@ -139,6 +139,7 @@ static const char *rcodes[] = {
 };
 #define DNS_NAME_MAX  256
 #define DNS_MAX_NUM   32
+#define DNS_IP_MAX      16
 typedef struct _HOSTENT
 {
     int qid;
