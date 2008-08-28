@@ -27,6 +27,7 @@ static struct sockaddr_in sa = {0};
 static socklen_t sa_len = sizeof(struct sockaddr_in);
 static EVBASE *evbase = NULL;
 static char buffer[CONN_MAX][EV_BUF_SIZE];
+static int nbuffer[CONN_MAX];
 static EVENT *events[CONN_MAX];
 static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
@@ -76,38 +77,22 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
     {
         if((ev_flags & E_READ))
         {
-            //rfd = dup(fd);
-            /*
             if((rfd = socket(AF_INET, SOCK_DGRAM, 0)) <= 0 
                 || setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR, 
                     (char *)&opt, (socklen_t) sizeof(int)) != 0
-                || setsockname(rfd, (struct sockaddr *)&sa, sa_len) != 0 )
+                || bind(rfd, (struct sockaddr *)&sa, sa_len) != 0) 
             {
                 FATAL_LOG("Bind %d to %s:%d failed, %s",
                     rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
                 return ;
-            }*/
-            /**/
-            if(bind(rfd, (struct sockaddr *)&sa, sizeof(struct sockaddr *)) == 0)
-            {
-                SHOW_LOG("Binded %d to %s:%d ",
-                        rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port));
             }
-            else
-            {
-                FATAL_LOG("Bind %d to %s:%d failed, %s",
-                        rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
-                goto err_end;
-            }
-            /**/
             rsa_len = sizeof(struct sockaddr_in);
             memset(&rsa, 0 , rsa_len);
-            if(( n = recvfrom(fd, buffer[rfd], EV_BUF_SIZE, 0, 
+            if((nbuffer[rfd] = recvfrom(fd, buffer[rfd], EV_BUF_SIZE, 0, 
                             (struct sockaddr *)&rsa, &rsa_len)) > 0 )
             {
-                buffer[rfd][n] = 0;
-                SHOW_LOG("Received %d bytes from %s:%d via %d, %s",
-                        n, inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd, buffer[rfd]);
+                SHOW_LOG("Received %d bytes from %s:%d via %d, %s", nbuffer[rfd], 
+                        inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd, buffer[rfd]);
                 if(connect(rfd, (struct sockaddr *)&rsa, rsa_len) == 0)
                 {
                     SHOW_LOG("Connected %s:%d via %d",
@@ -119,25 +104,11 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                             inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd, strerror(errno));
                     goto err_end;
                 }
-
-                if((n = sendto(rfd, buffer[rfd], strlen(buffer[rfd]), 0, 
-                                (struct sockaddr *)&rsa, sizeof(struct sockaddr_in))) > 0 )
-                    //if( n = write(rfd, buffer[rfd], strlen(buffer[rfd])) > 0)
-                {
-                    SHOW_LOG("Sent %d to %s:%d via %d", 
-                            n, inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd);
-                }
-                else
-                {
-                    SHOW_LOG("Sending data to %s:%d via %d failed, %s", 
-                            inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd, strerror(errno));
-                    goto err_end;
-                }
                 /* set FD NON-BLOCK */
                 fcntl(rfd, F_SETFL, O_NONBLOCK);
                 if((events[rfd] = ev_init()))
                 {
-                    events[rfd]->set(events[rfd], rfd, E_READ|E_PERSIST,
+                    events[rfd]->set(events[rfd], rfd, E_READ|E_WRITE|E_PERSIST,
                             (void *)events[rfd], &ev_udp_handler);
                     evbase->add(evbase, events[rfd]);
                 }
@@ -154,9 +125,9 @@ err_end:
         DEBUG_LOG("EVENT %d on %d", ev_flags, fd);
         if(ev_flags & E_READ)
         {
-            if( ( n = recvfrom(fd, buffer[fd], EV_BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
+            //if( ( n = recvfrom(fd, buffer[fd], EV_BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
+            if((nbuffer[fd] = read(fd, buffer[fd], nbuffer[fd])) > 0)
             {
-                buffer[fd][n] = 0;
                 SHOW_LOG("Read %d bytes from %d, %s", n, fd, buffer[fd]);
                 SHOW_LOG("Updating event[%08x] on %d ", events[fd], fd);
                 if(events[fd])
@@ -176,7 +147,7 @@ err_end:
         if(ev_flags & E_WRITE)
         {
             SHOW_LOG("E_WRITE on %d end", fd);
-            if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
+            if(  (n = write(fd, buffer[fd], nbuffer[fd])) > 0 )
             {
                 SHOW_LOG("Echo %d bytes to %d", n, fd);
             }
@@ -335,25 +306,11 @@ int main(int argc, char **argv)
     }
 
     /* Bind */
-    if(bind(lfd, (struct sockaddr *)&sa, sa_len ) != 0 )
+    if(bind(lfd, (struct sockaddr *)&sa, sa_len) != 0 )
     {
         SHOW_LOG("Binding failed, %s", strerror(errno));
         return ;
     }
-    /*
-    sockfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
-    if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-            (char *)&opt, (socklen_t) sizeof(opt)) != 0)
-    {
-        fprintf(stderr, "setsockopt[SO_REUSEADDR] on fd[%d] failed, %s", fd, strerror(errno));
-        _exit(-1);
-    }
-    if(bind(sockfd, (struct sockaddr *)&sa, sa_len ) != 0 )
-    {
-        SHOW_LOG("Binding failed, %s", strerror(errno));
-        return ;
-    }
-    */
     /* set FD NON-BLOCK */
     /**/
     if(fcntl(lfd, F_SETFL, O_NONBLOCK) != 0 )
