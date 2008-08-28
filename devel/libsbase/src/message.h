@@ -45,6 +45,7 @@ static char *messagelist[] =
 typedef struct _MESSAGE
 {
     int             msg_id;
+    int             index;
     int             fd;
     void            *handler;
     void 	        *parent;

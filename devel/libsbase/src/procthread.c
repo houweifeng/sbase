@@ -36,6 +36,7 @@ int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
     {
         msg.msg_id      = MESSAGE_TASK;
         msg.parent      = pth;
+        msg.index       = -1;
         msg.handler     = task_handler;
         msg.arg         = arg;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
@@ -54,6 +55,7 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
     if(pth && pth->message_queue && conn)
     {
         msg.msg_id = MESSAGE_TRANSACTION;
+        msg.index       = -1;
         msg.fd = conn->fd;
         msg.tid = tid;
         msg.handler = conn;
@@ -76,6 +78,7 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
     if(pth && pth->message_queue && conn)
     {
         msg.msg_id      = MESSAGE_NEW_SESSION;
+        msg.index       = -1;
         msg.fd          = conn->fd;
         msg.handler     = (void *)conn;
         msg.parent      = (void *)pth;
@@ -133,6 +136,7 @@ void procthread_stop(PROCTHREAD *pth)
     if(pth && pth->message_queue)
     {
         msg.msg_id      = MESSAGE_STOP;
+        msg.index       = -1;
         msg.parent      = (void *)pth;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
         DEBUG_LOGGER(pth->logger, "Ready for stopping procthread[%d]", pth->index);
@@ -161,6 +165,7 @@ void procthread_state(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
         msg.msg_id      = MESSAGE_STATE;
         msg.parent      = (void *)pth;
         msg.handler     = (void *)handler;
+        msg.index       = -1;
         msg.arg         = (void *)arg;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
         //DEBUG_LOGGER(pth->logger, "Ready for state connections on daemon procthread");
@@ -179,6 +184,7 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
         msg.parent      = (void *)pth;
         msg.handler     = (void *)handler;
         msg.arg         = (void *)arg;
+        msg.index       = -1;
         QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
         //DEBUG_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
     }

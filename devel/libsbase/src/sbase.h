@@ -312,6 +312,13 @@ typedef struct _CONN
     int s_id;
     int s_state;
 
+    /* event state */
+    int evstate;
+#define EVSTATE_INIT   0
+#define EVSTATE_WAIT   1 
+    int (*wait_evstate)(struct _CONN *);
+    int (*over_evstate)(struct _CONN *);
+
     /* timeout */
     int timeout;
     int (*set_timeout)(struct _CONN *, int timeout_usec);

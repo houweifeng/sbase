@@ -22,8 +22,8 @@
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        conn->s_state = S_STATE_CLOSE;                                                      \
         conn->push_message(conn, MESSAGE_QUIT);                                             \
+        conn->s_state = S_STATE_CLOSE;                                                      \
     }                                                                                       \
 }
 #define CONN_CHUNK_READ(conn, n)                                                            \
@@ -162,6 +162,7 @@ int conn_set(CONN *conn)
 /* close connection */
 int conn_close(CONN *conn)
 {
+    CONN_CHECK_RET(conn, -1);
     if(conn)
     {
         CONN_TERMINATE(conn);
@@ -174,6 +175,7 @@ int conn_close(CONN *conn)
 /* over connection */
 int conn_over(CONN *conn)
 {
+    CONN_CHECK_RET(conn, -1);
     if(conn)
     {
         return conn->push_message(conn, MESSAGE_QUIT);
@@ -211,8 +213,13 @@ void conn_evtimer_handler(void *arg)
 {
     CONN *conn = (CONN *)arg;
 
+    CONN_CHECK(conn);
+
     if(conn)
     {
+        DEBUG_LOGGER(conn->logger, "evtimer_handler[%d](%08x) on remote[%s:%d] local[%s:%d] via %d", 
+                conn->evid, conn->evtimer, conn->remote_ip, conn->remote_port, 
+                conn->local_ip, conn->local_port, conn->fd);
         conn->push_message(conn, MESSAGE_TIMEOUT);
     }
     return ;
@@ -223,24 +230,60 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
 {
     int ret = -1;
 
+    CONN_CHECK_RET(conn, -1);
     if(conn && timeout_usec > 0)
     {
-        DEBUG_LOGGER(conn->logger, "evtimer:%08x on %s:%d via %d", 
-                conn->evtimer, conn->local_ip, conn->local_port, conn->fd);
         conn->timeout = timeout_usec;
+        DEBUG_LOGGER(conn->logger, "set evtimer[%08x](%d) on %s:%d local[%s:%d] via %d", 
+                conn->evtimer, conn->timeout, conn->remote_ip, conn->remote_port, 
+                conn->local_ip, conn->local_port, conn->fd);
         CONN_EVTIMER_SET(conn);
     }
     return ret;
 }
 
+/* set evstate as wait*/
+int conn_wait_evstate(CONN *conn)
+{
+    CONN_CHECK_RET(conn, -1);
+    if(conn)
+    {
+        conn->evstate = EVSTATE_WAIT;
+        return 0;
+    }
+    return -1;
+}
+
+/* over evstate */
+int conn_over_evstate(CONN *conn)
+{
+    CONN_CHECK_RET(conn, -1);
+    if(conn)
+    {
+        conn->evstate = EVSTATE_INIT;
+        return 0;
+    }
+    return -1;
+}
+
 /* timeout handler */
 int conn_timeout_handler(CONN *conn)
 {
+    CONN_CHECK_RET(conn, -1);
     if(conn)
     {
         if(conn->session.timeout_handler)
-            return conn->session.timeout_handler(conn, conn->packet, conn->cache, conn->chunk);
-        CONN_TERMINATE(conn);
+        {
+            DEBUG_LOGGER(conn->logger, "timeout_handler(%d) on remote[%s:%d] local[%s:%d] via %d", 
+                    conn->timeout, conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port, conn->fd);
+            return conn->session.timeout_handler(conn, PCB(conn->packet), 
+                    PCB(conn->cache), PCB(conn->chunk));
+        }
+        else
+        {
+            CONN_TERMINATE(conn);
+        }
     }
     return -1;
 }
@@ -257,6 +300,9 @@ int conn_start_cstate(CONN *conn)
     {
         if(conn->c_state == C_STATE_FREE)
         {
+            DEBUG_LOGGER(conn->logger, "Start cstate on conn[%s:%d] local[%s:%d] via %d",
+                    conn->remote_ip, conn->remote_port, conn->local_ip, 
+                    conn->local_port, conn->fd);
             conn->c_state = C_STATE_USING;
             while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
             MB_RESET(conn->packet);
@@ -275,6 +321,7 @@ int conn_over_cstate(CONN *conn)
 {
     int ret = -1;
 
+    CONN_CHECK_RET(conn, -1);
     if(conn)
     {
         conn->c_state = C_STATE_FREE;
@@ -290,10 +337,12 @@ int conn_push_message(CONN *conn, int message_id)
     MESSAGE msg = {0};
     int ret = -1;
 
+    CONN_CHECK_RET(conn, -1);
     if(conn && (message_id & MESSAGE_ALL) )
     {
         msg.msg_id = message_id;
         msg.fd = conn->fd;
+        msg.index = conn->index;
         msg.handler  = conn;
         msg.parent   = conn->parent;
         QUEUE_PUSH(conn->message_queue, MESSAGE, &msg);
@@ -356,8 +405,8 @@ int conn_read_handler(CONN *conn)
 int conn_write_handler(CONN *conn)
 {
     int ret = -1, n = 0;
-    CONN_CHECK_RET(conn, ret);
     CHUNK *cp = NULL;
+    CONN_CHECK_RET(conn, ret);
 
     if(conn && conn->send_queue && QTOTAL(conn->send_queue) > 0)
     {
@@ -691,6 +740,7 @@ int conn_set_session(CONN *conn, SESSION *session)
 {
     int ret = -1;
 
+    CONN_CHECK_RET(conn, -1);
     if(conn && session)
     {
         memcpy(&(conn->session), session, sizeof(SESSION));
@@ -768,6 +818,8 @@ CONN *conn_init()
         conn->start_cstate          = conn_start_cstate;
         conn->over_cstate           = conn_over_cstate;
         conn->set_timeout           = conn_set_timeout;
+        conn->wait_evstate          = conn_wait_evstate;
+        conn->over_evstate          = conn_over_evstate;
         conn->timeout_handler       = conn_timeout_handler;
         conn->set_session           = conn_set_session;
         conn->push_message          = conn_push_message;

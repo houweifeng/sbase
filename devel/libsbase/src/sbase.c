@@ -150,7 +150,7 @@ running:
         {
             //running evbase 
             sbase->evbase->loop(sbase->evbase, 0, NULL);
-            sbase->nheartbeat++;
+            //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
             EVTIMER_CHECK(sbase->evtimer);
             //running message queue
@@ -159,10 +159,11 @@ running:
                 message_handler(sbase->message_queue, sbase->logger);
             }
             //running and check timeout
+            /*
             if(useconds > 0 && TIMER_CHECK(sbase->timer, useconds)  == 0)
             {
                 break;
-            }
+            }*/
             usleep(sbase->usec_sleep);
         }
         ret = 0;
