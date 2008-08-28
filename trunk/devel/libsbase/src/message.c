@@ -16,7 +16,7 @@ void message_handler(void *message_queue, void *logger)
     PROCTHREAD *pth = NULL;
     CONN *conn = NULL;
     MESSAGE msg = {0};
-    int fd = -1;
+    int fd = -1, index = 0;
 
     if(message_queue && QTOTAL(message_queue) > 0 
             && QUEUE_POP(message_queue, MESSAGE, &msg) == 0)
@@ -29,6 +29,7 @@ void message_handler(void *message_queue, void *logger)
         }
         conn = (CONN *)(msg.handler);
         pth = (PROCTHREAD *)(msg.parent);
+        index = msg.index;
         if(msg.msg_id == MESSAGE_STOP && pth)
         {
             pth->terminate(pth);
@@ -51,6 +52,7 @@ void message_handler(void *message_queue, void *logger)
                     "parent[%08x] service[%08x]", msg.msg_id, msg.fd, fd, conn, pth, pth->service);
             goto next;
         }
+        if(index >= 0 && pth->service->connections[index] != conn) goto next;
         DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%08x] "
                 "connection[%s:%d] local[%s:%d] via %d", MESSAGE_DESC(msg.msg_id), 
                 pth->service->service_name, pth, conn->remote_ip, conn->remote_port, 
