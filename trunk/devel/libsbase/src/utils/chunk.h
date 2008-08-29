@@ -51,8 +51,8 @@ typedef struct _CHUNK * PCHUNK;
     if(ptr && len > 0 && CK_TYPE(ptr) == CHUNK_FILE)                                        \
     {                                                                                       \
         CK_BSIZE(ptr) = len;                                                                \
-        CK_DATA(ptr) = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr));                        \
-        memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                             \
+        if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                \
+        CK_DATA(ptr) = (char *)calloc(1, CK_BSIZE(ptr));                                    \
         CK_END(ptr)    = CK_DATA(ptr);                                                      \
     }                                                                                       \
 }
@@ -65,8 +65,8 @@ typedef struct _CHUNK * PCHUNK;
         CK_STATUS(ptr) = CHUNK_STATUS_ON;                                                   \
         CK_SIZE(ptr)   = len;                                                               \
         CK_LEFT(ptr)   = len;                                                               \
-        CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_SIZE(ptr));                       \
-        memset(CK_DATA(ptr), 0, CK_SIZE(ptr));                                              \
+        if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                \
+        CK_DATA(ptr)   = (char *)calloc(1, CK_SIZE(ptr));                                   \
         CK_END(ptr)    = CK_DATA(ptr);                                                      \
         CK_NDATA(ptr)  = 0;                                                                 \
     }                                                                                       \
@@ -88,20 +88,20 @@ typedef struct _CHUNK * PCHUNK;
 }
 #define CHUNK_STATUS(ptr) ((CK_LEFT(ptr) == 0) ? CHUNK_STATUS_OVER : CHUNK_STATUS_ON)
 /* read to mem chunk from fd */
-#define CK_READ(ptr, fd) ((ptr && fd > 0                                                    \
+#define CK_READ(ptr, fd) ((ptr && fd > 0 && CK_DATA(ptr)                                    \
             && (CKN(ptr) = read(fd, CK_END(ptr), CK_LEFT(ptr))) > 0) ?                      \
-         (((CK_END(ptr) += CKN(ptr)) && (CK_LEFT(ptr) -= CKN(ptr)) >= 0                     \
+            (((CK_END(ptr) += CKN(ptr)) && (CK_LEFT(ptr) -= CKN(ptr)) >= 0                  \
            && (CK_NDATA(ptr) += CKN(ptr)) > 0                                               \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0 ) ? CKN(ptr) : -1): -1)
 
 /* write to fd from mem chunk */
-#define CK_WRITE(ptr, fd) ((ptr && fd > 0                                                   \
+#define CK_WRITE(ptr, fd) ((ptr && fd > 0 && CK_DATA(ptr)                                   \
             && (CKN(ptr) = write(fd, CK_END(ptr), CK_LEFT(ptr))) > 0) ?                     \
             (((CK_END(ptr) += CKN(ptr)) && (CK_LEFT(ptr) -= CKN(ptr)) >= 0                  \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0) ? CKN(ptr) : -1): -1)
 
 /* fill to memory from buffer */
-#define CK_MEM_FILL(ptr, pdata, npdata) ((ptr && pdata && npdata > 0                        \
+#define CK_MEM_FILL(ptr, pdata, npdata) ((ptr && pdata && npdata > 0 && CK_DATA(ptr)        \
             && (CKN(ptr) = ((npdata > CK_LEFT(ptr)) ? CK_LEFT(ptr) : npdata)) > 0           \
             && memcpy(CK_END(ptr), pdata, CKN(ptr)))?                                       \
             (((CK_LEFT(ptr) -= CKN(ptr)) >= 0 && (CK_END(ptr) += CKN(ptr))                  \
@@ -109,7 +109,7 @@ typedef struct _CHUNK * PCHUNK;
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr):-1):-1)
 
 /* push to memory chunk from bufer */
-#define CK_MEM_COPY(ptr, pdata, npdata) ((ptr && pdata && npdata > 0                        \
+#define CK_MEM_COPY(ptr, pdata, npdata) ((ptr && pdata && npdata > 0 && CK_DATA(ptr)        \
             && (CKN(ptr) = ((npdata > CK_SIZE(ptr)) ? CK_SIZE(ptr) : npdata)) > 0           \
             && memcpy(CK_END(ptr), pdata, CKN(ptr)))? CKN(ptr):-1)                          
 
@@ -117,7 +117,7 @@ typedef struct _CHUNK * PCHUNK;
      (CK_FD(ptr) = open(CK_FILENAME(ptr), O_CREAT|O_RDWR, 0644)): CK_FD(ptr)): -1)
 #define CK_FLEFT(ptr) ((CK_LEFT(ptr) > CK_BSIZE(ptr))?CK_BSIZE(ptr) : CK_LEFT(ptr))
 /* read to file from fd */
-#define CK_READ_TO_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0                        \
+#define CK_READ_TO_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0 && CK_DATA(ptr)        \
             && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0                   \
             && (CKN(ptr) = read(fd, CK_DATA(ptr), CK_NDATA(ptr))) > 0                       \
             && lseek(CK_FD(ptr), CK_OFFSET(ptr), SEEK_SET) >= 0                             \
@@ -127,7 +127,7 @@ typedef struct _CHUNK * PCHUNK;
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr): -1): -1)
 
 /* write to fd from file */
-#define CK_WRITE_FROM_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0                     \
+#define CK_WRITE_FROM_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0 && CK_DATA(ptr)     \
             && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0                   \
             && lseek(CK_FD(ptr), CK_OFFSET(ptr), SEEK_SET) >= 0                             \
             && (CKN(ptr) = read(CK_FD(ptr), CK_DATA(ptr), CK_NDATA(ptr))) > 0               \
