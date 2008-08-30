@@ -87,7 +87,9 @@ void conn_event_handler(int event_fd, short event, void *arg)
             {
                 if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, &len) != 0 || error != 0)
                 {
-                    ERROR_LOGGER(conn->logger, "socket %d connecting failed, %s", strerror(errno));
+                    ERROR_LOGGER(conn->logger, "socket %d to remote[%s:%d] local[%s:%d] "
+                            "connectting failed,  %s", conn->fd, conn->remote_ip, conn->remote_port,
+                            conn->local_ip, conn->local_port, strerror(errno));
                     conn->status = CONN_STATUS_CLOSED;
                     CONN_TERMINATE(conn);          
                     return ;
@@ -394,7 +396,7 @@ int conn_read_handler(CONN *conn)
         conn->recv_data_total += n;
         DEBUG_LOGGER(conn->logger, "Received %d bytes data total %lld from %s:%d on %s:%d via %d",
                 n, conn->recv_data_total, conn->remote_ip, conn->remote_port, 
-                conn->local_ip, conn->local_port, conn->fd, conn->fd);
+                conn->local_ip, conn->local_port, conn->fd);
         conn->packet_reader(conn);
         ret = 0;
     }
@@ -499,7 +501,7 @@ int conn_packet_reader(CONN *conn)
         {
             len = conn->session.packet_length;
             DEBUG_LOGGER(conn->logger, "Reading packet with certain length[%d] "
-                    "from %s:%d on %s:%d via %d", len, len, conn->remote_ip, conn->remote_port, 
+                    "from %s:%d on %s:%d via %d", len, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
             goto end;
         }
@@ -726,8 +728,8 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
             QUEUE_PUSH(conn->send_queue, PCHUNK, &cp);
             if((QTOTAL(conn->send_queue)) > 0 ) conn->event->add(conn->event, E_WRITE);
             DEBUG_LOGGER(conn->logger, "Pushed file[%s] [%lld][%lld] to %s:%d "
-                    "send_queue total %d on %s:%d via %d ", filename, offset, 
-                    conn->remote_ip, conn->remote_port, size, QTOTAL(conn->send_queue), 
+                    "send_queue total %d on %s:%d via %d ", filename, offset, size, 
+                    conn->remote_ip, conn->remote_port, QTOTAL(conn->send_queue), 
                     conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
         }
