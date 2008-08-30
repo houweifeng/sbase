@@ -156,8 +156,11 @@ typedef struct _CHUNK * PCHUNK;
 /* reset chunk */
 #define CK_RESET(ptr)                                                                       \
 {                                                                                           \
-    if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                    \
-    memset(ptr, 0, sizeof(CHUNK));                                                          \
+    if(ptr)                                                                                 \
+    {                                                                                       \
+        if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                \
+        memset(ptr, 0, sizeof(CHUNK));                                                      \
+    }                                                                                       \
 }
 /* clean chunk */
 #define CK_CLEAN(ptr)                                                                       \
