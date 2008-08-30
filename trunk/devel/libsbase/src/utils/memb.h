@@ -90,8 +90,7 @@ do{                                                                             
 do{                                                                                             \
     if(ptr)                                                                                     \
     {                                                                                           \
-        MB_LEFT(ptr) = MB_SIZE(ptr) = MB_BSIZE(ptr);                                            \
-        MB_DATA(ptr) = (char *)realloc(MB_DATA(ptr), MB_SIZE(ptr));                             \
+        MB_LEFT(ptr) = MB_SIZE(ptr);                                                            \
         MB_END(ptr)  = MB_DATA(ptr);                                                            \
         MB_NDATA(ptr)  = 0;                                                                     \
     }                                                                                           \
