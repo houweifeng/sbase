@@ -181,6 +181,11 @@ int conn_over(CONN *conn)
     if(conn)
     {
         conn->istate = C_STATE_OVER;
+        if(QTOTAL(conn->send_queue) <= 0)
+        {
+            CONN_TERMINATE(conn);
+        }
+        return 0;
     }
     return -1;
 }
