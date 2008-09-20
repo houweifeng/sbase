@@ -37,6 +37,7 @@ extern "C" {
 #define C_STATE_FREE            0x00
 #define C_STATE_WORKING         0x02
 #define C_STATE_USING           0x04
+#define C_STATE_OVER            0x08
 /* connection running state */
 #ifndef S_STATES
 #define S_STATE_READY           0x00
@@ -303,6 +304,7 @@ typedef struct _CONN
 
     /* client transaction state */
     int status;
+    int istate;
     int c_state;
     int c_id;
     int (*start_cstate)(struct _CONN *);

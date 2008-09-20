@@ -180,7 +180,7 @@ int conn_over(CONN *conn)
     CONN_CHECK_RET(conn, -1);
     if(conn)
     {
-        return conn->push_message(conn, MESSAGE_QUIT);
+        conn->istate = C_STATE_OVER;
     }
     return -1;
 }
@@ -455,6 +455,10 @@ int conn_write_handler(CONN *conn)
         if(QTOTAL(conn->send_queue) <= 0)
         {
             conn->event->del(conn->event, E_WRITE);
+            if(conn->istate == C_STATE_OVER)
+            {
+                CONN_TERMINATE(conn);
+            }
         }
     }
     return ret;
