@@ -60,7 +60,7 @@
         message_handler(pth->message_queue, pth->logger);
      }
   }}}
-  服务器启动的时候的时候,如果这个时候有客户连接上来,触发accept事件,激活service_event_handler处理函数,此函数将accept出来的套接字conn,设置了session处理函数为service的session处理函数后,将conn加入到某个线程pth[index]中,index号由fd%nprocthreads决定  
+  服务器启动的时候的时候,如果这个时候有客户连接上来,触发accept事件,激活service_event_handler处理函数,此函数将accept出来的套接字conn,设置了session处理函数为service的session处理函数后,将conn加入到某个线程 pth[ind] 中,ind下标由 fd%nprocthreads 决定  
   {{{
      conn->set_session(conn, session);
      msg.msg_id      = MESSAGE_NEW_SESSION;
