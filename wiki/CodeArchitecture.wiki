@@ -113,12 +113,13 @@
   {{{
   http_request_parse(p, end, &http_req);
   }}}
-  p是接受到的http请求包,end是数据区的尾位置。到Http.c的http_request_parse函数,读取http请求头的各个字段的值并保存。
-  {{{
-   for(i< HTTP_HEADER_NUM;i++)
+  p是接受到的http请求包,end是数据区的尾位置。到Http.c的http_request_parse函数,读取http请求头的各个字段的值,最重要的是找出请求的path路径,因为里面含有用户的查询词。
+  {{{  
+    ps = http_req->path;
+    for(i< HTTP_HEADER_NUM;i++)
        if(strncmp(s,http_headers[i].e,http_headers[i].elen) 
        {
          http_req->headers[i] = s;
-       }
+       }   
   }}}
  
