@@ -2,6 +2,15 @@
   服务启动,主线程启动一定数目的子线程,每个子线程有一个消息队列,用来存放各种类型的消息。每个线程是一个循环,主要做2件事,一是等待事件发生,一是对消息队列进行处理。
 
 = 详细 =
+  libevbase作为服务器的事件驱动库,开发的目的是为了封装不同操作系统的io事件操作，如select,epoll等 
+使得所有的事件处理模式为： 1. 注册一个事件(event)的处理操作 2. 将此事件添加到事件监听器(evbase)中 
+例如: 
+{{{
+ con->evbase=pth->evbase;
+ con->event->set(event,READ,event_handler); 
+ pth->evbase->add(pth->evbase,con->event);
+}}}
+  当读事件发生时,便激活event_handler函数,这个激活不是signal,实际上是遍历所有的可读fd,看哪个被激活了
 
   服务器的工作由多个线程完成(Procthread.c),线程函数的伪代码如下:
   {{{
