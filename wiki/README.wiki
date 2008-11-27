@@ -31,9 +31,10 @@ typedef struct _SESSION
 }SESSION;
 
 }}}
-  ==sbase总体结构 sbase->services[] service->procthreads[] procthread->connections[]==
-  ==sbase 可以同时运行多个service (sbase->add_service()).==
-  ==sbase主线程负责管理所有service下的监听端口的文件描数字, 如果sbase通过libevbase发现有fd可读会通知service下的成员负责accept操作和添加新连接操作. ==
+
+ == sbase总体结构 sbase->services[] service->procthreads[] procthread->connections[].==
+ == sbase 可以同时运行多个service (sbase->add_service()).    sbase主线程负责管理所有service下的监听端口的文件描数字, 如果sbase通过libevbase发现有fd可读会通知service下的成员负责accept操作和添加新连接操作. ==
+
 
 {{{
 typedef struct _SBASE
@@ -78,8 +79,11 @@ typedef struct _SBASE
     void (*clean)(struct _SBASE **);
 }SBASE;
 }}}
+
+
   
   ==service 负责管理服务下的所有线程以及连接, service本身不参与主循环的工作, service只是接受sbase的调用以及连接(connection)的调用, 与service相关的业务逻辑都是运行在service->procthreads[]线程之上, 另外任务(task)运行在service->daemons[]线程之上. service之上的所有连接根据文件描数字(fd)散列到procthreads[]之上. ==
+
 {{{
 typedef struct _SERVICE
 {
