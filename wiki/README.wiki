@@ -195,12 +195,8 @@ typedef struct _SERVICE
     ==procthread负责管理线程之上的所有连接, 包括通过libevbase管理连接的读写通知, 管理新连接添加, 数据头读, 数据头处理, 数据处理, 事务处理, 错误处理, 超时处理等消息.== 
     ===新连接操作流程: ===
     ===1. sbase->evbase->loop() 发现某个连接;===
-    ===2. service->event_handler() 完成accept, conn_init() 初始化连接, ===
-    ===    然后添加NEW_CONNECTION消息到i = fd%service->nprocthreads, ===
-    ===    service->procthreads[i]->message_queue 对应的消息队列;===
-    ===3. procthread 通过消息队列循环获得NEW_CONNECTION消息,===
-     ===   然后procthread->add_connection()加入新连接, 添加连接fd的读写事件到procthread->evbase ===
-     ===   同时service->pushconn() 注册连接到service->connections[];===
+    ===2. service->event_handler() 完成accept, conn_init() 初始化连接, 然后添加NEW_CONNECTION消息到i = fd%service->nprocthreads, service->procthreads[i]->message_queue 对应的消息队列;===
+    ===3. procthread 通过消息队列循环获得NEW_CONNECTION消息,然后procthread->add_connection()加入新连接, 添加连接fd的读写事件到procthread->evbase, 同时service->pushconn() 注册连接到service->connections[];===
     ===4. procthread->evbase->loop() 检查连接状态, 同时通过conn->event_handler激活读写;===
     ===5. conn->read_handler()读取数据到conn->buffer, 同时调用conn->packet_reader()读取数据头;===
     ===6. 数据头读取后添加MESSAGE_PACKET_HANDLE消息, procthread通过消息队列循环调用conn->packet_handler()处理数据头;===
