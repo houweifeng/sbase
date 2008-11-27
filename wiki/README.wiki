@@ -1,7 +1,7 @@
   =libsbase是一个对服务, 线程, 连接等与业务逻辑无关的封装, 可以用于服务端和客户端的网络应用开发.=
 
-    sbase包括服务管理(service), 线程管理(procthread), 连接管理(connection), 采用libevbase(类似libevent)的网络IO读写通知模式, 对业务逻辑数据的处理采用消息队列(message_queue)的方式运行, 每个连接(connection)可以定义独立的会话特性(SESSION), 附着与连接上的业务逻辑采用回调的方式执行, 具体的回调函数封装于session内.
-
+    ==sbase包括服务管理(service), 线程管理(procthread), 连接管理(connection), 采用libevbase(类似libevent)的网络IO读写通知模式, 对业务逻辑数据的处理采用消息队列(message_queue)的方式运行, 每个连接(connection)可以定义独立的会话特性(SESSION), 附着与连接上的业务逻辑采用回调的方式执行, 具体的回调函数封装于session内.==
+{{{
 typedef struct _SESSION
 {
     /* packet */
@@ -30,9 +30,12 @@ typedef struct _SESSION
     int (*transaction_handler)(struct _CONN *, int tid);
 }SESSION;
 
-  sbase总体结构 sbase->services[] service->procthreads[] procthread->connections[]
-  sbase 可以同时运行多个service (sbase->add_service()).
-  sbase主线程负责管理所有service下的监听端口的文件描数字, 如果sbase通过libevbase发现有fd可读会通知service下的成员负责accept操作和添加新连接操作.
+}}}
+  ==sbase总体结构 sbase->services[] service->procthreads[] procthread->connections[]==
+  ==sbase 可以同时运行多个service (sbase->add_service()).==
+  ==sbase主线程负责管理所有service下的监听端口的文件描数字, 如果sbase通过libevbase发现有fd可读会通知service下的成员负责accept操作和添加新连接操作. ==
+
+{{{
 typedef struct _SBASE
 {
     /* base option */
@@ -74,9 +77,10 @@ typedef struct _SBASE
     void (*stop)(struct _SBASE *);
     void (*clean)(struct _SBASE **);
 }SBASE;
-
+}}}
   
-  service 负责管理服务下的所有线程以及连接, service本身不参与主循环的工作, service只是接受sbase的调用以及连接(connection)的调用, 与service相关的业务逻辑都是运行在service->procthreads[]线程之上, 另外任务(task)运行在service->daemons[]线程之上. service之上的所有连接根据文件描数字(fd)散列到procthreads[]之上. 
+  ==service 负责管理服务下的所有线程以及连接, service本身不参与主循环的工作, service只是接受sbase的调用以及连接(connection)的调用, 与service相关的业务逻辑都是运行在service->procthreads[]线程之上, 另外任务(task)运行在service->daemons[]线程之上. service之上的所有连接根据文件描数字(fd)散列到procthreads[]之上. ==
+{{{
 typedef struct _SERVICE
 {
     /* global */
@@ -187,29 +191,30 @@ typedef struct _SERVICE
     void (*clean)(struct _SERVICE **pservice);
 
 }SERVICE;
-
-    procthread负责管理线程之上的所有连接, 包括通过libevbase管理连接的读写通知, 管理新连接添加, 数据头读, 数据头处理, 数据处理, 事务处理, 错误处理, 超时处理等消息. 
-    新连接操作流程: 
-    1. sbase->evbase->loop() 发现某个连接;
-    2. service->event_handler() 完成accept, conn_init() 初始化连接, 
-        然后添加NEW_CONNECTION消息到i = fd%service->nprocthreads, 
-        service->procthreads[i]->message_queue 对应的消息队列;
-    3. procthread 通过消息队列循环获得NEW_CONNECTION消息,
-        然后procthread->add_connection()加入新连接, 添加连接fd的读写事件到procthread->evbase
-        同时service->pushconn() 注册连接到service->connections[];
-    4. procthread->evbase->loop() 检查连接状态, 同时通过conn->event_handler激活读写;
-    5. conn->read_handler()读取数据到conn->buffer, 同时调用conn->packet_reader()读取数据头;
-    6. 数据头读取后添加MESSAGE_PACKET_HANDLE消息, procthread通过消息队列循环调用conn->packet_handler()处理数据头;
-    7. conn->recv_chunk()或者conn->recv_file()可以接收指定长度的数据块或者文件;
-    8. 数据接收完成以后添加新的数据处理消息MESSAGE_DATA_HANDLE, procthread通过消息队列循环调用conn->data_handler();
-    9. 数据处理完毕, 如果需要发送数据的话可以通过conn->push_chunk()发送数据块或者通过conn->push_file()发送文件, 同时添加fd写事件到procthread->evbase, 添加数据参数到conn->send_queue;
-    10. procthread->evbase->loop()通知连接写数据, 每次根据连接buffer最大写, 然后等待下一次loop()直到完成数据发送, 连接的初始化和一个会话到此完成.
+}}}
+    ==procthread负责管理线程之上的所有连接, 包括通过libevbase管理连接的读写通知, 管理新连接添加, 数据头读, 数据头处理, 数据处理, 事务处理, 错误处理, 超时处理等消息.== 
+    ===新连接操作流程: ===
+    ===1. sbase->evbase->loop() 发现某个连接;===
+    ===2. service->event_handler() 完成accept, conn_init() 初始化连接, ===
+    ===    然后添加NEW_CONNECTION消息到i = fd%service->nprocthreads, ===
+    ===    service->procthreads[i]->message_queue 对应的消息队列;===
+    ===3. procthread 通过消息队列循环获得NEW_CONNECTION消息,===
+     ===   然后procthread->add_connection()加入新连接, 添加连接fd的读写事件到procthread->evbase ===
+     ===   同时service->pushconn() 注册连接到service->connections[];===
+    ===4. procthread->evbase->loop() 检查连接状态, 同时通过conn->event_handler激活读写;===
+    ===5. conn->read_handler()读取数据到conn->buffer, 同时调用conn->packet_reader()读取数据头;===
+    ===6. 数据头读取后添加MESSAGE_PACKET_HANDLE消息, procthread通过消息队列循环调用conn->packet_handler()处理数据头;===
+    ===7. conn->recv_chunk()或者conn->recv_file()可以接收指定长度的数据块或者文件;===
+    ===8. 数据接收完成以后添加新的数据处理消息MESSAGE_DATA_HANDLE, procthread通过消息队列循环调用conn->data_handler();===
+    ===9. 数据处理完毕, 如果需要发送数据的话可以通过conn->push_chunk()发送数据块或者通过conn->push_file()发送文件, 同时添加fd写事件到procthread->evbase, 添加数据参数到conn->send_queue;===
+    ===10. procthread->evbase->loop()通知连接写数据, 每次根据连接buffer最大写, 然后等待下一次loop()直到完成数据发送, 连接的初始化和一个会话到此完成.===
     
-    客户端连接建立:
-    1. 调用service->newconn(), 此处的采用非阻塞连接, 连接并非马上建立, 标记conn->status = CONN_STATUS_READY, 然后进入连接添加流程;
-    2. 进入之前服务连接流程 4 的时候, 如果碰到conn->status == CONN_STATUS_READY, 检查socket是否有错, 如果有错当做错误处理, 关闭连接.
-    3. 其他处理类似.
+    ===客户端连接建立:===
+    ===1. 调用service->newconn(), 此处的采用非阻塞连接, 连接并非马上建立, 标记conn->status = CONN_STATUS_READY, 然后进入连接添加流程;===
+    ===2. 进入之前服务连接流程 4 的时候, 如果碰到conn->status == CONN_STATUS_READY, 检查socket是否有错, 如果有错当做错误处理, 关闭连接.===
+    ===3. 其他处理类似.  ===
 
+{{{
 /* procthread */
 typedef struct _PROCTHREAD
 {
@@ -367,15 +372,15 @@ typedef struct _CONN
     /* normal */
     void (*clean)(struct _CONN **pconn);
 }CONN;
+}}}
+==编译安装:==
+====homepage : http://sbase.googlecode.com ====
 
-编译安装:
-homepage : http://sbase.googlecode.com
-
-install :
+===install :===
 ./configure --enable-debug
 make 
 
-test & demo :
+===test & demo :===
 
 ./src/lechod -c doc/rc.lechod.ini 
 
