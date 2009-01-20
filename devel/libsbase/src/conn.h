@@ -83,6 +83,9 @@ int conn_timeout_handler(CONN *conn);
 /* evtimer handler */
 void conn_evtimer_handler(void *arg);
 
+/* reset conn */
+void conn_reset(CONN *conn);
+
 /* clean connection */
 void conn_clean(CONN **pconn);
 

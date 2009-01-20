@@ -180,7 +180,7 @@ int conn_over(CONN *conn)
     CONN_CHECK_RET(conn, -1);
     if(conn)
     {
-        conn->istate = C_STATE_OVER;
+        conn->i_state = C_STATE_OVER;
         if(QTOTAL(conn->send_queue) <= 0)
         {
             CONN_TERMINATE(conn);
@@ -460,7 +460,7 @@ int conn_write_handler(CONN *conn)
         if(QTOTAL(conn->send_queue) <= 0)
         {
             conn->event->del(conn->event, E_WRITE);
-            if(conn->istate == C_STATE_OVER)
+            if(conn->i_state == C_STATE_OVER)
             {
                 CONN_TERMINATE(conn);
             }
@@ -777,6 +777,68 @@ int conn_transaction_handler(CONN *conn, int tid)
     return ret;
 }
 
+/* reset connection */
+void conn_reset(CONN *conn)
+{
+    CHUNK *cp = NULL;
+
+    if(conn)
+    {
+        /* global */
+        conn->index = 0;
+        conn->parent = NULL;
+        /* connection */
+        conn->fd = 0;
+        conn->sock_type = 0;
+        memset(conn->remote_ip, 0, SB_IP_MAX);
+        conn->remote_port = 0;
+        memset(conn->local_ip, 0, SB_IP_MAX);
+        conn->local_port = 0;
+        /* bytes stats */
+        conn->recv_oob_total = 0ll;
+        conn->sent_oob_total = 0ll;
+        conn->recv_data_total = 0ll;
+        conn->sent_data_total = 0ll;
+        /* event */
+        conn->evbase = NULL;
+
+        /* event timer */
+        conn->evid = 0;
+        conn->evtimer = NULL;
+
+        /* buffer and chunk */
+        MB_RESET(conn->buffer);
+        MB_RESET(conn->packet);
+        MB_RESET(conn->oob);
+        MB_RESET(conn->cache);
+        CK_RESET(conn->chunk);
+
+        /* timer, logger, message_queue and send_queue */
+        TIMER_RESET(conn->timer);
+        conn->logger = NULL;
+        conn->message_queue = NULL;
+        if(conn->send_queue > 0)
+        {
+            while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
+        }
+
+        /* client transaction state */
+        conn->status = 0;
+        conn->i_state = 0;
+        conn->c_state = 0;
+        conn->c_id = 0;
+
+        /* transaction */
+        conn->s_id = 0;
+        conn->s_state = 0;
+        /* event state */
+        conn->evstate = 0;
+        conn->timeout = 0;
+        /* session */
+        memset(&(conn->session), 0, sizeof(SESSION));
+    }
+    return ;
+}
 /* clean connection */
 void conn_clean(CONN **pconn)
 {
@@ -848,6 +910,7 @@ CONN *conn_init()
         conn->recv_file             = conn_recv_file;
         conn->push_file             = conn_push_file;
         conn->set_session           = conn_set_session;
+        conn->reset                 = conn_reset;
         conn->clean                 = conn_clean;
     }
     return conn;

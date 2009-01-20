@@ -123,7 +123,7 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
     {
         ret = pth->service->popconn(pth->service, conn);
         ret |= conn->terminate(conn);
-        conn->clean(&conn);
+        conn->reset(&conn);
     }
     return ret;
 }

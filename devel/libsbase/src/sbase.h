@@ -174,6 +174,7 @@ typedef struct _SERVICE
     int running_connections;
     int nconnection;
     struct _CONN **connections;
+    void *connection_queue;
     /* C_SERVICE ONLY */
     int client_connections_limit;
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
@@ -198,8 +199,6 @@ typedef struct _SERVICE
     int ntask;
     int (*newtask)(struct _SERVICE *, CALLBACK *, void *arg); 
     int (*newtransaction)(struct _SERVICE *, struct _CONN *, int tid);
-
-    /* async dns */
 
     /* service default session option */
     SESSION session;
@@ -304,7 +303,7 @@ typedef struct _CONN
 
     /* client transaction state */
     int status;
-    int istate;
+    int i_state;
     int c_state;
     int c_id;
     int (*start_cstate)(struct _CONN *);
@@ -351,8 +350,9 @@ typedef struct _CONN
     int (*set_session)(struct _CONN *, SESSION *session);
 
     /* normal */
+    void (*reset)(struct _CONN *);
     void (*clean)(struct _CONN **pconn);
-}CONN;
+}CONN, *PCONN;
 CONN *conn_init();
 #ifdef __cplusplus
  }

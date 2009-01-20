@@ -158,6 +158,7 @@ typedef struct _CHUNK * PCHUNK;
 {                                                                                           \
     if(ptr)                                                                                 \
     {                                                                                       \
+        if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
         if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                \
         memset(ptr, 0, sizeof(CHUNK));                                                      \
     }                                                                                       \
