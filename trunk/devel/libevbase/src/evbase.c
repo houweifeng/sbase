@@ -289,8 +289,6 @@ void event_destroy(EVENT *event)
 /* Active event */
 void event_active(EVENT *event, short ev_flags)
 {
-	int n = 16;
-	char buf[16];
 	short e_flags = ev_flags;
 	if(event && event->ev_handler)
 	{

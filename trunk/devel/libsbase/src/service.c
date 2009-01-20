@@ -293,7 +293,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 
     if(service && fd > 0 && session)
     {
-        if((conn = conn_init()))
+        QUEUE_POP(service->connection_queue, PCONN, &conn);
+        if(conn || (conn = conn_init()))
         {
             conn->fd = fd;
             strcpy(conn->remote_ip, remote_ip);
@@ -379,6 +380,8 @@ int service_popconn(SERVICE *service, CONN *conn)
         if(conn->index >= 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
+            conn->reset(conn);
+            QUEUE_PUSH(service->connection_queue, PCONN, &conn);
             service->connections[conn->index] = NULL;
             service->running_connections--;
             if(service->index_max == conn->index) 
@@ -637,6 +640,7 @@ void service_evtimer_handler(void *arg)
 /* service clean */
 void service_clean(SERVICE **pservice)
 {
+    CONN *conn = NULL;
     int i = 0;
 
     if(pservice && *pservice)
@@ -645,6 +649,7 @@ void service_clean(SERVICE **pservice)
         if((*pservice)->is_inside_logger && (*pservice)->logger) LOGGER_CLEAN((*pservice)->logger);
         if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
         if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
+        //clean procthreads
         if((*pservice)->procthreads && (*pservice)->nprocthreads)
         {
             for(i = 0; i < (*pservice)->nprocthreads; i++)
@@ -656,6 +661,7 @@ void service_clean(SERVICE **pservice)
             }
             free((*pservice)->procthreads);
         }
+        //clean daemons
         if((*pservice)->daemons && (*pservice)->ndaemons)
         {
             for(i = 0; i < (*pservice)->ndaemons; i++)
@@ -666,6 +672,17 @@ void service_clean(SERVICE **pservice)
                 }
             }
             free((*pservice)->daemons);
+        }
+        //clean connection_queue
+        if(QTOTAL((*pservice)->connection_queue))
+        {
+            while(QTOTAL((*pservice)->connection_queue) > 0)
+            {
+                conn = NULL;
+                QUEUE_POP((*pservice)->connection_queue, PCONN, &conn);
+                if(conn) conn->clean(&conn);
+            }
+            QUEUE_CLEAN((*pservice)->connection_queue);
         }
         MUTEX_DESTROY((*pservice)->mutex);
         free(*pservice);
@@ -680,6 +697,7 @@ SERVICE *service_init()
     if((service = (SERVICE *)calloc(1, sizeof(SERVICE))))
     {
         MUTEX_INIT(service->mutex);
+        QUEUE_INIT(service->connection_queue);
         service->set                = service_set;
         service->run                = service_run;
         service->set_log            = service_set_log;
