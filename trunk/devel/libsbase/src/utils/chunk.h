@@ -7,7 +7,7 @@
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 256 
-#define CHUNK_BLOCK_SIZE  65536 
+#define CHUNK_BLOCK_SIZE    65536 
 #define CHUNK_STATUS_ON     0x01
 #define CHUNK_STATUS_OVER   0x02
 typedef struct _CHUNK

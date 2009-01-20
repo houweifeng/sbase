@@ -674,7 +674,7 @@ void service_clean(SERVICE **pservice)
             free((*pservice)->daemons);
         }
         //clean connection_queue
-        if(QTOTAL((*pservice)->connection_queue))
+        if((*pservice)->connection_queue)
         {
             while(QTOTAL((*pservice)->connection_queue) > 0)
             {
