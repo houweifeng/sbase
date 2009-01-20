@@ -104,6 +104,7 @@ typedef struct _SBASE
 
     /* evtimer */
     void *evtimer;
+    int evid;
 
     /* message queue for proc mode */
     void *message_queue;
