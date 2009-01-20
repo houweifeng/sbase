@@ -817,9 +817,14 @@ void conn_reset(CONN *conn)
         TIMER_RESET(conn->timer);
         conn->logger = NULL;
         conn->message_queue = NULL;
-        if(conn->send_queue > 0)
+        if(conn->send_queue)
         {
-            while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
+            while(QTOTAL(conn->send_queue) > 0)
+            {
+                cp = NULL;
+                QUEUE_POP(conn->send_queue, PCHUNK, &cp);
+                if(cp){CK_CLEAN(cp);}
+            }
         }
 
         /* client transaction state */

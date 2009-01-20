@@ -380,17 +380,17 @@ int service_popconn(SERVICE *service, CONN *conn)
         if(conn->index >= 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
-            conn->reset(conn);
             QUEUE_PUSH(service->connection_queue, PCONN, &conn);
             service->connections[conn->index] = NULL;
             service->running_connections--;
             if(service->index_max == conn->index) 
                 service->index_max--;
-            ret = 0;
             DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d "
                     "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd, 
                     conn->index, service->running_connections);
+            ret = 0;
+            conn->reset(conn);
         }
         MUTEX_UNLOCK(service->mutex);
     }

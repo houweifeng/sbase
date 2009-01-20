@@ -121,9 +121,9 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && conn)
     {
+        ret = conn->terminate(conn);
         ret = pth->service->popconn(pth->service, conn);
-        ret |= conn->terminate(conn);
-        conn->reset(&conn);
+        //conn->reset(conn);
     }
     return ret;
 }
