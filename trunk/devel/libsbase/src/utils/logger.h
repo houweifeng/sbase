@@ -10,14 +10,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#ifdef HAVE_PTHREAD
 #include "mutex.h"
-#else
-#define MUTEX_INIT(ptr)
-#define MUTEX_LOCK(ptr)
-#define MUTEX_UNLOCK(ptr)
-#define MUTEX_DESTROY(ptr)
-#endif
 
 #ifndef _LOGGER_H
 #define _LOGGER_H
@@ -33,7 +26,8 @@ extern "C" {
 #define	__WARN__ 		1
 #define	__ERROR__ 		2
 #define	__FATAL__ 		3
-static char *_logger_level_s[] = {"DEBUG", "WARN", "ERROR", "FATAL"};
+#define	__ACCESS__ 		4
+static char *_logger_level_s[] = {"DEBUG", "WARN", "ERROR", "FATAL", ""};
 #ifndef _STATIS_YMON
 #define _STATIS_YMON
 static char *ymonths[]= {
@@ -70,16 +64,16 @@ typedef struct _LOGGER
 #define PLB(ptr) (PL(ptr)->buf)
 #define PLPS(ptr) (PL(ptr)->ps)
 #define LOGGER_INIT(ptr, lp)                                                        \
-{                                                                                   \
+do{                                                                                   \
     if((ptr = (LOGGER *)calloc(1, sizeof(LOGGER))))                                 \
     {                                                                               \
         MUTEX_INIT(PL(ptr)->mutex);                                                 \
         strcpy(PLF(ptr), lp);                                                       \
         PLFD(ptr) = open(PLF(ptr), O_CREAT|O_WRONLY|O_APPEND, 0644);                \
     }                                                                               \
-}
+}while(0)
 #define LOGGER_ADD(ptr, __level__, format...)                                       \
-{                                                                                   \
+do{                                                                                 \
     if(ptr)                                                                         \
     {                                                                               \
     MUTEX_LOCK(PL(ptr)->mutex);                                                     \
@@ -89,14 +83,14 @@ typedef struct _LOGGER
     PLPS(ptr) += sprintf(PLPS(ptr), "[%02d/%s/%04d:%02d:%02d:%02d +%06u] "          \
             "[%u/%08x] #%s::%d# %s:", PLP(ptr)->tm_mday, ymonths[PLP(ptr)->tm_mon], \
             (1900+PLP(ptr)->tm_year), PLP(ptr)->tm_hour, PLP(ptr)->tm_min,          \
-            PLP(ptr)->tm_sec, (size_t)(PLTV(ptr).tv_usec), (size_t)getpid(),        \
-            THREADID(), __FILE__, __LINE__, _logger_level_s[__level__]);            \
+        PLP(ptr)->tm_sec, (unsigned int)(PLTV(ptr).tv_usec),(unsigned int)getpid(), \
+        (unsigned int)THREADID(), __FILE__, __LINE__, _logger_level_s[__level__]);  \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
     write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                             \
     MUTEX_UNLOCK(PL(ptr)->mutex);                                                   \
     }                                                                               \
-}
+}while(0)
 #ifdef _DEBUG
 #define DEBUG_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __DEBUG__, format);}
 #else
@@ -105,8 +99,9 @@ typedef struct _LOGGER
 #define WARN_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __WARN__, format);}
 #define ERROR_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __ERROR__, format);}
 #define FATAL_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __FATAL__, format);}
+#define ACCESS_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __ACCESS__, format);}
 #define LOGGER_CLEAN(ptr)                                                           \
-{                                                                                   \
+do{                                                                                 \
     if(ptr)                                                                         \
     {                                                                               \
         close(PLFD(ptr));                                                           \
@@ -114,7 +109,7 @@ typedef struct _LOGGER
         free(ptr);                                                                  \
         ptr = NULL;                                                                 \
     }                                                                               \
-}
+}while(0)
 #ifdef __cplusplus
  }
 #endif
