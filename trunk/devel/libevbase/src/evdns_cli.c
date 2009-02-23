@@ -15,6 +15,7 @@
 #include "log.h"
 #include "logger.h"
 #include "evdns.h"
+#include "timer.h"
 #ifdef HAVE_EVKQUEUE
 #define CONN_MAX 10240
 #else
@@ -27,6 +28,8 @@ static EVENT *events[CONN_MAX];
 static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
 static int ev_sock_count  = 2;
+static char *domain = NULL;
+static void *timer = NULL;
 
 int setrlimiter(char *name, int rlimit, int nset)
 {
@@ -69,11 +72,13 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
         //if( ( n = recvfrom(fd, buffer[fd], EV_BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
         if( ( n = read(fd, buffer[fd], EV_BUF_SIZE)) > 0 )
         {
+            TIMER_SAMPLE(timer);
             evdns_parse_reply((unsigned char *)buffer[fd], n, &hostent);
             if(hostent.naddrs  > 0)
             {
-                fprintf(stdout, "QID:%d name:%s nalias:%d naddrs:%d\n", 
-                        hostent.qid, hostent.name, hostent.nalias, hostent.naddrs);
+                fprintf(stdout, "time:%lld QID:%d name:%s nalias:%d naddrs:%d\n", 
+                        PT_LU_USEC(timer), hostent.qid, hostent.name, 
+                        hostent.nalias, hostent.naddrs);
                 for(i = 0; i < hostent.nalias; i++)
                 {
                     fprintf(stdout, "alias%d:%s\n", i, hostent.alias[i]);
@@ -82,7 +87,8 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                 {
                     p = (unsigned char *)&(hostent.addrs[i]);
                     sprintf(ip, "%d.%d.%d.%d", *p, *(p+1), *(p+2), *(p+3));
-                    fprintf(stdout, "ip[%d] [%d:%s:%d]", i, hostent.addrs[i], ip, inet_addr(ip));
+                    fprintf(stdout, "ip[%d] [%d][%s:][%d]\n", 
+                            i, hostent.addrs[i], ip, inet_addr(ip));
                 }
                 fprintf(stdout, "\r\n");
             }
@@ -110,7 +116,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
     }
     if(ev_flags & E_WRITE)
     {
-        nevdnsbuf = evdns_make_query("www.sounos.org", 1, 1, 1, 1, evdnsbuf);
+        nevdnsbuf = evdns_make_query(domain, 1, 1, 1, 1, evdnsbuf);
         if((reqfd = open("/tmp/dns.query", O_CREAT|O_RDWR, 0644)) > 0)
         {
             write(reqfd, evdnsbuf, nevdnsbuf);
@@ -121,6 +127,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
         if((n = write(fd, evdnsbuf, nevdnsbuf)) > 0)
         {
             SHOW_LOG("Wrote %d bytes via %d", n, fd);
+            TIMER_RESET(timer);
         }
         else
         {
@@ -178,7 +185,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
     }
     if(ev_flags & E_WRITE)
     {
-        nevdnsbuf = evdns_make_query("www.china.com", 1, 1, 0, 0, evdnsbuf);
+        nevdnsbuf = evdns_make_query(domain, 1, 1, 0, 0, evdnsbuf);
         if((reqfd = open("/tmp/dns.query", O_CREAT|O_RDWR, 0644)) > 0)
         {
             write(reqfd, evdnsbuf, nevdnsbuf);
@@ -227,7 +234,7 @@ int main(int argc, char **argv)
     EVENT  *event = NULL;
     if(argc < 5)
     {
-        fprintf(stderr, "Usage:%s sock_type(0/TCP|1/UDP) ip port connection_number\n", argv[0]);	
+        fprintf(stderr, "Usage:%s sock_type(0/TCP|1/UDP) ip port domain\n", argv[0]);	
         _exit(-1);
     }	
     ev_sock_type = atoi(argv[1]);
@@ -239,7 +246,7 @@ int main(int argc, char **argv)
     sock_type = ev_sock_list[ev_sock_type];
     ip = argv[2];
     port = atoi(argv[3]);
-    conn_num = atoi(argv[4]);
+    domain = argv[4];
     /* Set resource limit */
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
     /* Initialize global vars */
@@ -254,8 +261,9 @@ int main(int argc, char **argv)
     if((evbase = evbase_init()))
     {
         LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
+        TIMER_INIT(timer);
         //evbase->set_evops(evbase, EOP_POLL);
-        while((fd = socket(AF_INET, sock_type, 0)) > 0 && fd < conn_num)
+        if((fd = socket(AF_INET, sock_type, 0)) > 0)
         {
             /* Connect */
             if(connect(fd, (struct sockaddr *)&sa, sa_len) == 0 )
@@ -285,7 +293,7 @@ int main(int argc, char **argv)
             else
             {
                 FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
-                break;
+                _exit(-1);
             }
         }
         while(1)
@@ -293,5 +301,6 @@ int main(int argc, char **argv)
             evbase->loop(evbase, 0, NULL);
             usleep(10);
         }
+        TIMER_CLEAN(timer);
     }
 }
