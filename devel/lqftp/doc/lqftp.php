@@ -3,8 +3,7 @@
 define('CALL_TIMEOUT', 200000);
 define('SOCK_END', "\r\n\r\n");
 define('RESP_OK', 300);
-define('READYFLAG', ".xxxxxx.flag");
-define('OVERFLAG', ".xxxxxx.end");
+define('OVERFLAG', ".xxxxxx.flag");
 class CLQFTP
 {
     var $host = "127.0.0.1";
@@ -174,62 +173,46 @@ class CLQFTP
     /* lookup dir */
     function lookup($dir)
     {
-       $j = 0;
-       $pdir = NULL;
-       $dirp = NULL;
-       $file = NULL;
-       $ent = NULL;
-       $path = NULL;
-       $p = NULL;
-       $overlist = Array();
+        $j = 0;
+        $pdir = NULL;
+        $file = NULL;
+        $path = NULL;
+        $flag = NULL;
+        $overlist = Array();
 
         if($dir && is_dir($dir) && ($pdir = opendir($dir)))
         {
+            $flag = $dir."/".OVERFLAG;
+            if(file_exists($flag) && filesize($flag) > 0) 
+                $overlist = unserialize(file_get_contents($flag));
+            $j = 0;
             while(($file = readdir($pdir)))
             {
-                if($file == '.' || $file == '..') continue;
                 $path = "$dir/$file";
-                if(is_dir($path) && file_exists($path."/".READYFLAG) 
-                    && !file_exists($path."/".OVERFLAG))
+                if($file{0} == '.' || filesize($path) == 0)
+                    continue;
+                if(is_dir($path)) lookup($path);
+                else
                 {
-                    if(filesize($path."/".READYFLAG) > 0)
-                        $overlist = file($path."/".READYFLAG);
-                    //print_r($overlist);
-                    //echo "Ready for transport dir[$path]\n";
-                    if(($dirp = opendir($path)))
+                    $last_mod_time = filemtime($path);
+                    if(array_key_exists($file, $overlist) && $last_mod_time == $overlist[$file]) 
+                        continue;
+                    else $overlist[$file] = $last_mod_time;
+                    if($this->add($path, $dir."/".$file) === FALSE)
                     {
-                        while(($ent = readdir($dirp)))
-                        {
-                            $p = $path."/".$ent;
-                            if(is_file($p) && $ent != READYFLAG 
-                                && filesize($p) > 0 && !in_array($ent."\n", $overlist))
-                            {
-                                if($this->add($p, "/$file/".$ent) === FALSE)
-                                {
-                                    closedir($dirp);
-                                    closedir($pdir);
-                                    return ;
-                                }
-                                else 
-                                {
-                                    echo "Added $p to queue\n";
-                                    error_log($ent."\n", 3, "$path/".READYFLAG);
-                                }
-                            }
-                        }
-                        if($this->add("$path/".READYFLAG, "/$file/".READYFLAG) === FALSE)
-                        {
-                                    closedir($dirp);
-                                    closedir($pdir);
-                                    return ;
-                        }
-                        else
-                        {
-                            copy("$path/".READYFLAG, "$path/".OVERFLAG);
-                        }
-                        closedir($dirp);
+                        break;
+                    }
+                    else 
+                    {
+                        $j++;
+                        echo "Added $path $dir/$file to queue\n";
                     }
                 }
+            }
+            if($j > 0)
+            {
+                if(file_exists($flag)) @unlink($flag);
+                error_log(serialize($overlist), 3, $flag);
             }
             closedir($pdir);
         }
