@@ -235,7 +235,7 @@ if($_SERVER['argc'] < 2)
     echo "\t OR status taskid\n";
     echo "\t OR addlist filelist statuslist\n";
     echo "\t OR statuslist statusfile\n";
-    echo "\t OR lookup dir\n";
+    echo "\t OR lookup dirs ... \n";
     exit;
 }
 $op = $_SERVER['argv'][1];
@@ -335,11 +335,12 @@ if($lqftp->is_connected)
     //lookup
     if($op == "lookup")
     {
-        $lookdir = $_SERVER['argv']['2'];
+        for($i = 2; $i < $_SERVER['argc']; $i++)
+            $dirs[] = $_SERVER['argv'][$i];
         while(1)
         {
-                $lqftp->lookup($lookdir);
-                sleep(60);
+            foreach($dirs AS $k => $v) $lqftp->lookup($v);
+            sleep(60);
         }
     }
     $lqftp->close();
