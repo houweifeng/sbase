@@ -127,6 +127,8 @@ target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 EXTRA_DIST = rc.lqftp  rc.lqftp.ini rc.lqftpd rc.lqftpd.ini lqftp.php setup.sh
+conftodir = "`echo $(sysconfdir)|sed -e 's|/usr/etc|/etc|'`"
+sysconftodir = $(conftodir)
 all: all-am
 
 .SUFFIXES:
@@ -196,7 +198,6 @@ check-am: all-am
 check: check-am
 all-am: Makefile
 installdirs:
-install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -286,6 +287,15 @@ uninstall-am:
 	maintainer-clean maintainer-clean-generic mostlyclean \
 	mostlyclean-generic pdf pdf-am ps ps-am uninstall uninstall-am
 
+install: install-ini
+
+install-ini:
+	@echo install lqftp.ini lqftpd to $(sysconftodir)
+	@test -d $(sysconftodir)      || mkdir -p $(sysconftodir)
+	@test -f $(sysconftodir)/lqftp.ini \
+		|| cp -p $(top_srcdir)/doc/rc.lqftp.ini $(sysconftodir)/lqftp.ini
+	@test -f $(sysconftodir)/lqftpd.ini \
+		|| cp -p $(top_srcdir)/doc/rc.lqftpd.ini $(sysconftodir)/lqftpd.ini
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:
