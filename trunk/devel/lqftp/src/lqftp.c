@@ -262,6 +262,7 @@ int cb_serv_packet_handler(CONN *conn, CB_DATA *packet)
             *np = '\0';
             n = np - file;
             np = destfile;
+            if(*p != '/') *np++ = '/';
             while(p < end && *p != ' ' && *p != '\r' && *p != '\n')
             {
                 if((np - destfile) >= PATH_MAX_SIZE) goto bad_req_err;
