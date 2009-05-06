@@ -171,7 +171,7 @@ class CLQFTP
     }
 
     /* lookup dir */
-    function lookup($dir)
+    function lookupdir($dir)
     {
         $j = 0;
         $pdir = NULL;
@@ -191,7 +191,7 @@ class CLQFTP
                 $path = "$dir/$file";
                 if($file{0} == '.' || filesize($path) == 0)
                     continue;
-                if(is_dir($path)) lookup($path);
+                if(is_dir($path)) $this->lookupdir($path);
                 else
                 {
                     $last_mod_time = filemtime($path);
@@ -228,7 +228,7 @@ class CLQFTP
     }
 }
 
-if($_SERVER['argc'] < 2)
+if($_SERVER['argc'] < 3)
 {
     $self = $_SERVER['argv'][0];
     echo "Usage:$self add file destfile\n";
@@ -339,7 +339,10 @@ if($lqftp->is_connected)
             $dirs[] = $_SERVER['argv'][$i];
         while(1)
         {
-            foreach($dirs AS $k => $v) $lqftp->lookup($v);
+            foreach($dirs AS $k => $v) 
+            {
+                $lqftp->lookupdir($v);
+            }
             sleep(60);
         }
     }
