@@ -72,6 +72,28 @@ do{                                                                             
         }                                                                                   \
     }                                                                                       \
 }while(0)
+/* chunk pop/push */
+#define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
+#define CHUNK_PUSH(conn, cp)                                                                \
+do                                                                                          \
+{                                                                                           \
+    if(conn && PPARENT(conn) && PPARENT(conn)->chunks_queue)                                \
+    {                                                                                       \
+        QUEUE_PUSH(PPARENT(conn)->chunks_queue, PCHUNK, &cp);                               \
+    }                                                                                       \
+}while(0)
+#define CHUNK_POP(conn, cp)                                                                 \
+do                                                                                          \
+{                                                                                           \
+    if(conn && PPARENT(conn) && PPARENT(conn)->chunks_queue)                                \
+    {                                                                                       \
+        cp = NULL;                                                                          \
+        if(QUEUE_POP(PPARENT(conn)->chunks_queue, PCHUNK, &cp) == 0)                        \
+        {                                                                                   \
+            if(cp){CK_RESET(cp);}                                                           \
+        }                                                                                   \
+    }                                                                                       \
+}while(0)
 /* connection event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
@@ -313,9 +335,7 @@ int conn_start_cstate(CONN *conn)
             conn->c_state = C_STATE_USING;
             while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
             {
-                CK_RESET(cp);
-                QUEUE_PUSH(conn->chunks_queue, PCHUNK, &cp);
-                cp = NULL;
+                CHUNK_PUSH(conn, cp);
             }
             MB_RESET(conn->packet);
             MB_RESET(conn->cache);
@@ -448,9 +468,7 @@ int conn_write_handler(CONN *conn)
                                 "on %s:%d via %d clean it leave %d", cp, 
                                 conn->remote_ip, conn->remote_port, conn->local_ip,
                                 conn->local_port, conn->fd, QTOTAL(conn->send_queue));
-                        CK_RESET(cp);
-                        QUEUE_PUSH(conn->chunks_queue, PCHUNK, &cp);
-                        cp = NULL;
+                        CHUNK_PUSH(conn, cp);
                     }
                 }
                 ret = 0;
@@ -690,11 +708,10 @@ int conn_push_chunk(CONN *conn, void *data, int size)
 
     if(conn && conn->send_queue && data && size > 0)
     {
-
-        if(conn->chunks_queue){QUEUE_POP(conn->chunks_queue, PCHUNK, &cp);}
-        if(cp == NULL){CK_INIT(cp, conn->session.buffer_size);}
+        CHUNK_POP(conn, cp);
         if(cp)
         {
+            CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
             QUEUE_PUSH(conn->send_queue, PCHUNK, &cp);
         }else return ret;
@@ -738,8 +755,7 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
 
     if(conn && conn->send_queue && filename && offset >= 0 && size > 0)
     {
-        if(conn->chunks_queue){QUEUE_POP(conn->chunks_queue, PCHUNK, &cp);}
-        if(cp == NULL){CK_INIT(cp, conn->session.buffer_size);}
+        CHUNK_POP(conn, cp);
         if(cp)
         {
             CK_FILE(cp, filename, offset, size);
@@ -832,9 +848,7 @@ void conn_reset(CONN *conn)
             {
                 if(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
                 {
-                    CK_RESET(cp);
-                    QUEUE_PUSH(conn->chunks_queue, PCHUNK, &cp);
-                    cp = NULL;
+                    CHUNK_PUSH(conn, cp);
                 }
             }
         }
@@ -881,11 +895,6 @@ void conn_clean(CONN **pconn)
             while(QUEUE_POP((*pconn)->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
             QUEUE_CLEAN((*pconn)->send_queue);
         }
-        if((*pconn)->chunks_queue)
-        {
-            while(QUEUE_POP((*pconn)->chunks_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
-            QUEUE_CLEAN((*pconn)->chunks_queue);
-        }
         free(*pconn);
         (*pconn) = NULL;
     }
@@ -903,9 +912,8 @@ CONN *conn_init()
         MB_INIT(conn->packet, MB_BLOCK_SIZE);
         MB_INIT(conn->cache, MB_BLOCK_SIZE);
         MB_INIT(conn->oob, MB_BLOCK_SIZE);
-        CK_INIT(conn->chunk, 0);
+        CK_INIT(conn->chunk);
         QUEUE_INIT(conn->send_queue);
-        QUEUE_INIT(conn->chunks_queue);
         conn->event                 = ev_init();
         conn->set                   = conn_set;
         conn->close                 = conn_close;
