@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "message.h"
 #include "evtimer.h"
+#include "chunk.h"
 
 /* run procthread */
 void procthread_run(void *arg)
@@ -103,7 +104,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn->message_queue = pth->message_queue;
         conn->evbase        = pth->evbase;
-        conn->parent = pth;
+        conn->parent        = pth;
         if(conn->set(conn) == 0)
         {
             DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] on %s:%d via %d to pool",
@@ -195,12 +196,23 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 /* clean procthread */
 void procthread_clean(PROCTHREAD **ppth)
 {
+    CHUNK *cp = NULL;
+
     if(ppth && *ppth)
     {
         if((*ppth)->service->working_mode != WORKING_PROC)
         {
             (*ppth)->evbase->clean(&((*ppth)->evbase));
             QUEUE_CLEAN((*ppth)->message_queue);
+        }
+        if((*ppth)->chunks_queue && QTOTAL((*ppth)->chunks_queue) > 0)
+        {
+            while(QUEUE_POP((*ppth)->chunks_queue, PCHUNK, &cp) == 0)
+            {
+                CK_CLEAN(cp);
+                cp = NULL;
+            }
+            QUEUE_CLEAN((*ppth)->chunks_queue);
         }
         free((*ppth));
         (*ppth) = NULL;
@@ -215,6 +227,7 @@ PROCTHREAD *procthread_init()
     if((pth = (PROCTHREAD *)calloc(1, sizeof(PROCTHREAD))))
     {
         QUEUE_INIT(pth->message_queue);
+        QUEUE_INIT(pth->chunks_queue);
         pth->evbase                  = evbase_init();
         pth->run                     = procthread_run;
         pth->addconn                 = procthread_addconn;

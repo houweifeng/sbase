@@ -6,8 +6,8 @@
 #define CHUNK_MEM   0x02
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
-#define CHUNK_FILE_NAME_MAX 256 
-#define CHUNK_BLOCK_SIZE    524288 
+#define CHUNK_FILE_NAME_MAX 1024 
+#define CHUNK_BLOCK_SIZE    65536 
 #define CHUNK_STATUS_ON     0x01
 #define CHUNK_STATUS_OVER   0x02
 typedef struct _CHUNK
@@ -49,8 +49,11 @@ typedef struct _CHUNK * PCHUNK;
             if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;}                       \
             CK_DATA(ptr) = (char *)calloc(1, CK_BSIZE(ptr));                                \
         }                                                                                   \
-        if(CK_DATA(ptr) && CK_BSIZE(ptr) > 0)                                               \
-            memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                         \
+        else                                                                                \
+        {                                                                                   \
+            if(CK_DATA(ptr) && CK_BSIZE(ptr) > 0)                                           \
+                memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                     \
+        }                                                                                   \
         CK_END(ptr)    = CK_DATA(ptr);                                                      \
     }                                                                                       \
 }
@@ -66,13 +69,16 @@ typedef struct _CHUNK * PCHUNK;
         if(len > CK_BSIZE(ptr))                                                             \
         {                                                                                   \
             if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;}                       \
-            CKN(ptr) = (len/CK_BSIZE(ptr));                                                 \
-            if(len % CK_BSIZE(ptr)) ++CKN(ptr);                                             \
-            CK_BSIZE(ptr) *= CKN(ptr);                                                      \
+            CKN(ptr) = (len/CHUNK_BLOCK_SIZE);                                              \
+            if(len % CHUNK_BLOCK_SIZE) ++CKN(ptr);                                          \
+            CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                                   \
             CK_DATA(ptr)   = (char *)calloc(1, CK_BSIZE(ptr));                              \
         }                                                                                   \
-        if(CK_DATA(ptr) && CK_BSIZE(ptr) > 0)                                               \
-            memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                         \
+        else                                                                                \
+        {                                                                                   \
+            if(CK_DATA(ptr) && CK_BSIZE(ptr) > 0)                                           \
+                memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                     \
+        }                                                                                   \
         CK_END(ptr)    = CK_DATA(ptr);                                                      \
         CK_NDATA(ptr)  = 0;                                                                 \
     }                                                                                       \
@@ -186,13 +192,12 @@ typedef struct _CHUNK * PCHUNK;
         free(ptr);ptr = NULL;                                                               \
     }                                                                                       \
 }
-#define CK_INIT(ptr, block_size)                                                            \
+#define CK_INIT(ptr)                                                                        \
 {                                                                                           \
     if((ptr = calloc(1, sizeof(CHUNK))))                                                    \
     {                                                                                       \
         CK_FD(ptr) = -1;                                                                    \
-        if(block_size > 0){CK_SET_BSIZE(ptr, block_size);}                                  \
-        else {CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);}                                         \
+        CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);                                                \
     }                                                                                       \
 }
 #endif

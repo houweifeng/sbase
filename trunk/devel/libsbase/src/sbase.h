@@ -224,6 +224,9 @@ typedef struct _PROCTHREAD
     /* message queue */
     void *message_queue;
 
+    /* chunks queue */
+    void *chunks_queue;
+
     /* evbase */
     EVBASE *evbase;
 
@@ -295,9 +298,6 @@ typedef struct _CONN
     /* logger and timer */
     void *logger;
     void *timer;
-
-    /* chunks queue */
-    void *chunks_queue;
 
     /* queue */
     void *send_queue;
