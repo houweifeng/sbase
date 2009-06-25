@@ -311,7 +311,10 @@ int conn_start_cstate(CONN *conn)
                     conn->remote_ip, conn->remote_port, conn->local_ip, 
                     conn->local_port, conn->fd);
             conn->c_state = C_STATE_USING;
-            while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
+            while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
+            {
+                QUEUE_PUSH(conn->chunks_queue, PCHUNK, &cp);
+            }
             MB_RESET(conn->packet);
             MB_RESET(conn->cache);
             MB_RESET(conn->buffer);
@@ -443,7 +446,7 @@ int conn_write_handler(CONN *conn)
                                 "on %s:%d via %d clean it leave %d", cp, 
                                 conn->remote_ip, conn->remote_port, conn->local_ip,
                                 conn->local_port, conn->fd, QTOTAL(conn->send_queue));
-                        CK_CLEAN(cp);
+                        QUEUE_PUSH(conn->chunks_queue, PCHUNK, &cp);
                     }
                 }
                 ret = 0;
@@ -683,13 +686,15 @@ int conn_push_chunk(CONN *conn, void *data, int size)
 
     if(conn && conn->send_queue && data && size > 0)
     {
-        CK_INIT(cp);
+
+        if(conn->chunks_queue){QUEUE_POP(conn->chunks_queue, PCHUNK, &cp);}
+        if(cp == NULL){CK_INIT(cp);}
         if(cp)
         {
             CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
             QUEUE_PUSH(conn->send_queue, PCHUNK, &cp);
-        }
+        }else return ret;
         if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
         DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d] to %s:%d send_queue "
                 "total %d on %s:%d via %d ", size, conn->remote_ip, conn->remote_port, 
@@ -730,7 +735,8 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
 
     if(conn && conn->send_queue && filename && offset >= 0 && size > 0)
     {
-        CK_INIT(cp);
+        if(conn->chunks_queue){QUEUE_POP(conn->chunks_queue, PCHUNK, &cp);}
+        if(cp == NULL){CK_INIT(cp);}
         if(cp)
         {
             CK_FILE(cp, filename, offset, size);
@@ -741,7 +747,7 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
                     conn->remote_ip, conn->remote_port, QTOTAL(conn->send_queue), 
                     conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
-        }
+        }else return ret;
     }
     return ret;
 }
@@ -823,7 +829,10 @@ void conn_reset(CONN *conn)
             {
                 cp = NULL;
                 QUEUE_POP(conn->send_queue, PCHUNK, &cp);
-                if(cp){CK_CLEAN(cp);}
+                if(cp)
+                {
+                    QUEUE_PUSH(conn->chunks_queue, PCHUNK, &cp);
+                }
             }
         }
 
@@ -869,6 +878,11 @@ void conn_clean(CONN **pconn)
             while(QUEUE_POP((*pconn)->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
             QUEUE_CLEAN((*pconn)->send_queue);
         }
+        if((*pconn)->chunks_queue)
+        {
+            while(QUEUE_POP((*pconn)->chunks_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
+            QUEUE_CLEAN((*pconn)->chunks_queue);
+        }
         free(*pconn);
         (*pconn) = NULL;
     }
@@ -888,6 +902,7 @@ CONN *conn_init()
         MB_INIT(conn->oob, MB_BLOCK_SIZE);
         CK_INIT(conn->chunk);
         QUEUE_INIT(conn->send_queue);
+        QUEUE_INIT(conn->chunks_queue);
         conn->event                 = ev_init();
         conn->set                   = conn_set;
         conn->close                 = conn_close;

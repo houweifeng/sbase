@@ -296,6 +296,9 @@ typedef struct _CONN
     void *logger;
     void *timer;
 
+    /* chunks queue */
+    void *chunks_queue;
+
     /* queue */
     void *send_queue;
 
