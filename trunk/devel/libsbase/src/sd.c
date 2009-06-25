@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <sys/resource.h>
 #include "sbase.h"
+static int sfd = 0;
 int sd_packet_handler(CONN *conn, CB_DATA *packet)
 {
     return conn->push_chunk(conn, packet->data, packet->ndata);
