@@ -41,7 +41,7 @@ typedef struct _CHUNK * PCHUNK;
 #define CKN(ptr) (CK(ptr)->n)
 #define CK_SET_BSIZE(ptr, len)                                                              \
 {                                                                                           \
-    if(ptr && len > 0 && CK_TYPE(ptr) == CHUNK_FILE)                                        \
+    if(ptr && len > 0)                                                                      \
     {                                                                                       \
         if(len > CK_BSIZE(ptr))                                                             \
         {                                                                                   \
