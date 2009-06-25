@@ -92,6 +92,10 @@ do                                                                              
         {                                                                                   \
             if(cp){CK_RESET(cp);}                                                           \
         }                                                                                   \
+        else                                                                                \
+        {                                                                                   \
+            CK_INIT(cp);                                                                    \
+        }                                                                                   \
     }                                                                                       \
 }while(0)
 /* connection event handler */
