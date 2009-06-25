@@ -7,7 +7,7 @@
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 256 
-#define CHUNK_BLOCK_SIZE    1048576 
+#define CHUNK_BLOCK_SIZE    524288 
 #define CHUNK_STATUS_ON     0x01
 #define CHUNK_STATUS_OVER   0x02
 typedef struct _CHUNK
@@ -46,10 +46,11 @@ typedef struct _CHUNK * PCHUNK;
         if(len > CK_BSIZE(ptr))                                                             \
         {                                                                                   \
             CK_BSIZE(ptr) = len;                                                            \
-            if(CK_DATA(ptr)) free(CK_DATA(ptr));                                            \
+            if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;}                       \
             CK_DATA(ptr) = (char *)calloc(1, CK_BSIZE(ptr));                                \
         }                                                                                   \
-        if(CK_DATA(ptr))memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                             \
+        if(CK_DATA(ptr) && CK_BSIZE(ptr) > 0)                                               \
+            memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                         \
         CK_END(ptr)    = CK_DATA(ptr);                                                      \
     }                                                                                       \
 }
@@ -64,13 +65,14 @@ typedef struct _CHUNK * PCHUNK;
         CK_LEFT(ptr)   = len;                                                               \
         if(len > CK_BSIZE(ptr))                                                             \
         {                                                                                   \
-            if(CK_DATA(ptr)) free(CK_DATA(ptr));                                            \
+            if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;}                       \
             CKN(ptr) = (len/CK_BSIZE(ptr));                                                 \
             if(len % CK_BSIZE(ptr)) ++CKN(ptr);                                             \
             CK_BSIZE(ptr) *= CKN(ptr);                                                      \
             CK_DATA(ptr)   = (char *)calloc(1, CK_BSIZE(ptr));                              \
         }                                                                                   \
-        else memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                         \
+        if(CK_DATA(ptr) && CK_BSIZE(ptr) > 0)                                               \
+            memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                         \
         CK_END(ptr)    = CK_DATA(ptr);                                                      \
         CK_NDATA(ptr)  = 0;                                                                 \
     }                                                                                       \
@@ -184,12 +186,13 @@ typedef struct _CHUNK * PCHUNK;
         free(ptr);ptr = NULL;                                                               \
     }                                                                                       \
 }
-#define CK_INIT(ptr)                                                                        \
+#define CK_INIT(ptr, block_size)                                                            \
 {                                                                                           \
     if((ptr = calloc(1, sizeof(CHUNK))))                                                    \
     {                                                                                       \
         CK_FD(ptr) = -1;                                                                    \
-        CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);                                                \
+        if(block_size > 0){CK_SET_BSIZE(ptr, block_size);}                                  \
+        else {CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);}                                         \
     }                                                                                       \
 }
 #endif
