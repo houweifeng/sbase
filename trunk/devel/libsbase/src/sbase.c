@@ -97,10 +97,10 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
 }
 
 /* sbase evtimer  handler */
-void sbase_evtimer_handler(void *arg, int id)
+void sbase_evtimer_handler(void *arg)
 {
 	SBASE *sbase = NULL;
-	if((sbase = (SBASE *)arg) && sbase->evid == id)
+	if((sbase = (SBASE *)arg))
 	{
 		sbase->running_status = 0;
 	}
@@ -116,11 +116,11 @@ int sbase_running(SBASE *sbase, int useconds)
 
     if(sbase)
     {
-	if(useconds > 0 )
-	{
-		  EVTIMER_ADD(sbase->evtimer, useconds,
+        if(useconds > 0 )
+        {
+            EVTIMER_ADD(sbase->evtimer, useconds,
                     &sbase_evtimer_handler, (void *)sbase, sbase->evid);
-	}
+        }
         if(sbase->nchilds > SB_NDAEMONS_MAX) sbase->nchilds = SB_NDAEMONS_MAX;
         //nproc
         if(sbase->nchilds > 0)
@@ -176,10 +176,10 @@ running:
             }
             //running and check timeout
             /*
-            if(useconds > 0 && TIMER_CHECK(sbase->timer, useconds)  == 0)
-            {
-                break;
-            }*/
+               if(useconds > 0 && TIMER_CHECK(sbase->timer, useconds)  == 0)
+               {
+               break;
+               }*/
             usleep(sbase->usec_sleep);
         }
         ret = 0;

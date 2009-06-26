@@ -45,9 +45,11 @@ typedef struct _CHUNK * PCHUNK;
     {                                                                                       \
         if(len > CK_BSIZE(ptr))                                                             \
         {                                                                                   \
-            CK_BSIZE(ptr) = len;                                                            \
             if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;}                       \
-            CK_DATA(ptr) = (char *)calloc(1, CK_BSIZE(ptr));                                \
+            CKN(ptr) = (len/CHUNK_BLOCK_SIZE);                                              \
+            if(len % CHUNK_BLOCK_SIZE) ++CKN(ptr);                                          \
+            CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                                   \
+            CK_DATA(ptr)   = (char *)calloc(1, CK_BSIZE(ptr));                              \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \

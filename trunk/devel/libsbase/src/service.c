@@ -380,7 +380,6 @@ int service_popconn(SERVICE *service, CONN *conn)
         if(conn->index >= 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
-            QUEUE_PUSH(service->connection_queue, PCONN, &conn);
             service->connections[conn->index] = NULL;
             service->running_connections--;
             if(service->index_max == conn->index) 
@@ -502,6 +501,7 @@ void service_stop(SERVICE *service)
         //stop all connections 
         if(service->connections && service->running_connections > 0 && service->index_max > 0)
         {
+            DEBUG_LOGGER(service->logger, "Ready for close connections");
             for(i = 0; i < service->index_max; i++)
             {
                 if((conn = service->connections[i]))
@@ -513,19 +513,23 @@ void service_stop(SERVICE *service)
         //stop all procthreads
         if(service->daemon)
         {
+            DEBUG_LOGGER(service->logger, "Ready for stop daemons");
             service->daemon->stop(service->daemon);
 #ifdef HAVE_PTHREAD
+            pthread_detach((pthread_t)service->daemon->threadid);
             pthread_join((pthread_t)service->daemon->threadid, NULL);
 #endif
         }
         if(service->procthreads && service->nprocthreads)
         {
+            DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
             {
                 if(service->procthreads[i])
                 {
                     service->procthreads[i]->stop(service->procthreads[i]);
 #ifdef HAVE_PTHREAD
+                    pthread_detach((pthread_t)(service->procthreads[i]->threadid));
                     pthread_join((pthread_t)(service->procthreads[i]->threadid), NULL);
 #endif
                 }
@@ -533,12 +537,14 @@ void service_stop(SERVICE *service)
         }
         if(service->daemons && service->ndaemons)
         {
+            DEBUG_LOGGER(service->logger, "Ready for stop daemonss");
             for(i = 0; i < service->ndaemons; i++)
             {
                 if(service->daemons[i])
                 {
                     service->daemons[i]->stop(service->daemons[i]);
 #ifdef HAVE_PTHREAD
+                    pthread_detach((pthread_t)(service->daemons[i]->threadid));
                     pthread_join((pthread_t)(service->daemons[i]->threadid), NULL);
 #endif
                 }
@@ -646,7 +652,6 @@ void service_clean(SERVICE **pservice)
     if(pservice && *pservice)
     {
         if((*pservice)->connections) free((*pservice)->connections);
-        if((*pservice)->is_inside_logger && (*pservice)->logger) LOGGER_CLEAN((*pservice)->logger);
         if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
         if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
         //clean procthreads
@@ -674,17 +679,24 @@ void service_clean(SERVICE **pservice)
             free((*pservice)->daemons);
         }
         //clean connection_queue
+        DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
         if((*pservice)->connection_queue)
         {
+            DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
             while(QTOTAL((*pservice)->connection_queue) > 0)
             {
                 conn = NULL;
                 QUEUE_POP((*pservice)->connection_queue, PCONN, &conn);
+                DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%08x]", conn);
                 if(conn) conn->clean(&conn);
             }
             QUEUE_CLEAN((*pservice)->connection_queue);
         }
         MUTEX_DESTROY((*pservice)->mutex);
+        if((*pservice)->is_inside_logger && (*pservice)->logger) 
+        {
+            LOGGER_CLEAN((*pservice)->logger);
+        }
         free(*pservice);
         *pservice = NULL;
     }
