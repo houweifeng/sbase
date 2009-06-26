@@ -62,7 +62,7 @@ typedef struct _CHUNK * PCHUNK;
 
 #define CK_MEM(ptr, len)                                                                    \
 {                                                                                           \
-    if(ptr)                                                                                 \
+    if(ptr && len > 0)                                                                      \
     {                                                                                       \
         CK_TYPE(ptr)   = CHUNK_MEM;                                                         \
         CK_STATUS(ptr) = CHUNK_STATUS_ON;                                                   \

@@ -130,7 +130,7 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
         }
         else
         {
-            QUEUE_PUSH(pth->service->connections_queue, PCONN, &conn);
+            QUEUE_PUSH(pth->service->connection_queue, PCONN, &conn);
         }
         //conn->reset(conn);
     }
