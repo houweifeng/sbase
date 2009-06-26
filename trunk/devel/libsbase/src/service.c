@@ -405,7 +405,7 @@ CONN *service_getconn(SERVICE *service)
     if(service)
     {
         MUTEX_LOCK(service->mutex);
-        for(i = 0; i < service->index_max; i++)
+        for(i = 0; i <= service->index_max; i++)
         {
             if((conn = service->connections[i]) && conn->status == CONN_STATUS_FREE
                     && conn->c_state == C_STATE_FREE)
@@ -501,8 +501,8 @@ void service_stop(SERVICE *service)
         //stop all connections 
         if(service->connections && service->running_connections > 0 && service->index_max > 0)
         {
-            DEBUG_LOGGER(service->logger, "Ready for close connections");
-            for(i = 0; i < service->index_max; i++)
+            DEBUG_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
+            for(i = 0; i <= service->index_max; i++)
             {
                 if((conn = service->connections[i]))
                 {
@@ -516,8 +516,8 @@ void service_stop(SERVICE *service)
             DEBUG_LOGGER(service->logger, "Ready for stop daemons");
             service->daemon->stop(service->daemon);
 #ifdef HAVE_PTHREAD
-            pthread_detach((pthread_t)service->daemon->threadid);
             pthread_join((pthread_t)service->daemon->threadid, NULL);
+            pthread_detach((pthread_t)service->daemon->threadid);
 #endif
         }
         if(service->procthreads && service->nprocthreads)
@@ -529,8 +529,8 @@ void service_stop(SERVICE *service)
                 {
                     service->procthreads[i]->stop(service->procthreads[i]);
 #ifdef HAVE_PTHREAD
-                    pthread_detach((pthread_t)(service->procthreads[i]->threadid));
                     pthread_join((pthread_t)(service->procthreads[i]->threadid), NULL);
+                    pthread_detach((pthread_t)(service->procthreads[i]->threadid));
 #endif
                 }
             }
@@ -544,8 +544,8 @@ void service_stop(SERVICE *service)
                 {
                     service->daemons[i]->stop(service->daemons[i]);
 #ifdef HAVE_PTHREAD
-                    pthread_detach((pthread_t)(service->daemons[i]->threadid));
                     pthread_join((pthread_t)(service->daemons[i]->threadid), NULL);
+                    pthread_detach((pthread_t)(service->daemons[i]->threadid));
 #endif
                 }
             }

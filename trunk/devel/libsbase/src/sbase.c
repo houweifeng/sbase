@@ -222,11 +222,11 @@ void sbase_clean(SBASE **psbase)
             }
             free((*psbase)->services);
         }
-        if((*psbase)->timer) TIMER_CLEAN((*psbase)->timer);
-        if((*psbase)->evtimer) EVTIMER_CLEAN((*psbase)->evtimer);
-        if((*psbase)->logger) LOGGER_CLEAN((*psbase)->logger);
-        if((*psbase)->evbase) (*psbase)->evbase->clean(&((*psbase)->evbase));
-        if((*psbase)->message_queue) QUEUE_CLEAN((*psbase)->message_queue);
+        if((*psbase)->timer){TIMER_CLEAN((*psbase)->timer);}
+        if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
+        if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
+        if((*psbase)->evbase){(*psbase)->evbase->clean(&((*psbase)->evbase));}
+        if((*psbase)->message_queue){QUEUE_CLEAN((*psbase)->message_queue);}
         free(*psbase);
         *psbase = NULL;
     }
