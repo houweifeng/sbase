@@ -216,6 +216,7 @@ typedef struct _PROCTHREAD
 {
     /* global */
     SERVICE *service;
+    int lock;
     int running_status;
 	int usec_sleep;
     int index;

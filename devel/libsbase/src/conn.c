@@ -77,8 +77,9 @@ do{                                                                             
 #define CHUNK_PUSH(conn, cp)                                                                \
 do                                                                                          \
 {                                                                                           \
-    if(conn && PPARENT(conn) && PPARENT(conn)->chunks_queue)                                \
+    if(conn && PPARENT(conn) && PPARENT(conn)->chunks_queue && cp)                          \
     {                                                                                       \
+	    DEBUG_LOGGER(conn->logger, "chunk_push(%08x)", cp); 				    			\
         QUEUE_PUSH(PPARENT(conn)->chunks_queue, PCHUNK, &cp);                               \
     }                                                                                       \
 }while(0)
@@ -90,11 +91,13 @@ do                                                                              
         cp = NULL;                                                                          \
         if(QUEUE_POP(PPARENT(conn)->chunks_queue, PCHUNK, &cp) == 0)                        \
         {                                                                                   \
+	    	DEBUG_LOGGER(conn->logger, "chunk_pop(%08x)", cp); 				    			\
             if(cp){CK_RESET(cp);}                                                           \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
             CK_INIT(cp);                                                                    \
+	    	DEBUG_LOGGER(conn->logger, "new_chunk(%08x)", cp); 				    			\
         }                                                                                   \
     }                                                                                       \
 }while(0)
@@ -844,7 +847,6 @@ void conn_reset(CONN *conn)
 
         /* timer, logger, message_queue and send_queue */
         TIMER_RESET(conn->timer);
-        conn->logger = NULL;
         conn->message_queue = NULL;
         if(conn->send_queue)
         {
@@ -881,6 +883,7 @@ void conn_clean(CONN **pconn)
 
     if(pconn && *pconn)
     {
+        DEBUG_LOGGER((*pconn)->logger, "Ready for clean conn[%08x]", (*pconn));
         if((*pconn)->timer) {TIMER_CLEAN((*pconn)->timer);}
         if((*pconn)->event) (*pconn)->event->clean(&((*pconn)->event));
         /* Clean BUFFER */
@@ -899,6 +902,7 @@ void conn_clean(CONN **pconn)
             while(QUEUE_POP((*pconn)->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
             QUEUE_CLEAN((*pconn)->send_queue);
         }
+        DEBUG_LOGGER((*pconn)->logger, "Over for clean conn[%08x]", (*pconn));
         free(*pconn);
         (*pconn) = NULL;
     }
