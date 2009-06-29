@@ -342,7 +342,11 @@ int conn_start_cstate(CONN *conn)
             conn->c_state = C_STATE_USING;
             while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
             {
-                PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
+                if(cp && PPARENT(conn) && PPARENT(conn)->service)
+                {
+                    PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
+                }
+                cp  = NULL;
             }
             MB_RESET(conn->packet);
             MB_RESET(conn->cache);
@@ -475,7 +479,11 @@ int conn_write_handler(CONN *conn)
                                 "on %s:%d via %d clean it leave %d", cp, 
                                 conn->remote_ip, conn->remote_port, conn->local_ip,
                                 conn->local_port, conn->fd, QTOTAL(conn->send_queue));
-                        PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
+                        if(cp && PPARENT(conn) && PPARENT(conn)->service)
+                        {
+                            PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
+                        }
+                        cp  = NULL;
                     }
                 }
                 ret = 0;
@@ -716,7 +724,8 @@ int conn_push_chunk(CONN *conn, void *data, int size)
     if(conn && conn->send_queue && data && size > 0)
     {
         //CHUNK_POP(conn, cp);
-        if((cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
+        if(PPARENT(conn) && PPARENT(conn)->service 
+                && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
             CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
@@ -763,7 +772,8 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
     if(conn && conn->send_queue && filename && offset >= 0 && size > 0)
     {
         //CHUNK_POP(conn, cp);
-        if((cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
+        if(PPARENT(conn) && PPARENT(conn)->service 
+                && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
             CK_FILE(cp, filename, offset, size);
             QUEUE_PUSH(conn->send_queue, PCHUNK, &cp);
@@ -818,7 +828,6 @@ void conn_reset(CONN *conn)
     {
         /* global */
         conn->index = 0;
-        conn->parent = NULL;
         /* connection */
         conn->fd = 0;
         conn->sock_type = 0;
@@ -850,16 +859,18 @@ void conn_reset(CONN *conn)
         conn->message_queue = NULL;
         if(conn->send_queue)
         {
-            while(QTOTAL(conn->send_queue) > 0)
+            while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
             {
-                if(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
+                if(cp && PPARENT(conn) && PPARENT(conn)->service)
                 {
                     PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
                 }
+                cp  = NULL;
             }
         }
 
         /* client transaction state */
+        conn->parent = NULL;
         conn->status = 0;
         conn->i_state = 0;
         conn->c_state = 0;
