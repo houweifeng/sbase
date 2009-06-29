@@ -153,9 +153,9 @@ int main(int argc, char **argv)
         return -1;
     }
     fprintf(stdout, "Initialized successed\n");
-    //sbase->running(sbase, 0);
+    sbase->running(sbase, 0);
     //sbase->running(sbase, 3600);
-    sbase->running(sbase, 30000000);
+    //sbase->running(sbase, 30000000);
     sbase->stop(sbase);
     sbase->clean(&sbase);
     if(dict)iniparser_free(dict);

@@ -294,7 +294,9 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
     if(service && fd > 0 && session)
     {
         QUEUE_POP(service->connection_queue, PCONN, &conn);
-        if(conn || (conn = conn_init()))
+        if(conn) conn->reset(conn);
+        else conn = conn_init();
+        if(conn)
         {
             conn->fd = fd;
             strcpy(conn->remote_ip, remote_ip);
@@ -389,7 +391,6 @@ int service_popconn(SERVICE *service, CONN *conn)
                     conn->local_ip, conn->local_port, conn->fd, 
                     conn->index, service->running_connections);
             ret = 0;
-            conn->reset(conn);
         }
         MUTEX_UNLOCK(service->mutex);
     }
