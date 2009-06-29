@@ -1,4 +1,5 @@
 #include "sbase.h"
+#include "chunk.h"
 #ifndef _SERVICE_H
 #define _SERVICE_H
 #ifdef __cplusplus
@@ -22,6 +23,10 @@ int service_pushconn(SERVICE *service, CONN *conn);
 int service_popconn(SERVICE *service, CONN *conn);
 /* get free connection */
 CONN *service_getconn(SERVICE *service);
+/* pop chunk from service  */
+CHUNK *service_popchunk(SERVICE *service);
+/* push chunk to service  */
+int service_pushchunk(SERVICE *service, CHUNK *cp);
 /* set service session */
 int service_set_session(SERVICE *service, SESSION *session);
 /* new task */

@@ -342,7 +342,7 @@ int conn_start_cstate(CONN *conn)
             conn->c_state = C_STATE_USING;
             while(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
             {
-                CHUNK_PUSH(conn, cp);
+                PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
             }
             MB_RESET(conn->packet);
             MB_RESET(conn->cache);
@@ -475,7 +475,7 @@ int conn_write_handler(CONN *conn)
                                 "on %s:%d via %d clean it leave %d", cp, 
                                 conn->remote_ip, conn->remote_port, conn->local_ip,
                                 conn->local_port, conn->fd, QTOTAL(conn->send_queue));
-                        CHUNK_PUSH(conn, cp);
+                        PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
                     }
                 }
                 ret = 0;
@@ -715,8 +715,8 @@ int conn_push_chunk(CONN *conn, void *data, int size)
 
     if(conn && conn->send_queue && data && size > 0)
     {
-        CHUNK_POP(conn, cp);
-        if(cp)
+        //CHUNK_POP(conn, cp);
+        if((cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
             CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
@@ -762,8 +762,8 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
 
     if(conn && conn->send_queue && filename && offset >= 0 && size > 0)
     {
-        CHUNK_POP(conn, cp);
-        if(cp)
+        //CHUNK_POP(conn, cp);
+        if((cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
             CK_FILE(cp, filename, offset, size);
             QUEUE_PUSH(conn->send_queue, PCHUNK, &cp);
@@ -854,7 +854,7 @@ void conn_reset(CONN *conn)
             {
                 if(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
                 {
-                    CHUNK_PUSH(conn, cp);
+                    PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
                 }
             }
         }

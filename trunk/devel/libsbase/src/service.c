@@ -422,6 +422,50 @@ CONN *service_getconn(SERVICE *service)
     return conn;
 }
 
+/* pop chunk from service  */
+CHUNK * service_popchunk(SERVICE *service)
+{
+    int ret = -1;
+    CHUNK *cp = NULL;
+
+    if(service && service->chunks_queue)
+    {
+        MUTEX_LOCK(service->mutex);
+        QUEUE_POP(service->chunks_queue, PCHUNK, &cp);
+        if(cp == NULL) 
+        {
+            CK_INIT(cp);
+            DEBUG_LOGGER(service->logger, "chunk_new(%08x) bsize:%d", 
+                    (unsigned int)cp, CK_BSIZE(cp));
+        }
+        else
+        {
+            DEBUG_LOGGER(service->logger, "chunk_pop(%08x) bsize:%d", 
+                    (unsigned int)cp, CK_BSIZE(cp));
+
+        }
+        MUTEX_UNLOCK(service->mutex);
+    }
+    return cp;
+}
+
+/* push chunk to service  */
+int service_pushchunk(SERVICE *service, CHUNK *cp)
+{
+    int ret = -1;
+
+    if(service && service->chunks_queue && cp)
+    {
+        MUTEX_LOCK(service->mutex);
+        QUEUE_PUSH(service->chunks_queue, PCHUNK, &cp);
+        DEBUG_LOGGER(service->logger, "chunk_push(%08x) bsize:%d", 
+                    (unsigned int)cp, CK_BSIZE(cp));
+        MUTEX_UNLOCK(service->mutex);
+    }
+    return ret;
+}
+
+
 /* set service session */
 int service_set_session(SERVICE *service, SESSION *session)
 {
@@ -647,6 +691,7 @@ void service_evtimer_handler(void *arg)
 void service_clean(SERVICE **pservice)
 {
     CONN *conn = NULL;
+    CHUNK *cp = NULL;
     int i = 0;
 
     if(pservice && *pservice)
@@ -679,7 +724,7 @@ void service_clean(SERVICE **pservice)
             free((*pservice)->daemons);
         }
         //clean connection_queue
-        DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
+        DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk");
         if((*pservice)->connection_queue)
         {
             DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
@@ -691,6 +736,20 @@ void service_clean(SERVICE **pservice)
                 if(conn) conn->clean(&conn);
             }
             QUEUE_CLEAN((*pservice)->connection_queue);
+        }
+        //clean chunks queue
+        DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue");
+        if((*pservice)->chunks_queue)
+        {
+            DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
+            while(QTOTAL((*pservice)->chunks_queue) > 0)
+            {
+                cp = NULL;
+                QUEUE_POP((*pservice)->chunks_queue, PCONN, &cp);
+                DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%08x]", cp);
+                if(cp){CK_CLEAN(cp);}
+            }
+            QUEUE_CLEAN((*pservice)->chunks_queue);
         }
         MUTEX_DESTROY((*pservice)->mutex);
         if((*pservice)->is_inside_logger && (*pservice)->logger) 
@@ -710,6 +769,7 @@ SERVICE *service_init()
     {
         MUTEX_INIT(service->mutex);
         QUEUE_INIT(service->connection_queue);
+        QUEUE_INIT(service->chunks_queue);
         service->set                = service_set;
         service->run                = service_run;
         service->set_log            = service_set_log;
@@ -719,6 +779,8 @@ SERVICE *service_init()
         service->pushconn           = service_pushconn;
         service->popconn            = service_popconn;
         service->getconn            = service_getconn;
+        service->popchunk           = service_popchunk;
+        service->pushchunk          = service_pushchunk;
         service->set_session        = service_set_session;
         service->newtask            = service_newtask;
         service->newtransaction     = service_newtransaction;
