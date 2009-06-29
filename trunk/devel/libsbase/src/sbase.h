@@ -126,6 +126,7 @@ SBASE *sbase_init();
 typedef struct _SERVICE
 {
     /* global */
+    int lock;
 	int usec_sleep;
     SBASE *sbase;
     void *mutex;
