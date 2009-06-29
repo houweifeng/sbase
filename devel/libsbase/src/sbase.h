@@ -59,6 +59,7 @@ struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
+struct _CHUNK;
 typedef struct _CB_DATA
 {
     char *data;
@@ -168,6 +169,12 @@ typedef struct _SERVICE
 
     /* message queue for proc mode */
     void *message_queue;
+
+    /* chunks queue */
+    void *chunks_queue;
+    struct _CHUNK *(*popchunk)(struct _SERVICE *service);
+    int (*pushchunk)(struct _SERVICE *service, struct _CHUNK *cp);
+
 
     /* connections option */
     int connections_limit; 
