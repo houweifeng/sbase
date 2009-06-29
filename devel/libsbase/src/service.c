@@ -245,7 +245,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
     char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
 
-    if(service)
+    if(service && service->lock == 0)
     {
         family  = (inet_family > 0 ) ? inet_family : service->family;
         sock_type = (socket_type > 0 ) ? socket_type : service->sock_type;
@@ -291,7 +291,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
     CONN *conn = NULL;
     int index = 0;
 
-    if(service && fd > 0 && session)
+    if(service && service->lock == 0 && fd > 0 && session)
     {
         QUEUE_POP(service->connection_queue, PCONN, &conn);
         if(conn) conn->reset(conn);
@@ -544,6 +544,7 @@ void service_stop(SERVICE *service)
     if(service)
     {
         //stop all connections 
+        service->lock = 1;
         if(service->connections && service->running_connections > 0 && service->index_max > 0)
         {
             DEBUG_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
