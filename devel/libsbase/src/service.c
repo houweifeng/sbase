@@ -566,7 +566,7 @@ void service_stop(SERVICE *service)
             pthread_detach((pthread_t)service->daemon->threadid);
 #endif
         }
-        if(service->procthreads && service->nprocthreads)
+        if(service->procthreads && service->nprocthreads > 0)
         {
             DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
@@ -581,7 +581,7 @@ void service_stop(SERVICE *service)
                 }
             }
         }
-        if(service->daemons && service->ndaemons)
+        if(service->daemons && service->ndaemons > 0)
         {
             DEBUG_LOGGER(service->logger, "Ready for stop daemonss");
             for(i = 0; i < service->ndaemons; i++)
