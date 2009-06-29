@@ -597,7 +597,7 @@ void service_stop(SERVICE *service)
         }
         EVTIMER_DEL(service->evtimer, service->evid);
         //remove event
-        service->event->destroy(service->event);
+        if(service->event)service->event->destroy(service->event);
         close(service->fd);
     }
 }
