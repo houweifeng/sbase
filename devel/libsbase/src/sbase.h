@@ -233,9 +233,6 @@ typedef struct _PROCTHREAD
     /* message queue */
     void *message_queue;
 
-    /* chunks queue */
-    void *chunks_queue;
-
     /* evbase */
     EVBASE *evbase;
 

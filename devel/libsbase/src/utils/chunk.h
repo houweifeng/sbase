@@ -172,7 +172,7 @@ typedef struct _CHUNK * PCHUNK;
     if(ptr)                                                                                 \
     {                                                                                       \
         if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
-        if(CK_DATA(ptr))memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                             \
+        if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;CK_BSIZE(ptr) = 0;}         \
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_END(ptr) = NULL;                                                                 \
 		CK_TYPE(ptr) = 0;                                                                   \
@@ -183,6 +183,7 @@ typedef struct _CHUNK * PCHUNK;
 		CK_STATUS(ptr) = 0;                                                                 \
 		CKN(ptr) = 0;                                                                       \
         CK_LEFT(ptr) = 0;                                                                   \
+        CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);                                                \
     }                                                                                       \
 }
 /* clean chunk */
