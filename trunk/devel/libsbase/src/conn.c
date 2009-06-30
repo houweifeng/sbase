@@ -7,7 +7,9 @@
 #include "message.h"
 #include "timer.h"
 #include "evtimer.h"
-
+#ifndef PPL
+#define PPL(_x_) ((void *)(_x_))
+#endif
 #define CONN_CHECK_RET(conn, ret)                                                           \
 {                                                                                           \
     if(conn == NULL ) return ret;                                                           \
@@ -74,33 +76,6 @@ do{                                                                             
 }while(0)
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
-#define CHUNK_PUSH(conn, cp)                                                                \
-do                                                                                          \
-{                                                                                           \
-    if(conn && PPARENT(conn) && PPARENT(conn)->chunks_queue && cp)                          \
-    {                                                                                       \
-	    DEBUG_LOGGER(conn->logger, "chunk_push(%08x)", cp); 				    			\
-        QUEUE_PUSH(PPARENT(conn)->chunks_queue, PCHUNK, &cp);                               \
-    }                                                                                       \
-}while(0)
-#define CHUNK_POP(conn, cp)                                                                 \
-do                                                                                          \
-{                                                                                           \
-    if(conn && PPARENT(conn) && PPARENT(conn)->chunks_queue)                                \
-    {                                                                                       \
-        cp = NULL;                                                                          \
-        if(QUEUE_POP(PPARENT(conn)->chunks_queue, PCHUNK, &cp) == 0)                        \
-        {                                                                                   \
-	    	DEBUG_LOGGER(conn->logger, "chunk_pop(%08x)", cp); 				    			\
-            if(cp){CK_RESET(cp);}                                                           \
-        }                                                                                   \
-        else                                                                                \
-        {                                                                                   \
-            CK_INIT(cp);                                                                    \
-	    	DEBUG_LOGGER(conn->logger, "new_chunk(%08x)", cp); 				    			\
-        }                                                                                   \
-    }                                                                                       \
-}while(0)
 /* connection event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
@@ -181,8 +156,8 @@ int conn_set(CONN *conn)
         }
         else
         {
-            FATAL_LOGGER(conn->logger, "Connection[%08x] fd[%d] evbase or"
-                    "initialize event failed, %s", conn, conn->fd, strerror(errno));	
+            FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or"
+                    "initialize event failed, %s", PPL(conn), conn->fd, strerror(errno));	
             /* Terminate connection */
             CONN_TERMINATE(conn);
         }
@@ -253,8 +228,9 @@ void conn_evtimer_handler(void *arg)
 
     if(conn)
     {
-        DEBUG_LOGGER(conn->logger, "evtimer_handler[%d](%08x) on remote[%s:%d] local[%s:%d] via %d", 
-                conn->evid, conn->evtimer, conn->remote_ip, conn->remote_port, 
+        DEBUG_LOGGER(conn->logger, "evtimer_handler[%d](%p) "
+                "on remote[%s:%d] local[%s:%d] via %d", conn->evid, 
+                PPL(conn->evtimer), conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
         conn->push_message(conn, MESSAGE_TIMEOUT);
     }
@@ -270,8 +246,8 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
     if(conn && timeout_usec > 0)
     {
         conn->timeout = timeout_usec;
-        DEBUG_LOGGER(conn->logger, "set evtimer[%08x](%d) on %s:%d local[%s:%d] via %d", 
-                conn->evtimer, conn->timeout, conn->remote_ip, conn->remote_port, 
+        DEBUG_LOGGER(conn->logger, "set evtimer[%p](%d) on %s:%d local[%s:%d] via %d", 
+                PPL(conn->evtimer), conn->timeout, conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
         CONN_EVTIMER_SET(conn);
     }
@@ -389,11 +365,12 @@ int conn_push_message(CONN *conn, int message_id)
         msg.handler  = conn;
         msg.parent   = conn->parent;
         QUEUE_PUSH(conn->message_queue, MESSAGE, &msg);
-        DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%08x] "
-                "on conn[%s:%d] local[%s:%d] via %d total %d handler[%08x] parent[%08x]",
-                MESSAGE_DESC(message_id), conn->message_queue, conn->remote_ip, conn->remote_port,
-                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->message_queue),
-                conn, conn->parent);
+        DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%p] "
+                "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
+                MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
+                conn->remote_port, conn->local_ip, conn->local_port, 
+                conn->fd, QTOTAL(conn->message_queue),
+                PPL(conn), PPL(conn->parent));
         ret = 0;
     }
     return ret;
@@ -424,10 +401,11 @@ int conn_read_handler(CONN *conn)
         /* Receive normal data */
         if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
         {
-            FATAL_LOGGER(conn->logger, "Reading %d bytes ptr:%08x left:%d "
+            FATAL_LOGGER(conn->logger, "Reading %d bytes ptr:%p left:%d "
                     "data from %s:%d on %s:%d via %d failed, %s",
                     n, MB_END(conn->buffer), MB_LEFT(conn->buffer), conn->remote_ip, 
-                    conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
+                    conn->remote_port, conn->local_ip, conn->local_port, 
+                    conn->fd, strerror(errno));
             /* Terminate connection */
             CONN_TERMINATE(conn);
             return (ret = 0);
@@ -460,8 +438,8 @@ int conn_write_handler(CONN *conn)
         if(QUEUE_HEAD(conn->send_queue, PCHUNK, &cp) == 0)
         {
             DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d "
-                    "on %s:%d via %d qtotal:%d pcp:%08x", conn->remote_ip, conn->remote_port,
-                    conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue), cp);   
+                    "on %s:%d via %d qtotal:%d pcp:%p", conn->remote_ip, conn->remote_port,
+                    conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue), PPL(cp));   
             if((n = CHUNK_WRITE(cp, conn->fd)) > 0)
             {
                 conn->sent_data_total += n;
@@ -475,8 +453,8 @@ int conn_write_handler(CONN *conn)
                 {
                     if(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
                     {
-                        DEBUG_LOGGER(conn->logger, "Completed chunk[%08x] to %s:%d "
-                                "on %s:%d via %d clean it leave %d", cp, 
+                        DEBUG_LOGGER(conn->logger, "Completed chunk[%p] to %s:%d "
+                                "on %s:%d via %d clean it leave %d", PPL(cp), 
                                 conn->remote_ip, conn->remote_port, conn->local_ip,
                                 conn->local_port, conn->fd, QTOTAL(conn->send_queue));
                         if(cp && PPARENT(conn) && PPARENT(conn)->service)
@@ -538,8 +516,8 @@ int conn_packet_reader(CONN *conn)
         {
             len = conn->session.packet_reader(conn, data);
             DEBUG_LOGGER(conn->logger,
-                    "Reading packet with customized function[%08x] length[%d] "
-                    "from %s:%d on %s:%d via %d", conn->session.packet_reader, len, 
+                    "Reading packet with customized function[%p] length[%d] "
+                    "from %s:%d on %s:%d via %d", PPL(conn->session.packet_reader), len, 
                     conn->remote_ip, conn->remote_port, conn->local_ip, 
                     conn->local_port, conn->fd);
             goto end;
@@ -894,7 +872,7 @@ void conn_clean(CONN **pconn)
 
     if(pconn && *pconn)
     {
-        DEBUG_LOGGER((*pconn)->logger, "Ready for clean conn[%08x]", (*pconn));
+        DEBUG_LOGGER((*pconn)->logger, "Ready for clean conn[%p]", PPL(*pconn));
         if((*pconn)->timer) {TIMER_CLEAN((*pconn)->timer);}
         if((*pconn)->event) (*pconn)->event->clean(&((*pconn)->event));
         /* Clean BUFFER */
@@ -913,7 +891,7 @@ void conn_clean(CONN **pconn)
             while(QUEUE_POP((*pconn)->send_queue, PCHUNK, &cp) == 0){CK_CLEAN(cp);}
             QUEUE_CLEAN((*pconn)->send_queue);
         }
-        DEBUG_LOGGER((*pconn)->logger, "Over for clean conn[%08x]", (*pconn));
+        DEBUG_LOGGER((*pconn)->logger, "Over for clean conn[%p]", PPL(*pconn));
         free(*pconn);
         (*pconn) = NULL;
     }

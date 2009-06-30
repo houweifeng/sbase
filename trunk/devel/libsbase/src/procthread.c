@@ -214,15 +214,6 @@ void procthread_clean(PROCTHREAD **ppth)
             (*ppth)->evbase->clean(&((*ppth)->evbase));
             QUEUE_CLEAN((*ppth)->message_queue);
         }
-        if((*ppth)->chunks_queue)
-        {
-            while(QUEUE_POP((*ppth)->chunks_queue, PCHUNK, &cp) == 0)
-            {
-                CK_CLEAN(cp);
-                cp = NULL;
-            }
-            QUEUE_CLEAN((*ppth)->chunks_queue);
-        }
         free((*ppth));
         (*ppth) = NULL;
     }
@@ -236,7 +227,6 @@ PROCTHREAD *procthread_init()
     if((pth = (PROCTHREAD *)calloc(1, sizeof(PROCTHREAD))))
     {
         QUEUE_INIT(pth->message_queue);
-        QUEUE_INIT(pth->chunks_queue);
         pth->evbase                  = evbase_init();
         pth->run                     = procthread_run;
         pth->addconn                 = procthread_addconn;

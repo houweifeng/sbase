@@ -5,7 +5,9 @@
 #include "queue.h"
 #include "mutex.h"
 #include "evtimer.h"
-
+#ifndef UI
+#define UI(_x_) ((unsigned int)(_x_))
+#endif
 /* set service */
 int service_set(SERVICE *service)
 {
@@ -44,7 +46,7 @@ int service_set(SERVICE *service)
 {                                                                                           \
     if(pthread_create((pthread_t *)&pthid, NULL, (void *)(pth->run), (void *)pth) == 0)     \
     {                                                                                       \
-        DEBUG_LOGGER(logger, "Created %s[%d] ID[%08x]", ns, id, pthid);                     \
+        DEBUG_LOGGER(logger, "Created %s[%d] ID[%08x]", ns, id, UI(pthid));                 \
     }                                                                                       \
     else                                                                                    \
     {                                                                                       \
@@ -75,7 +77,7 @@ int service_run(SERVICE *service)
         {
             EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
                     &service_evtimer_handler, (void *)service, service->evid);
-            DEBUG_LOGGER(service->logger, "Added service[%s] to evtimer[%08x][%d] interval:%d",
+            DEBUG_LOGGER(service->logger, "Added service[%s] to evtimer[%p][%d] interval:%d",
                     service->service_name, service->evtimer, service->evid, 
                     service->heartbeat_interval);
         }
@@ -104,7 +106,7 @@ running_proc:
                 service->daemon->evbase->clean(&(service->daemon->evbase));
                 service->daemon->evbase = service->evbase;
             }
-            DEBUG_LOGGER(service->logger, "sbase->q[%08x] service->q[%08x] daemon->q[%08x]",
+            DEBUG_LOGGER(service->logger, "sbase->q[%p] service->q[%p] daemon->q[%p]",
                     service->sbase->message_queue, service->message_queue, 
                     service->daemon->message_queue);
             service->daemon->service = service;
@@ -270,7 +272,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             }
             else
             {
-                FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%08x] failed, %s",
+                FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",
                         remote_ip, remote_port, fd, sess, strerror(errno));
             }
         }
@@ -436,13 +438,11 @@ CHUNK * service_popchunk(SERVICE *service)
         if(cp == NULL) 
         {
             CK_INIT(cp);
-            DEBUG_LOGGER(service->logger, "chunk_new(%08x) bsize:%d", 
-                    (unsigned int)cp, CK_BSIZE(cp));
+            DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d", cp, CK_BSIZE(cp));
         }
         else
         {
-            DEBUG_LOGGER(service->logger, "chunk_pop(%08x) bsize:%d", 
-                    (unsigned int)cp, CK_BSIZE(cp));
+            DEBUG_LOGGER(service->logger, "chunk_pop(%p) bsize:%d", cp, CK_BSIZE(cp));
 
         }
         MUTEX_UNLOCK(service->mutex);
@@ -458,9 +458,9 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
     if(service && service->chunks_queue && cp)
     {
         MUTEX_LOCK(service->mutex);
+        CK_RESET(cp);
         QUEUE_PUSH(service->chunks_queue, PCHUNK, &cp);
-        DEBUG_LOGGER(service->logger, "chunk_push(%08x) bsize:%d", 
-                    (unsigned int)cp, CK_BSIZE(cp));
+        DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d", cp, CK_BSIZE(cp));
         MUTEX_UNLOCK(service->mutex);
     }
     return ret;
@@ -664,11 +664,11 @@ void service_active_heartbeat(void *arg)
         {
             service->heartbeat_handler(service->heartbeat_arg);
         }
-        //if(service->evid == 0)fprintf(stdout, "Ready for updating evtimer[%08x][%d] [%08x][%08x] count[%d] q[%d]\n", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        //if(service->evid == 0)fprintf(stdout, "Ready for updating evtimer[%p][%d] [%p][%p] count[%d] q[%d]\n", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
         //if(service->evid == 0) EVTIMER_LIST(service->evtimer, stdout);
         EVTIMER_UPDATE(service->evtimer, service->evid, service->heartbeat_interval, 
                 &service_evtimer_handler, (void *)service);
-        //if(service->evid == 0)fprintf(stdout, "Over for updating evtimer[%08x][%d] [%08x][%08x] count[%d] q[%d]\n", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        //if(service->evid == 0)fprintf(stdout, "Over for updating evtimer[%p][%d] [%p][%p] count[%d] q[%d]\n", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
         //if(service->evid == 0) EVTIMER_LIST(service->evtimer, stdout);
     }
     return ;
@@ -681,10 +681,10 @@ void service_evtimer_handler(void *arg)
 
     if(service && service->daemon)
     {
-        //DEBUG_LOGGER(service->logger, "Ready for activing evtimer[%08x][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        //DEBUG_LOGGER(service->logger, "Ready for activing evtimer[%p][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
         service->daemon->active_heartbeat(service->daemon, 
                 &service_active_heartbeat, (void *)service);
-        //DEBUG_LOGGER(service->logger, "Over for activing evtimer[%08x][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
+        //DEBUG_LOGGER(service->logger, "Over for activing evtimer[%p][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
     }
     return ;
 }
@@ -734,7 +734,7 @@ void service_clean(SERVICE **pservice)
             {
                 conn = NULL;
                 QUEUE_POP((*pservice)->connection_queue, PCONN, &conn);
-                DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%08x]", conn);
+                DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", conn);
                 if(conn) conn->clean(&conn);
             }
             QUEUE_CLEAN((*pservice)->connection_queue);
@@ -748,7 +748,7 @@ void service_clean(SERVICE **pservice)
             {
                 cp = NULL;
                 QUEUE_POP((*pservice)->chunks_queue, PCONN, &cp);
-                DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%08x]", cp);
+                DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", cp);
                 if(cp){CK_CLEAN(cp);}
             }
             QUEUE_CLEAN((*pservice)->chunks_queue);
