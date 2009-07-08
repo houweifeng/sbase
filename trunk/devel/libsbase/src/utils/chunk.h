@@ -176,14 +176,15 @@ typedef struct _CHUNK * PCHUNK;
 		CK_FD(ptr) = -1;                                                                    \
 		memset(CK_FILENAME(ptr), 0, CHUNK_FILE_NAME_MAX);                                   \
 		CK_SIZE(ptr) = 0;                                                                   \
+		CK_BSIZE(ptr) = 0;                                                                  \
 		CK_OFFSET(ptr) = 0;                                                                 \
 		CK_STATUS(ptr) = 0;                                                                 \
 		CKN(ptr) = 0;                                                                       \
         CK_LEFT(ptr) = 0;                                                                   \
-        if(CK_DATA(ptr))                                                                    \
+        if(CK_DATA(ptr) && (CK_END(ptr) = CK_DATA(ptr)  = (char *)realloc(CK_DATA(ptr),     \
+                        CHUNK_BLOCK_SIZE)))                                                 \
         {                                                                                   \
             CK_BSIZE(ptr)  = CHUNK_BLOCK_SIZE;                                              \
-            CK_END(ptr) = CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr));    \
         }                                                                                   \
     }                                                                                       \
 }

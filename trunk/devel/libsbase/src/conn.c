@@ -578,7 +578,9 @@ int conn_packet_handler(CONN *conn)
 
     if(conn && conn->session.packet_handler)
     {
+        DEBUG_LOGGER(conn->logger, "packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
         ret = conn->session.packet_handler(conn, PCB(conn->packet));
+        DEBUG_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
     }
     return ret;
 }
@@ -593,7 +595,9 @@ int conn_oob_handler(CONN *conn)
     {
         if(conn && conn->session.oob_handler)
         {
+            DEBUG_LOGGER(conn->logger, "oob_handler(%p) on %s:%d via %d", conn->session.oob_handler, conn->remote_ip, conn->remote_port, conn->fd);
             ret = conn->session.oob_handler(conn, PCB(conn->oob));
+            DEBUG_LOGGER(conn->logger, "over oob_handler(%p) on %s:%d via %d", conn->session.oob_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
 
     }
@@ -610,8 +614,10 @@ int conn_data_handler(CONN *conn)
     {
         if(conn && conn->session.data_handler)
         {
+            DEBUG_LOGGER(conn->logger, "data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
             ret = conn->session.data_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), PCB(conn->chunk));
+            DEBUG_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
     }
     return ret;
