@@ -45,11 +45,10 @@ typedef struct _CHUNK * PCHUNK;
     {                                                                                       \
         if(len > CK_BSIZE(ptr))                                                             \
         {                                                                                   \
-            if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;}                       \
             CKN(ptr) = (len/CHUNK_BLOCK_SIZE);                                              \
             if(len % CHUNK_BLOCK_SIZE) ++CKN(ptr);                                          \
             CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                                   \
-            CK_DATA(ptr)   = (char *)calloc(1, CK_BSIZE(ptr));                              \
+            CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr));                  \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
@@ -70,11 +69,10 @@ typedef struct _CHUNK * PCHUNK;
         CK_LEFT(ptr)   = len;                                                               \
         if(len > CK_BSIZE(ptr))                                                             \
         {                                                                                   \
-            if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;}                       \
             CKN(ptr) = (len/CHUNK_BLOCK_SIZE);                                              \
             if(len % CHUNK_BLOCK_SIZE) ++CKN(ptr);                                          \
             CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                                   \
-            CK_DATA(ptr)   = (char *)calloc(1, CK_BSIZE(ptr));                              \
+            CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr));                  \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
@@ -172,7 +170,6 @@ typedef struct _CHUNK * PCHUNK;
     if(ptr)                                                                                 \
     {                                                                                       \
         if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
-        if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;CK_BSIZE(ptr) = 0;}         \
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_END(ptr) = NULL;                                                                 \
 		CK_TYPE(ptr) = 0;                                                                   \
@@ -183,7 +180,11 @@ typedef struct _CHUNK * PCHUNK;
 		CK_STATUS(ptr) = 0;                                                                 \
 		CKN(ptr) = 0;                                                                       \
         CK_LEFT(ptr) = 0;                                                                   \
-        CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);                                                \
+        if(CK_DATA(ptr))                                                                    \
+        {                                                                                   \
+            CK_BSIZE(ptr)  = CHUNK_BLOCK_SIZE;                                              \
+            CK_END(ptr) = CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr));    \
+        }                                                                                   \
     }                                                                                       \
 }
 /* clean chunk */
