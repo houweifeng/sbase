@@ -438,7 +438,7 @@ CHUNK * service_popchunk(SERVICE *service)
         if(cp == NULL) 
         {
             CK_INIT(cp);
-            DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d", cp, CK_BSIZE(cp));
+            if(cp){DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d", cp, CK_BSIZE(cp));}
         }
         else
         {

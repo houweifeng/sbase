@@ -164,6 +164,19 @@ typedef struct _CHUNK * PCHUNK;
 /* CHUNK FILL from buffer */
 #define CHUNK_FILL(ptr, pdata, npdata) ((CK_TYPE(ptr) == CHUNK_MEM)? \
         CK_MEM_FILL(ptr, pdata, npdata) : CK_FILE_FILL(ptr, pdata, npdata))
+
+#ifdef _SBASE_MIN_MM_
+/* reset chunk */
+#define CK_RESET(ptr)                                                                       \
+{                                                                                           \
+    if(ptr)                                                                                 \
+    {                                                                                       \
+        if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
+        if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                \
+        memset(ptr, 0, sizeof(CHUNK));                                                      \
+    }                                                                                       \
+}
+#else 
 /* reset chunk */
 #define CK_RESET(ptr)                                                                       \
 {                                                                                           \
@@ -188,6 +201,7 @@ typedef struct _CHUNK * PCHUNK;
         }                                                                                   \
     }                                                                                       \
 }
+#endif
 /* clean chunk */
 #define CK_CLEAN(ptr)                                                                       \
 {                                                                                           \
