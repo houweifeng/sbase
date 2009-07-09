@@ -327,7 +327,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             else if(service->working_mode == WORKING_THREAD)
             {
                 index = fd % service->nprocthreads;
-                if(service->procthreads && (procthread = service->procthreads[index]))
+                if(service->procthreads && (procthread = service->procthreads[index]) 
+                        && procthread->addconn)
                 {
                     procthread->addconn(procthread, conn);   
                 }
