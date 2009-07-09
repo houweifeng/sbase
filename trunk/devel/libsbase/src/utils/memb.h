@@ -88,6 +88,19 @@ do{                                                                             
     }                                                                               \
 }while(0)
 #define MB_STREND(ptr) {MB_PUSH(ptr, "\0", 1);}
+#ifdef _SBASE_MIN_MM_
+#define MB_RESET(ptr)                                                               \
+do                                                                                  \
+{                                                                                   \
+    if(ptr)                                                                         \
+    {                                                                               \
+        MB_LEFT(ptr) = MB_SIZE(ptr) = 0;                                            \
+        if(MB_DATA(ptr)){free(MB_DATA(ptr));}                                       \
+        memset(ptr, 0, sizeof(MEMB));                                               \
+        MB_BSIZE(ptr) = MB_BLOCK_SIZE;                                              \
+    }                                                                               \
+}while(0)
+#else
 #define MB_RESET(ptr)                                                               \
 do{                                                                                 \
     if(ptr)                                                                         \
@@ -104,6 +117,7 @@ do{                                                                             
         MB_NDATA(ptr)  = 0;                                                         \
     }                                                                               \
 }while(0)
+#endif
 #define MB_CLEAN(ptr)                                                               \
 do                                                                                  \
 {                                                                                   \

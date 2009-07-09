@@ -7,5 +7,14 @@ AC_DEFUN([AC_CHECK_EXTRA_OPTIONS],[
                 CPPFLAGS="${CPPFLAGS} -g -D_DEBUG"
         fi
         AC_MSG_RESULT([$enable_debug])
+        AC_MSG_CHECKING(for min memory)
+        AC_ARG_ENABLE(min_mm, [  --enable-min_mm          compile for min-mm])
+        if test -z "$enable_min_mm" ; then
+                enable_min_mm="no"
+        elif test $enable_min_mm = "yes" ; then
+                CPPFLAGS="${CPPFLAGS} -D_SBASE_MIN_MM_"
+        fi
+        AC_MSG_RESULT([$enable_min_mm])
+
 ])
 
