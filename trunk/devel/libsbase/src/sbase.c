@@ -7,7 +7,6 @@
 #include "logger.h"
 #include "queue.h"
 #include "message.h"
-#include "timer.h"
 #include "evtimer.h"
 
 /* set rlimit */
@@ -175,11 +174,6 @@ running:
                 message_handler(sbase->message_queue, sbase->logger);
             }
             //running and check timeout
-            /*
-               if(useconds > 0 && TIMER_CHECK(sbase->timer, useconds)  == 0)
-               {
-               break;
-               }*/
             usleep(sbase->usec_sleep);
         }
         ret = 0;
@@ -222,7 +216,6 @@ void sbase_clean(SBASE **psbase)
             }
             free((*psbase)->services);
         }
-        if((*psbase)->timer){TIMER_CLEAN((*psbase)->timer);}
         if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
         if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
         if((*psbase)->evbase){(*psbase)->evbase->clean(&((*psbase)->evbase));}
@@ -238,7 +231,6 @@ SBASE *sbase_init()
     SBASE *sbase = NULL;
     if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
     {
-        TIMER_INIT(sbase->timer);
         EVTIMER_INIT(sbase->evtimer);
         QUEUE_INIT(sbase->message_queue);
         sbase->set_log		    = sbase_set_log;

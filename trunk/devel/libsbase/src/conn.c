@@ -28,6 +28,13 @@
         conn->s_state = S_STATE_CLOSE;                                                      \
     }                                                                                       \
 }
+#define CONN_STATE_RESET(conn)                                                              \
+{                                                                                           \
+    if(conn && conn->s_state != S_STATE_CLOSE)                                              \
+    {                                                                                       \
+        conn->s_state = 0;                                                                  \
+    }                                                                                       \
+}
 #define CONN_CHUNK_READ(conn, n)                                                            \
 {                                                                                           \
     /* read to chunk */                                                                     \
@@ -53,7 +60,6 @@
                     "on %s:%d via %d", CK_SIZE(conn->chunk), conn->remote_ip,               \
                     conn->remote_port, conn->local_ip, conn->local_port, conn->fd);         \
         }                                                                                   \
-        TIMER_SAMPLE(conn->timer);                                                          \
         return 0;                                                                           \
     }                                                                                       \
 }
@@ -281,6 +287,8 @@ int conn_over_evstate(CONN *conn)
 /* timeout handler */
 int conn_timeout_handler(CONN *conn)
 {
+    int ret = -1;
+
     CONN_CHECK_RET(conn, -1);
     if(conn)
     {
@@ -289,8 +297,12 @@ int conn_timeout_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "timeout_handler(%d) on remote[%s:%d] local[%s:%d] via %d", 
                     conn->timeout, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
-            return conn->session.timeout_handler(conn, PCB(conn->packet), 
+            ret = conn->session.timeout_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), PCB(conn->chunk));
+            DEBUG_LOGGER(conn->logger, "over timeout_handler(%d) on remote[%s:%d] "
+                    "local[%s:%d] via %d", conn->timeout, conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port, conn->fd);
+            CONN_STATE_RESET(conn);
         }
         else
         {
@@ -393,7 +405,6 @@ int conn_read_handler(CONN *conn)
                     conn->local_ip, conn->local_port, conn->fd);
             conn->oob_handler(conn);
             /* CONN TIMER sample */
-            TIMER_SAMPLE(conn->timer);
             return (ret = 0);
         }
         /* Receive to chunk with chunk_read_state before reading to buffer */
@@ -410,13 +421,11 @@ int conn_read_handler(CONN *conn)
             CONN_TERMINATE(conn);
             return (ret = 0);
         }
-        /* CONN TIMER sample */
-        TIMER_SAMPLE(conn->timer);
         conn->recv_data_total += n;
         DEBUG_LOGGER(conn->logger, "Received %d bytes data total %lld from %s:%d on %s:%d via %d",
                 n, conn->recv_data_total, conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
-        conn->packet_reader(conn);
+        if(conn->s_state == 0)conn->packet_reader(conn);
         ret = 0;
     }
     return ret;
@@ -448,7 +457,6 @@ int conn_write_handler(CONN *conn)
                         conn->remote_ip, conn->remote_port, conn->local_ip, 
                         conn->local_port, conn->fd, CK_LEFT(cp));
                 /* CONN TIMER sample */
-                TIMER_SAMPLE(conn->timer);
                 if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER )
                 {
                     if(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
@@ -545,13 +553,13 @@ int conn_packet_reader(CONN *conn)
                 if(i == conn->session.packet_delimiter_length)
                 {
                     len = p - MB_DATA(conn->buffer);
-                    break;
-                }
-            }
-            DEBUG_LOGGER(conn->logger, "Reading packet with delimiter[%d] "
+                    DEBUG_LOGGER(conn->logger, "Reading packet with delimiter[%d] "
                     "length[%d] from %s:%d on %s:%d via %d", conn->session.packet_delimiter_length, 
                     len, conn->remote_ip, conn->remote_port, conn->local_ip, 
                     conn->local_port, conn->fd);
+                    break;
+                }
+            }
             goto end;
         }
         return len;
@@ -581,6 +589,10 @@ int conn_packet_handler(CONN *conn)
         DEBUG_LOGGER(conn->logger, "packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
         ret = conn->session.packet_handler(conn, PCB(conn->packet));
         DEBUG_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
+        if(conn->s_state == S_STATE_PACKET_HANDLING)
+        {
+            CONN_STATE_RESET(conn);
+        }
     }
     return ret;
 }
@@ -619,6 +631,7 @@ int conn_data_handler(CONN *conn)
                     PCB(conn->cache), PCB(conn->chunk));
             DEBUG_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
+        CONN_STATE_RESET(conn);
     }
     return ret;
 }
@@ -839,7 +852,6 @@ void conn_reset(CONN *conn)
         CK_RESET(conn->chunk);
 
         /* timer, logger, message_queue and send_queue */
-        TIMER_RESET(conn->timer);
         conn->message_queue = NULL;
         if(conn->send_queue)
         {
@@ -879,7 +891,6 @@ void conn_clean(CONN **pconn)
     if(pconn && *pconn)
     {
         DEBUG_LOGGER((*pconn)->logger, "Ready for clean conn[%p]", PPL(*pconn));
-        if((*pconn)->timer) {TIMER_CLEAN((*pconn)->timer);}
         if((*pconn)->event) (*pconn)->event->clean(&((*pconn)->event));
         /* Clean BUFFER */
         MB_CLEAN((*pconn)->buffer);
@@ -910,7 +921,6 @@ CONN *conn_init()
 
     if((conn = calloc(1, sizeof(CONN))))
     {
-        TIMER_INIT(conn->timer);
         MB_INIT(conn->buffer, MB_BLOCK_SIZE);
         MB_INIT(conn->packet, MB_BLOCK_SIZE);
         MB_INIT(conn->cache, MB_BLOCK_SIZE);

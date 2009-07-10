@@ -48,7 +48,10 @@ typedef struct _CHUNK * PCHUNK;
             CKN(ptr) = (len/CHUNK_BLOCK_SIZE);                                              \
             if(len % CHUNK_BLOCK_SIZE) ++CKN(ptr);                                          \
             CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                                   \
-            CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr));                  \
+            if((CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr))))             \
+            {                                                                               \
+                memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                     \
+            }                                                                               \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
@@ -72,7 +75,10 @@ typedef struct _CHUNK * PCHUNK;
             CKN(ptr) = (len/CHUNK_BLOCK_SIZE);                                              \
             if(len % CHUNK_BLOCK_SIZE) ++CKN(ptr);                                          \
             CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                                   \
-            CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr));                  \
+            if((CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr))))             \
+            {                                                                               \
+                memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                     \
+            }                                                                               \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
@@ -197,6 +203,7 @@ typedef struct _CHUNK * PCHUNK;
         if(CK_DATA(ptr) && (CK_END(ptr) = CK_DATA(ptr)  = (char *)realloc(CK_DATA(ptr),     \
                         CHUNK_BLOCK_SIZE)))                                                 \
         {                                                                                   \
+            memset(CK_DATA(ptr), 0, CHUNK_BLOCK_SIZE);                                      \
             CK_BSIZE(ptr)  = CHUNK_BLOCK_SIZE;                                              \
         }                                                                                   \
     }                                                                                       \
