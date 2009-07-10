@@ -101,7 +101,6 @@ typedef struct _SBASE
 
 	/* timer && logger */
 	void *logger;
-    void *timer;
 
     /* evtimer */
     void *evtimer;
@@ -199,7 +198,6 @@ typedef struct _SERVICE
     int evid;
 
     /* timer and logger */
-    void *timer;
     void *logger;
     int  is_inside_logger;
     int (*set_log)(struct _SERVICE *service, char *logfile);
@@ -303,7 +301,6 @@ typedef struct _CONN
 
     /* logger and timer */
     void *logger;
-    void *timer;
 
     /* queue */
     void *send_queue;

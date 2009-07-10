@@ -30,8 +30,8 @@ typedef struct _MEMB
                 + (((nsize % MB_BSIZE(ptr)) == 0) ? 0 : 1))) > 0 ) ?                    \
             ((MB_DATA(ptr) = (char *)realloc(MB_DATA(ptr), (MB_SIZE(ptr) + MBN(ptr))))? \
               (((MB_END(ptr) = MB_DATA(ptr) + MB_NDATA(ptr))                            \
-                && (MB_SIZE(ptr) += MBN(ptr)) && (MB_LEFT(ptr) += MBN(ptr))) ?          \
-                MB_DATA(ptr) : NULL)  : NULL) : NULL)
+                && (MB_SIZE(ptr) += MBN(ptr)) && (MB_LEFT(ptr) += MBN(ptr))             \
+                && memset(MB_END(ptr), 0, MB_LEFT(ptr)))? MB_DATA(ptr) : NULL)  : NULL) : NULL)
 #define MB_CHECK(ptr) ((ptr)?((MB_LEFT(ptr) <= 0)?((MB_RESIZE(ptr, MB_BSIZE(ptr)))?0:-1):0):-1)
 #define MB_INIT(ptr, b_size)                                                        \
 do                                                                                  \
@@ -108,9 +108,10 @@ do{                                                                             
         if(MB_SIZE(ptr) > MB_BSIZE(ptr) && MB_BSIZE(ptr) > 0)                       \
         {                                                                           \
             MB_LEFT(ptr) = MB_SIZE(ptr) = MB_BSIZE(ptr);                            \
-            if(MB_DATA(ptr))                                                        \
+            if(MB_DATA(ptr) && (MB_DATA(ptr) = (char *)realloc(MB_DATA(ptr),        \
+                            MB_SIZE(ptr))))                                         \
             {                                                                       \
-                MB_DATA(ptr) = (char *)realloc(MB_DATA(ptr), MB_SIZE(ptr));         \
+                memset(MB_DATA(ptr), 0, MB_SIZE(ptr));                              \
             }                                                                       \
         }                                                                           \
         MB_END(ptr)  = MB_DATA(ptr);                                                \
