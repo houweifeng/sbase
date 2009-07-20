@@ -146,7 +146,7 @@ int conn_set(CONN *conn)
         if(conn->session.buffer_size > MB_BLOCK_SIZE)
         {
             MB_SET_BLOCK_SIZE(conn->buffer, conn->session.buffer_size);
-            MB_RESET(conn->buffer);
+            //MB_RESET(conn->buffer);
         }
         conn->evid = -1;
         fcntl(conn->fd, F_SETFL, O_NONBLOCK);
@@ -509,7 +509,8 @@ int conn_packet_reader(CONN *conn)
     {
         data = PCB(conn->buffer);
         packet_type = conn->session.packet_type;
-        DEBUG_LOGGER(conn->logger, "Reading packet type[%d]", packet_type);
+        DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%p][%d]", 
+                packet_type, conn->buffer, MB_NDATA(conn->buffer));
         /* Remove invalid packet type */
         if(!(packet_type & PACKET_ALL))
         {
