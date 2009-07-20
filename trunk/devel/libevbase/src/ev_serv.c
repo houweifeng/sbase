@@ -80,8 +80,10 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
             if((rfd = socket(AF_INET, SOCK_DGRAM, 0)) <= 0 
                 || setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR, 
                     (char *)&opt, (socklen_t) sizeof(int)) != 0
+#ifdef SO_REUSEPORT
                 || setsockopt(rfd, SOL_SOCKET, SO_REUSEPORT, 
                     (char *)&opt, (socklen_t) sizeof(int)) != 0
+#endif
                 || bind(rfd, (struct sockaddr *)&sa, sa_len) != 0) 
             {
                 FATAL_LOG("Connect %d to %s:%d failed, %s",
@@ -300,8 +302,11 @@ int main(int argc, char **argv)
     lfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
     if(setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
             (char *)&opt, (socklen_t) sizeof(opt)) != 0
+#ifdef SO_REUSEPORT
         || setsockopt(lfd, SOL_SOCKET, SO_REUSEPORT,
-            (char *)&opt, (socklen_t) sizeof(opt)) != 0)
+            (char *)&opt, (socklen_t) sizeof(opt)) != 0
+#endif
+        )
     {
         fprintf(stderr, "setsockopt[SO_REUSEADDR] on fd[%d] failed, %s", fd, strerror(errno));
         _exit(-1);

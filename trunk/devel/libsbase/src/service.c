@@ -29,7 +29,9 @@ int service_set(SERVICE *service)
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0 
                     && fcntl(service->fd, F_SETFL, O_NONBLOCK) == 0
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+#ifdef SO_REUSEPORT
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+#endif
                     && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
                         sizeof(service->sa))) == 0)
             {
@@ -247,7 +249,9 @@ void service_event_handler(int event_fd, short flag, void *arg)
                         port = ntohs(rsa.sin_port);
                         if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
                             && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+#ifdef SO_REUSEPORT
                             && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+#endif
                             && bind(fd, (struct sockaddr *)&(service->sa), 
                                 sizeof(struct sockaddr_in)) == 0
                             && connect(fd, (struct sockaddr *)&rsa, 
