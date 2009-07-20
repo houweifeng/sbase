@@ -260,12 +260,14 @@ void service_event_handler(int event_fd, short flag, void *arg)
                                 ip, port, service->ip, service->port, &(service->session))))
                         {
                             MB_PUSH(conn->buffer, buf, n);
+                            msg.fd          = conn->fd;
                             msg.msg_id      = MESSAGE_INPUT;
                             msg.index       = -1;
-                            msg.parent      = (void *)conn;
+                            msg.parent      = conn->parent;
+                            msg.handler     = conn;
                             QUEUE_PUSH(((PROCTHREAD *)(conn->parent))->message_queue, MESSAGE, &msg);
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d",
-                                    ip, port, fd);
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
+                                    " buffer:%d", ip, port, fd, MB_NDATA(conn->buffer));
                         }
                         else
                         {
@@ -537,11 +539,17 @@ int service_add_multicast(SERVICE *service, char *multicast_ip)
 {
     struct ip_mreq mreq = {0};
     int ret = -1;
-    if(service && service->ip && service->fd)
+    if(service && service->sock_type == SOCK_DGRAM && multicast_ip 
+            && service->ip && service->fd > 0)
     {
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
         mreq.imr_interface.s_addr = inet_addr(service->ip);
-        ret = setsockopt(service->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq));
+        if((ret = setsockopt(service->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
+                        (char*)&mreq, sizeof(struct ip_mreq))) == 0)
+        {
+            DEBUG_LOGGER(service->logger, "added multicast:%s to service[%p]->fd[%d]",
+                    multicast_ip, service, service->fd);
+        }
     }
     return ret;
 }
@@ -552,7 +560,7 @@ int service_drop_multicast(SERVICE *service, char *multicast_ip)
     struct ip_mreq mreq = {0};
     int ret = -1;
 
-    if(service && service->ip && service->fd)
+    if(service && service->sock_type == SOCK_DGRAM && service->ip && service->fd)
     {
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
         mreq.imr_interface.s_addr = inet_addr(service->ip);

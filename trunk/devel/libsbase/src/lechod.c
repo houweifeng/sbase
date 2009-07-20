@@ -7,9 +7,9 @@
 #include <sys/resource.h>
 #include <sbase.h>
 #include "iniparser.h"
-
-SBASE *sbase = NULL;
-dictionary *dict = NULL;
+static SBASE *sbase = NULL;
+static SERVICE *service = NULL;
+static dictionary *dict = NULL;
 
 int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
 {
@@ -34,7 +34,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
 {
 	char *logfile = NULL, *s = NULL, *p = NULL;
 	int n = 0, ret = -1;
-	SERVICE *service = NULL;
 	if((dict = iniparser_new(conf)) == NULL)
 	{
 		fprintf(stderr, "Initializing conf:%s failed, %s\n", conf, strerror(errno));
@@ -89,13 +88,15 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->session.oob_handler = &lechod_oob_handler;
 	/* server */
 	fprintf(stdout, "Parsing for server...\n");
-	ret = sbase->add_service(sbase, service);
+	return sbase->add_service(sbase, service);
+    /*
     if(service->sock_type == SOCK_DGRAM 
             && (p = iniparser_getstr(dict, "LECHOD:multicast")) && ret == 0)
     {
         ret = service->add_multicast(service, p);
     }
     return ret;
+    */
 }
 
 static void lechod_stop(int sig){
@@ -113,7 +114,7 @@ static void lechod_stop(int sig){
 int main(int argc, char **argv)
 {
     pid_t pid;
-    char *conf = NULL, ch = 0;
+    char *conf = NULL, *p = NULL, ch = 0;
     int is_daemon = 0;
 
     /* get configure file */
@@ -163,9 +164,20 @@ int main(int argc, char **argv)
     if(sbase_initialize(sbase, conf) != 0 )
     {
         fprintf(stderr, "Initialize from configure file failed\n");
+        exit(EXIT_FAILURE);
         return -1;
     }
     fprintf(stdout, "Initialized successed\n");
+    if(service->sock_type == SOCK_DGRAM 
+            && (p = iniparser_getstr(dict, "LECHOD:multicast")))
+    {
+        if(service->add_multicast(service, p) != 0)
+        {
+            fprintf(stderr, "add multicast:%s failed, %s", p, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
+    }
     sbase->running(sbase, 0);
     //sbase->running(sbase, 3600);
     //sbase->running(sbase, 30000000);
