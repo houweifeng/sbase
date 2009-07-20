@@ -82,7 +82,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                     (char *)&opt, (socklen_t) sizeof(int)) != 0
                 || bind(rfd, (struct sockaddr *)&sa, sa_len) != 0) 
             {
-                FATAL_LOG("Bind %d to %s:%d failed, %s",
+                FATAL_LOG("Connect %d to %s:%d failed, %s",
                     rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
                 return ;
             }
@@ -262,19 +262,14 @@ err:
 
 int main(int argc, char **argv)
 {
-    int port = 0;
-    int connection_limit = 0;
-    int fd = 0;
-    int sockfd = 0;
-    int opt = 1;
-    int i = 0;
-    int nprocess = 0;
-    pid_t pid ;
+    int port = 0, connection_limit = 0, fd = 0, sockfd = 0, opt = 1, i = 0, nprocess = 0;
     EVENT  *event = NULL;
+    pid_t pid ;
+    char *multicast_ip = NULL;
     if(argc < 5)
     {
         fprintf(stderr, "Usage:%s sock_type(0/TCP|1/UDP) port "
-                "connection_limit process_limit\n", argv[0]);	
+                "connection_limit process_limit multicast_ip(only for UDP)\n", argv[0]);	
         _exit(-1);
     }	
     ev_sock_type = atoi(argv[1]);
@@ -286,6 +281,7 @@ int main(int argc, char **argv)
     port = atoi(argv[2]);
     connection_limit = atoi(argv[3]);
     nprocess = atoi(argv[4]);
+    if(argc > 5) multicast_ip = argv[5];
     max_connections = (connection_limit > 0) ? connection_limit : CONN_MAX;
     /* Set resource limit */
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
@@ -304,7 +300,19 @@ int main(int argc, char **argv)
         fprintf(stderr, "setsockopt[SO_REUSEADDR] on fd[%d] failed, %s", fd, strerror(errno));
         _exit(-1);
     }
-
+    /* set multicast */
+    if(ev_sock_list[ev_sock_type] == SOCK_DGRAM && multicast_ip)
+    {
+        struct ip_mreq mreq = {0};
+        mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
+        mreq.imr_interface.s_addr = INADDR_ANY;
+        if(setsockopt(lfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
+        {
+            SHOW_LOG("Setsockopt(MULTICAST) failed, %s", strerror(errno));
+            return ;
+        }
+    }
+    fprintf(stdout, "%d::OK\n", __LINE__);
     /* Bind */
     if(bind(lfd, (struct sockaddr *)&sa, sa_len) != 0 )
     {
@@ -312,7 +320,6 @@ int main(int argc, char **argv)
         return ;
     }
     /* set FD NON-BLOCK */
-    /**/
     if(fcntl(lfd, F_SETFL, O_NONBLOCK) != 0 )
     {
         SHOW_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
