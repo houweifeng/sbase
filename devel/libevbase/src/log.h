@@ -24,10 +24,10 @@ static char *_ymonths[]= {
 	gettimeofday(&tv, NULL);							\
 	time(&timep); 									\
 	p = localtime(&timep);								\
-	fprintf(out, "[%02d/%s/%04d:%02d:%02d:%02d +%06u] #%u/%08x# %s::%d ",		\
+	fprintf(out, "[%02d/%s/%04d:%02d:%02d:%02d +%06u] #%u/%p# %s::%d ",		\
 			p->tm_mday, _ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,	\
-			p->tm_min, p->tm_sec, (size_t)tv.tv_usec, 			\
-			(size_t )getpid(), (size_t )pthread_self(), __FILE__, __LINE__);\
+			p->tm_min, p->tm_sec, (unsigned int)tv.tv_usec, 			\
+			(unsigned int)getpid(), (void *)pthread_self(), __FILE__, __LINE__);\
 }
 #else
 #define LOG_HEADER(out)									\

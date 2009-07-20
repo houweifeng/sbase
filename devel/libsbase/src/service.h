@@ -29,6 +29,10 @@ CHUNK *service_popchunk(SERVICE *service);
 int service_pushchunk(SERVICE *service, CHUNK *cp);
 /* set service session */
 int service_set_session(SERVICE *service, SESSION *session);
+/* add multicast */
+int service_add_multicast(SERVICE *service, char *multicast_ip);
+/* drop multicast */
+int service_drop_multicast(SERVICE *service, char *multicast_ip);
 /* new task */
 int service_newtask(SERVICE *service, CALLBACK *callback, void *arg);
 /* add new transaction */

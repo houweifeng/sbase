@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -77,7 +76,7 @@ do{                                                                             
     if(ptr)                                                                         \
     {                                                                               \
     MUTEX_LOCK(PL(ptr)->mutex);                                                     \
-    gettimeofday(&(PLTV(ptr)), NULL); time(&PLTP(ptr));                             \
+    gettimeofday(&(PLTV(ptr)), NULL); time(&(PLTP(ptr)));                           \
     PLP(ptr) = localtime(&PLTP(ptr));                                               \
     PLPS(ptr) = PLB(ptr);                                                           \
     PLPS(ptr) += sprintf(PLPS(ptr), "[%02d/%s/%04d:%02d:%02d:%02d +%06u] "          \
@@ -85,6 +84,18 @@ do{                                                                             
             (1900+PLP(ptr)->tm_year), PLP(ptr)->tm_hour, PLP(ptr)->tm_min,          \
         PLP(ptr)->tm_sec, (unsigned int)(PLTV(ptr).tv_usec),(unsigned int)getpid(), \
         (unsigned int)THREADID(), __FILE__, __LINE__, _logger_level_s[__level__]);  \
+    PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
+    *PLPS(ptr)++ = '\n';                                                            \
+    write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                             \
+    MUTEX_UNLOCK(PL(ptr)->mutex);                                                   \
+    }                                                                               \
+}while(0)
+#define REALLOG(ptr, format...)                                                     \
+do{                                                                                 \
+    if(ptr)                                                                         \
+    {                                                                               \
+    MUTEX_LOCK(PL(ptr)->mutex);                                                     \
+    PLPS(ptr) = PLB(ptr);                                                           \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
     write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                             \

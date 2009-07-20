@@ -21,7 +21,7 @@ int setrlimiter(char *name, int rlimit, int nset)
         else
         {
             fprintf(stdout, "getrlimit %s cur[%ld] max[%ld]\n",
-                    name, rlim.rlim_cur, rlim.rlim_max);
+                    name, (long)rlim.rlim_cur, (long)rlim.rlim_max);
         }
         if(rlim.rlim_cur > nset && rlim.rlim_max > nset)
             return 0;
@@ -30,13 +30,13 @@ int setrlimiter(char *name, int rlimit, int nset)
         if((ret = setrlimit(rlimit, &rlim)) == 0)
         {
             fprintf(stdout, "setrlimit %s cur[%ld] max[%ld]\n",
-                    name, rlim.rlim_cur, rlim.rlim_max);
+                    name, (long)rlim.rlim_cur, (long)rlim.rlim_max);
             return 0;
         }
         else
         {
             fprintf(stderr, "setrlimit %s cur[%ld] max[%ld] failed, errno:%d\n",
-                    name, rlim.rlim_cur, rlim.rlim_max, errno);
+                    name, (long)rlim.rlim_cur, (long)rlim.rlim_max, errno);
         }
     }
     return ret;

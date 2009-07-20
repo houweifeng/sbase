@@ -33,7 +33,7 @@ int lechod_oob_handler(CONN *conn, CB_DATA *oob)
 int sbase_initialize(SBASE *sbase, char *conf)
 {
 	char *logfile = NULL, *s = NULL, *p = NULL;
-	int n = 0;
+	int n = 0, ret = -1;
 	SERVICE *service = NULL;
 	if((dict = iniparser_new(conf)) == NULL)
 	{
@@ -89,7 +89,13 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->session.oob_handler = &lechod_oob_handler;
 	/* server */
 	fprintf(stdout, "Parsing for server...\n");
-	return sbase->add_service(sbase, service);
+	ret = sbase->add_service(sbase, service);
+    if(service->sock_type == SOCK_DGRAM 
+            && (p = iniparser_getstr(dict, "LECHOD:multicast")) && ret == 0)
+    {
+        ret = service->add_multicast(service, p);
+    }
+    return ret;
 }
 
 static void lechod_stop(int sig){

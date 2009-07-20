@@ -44,8 +44,8 @@ int setrlimiter(char *name, int rlimit, int nset)
             return -1;
         else
         {
-            fprintf(stdout, "getrlimit %s cur[%d] max[%ld]\n", 
-                    name, rlim.rlim_cur, rlim.rlim_max);
+            fprintf(stdout, "getrlimit %s cur[%ld] max[%ld]\n", 
+                    name, (long)rlim.rlim_cur, (long)rlim.rlim_max);
         }
         if(rlim.rlim_cur > nset && rlim.rlim_max > nset)
             return 0;
@@ -54,13 +54,13 @@ int setrlimiter(char *name, int rlimit, int nset)
         if((ret = setrlimit(rlimit, &rlim)) == 0)
         {
             fprintf(stdout, "setrlimit %s cur[%ld] max[%ld]\n",
-                    name, rlim.rlim_cur, rlim.rlim_max);
+                    name, (long)rlim.rlim_cur, (long)rlim.rlim_max);
             return 0;
         }
         else
         {
             fprintf(stderr, "setrlimit %s cur[%ld] max[%ld] failed, %s\n",
-                    name, rlim.rlim_cur, rlim.rlim_max, strerror(errno));
+                    name, (long)rlim.rlim_cur, (long)rlim.rlim_max, strerror(errno));
         }
     }
     return ret;
@@ -72,7 +72,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
     struct 	sockaddr_in  rsa;
     socklen_t rsa_len ;
     int n = 0, opt = 1;
-    SHOW_LOG("fd[%d] ev[%d] arg[%08x]", fd, ev_flags, arg);
+    SHOW_LOG("fd[%d] ev[%d] arg[%p]", fd, ev_flags, arg);
     if(fd == lfd )
     {
         if((ev_flags & E_READ))
@@ -80,10 +80,14 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
             if((rfd = socket(AF_INET, SOCK_DGRAM, 0)) <= 0 
                 || setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR, 
                     (char *)&opt, (socklen_t) sizeof(int)) != 0
+                || setsockopt(rfd, SOL_SOCKET, SO_REUSEPORT, 
+                    (char *)&opt, (socklen_t) sizeof(int)) != 0
                 || bind(rfd, (struct sockaddr *)&sa, sa_len) != 0) 
             {
                 FATAL_LOG("Connect %d to %s:%d failed, %s",
                     rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
+                close(rfd);
+                _exit(-1);
                 return ;
             }
             rsa_len = sizeof(struct sockaddr_in);
@@ -129,11 +133,11 @@ err_end:
             if((nbuffer[fd] = read(fd, buffer[fd], nbuffer[fd])) > 0)
             {
                 SHOW_LOG("Read %d bytes from %d, %s", n, fd, buffer[fd]);
-                SHOW_LOG("Updating event[%08x] on %d ", events[fd], fd);
+                SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
                 if(events[fd])
                 {
                     events[fd]->add(events[fd], E_WRITE);	
-                    SHOW_LOG("Updated event[%08x] on %d ", events[fd], fd);
+                    SHOW_LOG("Updated event[%p] on %d ", events[fd], fd);
                 }
             }	
             else
@@ -217,7 +221,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
             {
                 SHOW_LOG("Read %d bytes from %d", n, fd);
                 buffer[fd][n] = 0;
-                SHOW_LOG("Updating event[%x] on %d ", events[fd], fd);
+                SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
                 if(events[fd])
                 {
                     events[fd]->add(events[fd], E_WRITE);	
@@ -295,6 +299,8 @@ int main(int argc, char **argv)
     /* Initialize inet */ 
     lfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
     if(setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
+            (char *)&opt, (socklen_t) sizeof(opt)) != 0
+        || setsockopt(lfd, SOL_SOCKET, SO_REUSEPORT,
             (char *)&opt, (socklen_t) sizeof(opt)) != 0)
     {
         fprintf(stderr, "setsockopt[SO_REUSEADDR] on fd[%d] failed, %s", fd, strerror(errno));

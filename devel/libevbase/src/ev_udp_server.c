@@ -57,7 +57,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
     struct 	sockaddr_in  rsa;
     socklen_t rsa_len ;
     int n = 0, opt = 1;
-    SHOW_LOG("fd[%d] ev[%d] arg[%08x]", fd, ev_flags, arg);
+    SHOW_LOG("fd[%d] ev[%d] arg[%p]", fd, ev_flags, arg);
     if(fd == lfd )
     {
         if((ev_flags & E_READ))
@@ -135,11 +135,11 @@ err_end:
             {
                 buffer[fd][n] = 0;
                 SHOW_LOG("Read %d bytes from %d, %s", n, fd, buffer[fd]);
-                SHOW_LOG("Updating event[%08x] on %d ", events[fd], fd);
+                SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
                 if(events[fd])
                 {
                     events[fd]->add(events[fd], E_WRITE);	
-                    SHOW_LOG("Updated event[%08x] on %d ", events[fd], fd);
+                    SHOW_LOG("Updated event[%p] on %d ", events[fd], fd);
                 }
             }	
             else

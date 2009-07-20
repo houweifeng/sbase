@@ -244,7 +244,7 @@ void event_add(EVENT *event, short flags)
 		{
 			event->ev_base->update(event->ev_base, event);
 			DEBUG_LOGGER(event->ev_base->logger, 
-                    "Added event[%08x] flags[%d] on fd[%d]",
+                    "Added event[%p] flags[%d] on fd[%d]",
 				event, event->ev_flags, event->ev_fd);
 		}
 	}
@@ -262,7 +262,7 @@ void event_del(EVENT *event, short flags)
 			if(event->ev_base && event->ev_base->update)
 			{
 				event->ev_base->update(event->ev_base, event);
-				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%08x] flags[%d] on fd[%d]",
+				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
 					event, event->ev_flags, event->ev_fd);
 			}
 
@@ -279,7 +279,7 @@ void event_destroy(EVENT *event)
         if(event->ev_base && event->ev_base->del)
         {
             event->ev_base->del(event->ev_base, event);
-            DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%08x] on fd[%d]",
+            DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%p] on fd[%d]",
                     event, event->ev_fd);
             event->ev_base = NULL;
         }
@@ -293,7 +293,7 @@ void event_active(EVENT *event, short ev_flags)
 	if(event && event->ev_handler)
 	{
 		DEBUG_LOGGER(event->ev_base->logger, 
-			"Activing event[%08x] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
+			"Activing event[%p] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
 		event->ev_handler(event->ev_fd, e_flags, event->ev_arg);	
 		if(!(event->ev_flags & E_PERSIST))
 		{

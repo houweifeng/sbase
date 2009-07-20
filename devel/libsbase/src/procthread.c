@@ -12,7 +12,7 @@ void procthread_run(void *arg)
 
     if(pth)
     {
-        DEBUG_LOGGER(pth->logger, "Ready for running thread[%08x]", pth->threadid);
+        DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
         while(pth->running_status)
         {

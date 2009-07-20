@@ -4,6 +4,8 @@
 #include "service.h"
 #include "queue.h"
 #include "mutex.h"
+#include "memb.h"
+#include "message.h"
 #include "evtimer.h"
 #ifndef UI
 #define UI(_x_) ((unsigned int)(_x_))
@@ -27,13 +29,16 @@ int service_set(SERVICE *service)
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0 
                     && fcntl(service->fd, F_SETFL, O_NONBLOCK) == 0
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
-                    && bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa)) == 0
-                    && listen(service->fd, service->backlog) == 0) 
+                    && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+                    && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
+                        sizeof(service->sa))) == 0)
             {
-                ret = 0;
+                if(service->sock_type == SOCK_STREAM)
+                    ret = listen(service->fd, service->backlog);
             }
 
-        }else if(service->service_type == C_SERVICE)
+        }
+        else if(service->service_type == C_SERVICE)
         {
             ret = 0;
         }
@@ -46,7 +51,7 @@ int service_set(SERVICE *service)
 {                                                                                           \
     if(pthread_create((pthread_t *)&pthid, NULL, (void *)(pth->run), (void *)pth) == 0)     \
     {                                                                                       \
-        DEBUG_LOGGER(logger, "Created %s[%d] ID[%08x]", ns, id, UI(pthid));                 \
+        DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        \
     }                                                                                       \
     else                                                                                    \
     {                                                                                       \
@@ -203,10 +208,10 @@ void service_event_handler(int event_fd, short flag, void *arg)
     struct sockaddr_in rsa;
     socklen_t rsa_len = sizeof(rsa);
     SERVICE *service = (SERVICE *)arg;
+    int fd = -1, port = -1, n = 0, opt = 1;
+    char buf[SB_BUF_SIZE], *ip = NULL;
+    MESSAGE msg = {0};
     CONN *conn = NULL;
-    int fd = -1;
-    char *ip = NULL;
-    int port = -1;
 
     if(service)
     {
@@ -214,21 +219,64 @@ void service_event_handler(int event_fd, short flag, void *arg)
         {
             if(E_READ & flag)
             {
-                if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                if(service->sock_type == SOCK_STREAM)
                 {
-                    ip = inet_ntoa(rsa.sin_addr);
-                    port = ntohs(rsa.sin_port);
-                    if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
-                                    service->ip, service->port, &(service->session))))
+                    if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
                     {
-                        DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d",
-                                ip, port, fd);
+                        ip = inet_ntoa(rsa.sin_addr);
+                        port = ntohs(rsa.sin_port);
+                        if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
+                                        service->ip, service->port, &(service->session))))
+                        {
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d",
+                                    ip, port, fd);
+                        }
+                    }
+                    else
+                    {
+                        FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
+                                strerror(errno));
                     }
                 }
-                else
+                else if(service->sock_type == SOCK_DGRAM)
                 {
-                    FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
-                            strerror(errno));
+                    if((n = recvfrom(event_fd, buf, SB_BUF_SIZE, 
+                            0, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                    {
+                        ip = inet_ntoa(rsa.sin_addr);
+                        port = ntohs(rsa.sin_port);
+                        if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
+                            && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+                            && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+                            && bind(fd, (struct sockaddr *)&(service->sa), 
+                                sizeof(struct sockaddr_in)) == 0
+                            && connect(fd, (struct sockaddr *)&rsa, 
+                                sizeof(struct sockaddr_in)) == 0
+                            && (conn = service_addconn(service, service->sock_type, fd, 
+                                ip, port, service->ip, service->port, &(service->session))))
+                        {
+                            MB_PUSH(conn->buffer, buf, n);
+                            msg.msg_id      = MESSAGE_INPUT;
+                            msg.index       = -1;
+                            msg.parent      = (void *)conn;
+                            QUEUE_PUSH(((PROCTHREAD *)(conn->parent))->message_queue, MESSAGE, &msg);
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d",
+                                    ip, port, fd);
+                        }
+                        else
+                        {
+                            shutdown(fd, SHUT_RDWR);
+                            close(fd);
+                            FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
+                                    strerror(errno));
+                        }
+                    }
+                    else
+                    {
+                        FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
+                                strerror(errno));
+                    }
+
                 }
             }
         }
@@ -314,6 +362,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             {
                 if(service->daemon && service->daemon->addconn)
                 {
+                    conn->parent = service->daemon;
                     service->daemon->addconn(service->daemon, conn);
                 }
                 else
@@ -330,6 +379,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 if(service->procthreads && (procthread = service->procthreads[index]) 
                         && procthread->addconn)
                 {
+                    conn->parent = procthread;
                     procthread->addconn(procthread, conn);   
                 }
                 else
@@ -477,6 +527,34 @@ int service_set_session(SERVICE *service, SESSION *session)
         return 0;
     }
     return -1;
+}
+/* add multicast */
+int service_add_multicast(SERVICE *service, char *multicast_ip)
+{
+    struct ip_mreq mreq = {0};
+    int ret = -1;
+    if(service && service->ip && service->fd)
+    {
+        mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
+        mreq.imr_interface.s_addr = inet_addr(service->ip);
+        ret = setsockopt(service->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq));
+    }
+    return ret;
+}
+
+/* drop multicast */
+int service_drop_multicast(SERVICE *service, char *multicast_ip)
+{
+    struct ip_mreq mreq = {0};
+    int ret = -1;
+
+    if(service && service->ip && service->fd)
+    {
+        mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
+        mreq.imr_interface.s_addr = inet_addr(service->ip);
+        ret = setsockopt(service->fd, IPPROTO_IP, IP_DROP_MEMBERSHIP,(char*)&mreq, sizeof(mreq));
+    }
+    return ret;
 }
 
 /* new task */
@@ -785,6 +863,8 @@ SERVICE *service_init()
         service->popchunk           = service_popchunk;
         service->pushchunk          = service_pushchunk;
         service->set_session        = service_set_session;
+        service->add_multicast      = service_add_multicast;
+        service->drop_multicast     = service_drop_multicast;
         service->newtask            = service_newtask;
         service->newtransaction     = service_newtransaction;
         service->set_heartbeat      = service_set_heartbeat;

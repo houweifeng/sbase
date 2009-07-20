@@ -115,7 +115,7 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
         n = poll(evbase->ev_fds, evbase->maxfd + 1 , sec);		
         if(n == -1)
         {
-            FATAL_LOGGER(evbase->logger, "Looping evbase[%08x] error[%d], %s", 
+            FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
                     evbase, errno, strerror(errno));
         }
         if(n <= 0) return ;
@@ -157,7 +157,7 @@ void evpoll_reset(EVBASE *evbase)
         evbase->nevent = 0;
         memset(evbase->ev_fds, 0, evbase->allowed * sizeof(struct pollfd));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
-        DEBUG_LOGGER(evbase->logger, "Reset evbase[%08x]", evbase);
+        DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
 }
 
