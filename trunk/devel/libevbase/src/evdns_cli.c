@@ -46,13 +46,13 @@ int setrlimiter(char *name, int rlimit, int nset)
         if((ret = setrlimit(rlimit, &rlim)) == 0)
         {
             fprintf(stdout, "setrlimit %s cur[%ld] max[%ld]\n",
-                    name, rlim.rlim_cur, rlim.rlim_max);
+                    name, (long)rlim.rlim_cur, (long)rlim.rlim_max);
             return 0;
         }
         else
         {
             fprintf(stderr, "setrlimit %s cur[%ld] max[%ld] failed, %s\n",
-                    name, rlim.rlim_cur, rlim.rlim_max, strerror(errno));
+                    name, (long)rlim.rlim_cur, (long)rlim.rlim_max, strerror(errno));
         }
     }
     return ret;
@@ -101,7 +101,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
             }
             SHOW_LOG("Read %d bytes from %d", n, fd);
             buffer[fd][n] = 0;
-            SHOW_LOG("Updating event[%x] on %d ", events[fd], fd);
+            SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
             if(events[fd])
             {
                 events[fd]->add(events[fd], E_WRITE);	
@@ -170,7 +170,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
             }
             SHOW_LOG("Read %d bytes from %d", n, fd);
             buffer[fd][n] = 0;
-            SHOW_LOG("Updating event[%x] on %d ", events[fd], fd);
+            SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
             if(events[fd])
             {
                 events[fd]->add(events[fd], E_WRITE);	

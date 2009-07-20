@@ -53,7 +53,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
             evbase->nfd++;
-            DEBUG_LOGGER(evbase->logger, "Added event[%x] flags[%d] on fd[%d]", 
+            DEBUG_LOGGER(evbase->logger, "Added event[%p] flags[%d] on fd[%d]", 
                     event, ev_flags, event->ev_fd);
             return 0;
         }
@@ -96,7 +96,7 @@ int evselect_update(EVBASE *evbase, EVENT *event)
         if(event->ev_fd > evbase->maxfd)
             evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
-        DEBUG_LOGGER(evbase->logger, "Updated event[%08x] flags[%d] on fd[%d]",
+        DEBUG_LOGGER(evbase->logger, "Updated event[%p] flags[%d] on fd[%d]",
                 event, event->ev_flags, event->ev_fd);
         return 0;
     }
@@ -115,7 +115,7 @@ int evselect_del(EVBASE *evbase, EVENT *event)
         {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
         }
-        DEBUG_LOGGER(evbase->logger, "Deleted event[%08x] flags[%d] on fd[%d]",
+        DEBUG_LOGGER(evbase->logger, "Deleted event[%p] flags[%d] on fd[%d]",
                 event, event->ev_flags, event->ev_fd);
         if(event->ev_fd >= evbase->maxfd)
             evbase->maxfd = event->ev_fd - 1;
@@ -174,7 +174,7 @@ void evselect_reset(EVBASE *evbase)
         evbase->nevent = 0;
         FD_ZERO((fd_set *)evbase->ev_read_fds);
         FD_ZERO((fd_set *)evbase->ev_write_fds);
-        DEBUG_LOGGER(evbase->logger, "Reset evbase[%08x]", evbase);
+        DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
 }
 

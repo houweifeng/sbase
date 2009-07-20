@@ -152,6 +152,7 @@ typedef struct _SERVICE
     int sock_type;
     struct  sockaddr_in sa;
     char *ip;
+    char *multicast;
     int port;
     int fd;
     int backlog;
@@ -192,6 +193,9 @@ typedef struct _SERVICE
     struct _CONN *(*getconn)(struct _SERVICE *service);
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
     int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
+    /* MULTICAST */
+    int (*add_multicast)(struct _SERVICE *service, char *multicast_ip);
+    int (*drop_multicast)(struct _SERVICE *service, char *multicast_ip);
     
     /* evtimer */
     void *evtimer;

@@ -23,7 +23,7 @@ void message_handler(void *message_queue, void *logger)
     {
         if(!(msg.msg_id & MESSAGE_ALL)) 
         {
-            FATAL_LOGGER(logger, "Invalid message[%d] handler[%08x] parent[%08x] fd[%d]",
+            FATAL_LOGGER(logger, "Invalid message[%d] handler[%p] parent[%p] fd[%d]",
                     msg.msg_id, msg.handler, msg.parent, msg.fd);
             goto next;
         }
@@ -48,12 +48,12 @@ void message_handler(void *message_queue, void *logger)
         if(conn) fd = conn->fd;
         if(conn == NULL || pth == NULL || msg.fd != conn->fd || pth->service == NULL)
         {
-            ERROR_LOGGER(logger, "Invalid MESSAGE[%d] fd[%d] conn->fd[%d] handler[%08x] "
-                    "parent[%08x] service[%08x]", msg.msg_id, msg.fd, fd, conn, pth, pth->service);
+            ERROR_LOGGER(logger, "Invalid MESSAGE[%d] fd[%d] conn->fd[%d] handler[%p] "
+                    "parent[%p] service[%p]", msg.msg_id, msg.fd, fd, conn, pth, pth->service);
             goto next;
         }
         if(index >= 0 && pth->service->connections[index] != conn) goto next;
-        DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%08x] "
+        DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%p] "
                 "connection[%s:%d] local[%s:%d] via %d", MESSAGE_DESC(msg.msg_id), 
                 pth->service->service_name, pth, conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
@@ -67,7 +67,7 @@ void message_handler(void *message_queue, void *logger)
                 pth->terminate_connection(pth, conn);
                 break;
             case MESSAGE_INPUT :
-                conn->read_handler(conn);
+                conn->packet_reader(conn);
                 break;
             case MESSAGE_OUTPUT :
                 conn->write_handler(conn);

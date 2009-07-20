@@ -60,7 +60,8 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             kqev.udata  = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
-            DEBUG_LOGGER(evbase->logger, "add EVFILT_READ[%d] on %d", kqev.filter, kqev.ident);
+            DEBUG_LOGGER(evbase->logger, "add EVFILT_READ[%d] on %d", 
+                    (int)kqev.filter, (int)kqev.ident);
         }
         if(event->ev_flags & E_WRITE)
         {
@@ -71,7 +72,8 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             kqev.udata     = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
-            DEBUG_LOGGER(evbase->logger, "add EVFILT_WRITE[%d] on %d", kqev.filter, kqev.ident);
+            DEBUG_LOGGER(evbase->logger, "add EVFILT_WRITE[%d] on %d", 
+                    (int)kqev.filter, (int)kqev.ident);
         }
         if(event->ev_fd > evbase->maxfd)
             evbase->maxfd = event->ev_fd;
@@ -106,13 +108,13 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
                 ERROR_LOGGER(evbase->logger, "adding EVFILT_READ flags[%d] on fd[%d] failed, %s", 
-                        kqev.flags, kqev.ident, strerror(errno));
+                        kqev.flags, (int)kqev.ident, strerror(errno));
                 return -1;
             }
             else
             {
                 DEBUG_LOGGER(evbase->logger, "added EVFILT_READ flags[%d] on fd[%d]",
-                        kqev.flags, kqev.ident);
+                        kqev.flags, (int)kqev.ident);
             }
         }
         if(add_ev_flags & E_WRITE)
@@ -123,13 +125,13 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
                 ERROR_LOGGER(evbase->logger, "adding EVFILT_WRITE flags[%d] on fd[%d] failed, %s", 
-                        kqev.flags, kqev.ident, strerror(errno));
+                        kqev.flags, (int)kqev.ident, strerror(errno));
                 return -1;
             }
             else
             {
                 DEBUG_LOGGER(evbase->logger, "added EVFILT_WRITE flags[%d] on fd[%d]",
-                        kqev.flags, kqev.ident);
+                        kqev.flags, (int)kqev.ident);
             }
         }
         if(del_ev_flags & E_READ)
@@ -139,13 +141,13 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
                 ERROR_LOGGER(evbase->logger, "deleting EVFILT_READ flags[%d] on fd[%d] failed, %s", 
-                        kqev.flags, kqev.ident, strerror(errno));
+                        kqev.flags, (int)kqev.ident, strerror(errno));
                 return -1;
             }
             else
             {
                 DEBUG_LOGGER(evbase->logger, "deleted EVFILT_READ flags[%d] on %d",
-                        kqev.flags, kqev.ident);
+                        kqev.flags, (int)kqev.ident);
             }
         }
         if(del_ev_flags & E_WRITE)
@@ -155,13 +157,13 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
                 ERROR_LOGGER(evbase->logger, "deleting EVFILT_WRITE flags[%d] on %d failed, %s", 
-                        kqev.flags, kqev.ident, strerror(errno));
+                        kqev.flags, (int)kqev.ident, strerror(errno));
                 return -1;
             }
             else
             {
                 DEBUG_LOGGER(evbase->logger, "deleted EVFILT_WRITE flags[%d] on %d",
-                        kqev.flags, kqev.ident);
+                        kqev.flags, (int)kqev.ident);
             }
         }
         evbase->evlist[event->ev_fd] = event;
@@ -185,7 +187,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
             kqev.flags  = EV_DELETE;
             kqev.udata  = (void *)event;
             kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
-            DEBUG_LOGGER(evbase->logger, "del EVFILT_READ[%d] on %d", kqev.filter, kqev.ident);
+            DEBUG_LOGGER(evbase->logger, "del EVFILT_READ[%d] on %d", kqev.filter, (int)kqev.ident);
         }
         if(event->ev_flags & E_WRITE)
         {
@@ -195,7 +197,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
             kqev.flags      = EV_DELETE;
             kqev.udata      = (void *)event;
             kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
-            DEBUG_LOGGER(evbase->logger, "del EVFILT_WRITE[%d] on %d", kqev.filter, kqev.ident);
+            DEBUG_LOGGER(evbase->logger, "del EVFILT_WRITE[%d] on %d", kqev.filter,(int)kqev.ident);
         }
         if(event->ev_fd >= evbase->maxfd)
             evbase->maxfd = event->ev_fd - 1;
@@ -219,7 +221,7 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
         n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->allowed, &ts);	
         if(n == -1)
         {
-            FATAL_LOGGER(evbase->logger, "Looping evbase[%08x] error[%d], %s", 
+            FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
                     evbase, errno, strerror(errno));
         }
         if(n <= 0 )return ;
@@ -256,7 +258,7 @@ void evkqueue_reset(EVBASE *evbase)
         evbase->maxfd = 0;
         memset(evbase->evs, 0, evbase->allowed * sizeof(struct kevent));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
-        DEBUG_LOGGER(evbase->logger, "Reset evbase[%08x]", evbase);
+        DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
 }
 

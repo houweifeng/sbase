@@ -129,7 +129,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     struct epoll_event *evp = NULL;
     EVENT *ev = NULL;
     int flags = 0;
-    //DEBUG_LOG("Loop evbase[%08x]", evbase);
+    //DEBUG_LOG("Loop evbase[%p]", evbase);
     //if(evbase)
     if(evbase && evbase->nfd > 0)
     {
@@ -138,7 +138,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
         n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd, timeout);
         if(n == -1)
         {
-            FATAL_LOGGER(evbase->logger, "Looping evbase[%08x] error[%d], %s",
+            FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s",
                     evbase, errno, strerror(errno));
         }
         if(n <= 0) return ;
@@ -149,13 +149,13 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
             ev = (EVENT *)evp->data.ptr;
             if(ev == NULL)
             {
-                FATAL_LOGGER(evbase->logger, "Invalid i:%d evp:%08x event:%08x",
+                FATAL_LOGGER(evbase->logger, "Invalid i:%d evp:%p event:%p",
                         i, evp, ev);
                 continue;
             }
             fd = ev->ev_fd;
             flags = evp->events;
-            DEBUG_LOGGER(evbase->logger, "Activing i:%d evp:%08x ev:%08x fd:%d flags:%d",
+            DEBUG_LOGGER(evbase->logger, "Activing i:%d evp:%p ev:%p fd:%d flags:%d",
                     i, evp, ev, fd, flags);
             //fd = evp->data.fd;
             if(fd >= 0 && fd <= evbase->maxfd &&  evbase->evlist[fd] 
@@ -171,7 +171,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                 if(flags & EPOLLOUT)
                     ev_flags |= E_WRITE;
                 DEBUG_LOGGER(evbase->logger,
-                        "Activing i:%d evp:%08x ev:%08x fd:%d ev_flags:%d", 
+                        "Activing i:%d evp:%p ev:%p fd:%d ev_flags:%d", 
                         i, evp, ev, fd, ev_flags);
                 if((ev_flags &= evbase->evlist[fd]->ev_flags))
                 {
@@ -198,7 +198,7 @@ void evepoll_reset(EVBASE *evbase)
         evbase->maxfd = 0;
         memset(evbase->evs, 0, evbase->allowed * sizeof(struct epoll_event));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
-        DEBUG_LOGGER(evbase->logger, "Reset evbase[%08x]", evbase);
+        DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
 }
 
