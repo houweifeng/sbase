@@ -177,6 +177,14 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
             return -1;
         }
+        p = "224.1.1.168";
+        if(service->add_multicast(service, p) != 0)
+        {
+            fprintf(stderr, "add multicast:%s failed, %s", p, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
+
     }
     sbase->running(sbase, 0);
     //sbase->running(sbase, 3600);
