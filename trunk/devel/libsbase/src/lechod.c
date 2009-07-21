@@ -18,7 +18,10 @@ int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
 int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 {
 	if(conn && conn->push_chunk)
-		conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
+    {
+		return conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
+    }
+    return -1;
 }
 
 int lechod_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
@@ -27,6 +30,12 @@ int lechod_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *ch
 
 int lechod_oob_handler(CONN *conn, CB_DATA *oob)
 {
+    if(conn && conn->push_chunk)
+    {
+        conn->push_chunk((CONN *)conn, ((CB_DATA *)oob)->data, oob->ndata);
+        return oob->ndata;
+    }
+    return -1;
 }
 
 /* Initialize from ini file */

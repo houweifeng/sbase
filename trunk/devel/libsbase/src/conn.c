@@ -400,10 +400,14 @@ int conn_read_handler(CONN *conn)
         if((n = MB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
             conn->recv_oob_total += n;
-            DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld from %s:%d on %s:%d via %d",
-                    n, conn->recv_oob_total, conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port, conn->fd);
-            conn->oob_handler(conn);
+            DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld "
+                    "from %s:%d on %s:%d via %d", n, conn->recv_oob_total, 
+                    conn->remote_ip, conn->remote_port, conn->local_ip, 
+                    conn->local_port, conn->fd);
+            if((n = conn->oob_handler(conn)) > 0)
+            {
+                MB_DEL(conn->oob, n);
+            }
             /* CONN TIMER sample */
             return (ret = 0);
         }
@@ -422,9 +426,10 @@ int conn_read_handler(CONN *conn)
             return (ret = 0);
         }
         conn->recv_data_total += n;
-        DEBUG_LOGGER(conn->logger, "Received %d bytes data total %lld from %s:%d on %s:%d via %d",
-                n, conn->recv_data_total, conn->remote_ip, conn->remote_port, 
-                conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "Received %d bytes data total %lld "
+                "from %s:%d on %s:%d via %d", n, conn->recv_data_total, 
+                conn->remote_ip, conn->remote_port, conn->local_ip, 
+                conn->local_port, conn->fd);
         if(conn->s_state == 0)conn->packet_reader(conn);
         ret = 0;
     }
