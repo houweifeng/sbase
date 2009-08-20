@@ -69,6 +69,8 @@ typedef struct _CB_DATA
 typedef struct _SESSION
 {
     /* packet */
+    int  uuid;
+    void *parent;
     int  packet_type;
     int  packet_length;
     char *packet_delimiter;
