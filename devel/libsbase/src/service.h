@@ -11,6 +11,9 @@ int service_set(SERVICE *service);
 int service_run(SERVICE *service);
 /* stop service */
 void service_stop(SERVICE *service);
+/* new proxy */
+CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int socket_type, 
+        char *ip, int port, SESSION *session);
 /* new connection */
 CONN *service_newconn(SERVICE *service, int inet_family, int socket_type, 
         char *ip, int port, SESSION *session);
@@ -23,6 +26,8 @@ int service_pushconn(SERVICE *service, CONN *conn);
 int service_popconn(SERVICE *service, CONN *conn);
 /* get free connection */
 CONN *service_getconn(SERVICE *service);
+/* find connection as index */
+CONN *service_findconn(SERVICE *service, int index);
 /* pop chunk from service  */
 CHUNK *service_popchunk(SERVICE *service);
 /* push chunk to service  */

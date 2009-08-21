@@ -339,6 +339,52 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
     return conn;
 }
 
+/* new connection */
+CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int socket_type, 
+        char *inet_ip, int inet_port, SESSION *session)
+{
+    CONN *conn = NULL;
+    struct sockaddr_in rsa, lsa;
+    socklen_t lsa_len = sizeof(lsa);
+    int fd = -1, family = -1, sock_type = -1, remote_port = -1, local_port = -1;
+    char *local_ip = NULL, *remote_ip = NULL;
+    SESSION *sess = NULL;
+
+    if(service && service->lock == 0 && parent)
+    {
+        family  = (inet_family > 0 ) ? inet_family : service->family;
+        sock_type = (socket_type > 0 ) ? socket_type : service->sock_type;
+        remote_ip = (inet_ip) ? inet_ip : service->ip;
+        remote_port  = (inet_port > 0 ) ? inet_port : service->port;
+        sess = (session) ? session : &(service->session);
+        rsa.sin_family = family;
+        rsa.sin_addr.s_addr = inet_addr(remote_ip);
+        rsa.sin_port = htons(remote_port);
+        if((fd = socket(family, sock_type, 0)) > 0
+                && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
+        {
+            getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
+            local_ip    = inet_ntoa(lsa.sin_addr);
+            local_port  = ntohs(lsa.sin_port);
+            if((conn = service->addconn(service, sock_type, fd, remote_ip, remote_port, 
+                            local_ip, local_port, sess)))
+            {
+                parent->session.packet_type = PACKET_PROXY;
+                conn->session.packet_type = PACKET_PROXY;
+                conn->session.parent = parent;
+                conn->session.parentid = parent->index;
+            }
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",
+                    remote_ip, remote_port, fd, sess, strerror(errno));
+        }
+    }
+    return conn;
+}
+
+
 /* add new connection */
 CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, int remote_port, 
         char *local_ip, int local_port, SESSION *session)
@@ -405,6 +451,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 int service_pushconn(SERVICE *service, CONN *conn)
 {
     int ret = -1, i = 0;
+    CONN *parent = NULL;
 
     if(service && conn && service->connections)
     {
@@ -424,6 +471,15 @@ int service_pushconn(SERVICE *service, CONN *conn)
                         conn->index, service->running_connections);
                 break;
             }
+        }
+        //for proxy
+        if(conn->session.packet_type == PACKET_PROXY
+                && (parent = (CONN *)(conn->session.parent)) 
+                && conn->session.parentid  >= 0 
+                && conn->session.parentid < service->index_max 
+                && conn->session.parent == service->connections[conn->session.parentid])
+        {
+            parent->bind_proxy(parent, conn);
         }
         MUTEX_UNLOCK(service->mutex);
     }
@@ -478,6 +534,17 @@ CONN *service_getconn(SERVICE *service)
             conn = NULL;
         }
         MUTEX_UNLOCK(service->mutex);
+    }
+    return conn;
+}
+
+/* find connection as index */
+CONN *service_findconn(SERVICE *service, int index)
+{
+    CONN *conn = NULL;
+    if(service && index >= 0 && index <= service->index_max)
+    {
+        conn = service->connections[index];
     }
     return conn;
 }
@@ -867,11 +934,13 @@ SERVICE *service_init()
         service->run                = service_run;
         service->set_log            = service_set_log;
         service->stop               = service_stop;
+        service->newproxy           = service_newproxy;
         service->newconn            = service_newconn;
         service->addconn            = service_addconn;
         service->pushconn           = service_pushconn;
         service->popconn            = service_popconn;
         service->getconn            = service_getconn;
+        service->findconn           = service_findconn;
         service->popchunk           = service_popchunk;
         service->pushchunk          = service_pushchunk;
         service->set_session        = service_set_session;

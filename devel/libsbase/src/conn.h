@@ -23,8 +23,11 @@ int conn_wait_evstate(CONN *conn);
 /* over evstate */
 int conn_over_evstate(CONN *conn);
 
-/* set session options */
-int conn_set_session(CONN *conn, SESSION *session);
+/* set session parent */
+int conn_set_session_parent(CONN *conn,void *);
+
+/* set session child */
+int conn_set_session_child(CONN *conn,void *);
 
 /* start client transaction state */
 int conn_start_cstate(CONN *conn);
@@ -52,6 +55,18 @@ int conn_oob_handler(CONN *conn);
 
 /* chunk data  handler */
 int conn_data_handler(CONN *conn);
+
+/* bind proxy */
+int conn_bind_proxy(CONN *conn, CONN *child);
+
+/* proxy data handler */
+int conn_proxy_handler(CONN *conn);
+
+/* close proxy */
+int conn_close_proxy(CONN *conn);
+
+/* push to exchange  */
+int conn_push_exchange(CONN *conn, void *data, int size);
 
 /* save cache to connection  */
 int conn_save_cache(CONN *conn, void *data, int size);
