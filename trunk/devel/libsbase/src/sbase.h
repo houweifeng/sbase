@@ -54,7 +54,8 @@ extern "C" {
 #define PACKET_CUSTOMIZED       0x01
 #define PACKET_CERTAIN_LENGTH   0x02
 #define PACKET_DELIMITER        0x04
-#define PACKET_ALL (PACKET_CUSTOMIZED | PACKET_CERTAIN_LENGTH | PACKET_DELIMITER)
+#define PACKET_PROXY            0x08
+#define PACKET_ALL (PACKET_CUSTOMIZED | PACKET_CERTAIN_LENGTH | PACKET_DELIMITER | PACKET_PROXY)
 struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
@@ -69,7 +70,10 @@ typedef struct _CB_DATA
 typedef struct _SESSION
 {
     /* packet */
-    int  uuid;
+    int timeout;
+    int childid;
+    void *child;
+    int  parentid;
     void *parent;
     int  packet_type;
     int  packet_length;
@@ -188,6 +192,8 @@ typedef struct _SERVICE
     void *connection_queue;
     /* C_SERVICE ONLY */
     int client_connections_limit;
+    struct _CONN *(*newproxy)(struct _SERVICE *service, struct _CONN * parent, int inet_family, 
+            int sock_type, char *ip, int port, SESSION *session);
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
             char *ip, int port, SESSION *session);
     struct _CONN *(*addconn)(struct _SERVICE *service, int sock_type, int fd, 
@@ -195,6 +201,7 @@ typedef struct _SERVICE
     struct _CONN *(*getconn)(struct _SERVICE *service);
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
     int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
+    struct _CONN *(*findconn)(struct _SERVICE *service, int index);
     /* MULTICAST */
     int (*add_multicast)(struct _SERVICE *service, char *multicast_ip);
     int (*drop_multicast)(struct _SERVICE *service, char *multicast_ip);
@@ -304,6 +311,7 @@ typedef struct _CONN
     void *cache;
     void *chunk;
     void *oob;
+    void *exchange;
 
     /* logger and timer */
     void *logger;
@@ -348,6 +356,10 @@ typedef struct _CONN
     int (*packet_handler)(struct _CONN *);
     int (*oob_handler)(struct _CONN *);
     int (*data_handler)(struct _CONN *);
+    int (*bind_proxy)(struct _CONN *, struct _CONN *);
+    int (*proxy_handler)(struct _CONN *);
+    int (*close_proxy)(struct _CONN *);
+    int (*push_exchange)(struct _CONN *, void *data, int size);
     int (*transaction_handler)(struct _CONN *, int );
     int (*save_cache)(struct _CONN *, void *data, int size);
 

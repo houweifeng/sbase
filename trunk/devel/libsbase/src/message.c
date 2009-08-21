@@ -84,6 +84,9 @@ void message_handler(void *message_queue, void *logger)
             case MESSAGE_TIMEOUT :
                 conn->timeout_handler(conn);
                 break;
+            case MESSAGE_PROXY :
+                conn->proxy_handler(conn);
+                break;
         }
 next: 
         usleep(1);

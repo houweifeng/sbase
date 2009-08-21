@@ -148,6 +148,9 @@ int conn_set(CONN *conn)
             MB_SET_BLOCK_SIZE(conn->buffer, conn->session.buffer_size);
             //MB_RESET(conn->buffer);
         }
+        //timeout
+        if(conn->parent && conn->session.timeout > 0) 
+            conn->set_timeout(conn, conn->session.timeout);
         conn->evid = -1;
         fcntl(conn->fd, F_SETFL, O_NONBLOCK);
         if(conn->evbase && conn->event)
@@ -214,6 +217,7 @@ int conn_terminate(CONN *conn)
                     conn->fd, conn->c_id);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
         }
+        conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
         conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing session[%s:%d] local[%s:%d] via %d",
@@ -340,6 +344,7 @@ int conn_start_cstate(CONN *conn)
             MB_RESET(conn->cache);
             MB_RESET(conn->buffer);
             MB_RESET(conn->oob);
+            MB_RESET(conn->exchange);
             CK_RESET(conn->chunk);
             ret = 0;
         }
@@ -412,7 +417,10 @@ int conn_read_handler(CONN *conn)
             return (ret = 0);
         }
         /* Receive to chunk with chunk_read_state before reading to buffer */
-        CONN_CHUNK_READ(conn, n);
+        if(conn->session.packet_type != PACKET_PROXY)
+        {
+            CONN_CHUNK_READ(conn, n);
+        }
         /* Receive normal data */
         if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
         {
@@ -430,6 +438,9 @@ int conn_read_handler(CONN *conn)
                 "from %s:%d on %s:%d via %d", n, conn->recv_data_total, 
                 conn->remote_ip, conn->remote_port, conn->local_ip, 
                 conn->local_port, conn->fd);
+        //for proxy
+        if(conn->session.packet_type == PACKET_PROXY)
+            return conn->proxy_handler(conn);
         if(conn->s_state == 0)conn->packet_reader(conn);
         ret = 0;
     }
@@ -526,7 +537,7 @@ int conn_packet_reader(CONN *conn)
             CONN_TERMINATE(conn);
         }
         /* Read packet with customized function from user */
-        if(packet_type == PACKET_CUSTOMIZED && conn->session.packet_reader)
+        else if(packet_type == PACKET_CUSTOMIZED && conn->session.packet_reader)
         {
             len = conn->session.packet_reader(conn, data);
             DEBUG_LOGGER(conn->logger,
@@ -592,6 +603,7 @@ int conn_packet_handler(CONN *conn)
 
     if(conn && conn->session.packet_handler)
     {
+
         DEBUG_LOGGER(conn->logger, "packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
         ret = conn->session.packet_handler(conn, PCB(conn->packet));
         DEBUG_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
@@ -609,15 +621,11 @@ int conn_oob_handler(CONN *conn)
     int ret = -1;
     CONN_CHECK_RET(conn, ret);
 
-    if(conn)
+    if(conn && conn->session.oob_handler)
     {
-        if(conn && conn->session.oob_handler)
-        {
-            DEBUG_LOGGER(conn->logger, "oob_handler(%p) on %s:%d via %d", conn->session.oob_handler, conn->remote_ip, conn->remote_port, conn->fd);
-            ret = conn->session.oob_handler(conn, PCB(conn->oob));
-            DEBUG_LOGGER(conn->logger, "over oob_handler(%p) on %s:%d via %d", conn->session.oob_handler, conn->remote_ip, conn->remote_port, conn->fd);
-        }
-
+        DEBUG_LOGGER(conn->logger, "oob_handler(%p) on %s:%d via %d", conn->session.oob_handler, conn->remote_ip, conn->remote_port, conn->fd);
+        ret = conn->session.oob_handler(conn, PCB(conn->oob));
+        DEBUG_LOGGER(conn->logger, "over oob_handler(%p) on %s:%d via %d", conn->session.oob_handler, conn->remote_ip, conn->remote_port, conn->fd);
     }
     return ret;
 }
@@ -630,7 +638,7 @@ int conn_data_handler(CONN *conn)
 
     if(conn)
     {
-        if(conn && conn->session.data_handler)
+        if(conn->session.data_handler)
         {
             DEBUG_LOGGER(conn->logger, "data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
             ret = conn->session.data_handler(conn, PCB(conn->packet), 
@@ -638,6 +646,124 @@ int conn_data_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
         CONN_STATE_RESET(conn);
+    }
+    return ret;
+}
+
+/* bind proxy */
+int conn_bind_proxy(CONN *conn, CONN *child)
+{
+    int ret = -1;
+    CONN_CHECK_RET(conn, ret);
+
+    if(conn && child)
+    {
+        conn->session.packet_type = PACKET_PROXY;
+        conn->session.childid = child->index;
+        conn->session.child = child;
+        ret = conn->push_message(conn, MESSAGE_PROXY);
+        DEBUG_LOGGER(conn->logger, "Bind proxy connection[%s:%d] to connection[%s:%d]",
+                conn->remote_ip, conn->remote_port, child->remote_ip, child->remote_port);
+    }
+    return ret;
+}
+
+/* proxy data handler */
+int conn_proxy_handler(CONN *conn)
+{
+    int ret = -1;
+    CONN_CHECK_RET(conn, ret);
+    CONN *parent = NULL, *child = NULL, *oconn = NULL;
+    CB_DATA *exchange = NULL, *chunk = NULL, *buffer = NULL;
+
+    if(conn)
+    {
+        if(conn->session.parent && (parent = PPARENT(conn)->service->findconn(
+                        PPARENT(conn)->service, conn->session.parentid))
+            && parent == conn->session.parent)
+        {
+            oconn = parent;
+        }
+        else if(conn->session.child && (child = PPARENT(conn)->service->findconn(
+                        PPARENT(conn)->service, conn->session.childid))
+            && child == conn->session.child)
+        {
+            oconn = child;
+        }
+        else 
+        {
+            return -1;
+        }
+        DEBUG_LOGGER(conn->logger, "Ready exchange connection[%s:%d] to connection[%s:%d]",
+                conn->remote_ip, conn->remote_port, oconn->remote_ip, oconn->remote_port);
+        if(conn->exchange && (exchange = PCB(conn->exchange)) && exchange->ndata > 0)
+        {
+            DEBUG_LOGGER(conn->logger, "Ready exchange packet[%d] to conn[%s:%d]", 
+                    exchange->ndata, oconn->remote_ip, oconn->remote_port);
+            oconn->push_chunk(oconn, exchange->data, exchange->ndata);
+            MB_RESET(conn->exchange);
+        }
+        if(conn->chunk && (chunk = PCB(conn->chunk)) && chunk->ndata > 0)
+        {
+            DEBUG_LOGGER(conn->logger, "Ready exchange chunk[%d] to conn[%s:%d]", 
+                    chunk->ndata, oconn->remote_ip, oconn->remote_port);
+            oconn->push_chunk(oconn, chunk->data, chunk->ndata);
+            CK_RESET(conn->chunk);
+        }
+        if(conn->buffer && (buffer = PCB(conn->buffer)) && buffer->ndata > 0)
+        {
+            DEBUG_LOGGER(conn->logger, "Ready exchange buffer[%d] to conn[%s:%d]", 
+                    buffer->ndata, oconn->remote_ip, oconn->remote_port);
+            oconn->push_chunk(oconn, buffer->data, buffer->ndata);
+            MB_DEL(conn->buffer, buffer->ndata);
+        }
+        return 0;
+    }
+    return -1;
+}
+
+/* close proxy */
+int conn_close_proxy(CONN *conn)
+{
+    int ret = -1;
+    CONN *parent = NULL, *child = NULL;
+
+    if(conn && conn->session.packet_type == PACKET_PROXY)
+    {
+        if(conn->session.parent && (parent = PPARENT(conn)->service->findconn(
+                        PPARENT(conn)->service, conn->session.parentid))
+                && parent == conn->session.parent)
+        {
+            parent->over(parent);
+            parent->session.childid = 0;
+            parent->session.child = NULL;
+        }
+        else if(conn->session.child && (child = PPARENT(conn)->service->findconn(
+                        PPARENT(conn)->service, conn->session.childid))
+                && child == conn->session.child)
+        {
+            child->over(parent);
+            child->session.parent = NULL;
+            child->session.parentid = 0;
+        }
+        ret = 0;
+    }
+    return ret;
+}
+
+/* push to exchange  */
+int conn_push_exchange(CONN *conn, void *data, int size)
+{
+    int ret = -1;
+    CONN_CHECK_RET(conn, ret);
+
+    if(conn)
+    {
+        MB_PUSH(conn->exchange, data, size);
+        DEBUG_LOGGER(conn->logger, "Push exchange size[%d] remote[%s:%d] local[%s:%d] via %d",
+                MB_NDATA(conn->exchange), conn->remote_ip, conn->remote_port, 
+                conn->local_ip, conn->local_port, conn->fd);
+        ret = 0;
     }
     return ret;
 }
@@ -800,6 +926,8 @@ int conn_set_session(CONN *conn, SESSION *session)
     if(conn && session)
     {
         memcpy(&(conn->session), session, sizeof(SESSION));
+        if(conn->parent && conn->session.timeout > 0) 
+            conn->set_timeout(conn, conn->session.timeout);
         ret = 0;
     }
     return ret;
@@ -906,6 +1034,8 @@ void conn_clean(CONN **pconn)
         MB_CLEAN((*pconn)->cache);
         /* Clean packet */
         MB_CLEAN((*pconn)->packet);
+        /* Clean exchange */
+        MB_CLEAN((*pconn)->exchange);
         /* Clean chunk */
         CK_CLEAN((*pconn)->chunk);
         /* Clean send queue */
@@ -931,6 +1061,7 @@ CONN *conn_init()
         MB_INIT(conn->packet, MB_BLOCK_SIZE);
         MB_INIT(conn->cache, MB_BLOCK_SIZE);
         MB_INIT(conn->oob, MB_BLOCK_SIZE);
+        MB_INIT(conn->exchange, MB_BLOCK_SIZE);
         CK_INIT(conn->chunk);
         QUEUE_INIT(conn->send_queue);
         conn->event                 = ev_init();
@@ -952,6 +1083,10 @@ CONN *conn_init()
         conn->packet_handler        = conn_packet_handler;
         conn->oob_handler           = conn_oob_handler;
         conn->data_handler          = conn_data_handler;
+        conn->bind_proxy            = conn_bind_proxy;
+        conn->proxy_handler         = conn_proxy_handler;
+        conn->close_proxy           = conn_close_proxy;
+        conn->push_exchange         = conn_push_exchange;
         conn->transaction_handler   = conn_transaction_handler;
         conn->save_cache            = conn_save_cache;
         conn->chunk_reader          = conn_chunk_reader;
