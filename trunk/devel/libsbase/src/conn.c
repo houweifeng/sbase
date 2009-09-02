@@ -641,7 +641,11 @@ int conn_data_handler(CONN *conn)
 
     if(conn)
     {
-        if(conn->session.data_handler)
+        if(conn->session.packet_type == PACKET_PROXY)
+        {
+            return conn->proxy_handler(conn);
+        }
+        else if(conn->session.data_handler)
         {
             DEBUG_LOGGER(conn->logger, "data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
             ret = conn->session.data_handler(conn, PCB(conn->packet), 
