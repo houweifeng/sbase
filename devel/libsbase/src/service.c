@@ -369,8 +369,8 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
             if((conn = service->addconn(service, sock_type, fd, remote_ip, remote_port, 
                             local_ip, local_port, sess)))
             {
-                parent->session.packet_type = PACKET_PROXY;
-                conn->session.packet_type = PACKET_PROXY;
+                parent->session.packet_type |= PACKET_PROXY;
+                conn->session.packet_type |= PACKET_PROXY;
                 conn->session.parent = parent;
                 conn->session.parentid = parent->index;
             }
@@ -473,7 +473,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
             }
         }
         //for proxy
-        if(conn->session.packet_type == PACKET_PROXY
+        if((conn->session.packet_type & PACKET_PROXY)
                 && (parent = (CONN *)(conn->session.parent)) 
                 && conn->session.parentid  >= 0 
                 && conn->session.parentid < service->index_max 

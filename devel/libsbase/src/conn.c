@@ -439,8 +439,11 @@ int conn_read_handler(CONN *conn)
                 conn->remote_ip, conn->remote_port, conn->local_ip, 
                 conn->local_port, conn->fd);
         //for proxy
-        if(conn->session.packet_type == PACKET_PROXY)
-            return conn->proxy_handler(conn);
+        if(conn->session.packet_type & PACKET_PROXY)
+        {
+            ret = conn->proxy_handler(conn);
+            if(conn->session.packet_type == PACKET_PROXY) return ret;
+        }
         if(conn->s_state == 0)conn->packet_reader(conn);
         ret = 0;
     }
@@ -537,18 +540,18 @@ int conn_packet_reader(CONN *conn)
             CONN_TERMINATE(conn);
         }
         /* Read packet with customized function from user */
-        else if(packet_type == PACKET_CUSTOMIZED && conn->session.packet_reader)
+        else if(packet_type & PACKET_CUSTOMIZED && conn->session.packet_reader)
         {
             len = conn->session.packet_reader(conn, data);
             DEBUG_LOGGER(conn->logger,
-                    "Reading packet with customized function[%p] length[%d] "
+                    "Reading packet with customized function[%p] length[%d]-[%d] "
                     "from %s:%d on %s:%d via %d", PPL(conn->session.packet_reader), len, 
-                    conn->remote_ip, conn->remote_port, conn->local_ip, 
+                    data->ndata, conn->remote_ip, conn->remote_port, conn->local_ip, 
                     conn->local_port, conn->fd);
             goto end;
         }
         /* Read packet with certain length */
-        else if(packet_type == PACKET_CERTAIN_LENGTH
+        else if(packet_type & PACKET_CERTAIN_LENGTH
                 && MB_NDATA(conn->buffer) >= conn->session.packet_length)
         {
             len = conn->session.packet_length;
@@ -558,7 +561,7 @@ int conn_packet_reader(CONN *conn)
             goto end;
         }
         /* Read packet with delimiter */
-        else if(packet_type == PACKET_DELIMITER && conn->session.packet_delimiter
+        else if(packet_type & PACKET_DELIMITER && conn->session.packet_delimiter
                 && conn->session.packet_delimiter_length > 0)
         {
             p = MB_DATA(conn->buffer);
@@ -658,7 +661,7 @@ int conn_bind_proxy(CONN *conn, CONN *child)
 
     if(conn && child)
     {
-        conn->session.packet_type = PACKET_PROXY;
+        conn->session.packet_type |= PACKET_PROXY;
         conn->session.childid = child->index;
         conn->session.child = child;
         ret = conn->push_message(conn, MESSAGE_PROXY);
@@ -710,7 +713,8 @@ int conn_proxy_handler(CONN *conn)
             oconn->push_chunk(oconn, chunk->data, chunk->ndata);
             CK_RESET(conn->chunk);
         }
-        if(conn->buffer && (buffer = PCB(conn->buffer)) && buffer->ndata > 0)
+        if(conn->session.packet_type == PACKET_PROXY 
+            && conn->buffer && (buffer = PCB(conn->buffer)) && buffer->ndata > 0)
         {
             DEBUG_LOGGER(conn->logger, "Ready exchange buffer[%d] to conn[%s:%d]", 
                     buffer->ndata, oconn->remote_ip, oconn->remote_port);
@@ -728,7 +732,7 @@ int conn_close_proxy(CONN *conn)
     int ret = -1;
     CONN *parent = NULL, *child = NULL;
 
-    if(conn && conn->session.packet_type == PACKET_PROXY)
+    if(conn && (conn->session.packet_type & PACKET_PROXY))
     {
         if(conn->session.parent && (parent = PPARENT(conn)->service->findconn(
                         PPARENT(conn)->service, conn->session.parentid))
