@@ -32,8 +32,7 @@ void message_handler(void *message_queue, void *logger)
         index = msg.index;
         if(msg.msg_id == MESSAGE_STOP && pth)
         {
-            pth->terminate(pth);
-            goto next;
+            return pth->terminate(pth);
         }
         //task and heartbeat
         if(msg.msg_id == MESSAGE_TASK || msg.msg_id == MESSAGE_HEARTBEAT 
