@@ -22,26 +22,26 @@ int main()
     sbase->nchilds = 1;
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
-	sbase->set_log(sbase, "/tmp/sd.log");
-	sbase->set_evlog(sbase, "/tmp/evsd.log");
+    sbase->set_log(sbase, "/tmp/sd.log");
+    sbase->set_evlog(sbase, "/tmp/evsd.log");
     SERVICE *service = NULL;
     if((service = service_init()))
     {
-        service->working_mode = 1;
-        service->nprocthreads = 4;
-        service->ndaemons = 4;
+	    service->working_mode = 1;
+	    service->nprocthreads = 4;
+	    service->ndaemons = 4;
 	    service->service_type = S_SERVICE;
 	    service->family = AF_INET;
 	    service->sock_type = SOCK_STREAM;
 	    service->service_name = "sd";
 	    service->ip = NULL;
 	    service->port = 1418;
-        session.packet_type = PACKET_DELIMITER;
-        session.packet_delimiter = "\r\n\r\n";
-        session.packet_delimiter_length = 4;
-        session.packet_handler = &sd_packet_handler;
-        session.buffer_size = 2097152;
-        service->set_session(service, &session);
+	    session.packet_type = PACKET_DELIMITER;
+	    session.packet_delimiter = "\r\n\r\n";
+	    session.packet_delimiter_length = 4;
+	    session.packet_handler = &sd_packet_handler;
+	    session.buffer_size = 2097152;
+	    service->set_session(service, &session);
     }
 /*
     service->max_procthreads = 2;
@@ -59,7 +59,12 @@ int main()
     service->ops.cb_oob_handler = &cb_oob_handler;
 */
     if(sbase->add_service(sbase, service) == 0)
+    {
         sbase->running(sbase, 0);
-    else 
-        fprintf(stderr, "add service failed, %s", strerror(errno));
+        //sbase->running(sbase, 60000000);
+    }
+    else fprintf(stderr, "add service failed, %s", strerror(errno));
+    sbase->stop(sbase);
+    sbase->clean(&sbase);
+    return 0;
 }

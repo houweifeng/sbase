@@ -209,18 +209,12 @@ void procthread_clean(PROCTHREAD **ppth)
 
     if(ppth && *ppth)
     {
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*ppth)->service->working_mode != WORKING_PROC)
         {
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             (*ppth)->evbase->clean(&((*ppth)->evbase));
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             QUEUE_CLEAN((*ppth)->message_queue);
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         }
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         free((*ppth));
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         (*ppth) = NULL;
     }
 }

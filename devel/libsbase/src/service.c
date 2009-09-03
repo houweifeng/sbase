@@ -65,12 +65,13 @@ int service_set(SERVICE *service)
 #define NEW_PROCTHREAD(ns, id, pthid, pth, logger)
 #endif
 #ifdef HAVE_PTHREAD
-#define PROCTHREAD_EXIT(id)                                                                 \
+#define PROCTHREAD_EXIT(id, exitid)                                                         \
 {                                                                                           \
+    pthread_join((pthread_t)id, (void **)&exitid);                                          \
     pthread_detach((pthread_t)id);                                                          \
 }
 #else
-#define PROCTHREAD_EXIT(id)
+#define PROCTHREAD_EXIT(id, exitid)
 #endif
 #define PROCTHREAD_SET(service, pth)                                                        \
 {                                                                                           \
@@ -732,7 +733,7 @@ void service_stop(SERVICE *service)
             DEBUG_LOGGER(service->logger, "Ready for stop daemon");
             service->daemon->stop(service->daemon);
             DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
-            PROCTHREAD_EXIT(service->daemon->threadid);
+            PROCTHREAD_EXIT(service->daemon->threadid, thread_exit);
             DEBUG_LOGGER(service->logger, "Joinning daemon thread");
             DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
@@ -744,7 +745,7 @@ void service_stop(SERVICE *service)
                 if(service->procthreads[i])
                 {
                     service->procthreads[i]->stop(service->procthreads[i]);
-                    PROCTHREAD_EXIT(service->procthreads[i]->threadid);
+                    PROCTHREAD_EXIT(service->procthreads[i]->threadid, thread_exit);
                 }
             }
         }
@@ -756,7 +757,7 @@ void service_stop(SERVICE *service)
                 if(service->daemons[i])
                 {
                     service->daemons[i]->stop(service->daemons[i]);
-                    PROCTHREAD_EXIT(service->daemons[i]->threadid);
+                    PROCTHREAD_EXIT(service->daemons[i]->threadid, thread_exit);
                 }
             }
         }
