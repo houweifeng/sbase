@@ -94,6 +94,10 @@
 /* Define to 1 if `vfork' works. */
 #undef HAVE_WORKING_VFORK
 
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
 /* Name of package */
 #undef PACKAGE
 
@@ -112,29 +116,20 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* Define as the return type of signal handlers (`int' or `void'). */
-#undef RETSIGTYPE
-
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
-#undef TIME_WITH_SYS_TIME
-
-/* Define to 1 if your <sys/time.h> declares `struct tm'. */
-#undef TM_IN_SYS_TIME
-
 /* Version number of package */
 #undef VERSION
+
+/* Define to `long int' if <sys/types.h> does not define. */
+#undef off_t
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef pid_t
 
 /* Define to rpl_realloc if the replacement function should be used. */
 #undef realloc
-
-/* Define to `unsigned' if <sys/types.h> does not define. */
-#undef size_t
 
 /* Define as `fork' if `vfork' does not work. */
 #undef vfork
