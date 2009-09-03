@@ -476,7 +476,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 service->connections[i] = conn;
                 conn->index = i;
                 service->running_connections++;
-                if(i > service->index_max) service->index_max = i;
+                if(i >= service->index_max) service->index_max = i;
                 ret = 0;
                 DEBUG_LOGGER(service->logger, "Added new connection[%s:%d] on %s:%d via %d "
                         "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
@@ -716,7 +716,7 @@ void service_stop(SERVICE *service)
     {
         //stop all connections 
         service->lock = 1;
-        if(service->connections && service->running_connections > 0 && service->index_max > 0)
+        if(service->connections && service->running_connections > 0 && service->index_max >= 0)
         {
             DEBUG_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
             for(i = 0; i <= service->index_max; i++)
@@ -863,13 +863,11 @@ void service_clean(SERVICE **pservice)
 
     if(pservice && *pservice)
     {
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
+        
         if((*pservice)->connections) free((*pservice)->connections);
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
+        
         //clean procthreads
         if((*pservice)->procthreads && (*pservice)->nprocthreads)
         {
@@ -877,15 +875,12 @@ void service_clean(SERVICE **pservice)
             {
                 if((*pservice)->procthreads[i])
                 {
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
                     (*pservice)->procthreads[i]->clean(&((*pservice)->procthreads[i]));
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
                 }
             }
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             free((*pservice)->procthreads);
         }
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
+        
         //clean daemons
         if((*pservice)->daemons && (*pservice)->ndaemons)
         {
@@ -898,56 +893,43 @@ void service_clean(SERVICE **pservice)
             }
             free((*pservice)->daemons);
         }
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         //clean connection_queue
         DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk");
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*pservice)->connection_queue)
         {
             DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             while(QTOTAL((*pservice)->connection_queue) > 0)
             {
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
                 conn = NULL;
                 QUEUE_POP((*pservice)->connection_queue, PCONN, &conn);
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
+        
                 DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", conn);
                 if(conn) conn->clean(&conn);
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             }
             QUEUE_CLEAN((*pservice)->connection_queue);
         }
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
+        
         //clean chunks queue
         DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue");
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
+        
         if((*pservice)->chunks_queue)
         {
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
             while(QTOTAL((*pservice)->chunks_queue) > 0)
             {
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
                 cp = NULL;
                 QUEUE_POP((*pservice)->chunks_queue, PCONN, &cp);
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
                 DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", cp);
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
                 if(cp){CK_CLEAN(cp);}
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             }
             QUEUE_CLEAN((*pservice)->chunks_queue);
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         }
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
+        
         MUTEX_DESTROY((*pservice)->mutex);
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*pservice)->is_inside_logger && (*pservice)->logger) 
         {
             LOGGER_CLEAN((*pservice)->logger);
         }
-        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         free(*pservice);
         *pservice = NULL;
     }
