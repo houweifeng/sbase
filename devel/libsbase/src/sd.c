@@ -19,7 +19,7 @@ int main()
 
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
     sbase = sbase_init();
-    sbase->nchilds = 1;
+    sbase->nchilds = 0;
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
     sbase->set_log(sbase, "/tmp/sd.log");
@@ -27,7 +27,7 @@ int main()
     SERVICE *service = NULL;
     if((service = service_init()))
     {
-	    service->working_mode = 1;
+	    service->working_mode = 0;
 	    service->nprocthreads = 4;
 	    service->ndaemons = 4;
 	    service->service_type = S_SERVICE;
@@ -42,6 +42,7 @@ int main()
 	    session.packet_handler = &sd_packet_handler;
 	    session.buffer_size = 2097152;
 	    service->set_session(service, &session);
+  	    service->set_log(service, "/tmp/sd_access.log");
     }
 /*
     service->max_procthreads = 2;
@@ -60,8 +61,8 @@ int main()
 */
     if(sbase->add_service(sbase, service) == 0)
     {
-        sbase->running(sbase, 0);
-        //sbase->running(sbase, 60000000);
+        //sbase->running(sbase, 0);
+        sbase->running(sbase, 60000000);
     }
     else fprintf(stderr, "add service failed, %s", strerror(errno));
     sbase->stop(sbase);

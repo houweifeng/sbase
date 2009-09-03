@@ -134,7 +134,7 @@ int main(int argc, char **argv)
     }
     if(conf == NULL)
     {
-        fprintf(stderr, "Usage:%s -c config_file\n", argv[0]);
+        fprintf(stderr, "Usage:%s -d -c config_file\n", argv[0]);
         _exit(-1);
     }
     /* locale */
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
     }
     sbase->running(sbase, 0);
     //sbase->running(sbase, 3600);
-    //sbase->running(sbase, 30000000);
+    //sbase->running(sbase, 20000000);
     sbase->stop(sbase);
     sbase->clean(&sbase);
     if(dict)iniparser_free(dict);
