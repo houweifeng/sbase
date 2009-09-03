@@ -212,10 +212,14 @@ int conn_terminate(CONN *conn)
     {
         if(conn->c_state == C_STATE_USING && conn->session.error_handler)
         {
-            DEBUG_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d", 
+            DEBUG_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", 
                     conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                    conn->fd, conn->c_id);
+                    conn->fd, conn->c_id, PCB(conn->packet)->ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
+            MB_RESET(conn->buffer); 
+            MB_RESET(conn->packet); 
+            MB_RESET(conn->cache); 
+            CK_RESET(conn->chunk); 
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
@@ -444,7 +448,8 @@ int conn_read_handler(CONN *conn)
             ret = conn->proxy_handler(conn);
             if(conn->session.packet_type == PACKET_PROXY) return ret;
         }
-        if(conn->s_state == 0)conn->packet_reader(conn);
+        if(conn->s_state == 0 && PCB(conn->packet)->ndata == 0)
+            conn->packet_reader(conn);
         ret = 0;
     }
     return ret;
@@ -612,7 +617,9 @@ int conn_packet_handler(CONN *conn)
         DEBUG_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
         if(conn->s_state == S_STATE_PACKET_HANDLING)
         {
+            DEBUG_LOGGER(conn->logger, "Reset packet(%p)[%d] on %s:%d via %d", conn->packet, PCB(conn->packet)->ndata, conn->remote_ip, conn->remote_port, conn->fd);
             CONN_STATE_RESET(conn);
+            MB_RESET(conn->packet);
         }
     }
     return ret;
@@ -647,12 +654,16 @@ int conn_data_handler(CONN *conn)
         }
         else if(conn->session.data_handler)
         {
-            DEBUG_LOGGER(conn->logger, "data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "data_handler(%p) on %s:%d via %d", 
+                    conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
             ret = conn->session.data_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), PCB(conn->chunk));
-            DEBUG_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", 
+                    conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
+        //reset session
         CONN_STATE_RESET(conn);
+        MB_RESET(conn->packet);
     }
     return ret;
 }
@@ -679,7 +690,7 @@ int conn_bind_proxy(CONN *conn, CONN *child)
 int conn_proxy_handler(CONN *conn)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, ret);
+    //CONN_CHECK_RET(conn, ret);
     CONN *parent = NULL, *child = NULL, *oconn = NULL;
     CB_DATA *exchange = NULL, *chunk = NULL, *buffer = NULL;
 
@@ -738,11 +749,12 @@ int conn_close_proxy(CONN *conn)
 
     if(conn && (conn->session.packet_type & PACKET_PROXY))
     {
+        conn->proxy_handler(conn);
         if(conn->session.parent && (parent = PPARENT(conn)->service->findconn(
                         PPARENT(conn)->service, conn->session.parentid))
                 && parent == conn->session.parent)
         {
-            parent->over(parent);
+            parent->set_timeout(parent, SB_PROXY_TIMEOUT);
             parent->session.childid = 0;
             parent->session.child = NULL;
         }
@@ -750,7 +762,7 @@ int conn_close_proxy(CONN *conn)
                         PPARENT(conn)->service, conn->session.childid))
                 && child == conn->session.child)
         {
-            child->over(parent);
+            child->set_timeout(child, SB_PROXY_TIMEOUT);
             child->session.parent = NULL;
             child->session.parentid = 0;
         }
