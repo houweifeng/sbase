@@ -369,6 +369,10 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
             if((conn = service->addconn(service, sock_type, fd, remote_ip, remote_port, 
                             local_ip, local_port, sess)))
             {
+                if(conn->session.timeout == 0)
+                    conn->session.timeout = SB_PROXY_TIMEOUT;
+                if(parent->session.timeout == 0)
+                    parent->session.timeout = SB_PROXY_TIMEOUT;
                 parent->session.packet_type |= PACKET_PROXY;
                 conn->session.packet_type |= PACKET_PROXY;
                 conn->session.parent = parent;
@@ -717,12 +721,16 @@ void service_stop(SERVICE *service)
         //stop all procthreads
         if(service->daemon)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop daemons");
+            DEBUG_LOGGER(service->logger, "Ready for stop daemon");
             service->daemon->stop(service->daemon);
 #ifdef HAVE_PTHREAD
+            DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
             pthread_join((pthread_t)service->daemon->threadid, NULL);
+            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
             pthread_detach((pthread_t)service->daemon->threadid);
+            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
 #endif
+            DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
         if(service->procthreads && service->nprocthreads > 0)
         {
