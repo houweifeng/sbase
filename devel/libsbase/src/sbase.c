@@ -101,6 +101,7 @@ void sbase_evtimer_handler(void *arg)
 	SBASE *sbase = NULL;
 	if((sbase = (SBASE *)arg))
 	{
+        fprintf(stdout, "Ready for stop sbase\n");
 		sbase->running_status = 0;
 	}
 	return ;
@@ -207,19 +208,30 @@ void sbase_clean(SBASE **psbase)
 
     if(psbase && *psbase)
     {
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*psbase)->services) 
         {
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             for(i = 0; i < (*psbase)->running_services; i++)
             {
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
                 if((*psbase)->services[i])
                     (*psbase)->services[i]->clean(&((*psbase)->services[i]));
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             }
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
             free((*psbase)->services);
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         }
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*psbase)->evbase){(*psbase)->evbase->clean(&((*psbase)->evbase));}
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         if((*psbase)->message_queue){QUEUE_CLEAN((*psbase)->message_queue);}
+        fprintf(stdout, "%s::%d::OK\n", __FILE__, __LINE__);
         free(*psbase);
         *psbase = NULL;
     }
