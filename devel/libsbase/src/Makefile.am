@@ -32,5 +32,3 @@ sd_LDFLAGS = -static
 lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
-
-
