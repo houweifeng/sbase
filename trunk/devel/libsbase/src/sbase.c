@@ -101,7 +101,7 @@ void sbase_evtimer_handler(void *arg)
 	SBASE *sbase = NULL;
 	if((sbase = (SBASE *)arg))
 	{
-        fprintf(stdout, "Ready for stop sbase\n");
+                fprintf(stdout, "%s::%d::Ready for stop sbase\n", __FILE__, __LINE__);
 		sbase->running_status = 0;
 	}
 	return ;
@@ -190,6 +190,7 @@ void sbase_stop(SBASE *sbase)
     if(sbase)
     {
         sbase->running_status = 0;
+	//fprintf(stdout, "%d::%d\n", __LINE__, sbase->running_services);
         for(i = 0; i < sbase->running_services; i++)
         {
             if(sbase->services[i])
