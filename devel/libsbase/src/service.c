@@ -14,7 +14,7 @@
 int service_set(SERVICE *service)
 {
     char *p = NULL;
-    int ret = -1, opt = 1;
+    int ret = -1, opt = 1, flag = 0;
 
     if(service)
     {
@@ -26,8 +26,10 @@ int service_set(SERVICE *service)
         if(service->backlog <= 0) service->backlog = SB_CONN_MAX;
         if(service->service_type == S_SERVICE)
         {
+            flag = fcntl(service->fd, F_GETFL, 0);
+            flag |= O_NONBLOCK;
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0 
-                    && fcntl(service->fd, F_SETFL, O_NONBLOCK) == 0
+                    && fcntl(service->fd, F_SETFL, flag) == 0
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
@@ -306,7 +308,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
     CONN *conn = NULL;
     struct sockaddr_in rsa, lsa;
     socklen_t lsa_len = sizeof(lsa);
-    int fd = -1, family = -1, sock_type = -1, remote_port = -1, local_port = -1;
+    int fd = -1, family = -1, sock_type = -1, remote_port = -1, local_port = -1, flag = 0;
     char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
 
@@ -322,7 +324,9 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             rsa.sin_family = family;
             rsa.sin_addr.s_addr = inet_addr(remote_ip);
             rsa.sin_port = htons(remote_port);
-            if(fcntl(fd, F_SETFL, O_NONBLOCK) == 0 
+            flag = fcntl(fd, F_GETFL, 0);
+            flag |= O_NONBLOCK;
+            if(fcntl(fd, F_SETFL, flag) == 0 
                     && (connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
                         || errno == EINPROGRESS))
             {
