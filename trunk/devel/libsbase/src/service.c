@@ -365,6 +365,12 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
 
     if(service && service->lock == 0 && parent)
     {
+        if(parent && (conn = parent->session.child) 
+                && strcmp(conn->remote_ip, inet_ip) == 0 
+                && conn->remote_port == inet_port)
+        {
+            return conn;
+        }
         family  = (inet_family > 0 ) ? inet_family : service->family;
         sock_type = (socket_type > 0 ) ? socket_type : service->sock_type;
         remote_ip = (inet_ip) ? inet_ip : service->ip;
