@@ -97,6 +97,14 @@ if test "$havepthread" = "yes" ; then
         LDFLAGS="${LDFLAGS} -lpthread"
 fi
 
+#ssl
+havessl=no
+AC_CHECK_LIB(ssl, SSL_read, havessl=yes)
+if test "$havessl" = "yes" ; then
+        CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
+        LDFLAGS="${LDFLAGS} -lssl"
+fi
+
 AC_CHECK_EXTRA_OPTIONS
 
 # Checks for library functions.
