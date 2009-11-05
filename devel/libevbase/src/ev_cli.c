@@ -11,6 +11,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#ifdef HAVE_SSL
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+#endif
 #include "evbase.h"
 #include "log.h"
 #include "logger.h"
@@ -21,11 +27,24 @@
 #endif
 #define EV_BUF_SIZE 1024
 static EVBASE *evbase = NULL;
-static char buffer[CONN_MAX][EV_BUF_SIZE];
-static EVENT *events[CONN_MAX];
 static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
 static int ev_sock_count  = 2;
+static int is_use_ssl = 1;
+#ifdef HAVE_SSL
+static SSL_CTX *ctx = NULL;
+#endif
+typedef struct _CONN
+{
+    int fd;
+    EVENT *event;
+    char request[EV_BUF_SIZE];
+    char response[EV_BUF_SIZE];
+#ifdef HAVE_SSL
+    SSL *ssl;
+#endif
+}CONN;
+static CONN *conns = NULL;
 
 int setrlimiter(char *name, int rlimit, int nset)
 {
@@ -61,14 +80,15 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
     socklen_t rsa_len = sizeof(struct sockaddr);
     if(ev_flags & E_READ)
     {
-        if( ( n = recvfrom(fd, buffer[fd], EV_BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
+        if( ( n = recvfrom(fd, conns[fd].response, EV_BUF_SIZE - 1, 
+                        0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
         {
             SHOW_LOG("Read %d bytes from %d", n, fd);
-            buffer[fd][n] = 0;
-            SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
-            if(events[fd])
+            conns[fd].response[n] = 0;
+            SHOW_LOG("Updating event[%p] on %d ", conns[fd].event, fd);
+            if(conns[fd].event)
             {
-                events[fd]->add(events[fd], E_WRITE);	
+                conns[fd].event->add(conns[fd].event, E_WRITE);	
             }
         }		
         else
@@ -80,7 +100,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
     }
     if(ev_flags & E_WRITE)
     {
-        if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
+        if(  (n = write(fd, conns[fd].request, strlen(conns[fd].request)) ) > 0 )
         {
             SHOW_LOG("Wrote %d bytes via %d", n, fd);
         }
@@ -90,15 +110,15 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                 FATAL_LOG("Wrote data via %d failed, %s", fd, strerror(errno));	
             goto err;
         }
-        if(events[fd]) events[fd]->del(events[fd], E_WRITE);
+        if(conns[fd].event) conns[fd].event->del(conns[fd].event, E_WRITE);
     }
     return ;
 err:
     {
-        if(events[fd])
+        if(conns[fd].event)
         {
-            events[fd]->destroy(events[fd]);
-            events[fd] = NULL;
+            conns[fd].event->destroy(conns[fd].event);
+            conns[fd].event = NULL;
             shutdown(fd, SHUT_RDWR);
             close(fd);
             SHOW_LOG("Connection %d closed", fd);
@@ -112,14 +132,26 @@ void ev_handler(int fd, short ev_flags, void *arg)
     int n = 0;
     if(ev_flags & E_READ)
     {
-        if( ( n = read(fd, buffer[fd], EV_BUF_SIZE)) > 0 )
+        if(is_use_ssl)
+        {
+#ifdef HAVE_SSL
+            n = SSL_read(conns[fd].ssl, conns[fd].response, EV_BUF_SIZE - 1);
+#else
+            n = read(fd, conns[fd].response, EV_BUF_SIZE - 1);
+#endif
+        }
+        else
+        {
+            n = read(fd, conns[fd].response, EV_BUF_SIZE - 1);
+        }
+        if(n > 0 )
         {
             SHOW_LOG("Read %d bytes from %d", n, fd);
-            buffer[fd][n] = 0;
-            SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
-            if(events[fd])
+            conns[fd].response[n] = 0;
+            SHOW_LOG("Updating event[%p] on %d ", conns[fd].event, fd);
+            if(conns[fd].event)
             {
-                events[fd]->add(events[fd], E_WRITE);	
+                conns[fd].event->add(conns[fd].event, E_WRITE);	
             }
         }		
         else
@@ -131,7 +163,20 @@ void ev_handler(int fd, short ev_flags, void *arg)
     }
     if(ev_flags & E_WRITE)
     {
-        if(  (n = write(fd, buffer[fd], strlen(buffer[fd])) ) > 0 )
+        if(is_use_ssl)
+        {
+#ifdef HAVE_SSL
+            n = SSL_write(conns[fd].ssl, conns[fd].request, strlen(conns[fd].request));
+#else
+            n = write(fd, conns[fd].request, strlen(conns[fd].request));
+#endif
+        }
+        else
+        {
+            n = write(fd, conns[fd].request, strlen(conns[fd].request));
+        }
+
+        if(n > 0 )
         {
             SHOW_LOG("Wrote %d bytes via %d", n, fd);
         }
@@ -141,15 +186,15 @@ void ev_handler(int fd, short ev_flags, void *arg)
                 FATAL_LOG("Wrote data via %d failed, %s", fd, strerror(errno));	
             goto err;
         }
-        if(events[fd]) events[fd]->del(events[fd], E_WRITE);
+        if(conns[fd].event) conns[fd].event->del(conns[fd].event, E_WRITE);
     }
     return ;
 err:
     {
-        if(events[fd])
+        if(conns[fd].event)
         {
-            events[fd]->destroy(events[fd]);
-            events[fd] = NULL;
+            conns[fd].event->destroy(conns[fd].event);
+            conns[fd].event = NULL;
             shutdown(fd, SHUT_RDWR);
             close(fd);
             SHOW_LOG("Connection %d closed", fd);
@@ -188,55 +233,118 @@ int main(int argc, char **argv)
     /* Set resource limit */
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
     /* Initialize global vars */
-    memset(events, 0, sizeof(EVENT *) * CONN_MAX);
-    /* Initialize inet */ 
-    memset(&sa, 0, sizeof(struct sockaddr_in));	
-    sa.sin_family = AF_INET;
-    sa.sin_addr.s_addr = inet_addr(ip);
-    sa.sin_port = htons(port);
-    sa_len = sizeof(struct sockaddr);
-    /* set evbase */
-    if((evbase = evbase_init()))
+    if((conns = (CONN *)calloc(CONN_MAX, sizeof(CONN))))
     {
-        LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
-        //evbase->set_evops(evbase, EOP_POLL);
-        while((fd = socket(AF_INET, sock_type, 0)) > 0 && fd < conn_num)
+        //memset(events, 0, sizeof(EVENT *) * CONN_MAX);
+        /* Initialize inet */ 
+        memset(&sa, 0, sizeof(struct sockaddr_in));	
+        sa.sin_family = AF_INET;
+        sa.sin_addr.s_addr = inet_addr(ip);
+        sa.sin_port = htons(port);
+        sa_len = sizeof(struct sockaddr);
+        /* set evbase */
+        if((evbase = evbase_init()))
         {
-            /* Connect */
-            if(connect(fd, (struct sockaddr *)&sa, sa_len) == 0 )
+            LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
+#ifdef HAVE_SSL
+            SSL_load_error_strings();
+            SSL_library_init();
+            ctx = SSL_CTX_new(SSLv23_client_method());
+#endif
+            //evbase->set_evops(evbase, EOP_POLL);
+            while((fd = socket(AF_INET, sock_type, 0)) > 0 && fd < CONN_MAX)
             {
+                conns[fd].fd = fd;
+                if(is_use_ssl && sock_type == SOCK_STREAM)
+                {
+#ifdef HAVE_SSL
+                    if(ctx == NULL)
+                    {
+                        FATAL_LOG("init SSL CTX failed:%s",
+                                ERR_reason_error_string(ERR_get_error()));
+                        break;
+                    }
+                    conns[fd].ssl = SSL_new(ctx);
+                    if(conns[fd].ssl == NULL )
+                    {
+                        FATAL_LOG("new SSL with created CTX failed:%s",
+                                ERR_reason_error_string(ERR_get_error()));
+                        break;
+                    }
+                    if((ret = SSL_set_fd(conns[fd].ssl, fd)) == 0)
+                    {
+                        FATAL_LOG("add SSL to tcp socket failed:%s",
+                                ERR_reason_error_string(ERR_get_error()));
+                        break;
+                    }
+                    /* SSL Connect */
+                    if(SSL_connect(conns[fd].ssl) != 1 )
+                    {
+                        FATAL_LOG("SSL connection failed:%s",
+                                ERR_reason_error_string(ERR_get_error()));
+                    }
+                    goto fd_setting;
+#endif
+                }
+                /* Connect */
+                if(connect(fd, (struct sockaddr *)&sa, sa_len) != 0)
+                {
+                    FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
+                    break;
+                }
+fd_settting:
                 /* set FD NON-BLOCK */
                 fcntl(fd, F_SETFL, O_NONBLOCK);
-                if((events[fd] = ev_init()))
+                if((conns[fd].event = ev_init()))
                 {
                     if(sock_type == SOCK_STREAM)
                     {
-                        events[fd]->set(events[fd], fd, E_READ|E_WRITE|E_PERSIST, 
-                                (void *)events[fd], &ev_handler);
+                        conns[fd].event->set(conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
+                                (void *)conns[fd].event, &ev_handler);
                     }
                     else
                     {
-                        events[fd]->set(events[fd], fd, E_READ|E_WRITE|E_PERSIST, 
-                                (void *)events[fd], &ev_udp_handler);
+                        conns[fd].event->set(conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
+                                (void *)conns[fd].event, &ev_udp_handler);
                     }
-                    evbase->add(evbase, events[fd]);
-                    sprintf(buffer[fd], "%d:client message\r\n", fd);
+                    evbase->add(evbase, conns[fd].event);
+                    sprintf(conns[fd].request, "%d:client message\r\n", fd);
                 }
                 lsa_len = sizeof(struct sockaddr);
                 memset(&lsa, 0, lsa_len);
                 getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
                 SHOW_LOG("Connected to %s:%d via %d port:%d", ip, port, fd, ntohs(lsa.sin_port));
             }
-            else
+            while(1)
             {
-                FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
-                break;
+                evbase->loop(evbase, 0, NULL);
+                usleep(10);
             }
+            for(i = 0; i < CONN_MAX; i++)
+            {
+                if(conns[i].event)
+                {
+                    showdown(conns[i].fd, SHUT_RDWR);
+                    close(conns[i].fd);
+                    conns[i].event->destroy(conns[i].event);
+                    conns[i].event = NULL;
+                }
+#ifdef HAVE_SSL
+                if(conns[i].ssl)
+                {
+                    SSL_shutdown(conns[i].ssl);
+                    SSL_free(conns[i].ssl); 
+                }
+                if(conns[i].ctx)
+                {
+                    SSL_CTX_free(conns[i].ctx);
+                }
+#endif
+            }
+#ifdef HAVE_SSL
+            ERR_free_strings();
+#endif
         }
-        while(1)
-        {
-            evbase->loop(evbase, 0, NULL);
-            usleep(10);
-        }
+        free(conns);
     }
 }
