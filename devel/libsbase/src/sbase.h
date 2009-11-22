@@ -10,6 +10,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <evbase.h>
+#ifdef HAVE_SSL
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
+#endif
 #ifndef _SBASE_H
 #define _SBASE_H
 #ifdef __cplusplus
@@ -46,10 +52,13 @@ extern "C" {
 #define S_STATE_WRITE_STATE     0x04
 #define S_STATE_PACKET_HANDLING 0x08
 #define S_STATE_DATA_HANDLING   0x10
-#define S_STATE_REQ             0x12
-#define S_STATE_CLOSE           0x64
+#define S_STATE_REQ             0x20
+#define S_STATE_CLOSE           0x40
+#define S_STATE_RCLOSE          0x80
+#define S_STATE_WCLOSE          0x100
 #define S_STATES    (S_STATE_READY | S_STATE_READ_CHUNK | S_STATE_WRITE_STATE \
-        S_STATE_PACKET_HANDLING | S_STATE_DATA_HANDLING | S_STATE_REQ | S_STATE_CLOSE )
+        | S_STATE_PACKET_HANDLING | S_STATE_DATA_HANDLING | S_STATE_REQ | S_STATE_CLOSE \
+        | S_STATE_RCLOSE | S_STATE_WCLOSE)
 #endif
 /* packet type list*/
 #define PACKET_CUSTOMIZED       0x01
@@ -160,9 +169,15 @@ typedef struct _SERVICE
     struct  sockaddr_in sa;
     char *ip;
     char *multicast;
-    int port;
     int fd;
     int backlog;
+    short port;
+    /* SSL */
+    short is_use_ssl;
+#ifdef HAVE_SSL
+    SSL *ssl;
+    SSL_CTX *ctx;
+#endif
 
     /* service option */
     int service_type;
