@@ -25,10 +25,7 @@ extern "C" {
 #define MESSAGE_TIMEOUT         0x400
 #define MESSAGE_STOP            0x800
 #define MESSAGE_PROXY           0x1000
-#define MESSAGE_ALL		(MESSAGE_QUIT | MESSAGE_NEW_SESSION | MESSAGE_INPUT | MESSAGE_OUTPUT \
-				| MESSAGE_PACKET | MESSAGE_DATA | MESSAGE_TRANSACTION| MESSAGE_TASK \
-                | MESSAGE_HEARTBEAT | MESSAGE_STATE | MESSAGE_TIMEOUT | MESSAGE_STOP \
-                | MESSAGE_PROXY)
+#define MESSAGE_ALL		        0x1fff
 static char *messagelist[] = 
 {
 	"MESSAGE_NEW_SESSION",

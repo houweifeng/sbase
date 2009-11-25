@@ -314,6 +314,9 @@ int conn_timeout_handler(CONN *conn)
         }
         else
         {
+            DEBUG_LOGGER(conn->logger, "TIMEOUT[%d]-close connection on remote[%s:%d] "
+                    "local[%s:%d] via %d", conn->timeout, conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port, conn->fd);
             CONN_TERMINATE(conn, S_STATE_CLOSE);
         }
     }
@@ -612,12 +615,12 @@ int conn_packet_handler(CONN *conn)
     if(conn && conn->session.packet_handler)
     {
 
-        DEBUG_LOGGER(conn->logger, "packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         ret = conn->session.packet_handler(conn, PCB(conn->packet));
-        DEBUG_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->s_state == S_STATE_PACKET_HANDLING)
         {
-            DEBUG_LOGGER(conn->logger, "Reset packet(%p)[%d] on %s:%d via %d", conn->packet, PCB(conn->packet)->ndata, conn->remote_ip, conn->remote_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "Reset packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
             CONN_STATE_RESET(conn);
             MB_RESET(conn->packet);
         }
@@ -977,6 +980,8 @@ void conn_reset(CONN *conn)
 
     if(conn)
     {
+        DEBUG_LOGGER(conn->logger, "Reset connection[%s:%d] local[%s:%d] via %d",
+                conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* global */
         conn->index = 0;
         /* connection */

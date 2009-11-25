@@ -21,10 +21,11 @@ void message_handler(void *message_queue, void *logger)
     if(message_queue && QTOTAL(message_queue) > 0 
             && QUEUE_POP(message_queue, MESSAGE, &msg) == 0)
     {
-        if(!(msg.msg_id & MESSAGE_ALL)) 
+        if((msg.msg_id & MESSAGE_ALL) != msg.msg_id) 
         {
-            FATAL_LOGGER(logger, "Invalid message[%d] handler[%p] parent[%p] fd[%d]",
-                    msg.msg_id, msg.handler, msg.parent, msg.fd);
+            FATAL_LOGGER(logger, "Invalid message[%04x:%04x:%04x] handler[%p] parent[%p] fd[%d]",
+                    msg.msg_id, MESSAGE_ALL, (msg.msg_id & MESSAGE_ALL), msg.handler, 
+                    msg.parent, msg.fd);
             goto next;
         }
         conn = (CONN *)(msg.handler);
