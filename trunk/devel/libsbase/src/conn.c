@@ -438,7 +438,7 @@ int conn_read_handler(CONN *conn)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno), conn->s_state, (flag & conn->s_state));
             /* Terminate connection */
-            CONN_TERMINATE(conn, S_STATE_WCLOSE);
+            CONN_TERMINATE(conn, S_STATE_WCLOSE|S_STATE_RCLOSE);
             return (ret = 0);
         }
         conn->recv_data_total += n;
