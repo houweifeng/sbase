@@ -28,6 +28,7 @@
         {                                                                                   \
             conn->push_message(conn, MESSAGE_QUIT);                                         \
             conn->s_state |= _state_;                                                       \
+            if(conn->event)conn->event->del(conn->event, E_WRITE|E_READ);                   \
         }                                                                                   \
     }                                                                                       \
 }
