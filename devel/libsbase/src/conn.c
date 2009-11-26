@@ -13,19 +13,22 @@
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
     if(conn == NULL ) return ret;                                                           \
-    if(conn->s_state & _state_) return ret;                                                 \
+    if(conn->s_state & (_state_)) return ret;                                               \
 }
 #define CONN_CHECK(conn, _state_)                                                           \
 {                                                                                           \
     if(conn == NULL) return ;                                                               \
-    if(conn->s_state & _state_) return ;                                                    \
+    if(conn->s_state & (_state_)) return ;                                                  \
 }
 #define CONN_TERMINATE(conn, _state_)                                                       \
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        conn->push_message(conn, MESSAGE_QUIT);                                             \
-        conn->s_state |= _state_;                                                           \
+        if(!(conn->s_state & (_state_)))                                                    \
+        {                                                                                   \
+            conn->push_message(conn, MESSAGE_QUIT);                                         \
+            conn->s_state |= _state_;                                                       \
+        }                                                                                   \
     }                                                                                       \
 }
 #define CONN_STATE_RESET(conn)                                                              \
@@ -210,6 +213,7 @@ int conn_terminate(CONN *conn)
 
     if(conn)
     {
+        conn->s_state = S_STATE_CLOSE;
         if(conn->c_state == C_STATE_USING && conn->session.error_handler)
         {
             DEBUG_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", 
