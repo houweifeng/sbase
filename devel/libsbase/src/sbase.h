@@ -56,16 +56,14 @@ extern "C" {
 #define S_STATE_CLOSE           0x40
 #define S_STATE_RCLOSE          0x80
 #define S_STATE_WCLOSE          0x100
-#define S_STATES    (S_STATE_READY | S_STATE_READ_CHUNK | S_STATE_WRITE_STATE \
-        | S_STATE_PACKET_HANDLING | S_STATE_DATA_HANDLING | S_STATE_REQ | S_STATE_CLOSE \
-        | S_STATE_RCLOSE | S_STATE_WCLOSE)
+#define S_STATES                0x1fe
 #endif
 /* packet type list*/
 #define PACKET_CUSTOMIZED       0x01
 #define PACKET_CERTAIN_LENGTH   0x02
 #define PACKET_DELIMITER        0x04
 #define PACKET_PROXY            0x08
-#define PACKET_ALL (PACKET_CUSTOMIZED | PACKET_CERTAIN_LENGTH | PACKET_DELIMITER | PACKET_PROXY)
+#define PACKET_ALL              0x0f
 struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;

@@ -403,8 +403,9 @@ int conn_push_message(CONN *conn, int message_id)
 /* read handler */
 int conn_read_handler(CONN *conn)
 {
-    int ret = -1, n = -1;
-    CONN_CHECK_RET(conn, (S_STATE_RCLOSE|S_STATE_CLOSE), ret);
+    int ret = -1, n = -1, flag = (S_STATE_RCLOSE|S_STATE_CLOSE);
+
+    CONN_CHECK_RET(conn, flag, ret);
 
     if(conn)
     {
@@ -431,11 +432,11 @@ int conn_read_handler(CONN *conn)
         /* Receive normal data */
         if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
         {
-            FATAL_LOGGER(conn->logger, "Reading %d bytes ptr:%p left:%d "
-                    "data from %s:%d on %s:%d via %d failed, %s",
+            FATAL_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
+                    "from %s:%d on %s:%d via %d failed, %s s_state[%d][%d]",
                     n, MB_END(conn->buffer), MB_LEFT(conn->buffer), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
-                    conn->fd, strerror(errno));
+                    conn->fd, strerror(errno), conn->s_state, (flag & conn->s_state));
             /* Terminate connection */
             CONN_TERMINATE(conn, S_STATE_WCLOSE);
             return (ret = 0);
