@@ -855,7 +855,7 @@ int conn_recv_chunk(CONN *conn, int size)
 {
     int ret = -1, n = -1;
     CHUNK *cp = NULL;
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE|S_STATE_RCLOSE), ret);
+    CONN_CHECK_RET(conn, S_STATE_CLOSE, ret);
 
     if(conn && conn->chunk)
     {
@@ -902,7 +902,7 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
 {
     int ret = -1, n = -1;
     CHUNK *cp = NULL;
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE|S_STATE_RCLOSE), ret);
+    CONN_CHECK_RET(conn, (S_STATE_CLOSE), ret);
 
     if(conn && conn->chunk && filename && offset >= 0 && size > 0)
     {
