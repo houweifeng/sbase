@@ -135,6 +135,11 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 conn->write_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
+            /*
+            fprintf(stdout, "%s::%d event:%d on remote[%s:%d] local[%s:%d] via %d\n",
+                    __FILE__, __LINE__, event, conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port, conn->fd);
+            */
             CONN_EVTIMER_SET(conn);
         }
     }
@@ -265,10 +270,10 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
     if(conn && timeout_usec > 0)
     {
         conn->timeout = timeout_usec;
-        DEBUG_LOGGER(conn->logger, "set evtimer[%p](%d) on %s:%d local[%s:%d] via %d", 
-                PPL(conn->evtimer), conn->timeout, conn->remote_ip, conn->remote_port, 
-                conn->local_ip, conn->local_port, conn->fd);
         CONN_EVTIMER_SET(conn);
+        DEBUG_LOGGER(conn->logger, "set evtimer[%p] timeout[%d] evid:%d "
+                "on %s:%d local[%s:%d] via %d", PPL(conn->evtimer), conn->timeout, conn->evid,
+                conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
     }
     return ret;
 }
@@ -473,13 +478,13 @@ int conn_write_handler(CONN *conn)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE), ret);
 
-    if(conn && conn->send_queue && QTOTAL(conn->send_queue) > 0)
+    if(conn && conn->send_queue)
     {
         DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d on %s:%d via %d "
                 "qtotal:%d qhead:%d qcount:%d", conn->remote_ip, conn->remote_port,
                 conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
                 QHEAD(conn->send_queue), QCOUNT(conn->send_queue));   
-        if(QUEUE_HEAD(conn->send_queue, PCHUNK, &cp) == 0)
+        if(QTOTAL(conn->send_queue) > 0 && QUEUE_HEAD(conn->send_queue, PCHUNK, &cp) == 0)
         {
             DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d "
                     "on %s:%d via %d qtotal:%d pcp:%p", conn->remote_ip, conn->remote_port,

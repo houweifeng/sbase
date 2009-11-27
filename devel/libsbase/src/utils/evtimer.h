@@ -114,8 +114,8 @@ do{                                                                             
             }                                                                           \
         }                                                                               \
         if(PEVT_HEAD(ptr)) PEVT_HEAD(ptr)->prev = NULL;                                 \
+        if(evnode->ison == 0 )PEVT_NQ(ptr)++;                                           \
         evnode->ison = 1;                                                               \
-        PEVT_NQ(ptr)++;                                                                 \
     }                                                                                   \
 }while(0)
 
@@ -156,6 +156,12 @@ do{                                                                             
 }while(0)
 
 /* evtimer update */
+/***
+ *
+ *
+fprintf(stdout, "%s::%d update evtimer[%d] head:%p, total:%d\n", __FILE__, __LINE__, evid, PEVT_HEAD(ptr), PEVT_NQ(ptr));\
+
+ */
 #define EVTIMER_UPDATE(ptr, evid, evtime, evhandler, evarg)                             \
 do{                                                                                     \
     MUTEX_LOCK(PEVT(ptr)->mutex);                                                       \
@@ -195,6 +201,10 @@ do{                                                                             
 }while(0)
 
 /* evtimer check */
+/*
+ *
+fprintf(stdout, "%s::%d check evtimer head:%p, total:%d\n", __FILE__, __LINE__, PEVT_HEAD(ptr), PEVT_NQ(ptr));\
+ * */
 #define EVTIMER_CHECK(ptr)                                                              \
 do{                                                                                     \
     MUTEX_LOCK(PEVT(ptr)->mutex);                                                       \
