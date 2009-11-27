@@ -54,9 +54,14 @@ extern "C" {
 #define S_STATE_DATA_HANDLING   0x10
 #define S_STATE_REQ             0x20
 #define S_STATE_CLOSE           0x40
-#define S_STATE_RCLOSE          0x80
-#define S_STATE_WCLOSE          0x100
-#define S_STATES                0x1fe
+#define S_STATES                0x7e
+#endif
+#ifndef D_STATES
+#define D_STATE_FREE            0x00
+#define D_STATE_RCLOSE          0x02
+#define D_STATE_WCLOSE          0x04
+#define D_STATE_CLOSE           0x08
+#define D_STATES                0x0e
 #endif
 /* packet type list*/
 #define PACKET_CUSTOMIZED       0x01
@@ -291,6 +296,8 @@ typedef struct _CONN
 {
     /* global */
     int index;
+    /* die state */
+    int d_state;
     void *parent;
 
     /* conenction */
@@ -344,7 +351,7 @@ typedef struct _CONN
     int (*start_cstate)(struct _CONN *);
     int (*over_cstate)(struct _CONN *);
 
-    /* transaction */
+    /* transaction/session */
     int s_id;
     int s_state;
 
