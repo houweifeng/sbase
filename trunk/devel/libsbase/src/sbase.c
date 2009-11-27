@@ -169,6 +169,7 @@ running:
             //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
             EVTIMER_CHECK(sbase->evtimer);
+            //EVTIMER_LIST(sbase->evtimer, stdout);
             //running message queue
             if(QTOTAL(sbase->message_queue) > 0)
             {
