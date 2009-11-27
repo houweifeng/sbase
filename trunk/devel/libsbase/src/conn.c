@@ -13,28 +13,28 @@
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
     if(conn == NULL ) return ret;                                                           \
-    if(conn->s_state & (_state_)) return ret;                                               \
+    if(conn->d_state & (_state_)) return ret;                                               \
 }
 #define CONN_CHECK(conn, _state_)                                                           \
 {                                                                                           \
     if(conn == NULL) return ;                                                               \
-    if(conn->s_state & (_state_)) return ;                                                  \
+    if(conn->d_state & (_state_)) return ;                                                  \
 }
 #define CONN_TERMINATE(conn, _state_)                                                       \
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        if(!(conn->s_state & (_state_)))                                                    \
+        if(!(conn->d_state & (_state_)))                                                    \
         {                                                                                   \
             conn->push_message(conn, MESSAGE_QUIT);                                         \
-            conn->s_state |= _state_;                                                       \
+            conn->d_state |= _state_;                                                       \
             if(conn->event)conn->event->del(conn->event, E_WRITE|E_READ);                   \
         }                                                                                   \
     }                                                                                       \
 }
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
-    if(conn && !(conn->s_state & (S_STATE_CLOSE|S_STATE_RCLOSE|S_STATE_WCLOSE)))            \
+    if(conn && (conn->d_state == 0))                                                        \
     {                                                                                       \
         conn->s_state = 0;                                                                  \
     }                                                                                       \
@@ -49,7 +49,7 @@
             FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d "                  \
                     "on %s:%d via %d failed, %s", n, conn->remote_ip, conn->remote_port,    \
                     conn->local_ip, conn->local_port, conn->fd, strerror(errno));           \
-            CONN_TERMINATE(conn, S_STATE_CLOSE);                                            \
+            CONN_TERMINATE(conn, D_STATE_CLOSE);                                            \
             return -1;                                                                      \
         }                                                                                   \
         DEBUG_LOGGER(conn->logger, "Read %d bytes ndata:%d left:%lld to chunk from %s:%d"   \
@@ -105,7 +105,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                             "connectting failed,  %s", conn->fd, conn->remote_ip, conn->remote_port,
                             conn->local_ip, conn->local_port, strerror(errno));
                     conn->status = CONN_STATUS_CLOSED;
-                    CONN_TERMINATE(conn, S_STATE_CLOSE);          
+                    CONN_TERMINATE(conn, D_STATE_CLOSE);          
                     return ;
                 }
                 DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
@@ -117,7 +117,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
             if(event & E_CLOSE)
             {
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
-                CONN_TERMINATE(conn, S_STATE_CLOSE);          
+                CONN_TERMINATE(conn, D_STATE_CLOSE);          
                 //conn->push_message(conn, MESSAGE_QUIT);
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d OVER ", E_CLOSE, event_fd);
             }
@@ -172,7 +172,7 @@ int conn_set(CONN *conn)
             FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or"
                     "initialize event failed, %s", PPL(conn), conn->fd, strerror(errno));	
             /* Terminate connection */
-            CONN_TERMINATE(conn, S_STATE_CLOSE);
+            CONN_TERMINATE(conn, D_STATE_CLOSE);
         }
     }	
     return -1;	
@@ -181,10 +181,10 @@ int conn_set(CONN *conn)
 /* close connection */
 int conn_close(CONN *conn)
 {
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
     if(conn)
     {
-        CONN_TERMINATE(conn, S_STATE_CLOSE);
+        CONN_TERMINATE(conn, D_STATE_CLOSE);
         return 0;
     }
     return -1;
@@ -194,13 +194,13 @@ int conn_close(CONN *conn)
 /* over connection */
 int conn_over(CONN *conn)
 {
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
     if(conn)
     {
         conn->i_state = C_STATE_OVER;
         if(QTOTAL(conn->send_queue) <= 0)
         {
-            CONN_TERMINATE(conn, S_STATE_CLOSE);
+            CONN_TERMINATE(conn, D_STATE_CLOSE);
         }
         return 0;
     }
@@ -214,7 +214,7 @@ int conn_terminate(CONN *conn)
 
     if(conn)
     {
-        conn->s_state = S_STATE_CLOSE;
+        conn->d_state = D_STATE_CLOSE;
         if(conn->c_state == C_STATE_USING && conn->session.error_handler)
         {
             DEBUG_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", 
@@ -243,7 +243,7 @@ void conn_evtimer_handler(void *arg)
 {
     CONN *conn = (CONN *)arg;
 
-    CONN_CHECK(conn, S_STATE_CLOSE);
+    CONN_CHECK(conn, D_STATE_CLOSE);
 
     if(conn)
     {
@@ -261,7 +261,7 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
 {
     int ret = -1;
 
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
     if(conn && timeout_usec > 0)
     {
         conn->timeout = timeout_usec;
@@ -276,7 +276,7 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
 /* set evstate as wait*/
 int conn_wait_evstate(CONN *conn)
 {
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
     if(conn)
     {
         conn->evstate = EVSTATE_WAIT;
@@ -288,7 +288,7 @@ int conn_wait_evstate(CONN *conn)
 /* over evstate */
 int conn_over_evstate(CONN *conn)
 {
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
     if(conn)
     {
         conn->evstate = EVSTATE_INIT;
@@ -302,7 +302,8 @@ int conn_timeout_handler(CONN *conn)
 {
     int ret = -1;
 
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
     if(conn)
     {
         if(conn->session.timeout_handler)
@@ -322,7 +323,7 @@ int conn_timeout_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "TIMEOUT[%d]-close connection on remote[%s:%d] "
                     "local[%s:%d] via %d", conn->timeout, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
-            CONN_TERMINATE(conn, S_STATE_CLOSE);
+            CONN_TERMINATE(conn, D_STATE_CLOSE);
         }
     }
     return -1;
@@ -334,7 +335,7 @@ int conn_start_cstate(CONN *conn)
     CHUNK *cp = NULL;
     int ret = -1;
     /* Check connection and transaction state */
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
     if(conn)
     {
@@ -369,7 +370,7 @@ int conn_over_cstate(CONN *conn)
 {
     int ret = -1;
 
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
     if(conn)
     {
         conn->c_state = C_STATE_FREE;
@@ -385,7 +386,8 @@ int conn_push_message(CONN *conn, int message_id)
     MESSAGE msg = {0};
     int ret = -1;
 
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
     if(conn && (message_id & MESSAGE_ALL) )
     {
         msg.msg_id = message_id;
@@ -408,9 +410,9 @@ int conn_push_message(CONN *conn, int message_id)
 /* read handler */
 int conn_read_handler(CONN *conn)
 {
-    int ret = -1, n = -1, flag = (S_STATE_RCLOSE|S_STATE_CLOSE);
+    int ret = -1, n = -1;
 
-    CONN_CHECK_RET(conn, flag, ret);
+    CONN_CHECK_RET(conn, (D_STATE_RCLOSE|D_STATE_CLOSE), ret);
 
     if(conn)
     {
@@ -438,12 +440,12 @@ int conn_read_handler(CONN *conn)
         if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
         {
             FATAL_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
-                    "from %s:%d on %s:%d via %d failed, %s s_state[%d][%d]",
+                    "from %s:%d on %s:%d via %d failed, %s",
                     n, MB_END(conn->buffer), MB_LEFT(conn->buffer), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
-                    conn->fd, strerror(errno), conn->s_state, (flag & conn->s_state));
+                    conn->fd, strerror(errno));
             /* Terminate connection */
-            CONN_TERMINATE(conn, S_STATE_WCLOSE|S_STATE_RCLOSE);
+            CONN_TERMINATE(conn, D_STATE_WCLOSE|D_STATE_RCLOSE);
             return (ret = 0);
         }
         conn->recv_data_total += n;
@@ -469,7 +471,7 @@ int conn_write_handler(CONN *conn)
 {
     int ret = -1, n = 0;
     CHUNK *cp = NULL;
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE|S_STATE_WCLOSE), ret);
+    CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE), ret);
 
     if(conn && conn->send_queue && QTOTAL(conn->send_queue) > 0)
     {
@@ -513,7 +515,7 @@ int conn_write_handler(CONN *conn)
                         conn->remote_ip, conn->remote_port, conn->local_ip, 
                         conn->local_port, conn->fd, strerror(errno));
                 /* Terminate connection */
-                CONN_TERMINATE(conn, S_STATE_CLOSE);
+                CONN_TERMINATE(conn, D_STATE_CLOSE);
             }
         }
         if(QTOTAL(conn->send_queue) <= 0)
@@ -521,7 +523,7 @@ int conn_write_handler(CONN *conn)
             conn->event->del(conn->event, E_WRITE);
             if(conn->i_state == C_STATE_OVER)
             {
-                CONN_TERMINATE(conn, S_STATE_CLOSE);
+                CONN_TERMINATE(conn, D_STATE_CLOSE);
             }
         }
     }
@@ -536,7 +538,7 @@ int conn_packet_reader(CONN *conn)
     char *p = NULL, *e = NULL;
     int packet_type = 0;
 
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE|S_STATE_RCLOSE), -1);
+    CONN_CHECK_RET(conn, (D_STATE_CLOSE), -1);
 
     if(conn)
     {
@@ -551,7 +553,7 @@ int conn_packet_reader(CONN *conn)
                     packet_type, conn->remote_ip, conn->remote_port, conn->local_ip,
                     conn->local_port, conn->fd);
             /* Terminate connection */
-            CONN_TERMINATE(conn, S_STATE_CLOSE);
+            CONN_TERMINATE(conn, D_STATE_CLOSE);
         }
         /* Read packet with customized function from user */
         else if(packet_type & PACKET_CUSTOMIZED && conn->session.packet_reader)
@@ -616,7 +618,6 @@ end:
 int conn_packet_handler(CONN *conn)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, ret);
 
     if(conn && conn->session.packet_handler)
     {
@@ -638,7 +639,6 @@ int conn_packet_handler(CONN *conn)
 int conn_oob_handler(CONN *conn)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE|S_STATE_RCLOSE), ret);
 
     if(conn && conn->session.oob_handler)
     {
@@ -653,7 +653,6 @@ int conn_oob_handler(CONN *conn)
 int conn_data_handler(CONN *conn)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, ret);
 
     if(conn)
     {
@@ -681,7 +680,7 @@ int conn_data_handler(CONN *conn)
 int conn_bind_proxy(CONN *conn, CONN *child)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, ret);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, ret);
 
     if(conn && child)
     {
@@ -784,7 +783,7 @@ int conn_close_proxy(CONN *conn)
 int conn_push_exchange(CONN *conn, void *data, int size)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE|S_STATE_WCLOSE), ret);
+    CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
     if(conn)
     {
@@ -801,7 +800,7 @@ int conn_push_exchange(CONN *conn, void *data, int size)
 int conn_save_cache(CONN *conn, void *data, int size)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, ret);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, ret);
 
     if(conn)
     {
@@ -820,7 +819,6 @@ int conn_chunk_reader(CONN *conn)
 {
     int ret = -1, n = -1;
     CHUNK *cp = NULL;
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, ret);
 
     if(conn && conn->chunk) 
     {
@@ -856,7 +854,6 @@ int conn_recv_chunk(CONN *conn, int size)
 {
     int ret = -1, n = -1;
     CHUNK *cp = NULL;
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, ret);
 
     if(conn && conn->chunk)
     {
@@ -877,7 +874,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
 {
     int ret = -1;
     CHUNK *cp = NULL;
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE|S_STATE_WCLOSE), ret);
+    CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
     if(conn && conn->send_queue && data && size > 0)
     {
@@ -903,7 +900,6 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
 {
     int ret = -1, n = -1;
     CHUNK *cp = NULL;
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE), ret);
 
     if(conn && conn->chunk && filename && offset >= 0 && size > 0)
     {
@@ -925,7 +921,7 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
 {
     int ret = -1;
     CHUNK *cp = NULL;
-    CONN_CHECK_RET(conn, (S_STATE_CLOSE|S_STATE_WCLOSE), ret);
+    CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
     if(conn && conn->send_queue && filename && offset >= 0 && size > 0)
     {
@@ -951,7 +947,7 @@ int conn_set_session(CONN *conn, SESSION *session)
 {
     int ret = -1;
 
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, -1);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
     if(conn && session)
     {
         memcpy(&(conn->session), session, sizeof(SESSION));
@@ -967,7 +963,6 @@ int conn_transaction_handler(CONN *conn, int tid)
 {
 
     int ret = -1;
-    CONN_CHECK_RET(conn, S_STATE_CLOSE, ret);
 
     if(conn)
     {
@@ -990,6 +985,7 @@ void conn_reset(CONN *conn)
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* global */
         conn->index = 0;
+        conn->d_state = 0;
         /* connection */
         conn->fd = 0;
         conn->sock_type = 0;
