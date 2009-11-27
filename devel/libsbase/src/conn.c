@@ -34,7 +34,7 @@
 }
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
-    if(conn && conn->s_state != S_STATE_CLOSE)                                              \
+    if(conn && !(conn->s_state & (S_STATE_CLOSE|S_STATE_RCLOSE|S_STATE_WCLOSE)))            \
     {                                                                                       \
         conn->s_state = 0;                                                                  \
     }                                                                                       \
