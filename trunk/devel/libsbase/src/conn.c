@@ -84,6 +84,15 @@ do{                                                                             
         }                                                                                   \
     }                                                                                       \
 }while(0)
+#define SESSION_RESET(conn)                                                             \
+do                                                                                      \
+{                                                                                       \
+    CONN_STATE_RESET(conn);                                                             \
+    MB_RESET(conn->packet);                                                             \
+    MB_RESET(conn->cache);                                                              \
+    CK_RESET(conn->chunk);                                                              \
+    if(PCB(conn->buffer)->ndata > 0) conn->packet_reader(conn);                         \
+}while(0)
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
 /* connection event handler */
@@ -450,7 +459,7 @@ int conn_read_handler(CONN *conn)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
             /* Terminate connection */
-            CONN_TERMINATE(conn, D_STATE_WCLOSE|D_STATE_RCLOSE);
+            CONN_TERMINATE(conn, (D_STATE_CLOSE|D_STATE_RCLOSE));
             return (ret = 0);
         }
         conn->recv_data_total += n;
@@ -618,7 +627,6 @@ end:
     }
     return len;
 }
-
 /* packet handler */
 int conn_packet_handler(CONN *conn)
 {
@@ -633,8 +641,7 @@ int conn_packet_handler(CONN *conn)
         if(conn->s_state == S_STATE_PACKET_HANDLING)
         {
             DEBUG_LOGGER(conn->logger, "Reset packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
-            CONN_STATE_RESET(conn);
-            MB_RESET(conn->packet);
+            SESSION_RESET(conn);
         }
     }
     return ret;
@@ -675,8 +682,7 @@ int conn_data_handler(CONN *conn)
                     conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
         //reset session
-        CONN_STATE_RESET(conn);
-        MB_RESET(conn->packet);
+        SESSION_RESET(conn);
     }
     return ret;
 }
@@ -860,7 +866,7 @@ int conn_recv_chunk(CONN *conn, int size)
     int ret = -1, n = -1;
     CHUNK *cp = NULL;
 
-    if(conn && conn->chunk)
+    if(conn && conn->chunk && size > 0)
     {
         DEBUG_LOGGER(conn->logger, "Ready for recv chunk size:%d from %s:%d on %s:%d via %d",
                 size, conn->remote_ip, conn->remote_port, 
