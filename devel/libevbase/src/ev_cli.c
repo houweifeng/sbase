@@ -268,7 +268,7 @@ int main(int argc, char **argv)
             }
 #endif
             //evbase->set_evops(evbase, EOP_POLL);
-            while((fd = socket(AF_INET, sock_type, 0)) > 0 && fd < CONN_MAX)
+            while((fd = socket(AF_INET, sock_type, 0)) > 0 && i < conn_num)
             {
                 conns[fd].fd = fd;
                 /* Connect */
@@ -324,7 +324,8 @@ int main(int argc, char **argv)
                 lsa_len = sizeof(struct sockaddr);
                 memset(&lsa, 0, lsa_len);
                 getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
-                SHOW_LOG("Connected to %s:%d via %d port:%d", ip, port, fd, ntohs(lsa.sin_port));
+                SHOW_LOG("%d:Connected to %s:%d via %d port:%d", i, ip, port, fd, ntohs(lsa.sin_port));
+                i++;
             }
             while(1)
             {

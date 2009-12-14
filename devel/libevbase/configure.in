@@ -102,7 +102,7 @@ havessl=no
 AC_CHECK_LIB(ssl, SSL_read, havessl=yes)
 if test "$havessl" = "yes" ; then
         CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
-        LDFLAGS="${LDFLAGS} -lssl"
+        LDFLAGS="${LDFLAGS} -lssl -lcrypto"
 fi
 
 AC_CHECK_EXTRA_OPTIONS

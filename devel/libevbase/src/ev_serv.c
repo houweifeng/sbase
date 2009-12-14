@@ -12,10 +12,9 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #ifdef HAVE_SSL
-#include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <openssl/bio.h>
+#include <openssl/crypto.h>
 #endif
 #include "evbase.h"
 #include "logger.h"
@@ -228,14 +227,23 @@ void ev_handler(int fd, short ev_flags, void *arg)
             if(is_use_ssl)
             {
 #ifdef HAVE_SSL
-                if((conns[rfd].ssl = SSL_new(ctx)) == NULL || SSL_set_fd(conns[rfd].ssl, rfd) == 0)
+                if((conns[rfd].ssl = SSL_new(ctx)) == NULL)
                 {
                     FATAL_LOG("SSL_new() failed, %s", ERR_reason_error_string(ERR_get_error()));
                     shutdown(rfd, SHUT_RDWR);
                     close(rfd);
                     return ;
                 }
-                if((SSL_accept(conns[fd].ssl)) <= 0)
+                //set fd
+                if(SSL_set_fd(conns[rfd].ssl, rfd) == 0) 
+                {
+                    ERR_print_errors_fp(stdout);
+                    shutdown(rfd, SHUT_RDWR);
+                    close(rfd);
+                    return ;
+                }
+                //ssl accept 
+                if((SSL_accept(conns[rfd].ssl)) <= 0)
                 {
                     FATAL_LOG("SSL_Accept connection %s:%d via %d failed, %s",
                             inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port),
@@ -374,9 +382,9 @@ int main(int argc, char **argv)
     if((conns = (CONN *)calloc(CONN_MAX, sizeof(CONN))))
     {
 #ifdef HAVE_SSL
-        SSL_load_error_strings();
-        OpenSSL_add_all_algorithms();
         SSL_library_init();
+        OpenSSL_add_all_algorithms();
+        SSL_load_error_strings();
         ctx = SSL_CTX_new(SSLv23_server_method());
         if(ctx == NULL)
         {
@@ -478,6 +486,7 @@ int main(int argc, char **argv)
             }
         }
         SHOW_LOG("Initialize evbase ");
+        /*
         for(i = 0; i < nprocess; i++)
         {
             pid = fork();
@@ -498,6 +507,7 @@ int main(int argc, char **argv)
         }
         return 0;
 running:
+        */
         /* set evbase */
         if((evbase = evbase_init()))
         {
@@ -516,7 +526,7 @@ running:
                 while(1)
                 {
                     evbase->loop(evbase, 0, NULL);
-                    usleep(10);
+                    usleep(1000);
                 }
             }
             else
