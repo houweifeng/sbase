@@ -67,7 +67,7 @@ void message_handler(void *message_queue, void *logger)
                 pth->terminate_connection(pth, conn);
                 break;
             case MESSAGE_INPUT :
-                conn->packet_reader(conn);
+                conn->read_handler(conn);
                 break;
             case MESSAGE_OUTPUT :
                 conn->write_handler(conn);

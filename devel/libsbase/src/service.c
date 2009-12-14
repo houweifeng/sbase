@@ -160,7 +160,7 @@ running_threads:
             {
                 if((service->procthreads[i] = procthread_init()))
                 {
-                    service->procthreads[i]->evbase = service->evbase;
+                    //service->procthreads[i]->evbase = service->evbase;
                     PROCTHREAD_SET(service, service->procthreads[i]);
                 }
                 else
