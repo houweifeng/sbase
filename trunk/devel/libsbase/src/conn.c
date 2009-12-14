@@ -40,12 +40,18 @@
         conn->s_state = 0;                                                                  \
     }                                                                                       \
 }
+#ifdef HAVE_SSL
+#define CHUNK_READING(conn) ((conn->ssl)?CHUNK_READ_SSL(conn->chunk, conn->ssl)              \
+    :CHUNK_READ(conn->chunk, conn->fd))
+#else
+#define CHUNK_READING(conn) CHUNK_READ(conn->chunk, conn->fd)
+#endif
 #define CONN_CHUNK_READ(conn, n)                                                            \
 {                                                                                           \
     /* read to chunk */                                                                     \
     if(conn->s_state == S_STATE_READ_CHUNK)                                                 \
     {                                                                                       \
-        if((n = CHUNK_READ(conn->chunk, conn->fd)) <= 0 && errno != EAGAIN)                 \
+        if((n = CHUNK_READING(conn)) <= 0 && errno != EAGAIN)                               \
         {                                                                                   \
             FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d "                  \
                     "on %s:%d via %d failed, %s", n, conn->remote_ip, conn->remote_port,    \
@@ -246,6 +252,15 @@ int conn_terminate(CONN *conn)
         conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing session[%s:%d] local[%s:%d] via %d",
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        /* SSL */
+        #ifdef HAVE_SSL
+        if(conn->ssl)
+        {
+            SSL_shutdown(conn->ssl);
+            SSL_free(conn->ssl);
+            conn->ssl = NULL;
+        }
+        #endif
         shutdown(conn->fd, SHUT_RDWR);
         close(conn->fd);
         conn->fd = -1;
@@ -457,7 +472,13 @@ int conn_read_handler(CONN *conn)
             return ret;
         }
         /* Receive normal data */
-        if((n = MB_READ(conn->buffer, conn->fd)) <= 0)
+#ifdef HAVE_SSL
+        if(conn->ssl) n = MB_READ_SSL(conn->buffer, conn->ssl);
+        else n = MB_READ(conn->buffer, conn->fd);
+#else
+        n = MB_READ(conn->buffer, conn->fd);
+#endif
+        if(n <= 0)
         {
             FATAL_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
                     "from %s:%d on %s:%d via %d failed, %s",
@@ -504,7 +525,13 @@ int conn_write_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d "
                     "on %s:%d via %d qtotal:%d pcp:%p", conn->remote_ip, conn->remote_port,
                     conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue), PPL(cp));   
-            if((n = CHUNK_WRITE(cp, conn->fd)) > 0)
+#ifdef HAVE_SSL
+            if(conn->ssl) n = CHUNK_WRITE_SSL(cp, conn->ssl);
+            else n = CHUNK_WRITE(cp, conn->fd);
+#else
+            n = CHUNK_WRITE(cp, conn->fd);
+#endif
+            if(n > 0)
             {
                 conn->sent_data_total += n;
                 DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
@@ -1042,7 +1069,15 @@ void conn_reset(CONN *conn)
                 cp  = NULL;
             }
         }
-
+        /* SSL */
+#ifdef HAVE_SSL
+        if(conn->ssl)
+        {
+            SSL_shutdown(conn->ssl);
+            SSL_free(conn->ssl);
+            conn->ssl = NULL;
+        }
+#endif
         /* client transaction state */
         conn->parent = NULL;
         conn->status = 0;

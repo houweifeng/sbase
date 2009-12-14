@@ -10,6 +10,26 @@
 #ifndef UI
 #define UI(_x_) ((unsigned int)(_x_))
 #endif
+#ifdef HAVE_SSL
+#define SERVICE_CHECK_SSL_CLIENT(service)                                           \
+do                                                                                  \
+{                                                                                   \
+    if(service->is_use_SSL)                                                         \
+    {                                                                               \
+        SSL_library_init();                                                         \
+        OpenSSL_add_all_algorithms();                                               \
+        SSL_load_error_strings();                                                   \
+        if((service->c_ctx = SSL_CTX_new(SSLv23_client_method())) == NULL)          \
+        {                                                                           \
+            ERR_print_errors_fp(stdout);                                            \
+            _exit(-1);                                                              \
+        }                                                                           \
+    }                                                                               \
+}while(0)
+#else 
+#define SERVICE_CHECK_SSL_CLIENT(service)
+#endif
+ 
 /* set service */
 int service_set(SERVICE *service)
 {
@@ -24,12 +44,46 @@ int service_set(SERVICE *service)
         service->sa.sin_port = htons(service->port);
         service->connections = (CONN **)calloc(service->connections_limit, sizeof(CONN *));
         if(service->backlog <= 0) service->backlog = SB_CONN_MAX;
+        if(service->is_use_SSL){SERVICE_CHECK_SSL_CLIENT(service);}
         if(service->service_type == S_SERVICE)
         {
-            flag = fcntl(service->fd, F_GETFL, 0);
-            flag |= O_NONBLOCK;
+#ifdef HAVE_SSL
+            if(service->is_use_SSL && service->cacert_file && service->privkey_file)
+            {
+                SSL_library_init();
+                OpenSSL_add_all_algorithms();
+                SSL_load_error_strings();
+                if((service->s_ctx = SSL_CTX_new(SSLv23_server_method())) == NULL)
+                {
+                    ERR_print_errors_fp(stdout);
+                    _exit(-1);
+                }
+                /*load certificate */
+                if (SSL_CTX_use_certificate_file(service->s_ctx, service->cacert_file, 
+                            SSL_FILETYPE_PEM) <= 0)
+                {
+                    ERR_print_errors_fp(stdout);
+                    _exit(-1);
+                }
+                /*load private key file */
+                if (SSL_CTX_use_PrivateKey_file(service->s_ctx, service->privkey_file, 
+                            SSL_FILETYPE_PEM) <= 0)
+                {
+                    ERR_print_errors_fp(stdout);
+                    _exit(-1);
+                }
+                /*check private key file */
+                if (!SSL_CTX_check_private_key(service->s_ctx))
+                {
+                    ERR_print_errors_fp(stdout);
+                    exit(1);
+                }
+            }
+#endif
+            //flag = fcntl(service->fd, F_GETFL, 0);
+            //flag |= O_NONBLOCK;
+            //&& fcntl(service->fd, F_SETFL, flag) == 0
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0 
-                    && fcntl(service->fd, F_SETFL, flag) == 0
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
@@ -40,11 +94,10 @@ int service_set(SERVICE *service)
                 if(service->sock_type == SOCK_STREAM)
                     ret = listen(service->fd, service->backlog);
             }
-
         }
         else if(service->service_type == C_SERVICE)
         {
-            ret = 0;
+           ret = 0;
         }
     }
     return ret;
@@ -226,6 +279,9 @@ void service_event_handler(int event_fd, short flag, void *arg)
     char buf[SB_BUF_SIZE], *ip = NULL;
     MESSAGE msg = {0};
     CONN *conn = NULL;
+#ifdef HAVE_SSL 
+    SSL *ssl = NULL;
+#endif
 
     if(service)
     {
@@ -239,12 +295,39 @@ void service_event_handler(int event_fd, short flag, void *arg)
                     {
                         ip = inet_ntoa(rsa.sin_addr);
                         port = ntohs(rsa.sin_port);
+#ifdef HAVE_SSL
+                        if(service->is_use_SSL && service->s_ctx)
+                        {
+                            if((ssl = SSL_new(service->s_ctx)) && SSL_set_fd(ssl, fd) > 0 
+                                    && SSL_accept(ssl) > 0)                                                   
+                            {
+                                goto new_conn;
+                            }
+                            else goto err_conn; 
+                        }
+#endif
+new_conn:
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                         service->ip, service->port, &(service->session))))
                         {
+#ifdef HAVE_SSL
+                            conn->ssl = ssl;
+#endif
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d",
                                     ip, port, fd);
+                            return ;
+                        }else goto err_conn;
+err_conn:               
+#ifdef HAVE_SSL
+                        if(ssl)
+                        {
+                            SSL_shutdown(ssl);
+                            SSL_free(ssl);
                         }
+#endif
+                        shutdown(fd, SHUT_RDWR);
+                        close(fd);
+                        return ;
                     }
                     else
                     {
@@ -312,6 +395,9 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
     int fd = -1, family = -1, sock_type = -1, remote_port = -1, local_port = -1, flag = 0;
     char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
+#ifdef HAVE_SSL
+    SSL *ssl = NULL;
+#endif
 
     if(service && service->lock == 0)
     {
@@ -325,24 +411,56 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             rsa.sin_family = family;
             rsa.sin_addr.s_addr = inet_addr(remote_ip);
             rsa.sin_port = htons(remote_port);
+#ifdef HAVE_SSL
+            if(sess->is_use_SSL)
+            {
+                SERVICE_CHECK_SSL_CLIENT(service);
+                if(service->c_ctx && (ssl = SSL_new(service->c_ctx)) && SSL_set_fd(ssl, fd) > 0 
+                        && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
+                        && SSL_connect(ssl) >= 0)
+                {
+                    goto new_conn;
+                }
+                else goto err_conn;
+            }
+#endif
             flag = fcntl(fd, F_GETFL, 0);
             flag |= O_NONBLOCK;
-            if(fcntl(fd, F_SETFL, flag) == 0 
-                    && (connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
-                        || errno == EINPROGRESS))
+            if(fcntl(fd, F_SETFL, flag) == 0  && (connect(fd, (struct sockaddr *)&rsa, 
+                            sizeof(rsa)) == 0 || errno == EINPROGRESS))
             {
-                getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
-                local_ip    = inet_ntoa(lsa.sin_addr);
-                local_port  = ntohs(lsa.sin_port);
-                if((conn = service->addconn(service, sock_type, fd, remote_ip, remote_port, 
-                                local_ip, local_port, sess)))
-                    conn->status = CONN_STATUS_READY; 
-            }
-            else
+                goto new_conn;
+            }else goto err_conn;
+new_conn:
+            getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
+            local_ip    = inet_ntoa(lsa.sin_addr);
+            local_port  = ntohs(lsa.sin_port);
+            if((conn = service->addconn(service, sock_type, fd, remote_ip, 
+                            remote_port, local_ip, local_port, sess)))
             {
-                FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",
-                        remote_ip, remote_port, fd, sess, strerror(errno));
+#ifdef HAVE_SSL
+                conn->ssl = ssl;
+#else
+                conn->status = CONN_STATUS_READY; 
+#endif
+                return conn;
+            }else goto err_conn;
+err_conn:
+#ifdef HAVE_SSL
+            if(ssl)
+            {
+                SSL_shutdown(ssl);
+                SSL_free(ssl);
             }
+#endif
+            if(fd > 0)
+            {
+                shutdown(fd, SHUT_RDWR);
+                close(fd);
+            }
+            FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",
+                    remote_ip, remote_port, fd, sess, strerror(errno));
+            return conn;
         }
         else
         {
@@ -363,6 +481,9 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
     int fd = -1, family = -1, sock_type = -1, remote_port = -1, local_port = -1;
     char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
+#ifdef HAVE_SSL
+    SSL *ssl = NULL;
+#endif
 
     if(service && service->lock == 0 && parent)
     {
@@ -383,6 +504,19 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
         if((fd = socket(family, sock_type, 0)) > 0
                 && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
         {
+#ifdef HAVE_SSL
+            if(sess->is_use_SSL)
+            {
+                SERVICE_CHECK_SSL_CLIENT(service);
+                if(service->c_ctx && (ssl = SSL_new(service->c_ctx)) 
+                        && SSL_set_fd(ssl, fd) > 0 && SSL_connect(ssl) >= 0)
+                {
+                    goto new_conn;
+                }
+                else goto err_conn;
+            }
+#endif
+new_conn:
             getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
             local_ip    = inet_ntoa(lsa.sin_addr);
             local_port  = ntohs(lsa.sin_port);
@@ -397,7 +531,25 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
                 conn->session.packet_type |= PACKET_PROXY;
                 conn->session.parent = parent;
                 conn->session.parentid = parent->index;
+#ifdef HAVE_SSL
+                conn->ssl = ssl;
+#endif
+                return conn;
             }
+err_conn:
+#ifdef HAVE_SSL
+            if(ssl)
+            {
+                SSL_shutdown(ssl);
+                SSL_free(ssl);
+            }
+#endif
+            if(fd > 0)
+            {
+                shutdown(fd, SHUT_RDWR);
+                close(fd);
+            }
+            return conn;
         }
         else
         {
@@ -935,7 +1087,12 @@ void service_clean(SERVICE **pservice)
             }
             QUEUE_CLEAN((*pservice)->chunks_queue);
         }
-        
+        /* SSL */
+#ifdef HAVE_SSL
+        ERR_free_strings();
+        if(service->s_ctx) SSL_CTX_free(service->s_ctx);
+        if(service->c_ctx) SSL_CTX_free(service->c_ctx);
+#endif
         MUTEX_DESTROY((*pservice)->mutex);
         if((*pservice)->is_inside_logger && (*pservice)->logger) 
         {
