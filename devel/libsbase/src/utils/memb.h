@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #ifdef HAVE_SSL
-#include <openssl/ssl.h>
+#include "xssl.h"
 #endif
 #ifndef _MEMB_H
 #define _MEMB_H
@@ -47,8 +47,8 @@ do                                                                              
 }while(0)
 #define MB_SET_BLOCK_SIZE(ptr, b_size) {MB_BSIZE(ptr) = b_size;}
 #ifdef HAVE_SSL
-#define MB_READ_SSL(ptr, ssl) ((MB_CHECK(ptr) == 0) ?                                   \
-    (((MBN(ptr) = SSL_read(ssl, MB_END(ptr), MB_LEFT(ptr))) > 0 )?                  \
+#define MB_READ_SSL(ptr, ssl) ((MB_CHECK(ptr) == 0) ?                               \
+    (((MBN(ptr) = SSL_read(XSSL(ssl), MB_END(ptr), MB_LEFT(ptr))) > 0 )?            \
          (((MB_END(ptr) += MBN(ptr)) && (MB_NDATA(ptr) += MBN(ptr)) >= 0            \
            && (MB_LEFT(ptr) -= MBN(ptr)) >= 0) ? MBN(ptr): -1) : -1) : -1)
 #endif

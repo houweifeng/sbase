@@ -10,6 +10,7 @@ procthread.c \
 sbase.c \
 sd.c \
 service.c \
+xssl.h 		\
 utils/chunk.h \
 utils/logger.h \
 utils/memb.h \

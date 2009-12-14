@@ -256,8 +256,8 @@ int conn_terminate(CONN *conn)
         #ifdef HAVE_SSL
         if(conn->ssl)
         {
-            SSL_shutdown(conn->ssl);
-            SSL_free(conn->ssl);
+            SSL_shutdown(XSSL(conn->ssl));
+            SSL_free(XSSL(conn->ssl));
             conn->ssl = NULL;
         }
         #endif
@@ -1073,8 +1073,8 @@ void conn_reset(CONN *conn)
 #ifdef HAVE_SSL
         if(conn->ssl)
         {
-            SSL_shutdown(conn->ssl);
-            SSL_free(conn->ssl);
+            SSL_shutdown(XSSL(conn->ssl));
+            SSL_free(XSSL(conn->ssl));
             conn->ssl = NULL;
         }
 #endif

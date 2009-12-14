@@ -1,5 +1,6 @@
 #include <errno.h>
 #include "sbase.h"
+#include "xssl.h"
 #include "logger.h"
 #include "service.h"
 #include "queue.h"
@@ -59,21 +60,21 @@ int service_set(SERVICE *service)
                     _exit(-1);
                 }
                 /*load certificate */
-                if (SSL_CTX_use_certificate_file(service->s_ctx, service->cacert_file, 
+                if(SSL_CTX_use_certificate_file(XSSL_CTX(service->s_ctx), service->cacert_file, 
                             SSL_FILETYPE_PEM) <= 0)
                 {
                     ERR_print_errors_fp(stdout);
                     _exit(-1);
                 }
                 /*load private key file */
-                if (SSL_CTX_use_PrivateKey_file(service->s_ctx, service->privkey_file, 
+                if (SSL_CTX_use_PrivateKey_file(XSSL_CTX(service->s_ctx), service->privkey_file, 
                             SSL_FILETYPE_PEM) <= 0)
                 {
                     ERR_print_errors_fp(stdout);
                     _exit(-1);
                 }
                 /*check private key file */
-                if (!SSL_CTX_check_private_key(service->s_ctx))
+                if (!SSL_CTX_check_private_key(XSSL_CTX(service->s_ctx)))
                 {
                     ERR_print_errors_fp(stdout);
                     exit(1);
@@ -298,7 +299,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
 #ifdef HAVE_SSL
                         if(service->is_use_SSL && service->s_ctx)
                         {
-                            if((ssl = SSL_new(service->s_ctx)) && SSL_set_fd(ssl, fd) > 0 
+                            if((ssl = SSL_new(XSSL_CTX(service->s_ctx))) && SSL_set_fd(ssl, fd) > 0 
                                     && SSL_accept(ssl) > 0)                                                   
                             {
                                 goto new_conn;
@@ -415,7 +416,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             if(sess->is_use_SSL)
             {
                 SERVICE_CHECK_SSL_CLIENT(service);
-                if(service->c_ctx && (ssl = SSL_new(service->c_ctx)) && SSL_set_fd(ssl, fd) > 0 
+                if(service->c_ctx && (ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
+                        && SSL_set_fd(ssl, fd) > 0 
                         && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
                         && SSL_connect(ssl) >= 0)
                 {
@@ -508,7 +510,7 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
             if(sess->is_use_SSL)
             {
                 SERVICE_CHECK_SSL_CLIENT(service);
-                if(service->c_ctx && (ssl = SSL_new(service->c_ctx)) 
+                if(service->c_ctx && (ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
                         && SSL_set_fd(ssl, fd) > 0 && SSL_connect(ssl) >= 0)
                 {
                     goto new_conn;
@@ -1090,8 +1092,8 @@ void service_clean(SERVICE **pservice)
         /* SSL */
 #ifdef HAVE_SSL
         ERR_free_strings();
-        if((*pservice)->s_ctx) SSL_CTX_free((*pservice)->s_ctx);
-        if((*pservice)->c_ctx) SSL_CTX_free((*pservice)->c_ctx);
+        if((*pservice)->s_ctx) SSL_CTX_free(XSSL_CTX((*pservice)->s_ctx));
+        if((*pservice)->c_ctx) SSL_CTX_free(XSSL_CTX((*pservice)->c_ctx));
 #endif
         MUTEX_DESTROY((*pservice)->mutex);
         if((*pservice)->is_inside_logger && (*pservice)->logger) 

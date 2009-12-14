@@ -10,12 +10,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <evbase.h>
-#ifdef HAVE_SSL
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
-#endif
 #ifndef _SBASE_H
 #define _SBASE_H
 #ifdef __cplusplus
@@ -84,9 +78,7 @@ typedef struct _SESSION
 {
     /* SSL */
     int is_use_SSL;
-#ifdef HAVE_SSL
-    SSL_CTX *ctx;
-#endif
+    void *ctx;
 
     /* packet */
     int timeout;
@@ -186,10 +178,8 @@ typedef struct _SERVICE
     short is_use_SSL;
     char *cacert_file;
     char *privkey_file;
-#ifdef HAVE_SSL
-    SSL_CTX *s_ctx;
-    SSL_CTX *c_ctx;
-#endif
+    void *s_ctx;
+    void *c_ctx;
 
     /* service option */
     int service_type;
@@ -332,9 +322,7 @@ typedef struct _CONN
     EVENT *event;
 
     /* SSL */
-#ifdef HAVE_SSL
-    SSL *ssl;
-#endif
+    void *ssl;
 
     /* evtimer */
     void *evtimer;
