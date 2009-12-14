@@ -12,10 +12,10 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #ifdef HAVE_SSL
-#include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <openssl/rand.h>
+#include <openssl/bio.h>
+#include <openssl/crypto.h>
 #endif
 #include "evbase.h"
 #include "log.h"
@@ -197,6 +197,15 @@ err:
             conns[fd].event = NULL;
             shutdown(fd, SHUT_RDWR);
             close(fd);
+#ifdef HAVE_SSL
+            if(conns[fd].ssl)
+            {
+                SSL_shutdown(conns[fd].ssl);
+                SSL_free(conns[fd].ssl);
+                conns[fd].ssl = NULL;
+            }
+#endif
+
             SHOW_LOG("Connection %d closed", fd);
         }
 
@@ -214,6 +223,8 @@ int main(int argc, char **argv)
     int i = 0;
     int conn_num = 0;
     int sock_type = 0;
+    int ret = -1;
+    int flag = 0;
     EVENT  *event = NULL;
     if(argc < 5)
     {
@@ -247,54 +258,54 @@ int main(int argc, char **argv)
         {
             LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
 #ifdef HAVE_SSL
-            SSL_load_error_strings();
             SSL_library_init();
-            ctx = SSL_CTX_new(SSLv23_client_method());
+            OpenSSL_add_all_algorithms();
+            SSL_load_error_strings();
+            if((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL)
+            {
+                ERR_print_errors_fp(stdout);
+                _exit(-1);
+            }
 #endif
             //evbase->set_evops(evbase, EOP_POLL);
             while((fd = socket(AF_INET, sock_type, 0)) > 0 && fd < CONN_MAX)
             {
                 conns[fd].fd = fd;
-                if(is_use_ssl && sock_type == SOCK_STREAM)
-                {
-#ifdef HAVE_SSL
-                    if(ctx == NULL)
-                    {
-                        FATAL_LOG("init SSL CTX failed:%s",
-                                ERR_reason_error_string(ERR_get_error()));
-                        break;
-                    }
-                    conns[fd].ssl = SSL_new(ctx);
-                    if(conns[fd].ssl == NULL )
-                    {
-                        FATAL_LOG("new SSL with created CTX failed:%s",
-                                ERR_reason_error_string(ERR_get_error()));
-                        break;
-                    }
-                    if((ret = SSL_set_fd(conns[fd].ssl, fd)) == 0)
-                    {
-                        FATAL_LOG("add SSL to tcp socket failed:%s",
-                                ERR_reason_error_string(ERR_get_error()));
-                        break;
-                    }
-                    /* SSL Connect */
-                    if(SSL_connect(conns[fd].ssl) != 1 )
-                    {
-                        FATAL_LOG("SSL connection failed:%s",
-                                ERR_reason_error_string(ERR_get_error()));
-                    }
-                    goto fd_setting;
-#endif
-                }
                 /* Connect */
                 if(connect(fd, (struct sockaddr *)&sa, sa_len) != 0)
                 {
                     FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
                     break;
                 }
-fd_settting:
+                if(is_use_ssl && sock_type == SOCK_STREAM)
+                {
+#ifdef HAVE_SSL
+                    conns[fd].ssl = SSL_new(ctx);
+                    if(conns[fd].ssl == NULL )
+                    {
+                        FATAL_LOG("new SSL with created CTX failed:%s\n",
+                                ERR_reason_error_string(ERR_get_error()));
+                        break;
+                    }
+                    if((ret = SSL_set_fd(conns[fd].ssl, fd)) == 0)
+                    {
+                        FATAL_LOG("add SSL to tcp socket failed:%s\n",
+                                ERR_reason_error_string(ERR_get_error()));
+                        break;
+                    }
+                    /* SSL Connect */
+                    if(SSL_connect(conns[fd].ssl) < 0)
+                    {
+                        FATAL_LOG("SSL connection failed:%s\n",
+                                ERR_reason_error_string(ERR_get_error()));
+                        break;
+                    }
+#endif
+                }
                 /* set FD NON-BLOCK */
-                fcntl(fd, F_SETFL, O_NONBLOCK);
+                flag = fcntl(fd, F_GETFL, 0);
+                flag |= O_NONBLOCK;
+                fcntl(fd, F_SETFL, flag);
                 if((conns[fd].event = ev_init()))
                 {
                     if(sock_type == SOCK_STREAM)
@@ -318,7 +329,7 @@ fd_settting:
             while(1)
             {
                 evbase->loop(evbase, 0, NULL);
-                usleep(10);
+                usleep(1000);
             }
             for(i = 0; i < CONN_MAX; i++)
             {
@@ -335,14 +346,11 @@ fd_settting:
                     SSL_shutdown(conns[i].ssl);
                     SSL_free(conns[i].ssl); 
                 }
-                if(conns[i].ctx)
-                {
-                    SSL_CTX_free(conns[i].ctx);
-                }
 #endif
             }
 #ifdef HAVE_SSL
             ERR_free_strings();
+            SSL_CTX_free(ctx);
 #endif
         }
         free(conns);
