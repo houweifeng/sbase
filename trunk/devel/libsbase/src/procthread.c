@@ -16,9 +16,11 @@ void procthread_run(void *arg)
         pth->running_status = 1;
         while(pth->running_status)
         {
-            pth->evbase->loop(pth->evbase, 0, NULL);
-            if(QTOTAL(pth->message_queue) > 0)
+            //pth->evbase->loop(pth->evbase, 0, NULL);
+            while(QTOTAL(pth->message_queue) > 0)
+            {
                 message_handler(pth->message_queue, pth->logger);
+            }
             usleep(pth->usec_sleep);
         }
     }
@@ -211,7 +213,7 @@ void procthread_clean(PROCTHREAD **ppth)
     {
         if((*ppth)->service->working_mode != WORKING_PROC)
         {
-            (*ppth)->evbase->clean(&((*ppth)->evbase));
+            //(*ppth)->evbase->clean(&((*ppth)->evbase));
             QUEUE_CLEAN((*ppth)->message_queue);
         }
         free((*ppth));
@@ -227,7 +229,7 @@ PROCTHREAD *procthread_init()
     if((pth = (PROCTHREAD *)calloc(1, sizeof(PROCTHREAD))))
     {
         QUEUE_INIT(pth->message_queue);
-        pth->evbase                  = evbase_init();
+        //pth->evbase                  = evbase_init();
         pth->run                     = procthread_run;
         pth->addconn                 = procthread_addconn;
         pth->add_connection          = procthread_add_connection;
