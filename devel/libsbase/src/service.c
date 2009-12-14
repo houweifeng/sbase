@@ -1090,8 +1090,8 @@ void service_clean(SERVICE **pservice)
         /* SSL */
 #ifdef HAVE_SSL
         ERR_free_strings();
-        if(service->s_ctx) SSL_CTX_free(service->s_ctx);
-        if(service->c_ctx) SSL_CTX_free(service->c_ctx);
+        if((*pservice)->s_ctx) SSL_CTX_free((*pservice)->s_ctx);
+        if((*pservice)->c_ctx) SSL_CTX_free((*pservice)->c_ctx);
 #endif
         MUTEX_DESTROY((*pservice)->mutex);
         if((*pservice)->is_inside_logger && (*pservice)->logger) 
