@@ -82,6 +82,12 @@ typedef struct _CB_DATA
 #define PCB(ptr) ((CB_DATA *)ptr)
 typedef struct _SESSION
 {
+    /* SSL */
+    int is_use_SSL;
+#ifdef HAVE_SSL
+    SSL_CTX *ctx;
+#endif
+
     /* packet */
     int timeout;
     int childid;
@@ -175,11 +181,14 @@ typedef struct _SERVICE
     int fd;
     int backlog;
     short port;
+    
     /* SSL */
-    short is_use_ssl;
+    short is_use_SSL;
+    char *cacert_file;
+    char *privkey_file;
 #ifdef HAVE_SSL
-    SSL *ssl;
-    SSL_CTX *ctx;
+    SSL_CTX *s_ctx;
+    SSL_CTX *c_ctx;
 #endif
 
     /* service option */
@@ -321,6 +330,11 @@ typedef struct _CONN
     /* evbase */
     EVBASE *evbase;
     EVENT *event;
+
+    /* SSL */
+#ifdef HAVE_SSL
+    SSL *ssl;
+#endif
 
     /* evtimer */
     void *evtimer;
