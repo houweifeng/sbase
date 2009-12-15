@@ -15,7 +15,7 @@
 #define SERVICE_CHECK_SSL_CLIENT(service)                                           \
 do                                                                                  \
 {                                                                                   \
-    if(service->is_use_SSL)                                                         \
+    if(service->c_ctx == NULL)                                                      \
     {                                                                               \
         SSL_library_init();                                                         \
         OpenSSL_add_all_algorithms();                                               \
@@ -409,17 +409,17 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
         sess = (session) ? session : &(service->session);
         if((fd = socket(family, sock_type, 0)) > 0)
         {
+            //DEBUG_LOGGER(service->logger, "new_conn[%s:%d] via %d", remote_ip, remote_port, fd);
             rsa.sin_family = family;
             rsa.sin_addr.s_addr = inet_addr(remote_ip);
             rsa.sin_port = htons(remote_port);
 #ifdef HAVE_SSL
-            if(sess->is_use_SSL)
+            if(sess->is_use_SSL &&  sock_type == SOCK_STREAM)
             {
                 SERVICE_CHECK_SSL_CLIENT(service);
                 if(service->c_ctx && (ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
-                        && SSL_set_fd(ssl, fd) > 0 
                         && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
-                        && SSL_connect(ssl) >= 0)
+                        && SSL_set_fd(ssl, fd) > 0 && SSL_connect(ssl) >= 0)
                 {
                     goto new_conn;
                 }
@@ -443,7 +443,7 @@ new_conn:
 #ifdef HAVE_SSL
                 conn->ssl = ssl;
 #else
-                conn->status = CONN_STATUS_READY; 
+                if(flag != 0) conn->status = CONN_STATUS_READY; 
 #endif
                 return conn;
             }else goto err_conn;
