@@ -41,7 +41,7 @@ int lechod_oob_handler(CONN *conn, CB_DATA *oob)
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-	char *logfile = NULL, *s = NULL, *p = NULL;
+	char *logfile = NULL, *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
 	int n = 0, ret = -1;
 	if((dict = iniparser_new(conf)) == NULL)
 	{
@@ -94,7 +94,15 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->session.packet_reader = &lechod_packet_reader;
 	service->session.packet_handler = &lechod_packet_handler;
 	service->session.data_handler = &lechod_data_handler;
-	service->session.oob_handler = &lechod_oob_handler;
+    service->session.oob_handler = &lechod_oob_handler;
+    cacert_file = iniparser_getstr(dict, "LECHOD:cacert_file");
+    privkey_file = iniparser_getstr(dict, "LECHOD:privkey_file");
+    if(cacert_file && privkey_file && iniparser_getint(dict, "LECHOD:is_use_SSL", 0))
+    {
+        service->is_use_SSL = 1;
+        service->cacert_file = cacert_file;
+        service->privkey_file = privkey_file;
+    }
 	/* server */
 	fprintf(stdout, "Parsing for server...\n");
 	return sbase->add_service(sbase, service);

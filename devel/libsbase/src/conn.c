@@ -527,10 +527,34 @@ int conn_write_handler(CONN *conn)
                     conn->ssl, conn->local_ip, conn->local_port, conn->fd, 
                     QTOTAL(conn->send_queue), PPL(cp));   
 #ifdef HAVE_SSL
-            if(conn->ssl) n = CHUNK_WRITE_SSL(cp, conn->ssl);
-            else n = CHUNK_WRITE(cp, conn->fd);
+            if(conn->ssl) 
+            {
+                if((n = CHUNK_WRITE_SSL(cp, conn->ssl)) < 0)
+                {
+                    ERR_print_errors_fp(stdout);
+                    FATAL_LOGGER(conn->logger, "Sending data to %s:%d on %s:%d via %d failed, %s",
+                            conn->remote_ip, conn->remote_port, conn->local_ip, 
+                            conn->local_port, conn->fd, strerror(errno));
+                }
+            }
+            else 
+            {
+                if((n = CHUNK_WRITE(cp, conn->fd)) < 0)
+                {
+                    FATAL_LOGGER(conn->logger, "Sending data to %s:%d on %s:%d via %d failed, %s",
+                            conn->remote_ip, conn->remote_port, conn->local_ip, 
+                            conn->local_port, conn->fd, strerror(errno));
+                }
+
+            }
 #else
-            n = CHUNK_WRITE(cp, conn->fd);
+            if((n = CHUNK_WRITE(cp, conn->fd)) < 0)
+            {
+                FATAL_LOGGER(conn->logger, "Sending data to %s:%d on %s:%d via %d failed, %s",
+                        conn->remote_ip, conn->remote_port, conn->local_ip, 
+                        conn->local_port, conn->fd, strerror(errno));
+
+            }
 #endif
             if(n > 0)
             {
