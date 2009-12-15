@@ -114,6 +114,8 @@ typedef struct _CHUNK * PCHUNK;
             (((CK_END(ptr) += CKN(ptr)) && (CK_LEFT(ptr) -= CKN(ptr)) >= 0                  \
             && (CK_NDATA(ptr) += CKN(ptr)) > 0                                              \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0 ) ? CKN(ptr) : -1): -1)
+#else
+#define CK_READ_SSL(ptr, ssl)
 #endif
 #define CK_READ(ptr, fd) ((ptr && fd > 0 && CK_DATA(ptr)                                    \
             && (CKN(ptr) = read(fd, CK_END(ptr), CK_LEFT(ptr))) > 0) ?                      \
@@ -127,6 +129,8 @@ typedef struct _CHUNK * PCHUNK;
         && (CKN(ptr) = SSL_write(XSSL(ssl), CK_END(ptr), CK_LEFT(ptr))) > 0) ?              \
             (((CK_END(ptr) += CKN(ptr)) && (CK_LEFT(ptr) -= CKN(ptr)) >= 0                  \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0) ? CKN(ptr) : -1): -1)
+#else
+#define CK_WRITE_SSL(ptr, ssl)
 #endif
 #define CK_WRITE(ptr, fd) ((ptr && fd > 0 && CK_DATA(ptr)                                   \
             && (CKN(ptr) = write(fd, CK_END(ptr), CK_LEFT(ptr))) > 0) ?                     \
@@ -158,6 +162,8 @@ typedef struct _CHUNK * PCHUNK;
             (((CK_LEFT(ptr) -= CKN(ptr)) >= 0 && (CK_OFFSET(ptr) += CKN(ptr)) > 0           \
             && (CK_FD(ptr) = close(CK_FD(ptr))) >= 0                                        \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr): -1): -1)
+#else
+#define CK_READ_TO_FILE_SSL(ptr, ssl)
 #endif
 #define CK_READ_TO_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0 && CK_DATA(ptr)        \
             && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0                   \
@@ -177,6 +183,8 @@ typedef struct _CHUNK * PCHUNK;
             (((CK_OFFSET(ptr) += CKN(ptr)) > 0 && (CK_LEFT(ptr) -= CKN(ptr)) >= 0           \
             && (CK_FD(ptr) = close(CK_FD(ptr))) >= 0                                        \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr) : -1) : -1)
+#else
+#define CK_WRITE_FROM_FILE_SSL(ptr, ssl)
 #endif
 #define CK_WRITE_FROM_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0 && CK_DATA(ptr)     \
             && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0                   \
@@ -198,6 +206,8 @@ typedef struct _CHUNK * PCHUNK;
 #ifdef HAVE_SSL
 #define CHUNK_WRITE_SSL(ptr, ssl) ((CK_TYPE(ptr) == CHUNK_MEM)?  \
         CK_WRITE_SSL(ptr, ssl) : CK_WRITE_FROM_FILE_SSL(ptr, ssl))
+#else
+#define  CHUNK_WRITE_SSL(ptr, ssl)
 #endif
 #define CHUNK_WRITE(ptr, fd) ((CK_TYPE(ptr) == CHUNK_MEM)?  \
         CK_WRITE(ptr, fd) : CK_WRITE_FROM_FILE(ptr, fd))
@@ -205,6 +215,8 @@ typedef struct _CHUNK * PCHUNK;
 #ifdef HAVE_SSL
 #define CHUNK_READ_SSL(ptr, ssl) ((CK_TYPE(ptr) == CHUNK_MEM)? \
         CK_READ_SSL(ptr, ssl) : CK_READ_TO_FILE_SSL(ptr, ssl))
+#else
+#define CHUNK_READ_SSL(ptr, ssl)
 #endif
 #define CHUNK_READ(ptr, fd) ((CK_TYPE(ptr) == CHUNK_MEM)? \
         CK_READ(ptr, fd) : CK_READ_TO_FILE(ptr, fd))
