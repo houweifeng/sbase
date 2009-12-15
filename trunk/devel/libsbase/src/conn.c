@@ -520,7 +520,8 @@ int conn_write_handler(CONN *conn)
                 "qtotal:%d qhead:%d qcount:%d", conn->remote_ip, conn->remote_port,
                 conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
                 QHEAD(conn->send_queue), QCOUNT(conn->send_queue));   
-        if(QTOTAL(conn->send_queue) > 0 && QUEUE_HEAD(conn->send_queue, PCHUNK, &cp) == 0)
+        if(QTOTAL(conn->send_queue) > 0 && QUEUE_HEAD(conn->send_queue, PCHUNK, &cp) == 0
+            && CK_LEFT(cp) > 0)
         {
             DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d ssl:%p "
                     "on %s:%d via %d qtotal:%d pcp:%p", conn->remote_ip, conn->remote_port,
