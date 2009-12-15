@@ -385,27 +385,26 @@ int main(int argc, char **argv)
         SSL_library_init();
         OpenSSL_add_all_algorithms();
         SSL_load_error_strings();
-        ctx = SSL_CTX_new(SSLv23_server_method());
-        if(ctx == NULL)
+        if((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL)
         {
-            FATAL_LOG("init SSL CTX failed:%s",
-                    ERR_reason_error_string(ERR_get_error()));
-            _exit(-1);
-            return -1;
-        }
-        //load certificate
-        if (SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
             ERR_print_errors_fp(stdout);
             exit(1);
         }
-        //load private key file
+        /*load certificate */
+        if (SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0)
+        {
+            ERR_print_errors_fp(stdout);
+            exit(1);
+        }
+        /*load private key file */
         if (SSL_CTX_use_PrivateKey_file(ctx, priv_file, SSL_FILETYPE_PEM) <= 0)
         {
             ERR_print_errors_fp(stdout);
             exit(1);
         }
-        //check private key file 
-        if (!SSL_CTX_check_private_key(ctx)) {
+        /*check private key file */
+        if (!SSL_CTX_check_private_key(ctx))
+        {
             ERR_print_errors_fp(stdout);
             exit(1);
         }
