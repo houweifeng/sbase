@@ -506,6 +506,7 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
 #ifdef HAVE_SSL
             if(sess->is_use_SSL && sock_type == SOCK_STREAM && service->c_ctx)
             {
+                DEBUG_LOGGER(service->logger, "SSL_newproxy() to %s:%d",remote_ip, remote_port);
                 if((ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
                         && SSL_set_fd(ssl, fd) > 0 && SSL_connect(ssl) >= 0)
                 {
