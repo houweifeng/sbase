@@ -103,6 +103,10 @@ int sbase_initialize(SBASE *sbase, char *conf)
         service->cacert_file = cacert_file;
         service->privkey_file = privkey_file;
     }
+    if((p = iniparser_getstr(dict, "LECHOD:logfile")))
+    {
+        service->set_log(service, p);
+    }
 	/* server */
 	fprintf(stdout, "Parsing for server...\n");
 	return sbase->add_service(sbase, service);
@@ -205,8 +209,7 @@ int main(int argc, char **argv)
     }
     sbase->running(sbase, 0);
     //sbase->running(sbase, 3600);
-    //sbase->running(sbase, 20000000);
-    sbase->stop(sbase);
+    //sbase->running(sbase, 40000000);sbase->stop(sbase);
     sbase->clean(&sbase);
     if(dict)iniparser_free(dict);
 }

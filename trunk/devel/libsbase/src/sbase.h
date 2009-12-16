@@ -122,6 +122,7 @@ typedef struct _SBASE
     /* evtimer */
     void *evtimer;
     int evid;
+    int ssl_id;
 
     /* message queue for proc mode */
     void *message_queue;
@@ -172,10 +173,10 @@ typedef struct _SERVICE
     char *multicast;
     int fd;
     int backlog;
-    short port;
+    int port;
     
     /* SSL */
-    short is_use_SSL;
+    int is_use_SSL;
     char *cacert_file;
     char *privkey_file;
     void *s_ctx;

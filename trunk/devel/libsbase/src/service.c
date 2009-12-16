@@ -17,9 +17,6 @@ do                                                                              
 {                                                                                   \
     if(service->c_ctx == NULL)                                                      \
     {                                                                               \
-        SSL_library_init();                                                         \
-        OpenSSL_add_all_algorithms();                                               \
-        SSL_load_error_strings();                                                   \
         if((service->c_ctx = SSL_CTX_new(SSLv23_client_method())) == NULL)          \
         {                                                                           \
             ERR_print_errors_fp(stdout);                                            \
@@ -45,15 +42,12 @@ int service_set(SERVICE *service)
         service->sa.sin_port = htons(service->port);
         service->connections = (CONN **)calloc(service->connections_limit, sizeof(CONN *));
         if(service->backlog <= 0) service->backlog = SB_CONN_MAX;
-        if(service->is_use_SSL){SERVICE_CHECK_SSL_CLIENT(service);}
+        SERVICE_CHECK_SSL_CLIENT(service);
         if(service->service_type == S_SERVICE)
         {
 #ifdef HAVE_SSL
             if(service->is_use_SSL && service->cacert_file && service->privkey_file)
             {
-                SSL_library_init();
-                OpenSSL_add_all_algorithms();
-                SSL_load_error_strings();
                 if((service->s_ctx = SSL_CTX_new(SSLv23_server_method())) == NULL)
                 {
                     ERR_print_errors_fp(stdout);
@@ -324,10 +318,14 @@ err_conn:
                         {
                             SSL_shutdown(ssl);
                             SSL_free(ssl);
+                            ssl = NULL;
                         }
 #endif
-                        shutdown(fd, SHUT_RDWR);
-                        close(fd);
+                        if(fd > 0)
+                        {
+                            shutdown(fd, SHUT_RDWR);
+                            close(fd);
+                        }
                         return ;
                     }
                     else
@@ -414,10 +412,9 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             rsa.sin_addr.s_addr = inet_addr(remote_ip);
             rsa.sin_port = htons(remote_port);
 #ifdef HAVE_SSL
-            if(sess->is_use_SSL &&  sock_type == SOCK_STREAM)
+            if(sess->is_use_SSL &&  sock_type == SOCK_STREAM && service->c_ctx)
             {
-                SERVICE_CHECK_SSL_CLIENT(service);
-                if(service->c_ctx && (ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
+                if((ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
                         && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
                         && SSL_set_fd(ssl, fd) > 0 && SSL_connect(ssl) >= 0)
                 {
@@ -440,10 +437,9 @@ new_conn:
             if((conn = service->addconn(service, sock_type, fd, remote_ip, 
                             remote_port, local_ip, local_port, sess)))
             {
+                if(flag != 0) conn->status = CONN_STATUS_READY; 
 #ifdef HAVE_SSL
                 conn->ssl = ssl;
-#else
-                if(flag != 0) conn->status = CONN_STATUS_READY; 
 #endif
                 return conn;
             }else goto err_conn;
@@ -453,6 +449,7 @@ err_conn:
             {
                 SSL_shutdown(ssl);
                 SSL_free(ssl);
+                ssl = NULL;
             }
 #endif
             if(fd > 0)
@@ -507,10 +504,9 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
                 && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
         {
 #ifdef HAVE_SSL
-            if(sess->is_use_SSL)
+            if(sess->is_use_SSL && sock_type == SOCK_STREAM && service->c_ctx)
             {
-                SERVICE_CHECK_SSL_CLIENT(service);
-                if(service->c_ctx && (ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
+                if((ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
                         && SSL_set_fd(ssl, fd) > 0 && SSL_connect(ssl) >= 0)
                 {
                     goto new_conn;
@@ -544,6 +540,7 @@ err_conn:
             {
                 SSL_shutdown(ssl);
                 SSL_free(ssl);
+                ssl = NULL;
             }
 #endif
             if(fd > 0)
@@ -1091,12 +1088,11 @@ void service_clean(SERVICE **pservice)
         }
         /* SSL */
 #ifdef HAVE_SSL
-        ERR_free_strings();
         if((*pservice)->s_ctx) SSL_CTX_free(XSSL_CTX((*pservice)->s_ctx));
         if((*pservice)->c_ctx) SSL_CTX_free(XSSL_CTX((*pservice)->c_ctx));
 #endif
         MUTEX_DESTROY((*pservice)->mutex);
-        if((*pservice)->is_inside_logger && (*pservice)->logger) 
+        if((*pservice)->is_inside_logger) 
         {
             LOGGER_CLEAN((*pservice)->logger);
         }
