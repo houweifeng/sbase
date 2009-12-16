@@ -106,9 +106,9 @@ do                                                                              
 /* connection event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
-    int error = 0, flag = 0;
     socklen_t len = sizeof(int);
     CONN *conn = (CONN *)arg;
+    int error = 0;
 
     if(conn)
     {
@@ -131,10 +131,10 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 conn->status = CONN_STATUS_FREE;
                 return ;
             }
-            flag = fcntl(conn->fd, F_GETFL, 0);
-            //if(conn->ssl) flag &= ~O_NONBLOCK;
-            //else flag |= O_NONBLOCK;
-            if(!(flag & O_NONBLOCK))fcntl(conn->fd, F_SETFL, flag);
+            int flag = fcntl(conn->fd, F_GETFL, 0);
+            if(conn->ssl) flag &= ~O_NONBLOCK;
+            else flag |= O_NONBLOCK;
+            fcntl(conn->fd, F_SETFL, flag);
             if(event & E_CLOSE)
             {
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
