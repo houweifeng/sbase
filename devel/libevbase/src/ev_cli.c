@@ -319,7 +319,7 @@ int main(int argc, char **argv)
                                 (void *)conns[fd].event, &ev_udp_handler);
                     }
                     evbase->add(evbase, conns[fd].event);
-                    sprintf(conns[fd].request, "%d:client message\r\n", fd);
+                    sprintf(conns[fd].request, "GET / HTTP/1.0\r\n\r\n");
                 }
                 lsa_len = sizeof(struct sockaddr);
                 memset(&lsa, 0, lsa_len);
