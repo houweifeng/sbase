@@ -733,16 +733,15 @@ CHUNK * service_popchunk(SERVICE *service)
     if(service && service->chunks_queue)
     {
         MUTEX_LOCK(service->mutex);
-        QUEUE_POP(service->chunks_queue, PCHUNK, &cp);
-        if(cp == NULL) 
+        if(QUEUE_POP(service->chunks_queue, PCHUNK, &cp) == 0) 
         {
-            CK_INIT(cp);
-            if(cp){DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d", cp, CK_BSIZE(cp));}
+            DEBUG_LOGGER(service->logger, "chunk_pop(%p) bsize:%d total:%d", cp, CK_BSIZE(cp), QTOTAL(service->chunks_queue));
+
         }
         else
         {
-            DEBUG_LOGGER(service->logger, "chunk_pop(%p) bsize:%d", cp, CK_BSIZE(cp));
-
+            CK_INIT(cp);
+            if(cp){DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d", cp, CK_BSIZE(cp));}
         }
         MUTEX_UNLOCK(service->mutex);
     }
@@ -759,7 +758,8 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
         MUTEX_LOCK(service->mutex);
         CK_RESET(cp);
         QUEUE_PUSH(service->chunks_queue, PCHUNK, &cp);
-        DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d", cp, CK_BSIZE(cp));
+        DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d total:%d", 
+                cp, CK_BSIZE(cp), QTOTAL(service->chunks_queue));
         MUTEX_UNLOCK(service->mutex);
     }
     return ret;

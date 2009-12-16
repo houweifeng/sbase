@@ -13,6 +13,7 @@ static dictionary *dict = NULL;
 
 int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
 {
+    return buffer->ndata;
 }
 
 int lechod_packet_handler(CONN *conn, CB_DATA *packet)
@@ -69,27 +70,28 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->service_name = iniparser_getstr(dict, "LECHOD:service_name");
 	service->nprocthreads = iniparser_getint(dict, "LECHOD:nprocthreads", 1);
 	service->ndaemons = iniparser_getint(dict, "LECHOD:ndaemons", 0);
-	service->set_log(service, iniparser_getstr(dict, "LECHOD:logfile"));
-    	service->session.packet_type = iniparser_getint(dict, "LECHOD:packet_type",PACKET_DELIMITER);
-	service->session.packet_delimiter = iniparser_getstr(dict, "LECHOD:packet_delimiter");
-	p = s = service->session.packet_delimiter;
-	while(*p != 0 )
-	{
-		if(*p == '\\' && *(p+1) == 'n')
-		{
-			*s++ = '\n';
-			p += 2;
-		}
-		else if (*p == '\\' && *(p+1) == 'r')
-		{
-			*s++ = '\r';
-			p += 2;
-		}
-		else
-			*s++ = *p++;
-	}
-	*s++ = 0;
-	service->session.packet_delimiter_length = strlen(service->session.packet_delimiter);
+    service->session.packet_type=iniparser_getint(dict, "LECHOD:packet_type",PACKET_DELIMITER);
+    if((service->session.packet_delimiter = iniparser_getstr(dict, "LECHOD:packet_delimiter")))
+    {
+        p = s = service->session.packet_delimiter;
+        while(*p != 0 )
+        {
+            if(*p == '\\' && *(p+1) == 'n')
+            {
+                *s++ = '\n';
+                p += 2;
+            }
+            else if (*p == '\\' && *(p+1) == 'r')
+            {
+                *s++ = '\r';
+                p += 2;
+            }
+            else
+                *s++ = *p++;
+        }
+        *s++ = 0;
+        service->session.packet_delimiter_length = strlen(service->session.packet_delimiter);
+    }
 	service->session.buffer_size = iniparser_getint(dict, "LECHOD:buffer_size", SB_BUF_SIZE);
 	service->session.packet_reader = &lechod_packet_reader;
 	service->session.packet_handler = &lechod_packet_handler;
@@ -209,7 +211,7 @@ int main(int argc, char **argv)
     }
     sbase->running(sbase, 0);
     //sbase->running(sbase, 3600);
-    //sbase->running(sbase, 40000000);sbase->stop(sbase);
+    //sbase->running(sbase, 90000000);sbase->stop(sbase);
     sbase->clean(&sbase);
     if(dict)iniparser_free(dict);
 }
