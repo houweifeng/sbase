@@ -8,6 +8,7 @@
 #include "queue.h"
 #include "message.h"
 #include "evtimer.h"
+#include "xssl.h"
 
 /* set rlimit */
 int setrlimiter(char *name, int rlimit, int nset)
@@ -223,6 +224,9 @@ void sbase_clean(SBASE **psbase)
         if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
         if((*psbase)->evbase){(*psbase)->evbase->clean(&((*psbase)->evbase));}
         if((*psbase)->message_queue){QUEUE_CLEAN((*psbase)->message_queue);}
+#ifdef HAVE_SSL
+        ERR_free_strings();
+#endif
         free(*psbase);
         *psbase = NULL;
     }
@@ -242,6 +246,9 @@ SBASE *sbase_init()
         sbase->running 		    = sbase_running;
         sbase->stop 		    = sbase_stop;
         sbase->clean 		    = sbase_clean;
+#ifdef HAVE_SSL
+        sbase->ssl_id           = SSL_library_init();
+#endif
         //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
     }
     return sbase;
