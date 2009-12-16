@@ -135,6 +135,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
             if(conn->ssl) flag &= ~O_NONBLOCK;
             else flag |= O_NONBLOCK;
             fcntl(conn->fd, F_SETFL, flag);
+            //if(!(flag & O_NONBLOCK))fcntl(conn->fd, F_SETFL, flag|O_NONBLOCK);
             if(event & E_CLOSE)
             {
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
@@ -554,9 +555,7 @@ int conn_write_handler(CONN *conn)
 #ifdef HAVE_SSL
                 if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
-                FATAL_LOGGER(conn->logger, "Sending data to %s:%d on %s:%d via %d failed, %s",
-                        conn->remote_ip, conn->remote_port, conn->local_ip, 
-                        conn->local_port, conn->fd, strerror(errno));
+                FATAL_LOGGER(conn->logger, "Sending chunk[%d-%d] data to %s:%d on %s:%d via %d failed, %s", CKN(cp), CK_LEFT(cp), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
                 /* Terminate connection */
                 CONN_TERMINATE(conn, D_STATE_CLOSE);
             }
