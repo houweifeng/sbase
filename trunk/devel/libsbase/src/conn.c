@@ -1,4 +1,5 @@
 #include "sbase.h"
+#include "xssl.h"
 #include "conn.h"
 #include "queue.h"
 #include "memb.h"
@@ -40,12 +41,12 @@
         conn->s_state = 0;                                                                  \
     }                                                                                       \
 }
-#define READING_CHUNK(conn) ((conn->ssl)?CHUNK_READ_SSL(conn->chunk, conn->ssl)             \
-    :CHUNK_READ(conn->chunk, conn->fd))
-#define WRITING_CHUNK(conn, cp) ((conn->ssl)?CHUNK_WRITE_SSL(cp, conn->ssl)                 \
-    :CHUNK_WRITE(cp, conn->fd))
-#define READING_BUFFER(conn) ((conn->ssl)?MB_READ_SSL(conn->buffer, conn->ssl)              \
-    :MB_READ(conn->buffer, conn->fd))
+#define READING_CHUNK(conn) ((conn->ssl)?(CHUNK_READ_SSL(conn->chunk, conn->ssl))           \
+    :(CHUNK_READ(conn->chunk, conn->fd)))
+#define WRITING_CHUNK(conn, cp) ((conn->ssl)?(CHUNK_WRITE_SSL(cp, conn->ssl))               \
+    :(CHUNK_WRITE(cp, conn->fd)))
+#define READING_BUFFER(conn) ((conn->ssl)?(MB_READ_SSL(conn->buffer, conn->ssl))            \
+    :(MB_READ(conn->buffer, conn->fd)))
 #define CONN_CHUNK_READ(conn, n)                                                            \
 {                                                                                           \
     /* read to chunk */                                                                     \
@@ -177,7 +178,8 @@ int conn_set(CONN *conn)
         if(conn->parent && conn->session.timeout > 0) 
             conn->set_timeout(conn, conn->session.timeout);
         conn->evid = -1;
-        fcntl(conn->fd, F_SETFL, O_NONBLOCK);
+        //flag = fcntl(conn->fd, F_GETFL, 0);
+        //fcntl(conn->fd, F_SETFL, flag|O_NONBLOCK);
         if(conn->evbase && conn->event)
         {
             flag = E_READ|E_PERSIST;
@@ -253,14 +255,14 @@ int conn_terminate(CONN *conn)
         DEBUG_LOGGER(conn->logger, "terminateing session[%s:%d] local[%s:%d] via %d",
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
-        #ifdef HAVE_SSL
+#ifdef HAVE_SSL
         if(conn->ssl)
         {
             SSL_shutdown(XSSL(conn->ssl));
             SSL_free(XSSL(conn->ssl));
             conn->ssl = NULL;
         }
-        #endif
+#endif
         shutdown(conn->fd, SHUT_RDWR);
         close(conn->fd);
         conn->fd = -1;
@@ -514,8 +516,7 @@ int conn_write_handler(CONN *conn)
                 "qtotal:%d qhead:%d qcount:%d", conn->remote_ip, conn->remote_port,
                 conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
                 QHEAD(conn->send_queue), QCOUNT(conn->send_queue));   
-        if(QTOTAL(conn->send_queue) > 0 && QUEUE_HEAD(conn->send_queue, PCHUNK, &cp) == 0
-            && CK_LEFT(cp) > 0)
+        if(QTOTAL(conn->send_queue) > 0 && QUEUE_HEAD(conn->send_queue, PCHUNK, &cp) == 0)
         {
             DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d ssl:%p "
                     "on %s:%d via %d qtotal:%d pcp:%p", conn->remote_ip, conn->remote_port,
@@ -529,7 +530,7 @@ int conn_write_handler(CONN *conn)
                         conn->remote_ip, conn->remote_port, conn->local_ip, 
                         conn->local_port, conn->fd, CK_LEFT(cp));
                 /* CONN TIMER sample */
-                if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER )
+                if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
                 {
                     if(QUEUE_POP(conn->send_queue, PCHUNK, &cp) == 0)
                     {
@@ -548,6 +549,9 @@ int conn_write_handler(CONN *conn)
             }
             else
             {
+#ifdef HAVE_SSL
+                if(conn->ssl) ERR_print_errors_fp(stdout);
+#endif
                 FATAL_LOGGER(conn->logger, "Sending data to %s:%d on %s:%d via %d failed, %s",
                         conn->remote_ip, conn->remote_port, conn->local_ip, 
                         conn->local_port, conn->fd, strerror(errno));
@@ -921,8 +925,8 @@ int conn_push_chunk(CONN *conn, void *data, int size)
             QUEUE_PUSH(conn->send_queue, PCHUNK, &cp);
         }else return ret;
         if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
-        DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d] to %s:%d send_queue "
-                "total %d on %s:%d via %d ", size, conn->remote_ip, conn->remote_port, 
+        DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d][%d] to %s:%d send_queue "
+                "total %d on %s:%d via %d", size, CK_BSIZE(cp),conn->remote_ip,conn->remote_port, 
                 QTOTAL(conn->send_queue), conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
@@ -1114,6 +1118,15 @@ void conn_clean(CONN **pconn)
             QUEUE_CLEAN((*pconn)->send_queue);
         }
         DEBUG_LOGGER((*pconn)->logger, "Over for clean conn[%p]", PPL(*pconn));
+#ifdef HAVE_SSL
+        if((*pconn)->ssl)
+        {
+            SSL_shutdown(XSSL((*pconn)->ssl));
+            SSL_free(XSSL((*pconn)->ssl));
+            (*pconn)->ssl = NULL;
+        }
+#endif
+
         free(*pconn);
         (*pconn) = NULL;
     }

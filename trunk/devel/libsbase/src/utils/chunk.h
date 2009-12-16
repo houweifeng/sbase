@@ -10,7 +10,9 @@
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 1024 
+#ifndef CHUNK_BLOCK_SIZE
 #define CHUNK_BLOCK_SIZE    65536 
+#endif
 #define CHUNK_STATUS_ON     0x01
 #define CHUNK_STATUS_OVER   0x02
 typedef struct _CHUNK
@@ -76,7 +78,7 @@ typedef struct _CHUNK * PCHUNK;
         if(len > CK_BSIZE(ptr))                                                             \
         {                                                                                   \
             CKN(ptr) = (len/CHUNK_BLOCK_SIZE);                                              \
-            if(len % CHUNK_BLOCK_SIZE) ++CKN(ptr);                                          \
+            if((len % CHUNK_BLOCK_SIZE)) ++CKN(ptr);                                        \
             CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                                   \
             if((CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr))))             \
             {                                                                               \

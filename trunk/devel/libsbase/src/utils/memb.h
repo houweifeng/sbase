@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <unistd.h>
+#ifdef HAVE_SSL
 #include "xssl.h"
+#endif
 #ifndef _MEMB_H
 #define _MEMB_H
 #ifdef __cplusplus
