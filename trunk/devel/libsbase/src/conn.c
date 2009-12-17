@@ -132,9 +132,22 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 return ;
             }
             int flag = fcntl(conn->fd, F_GETFL, 0);
-            if(conn->ssl) flag &= ~O_NONBLOCK;
-            else flag |= O_NONBLOCK;
-            fcntl(conn->fd, F_SETFL, flag);
+            if(conn->ssl) 
+            {
+                if(flag & O_NONBLOCK)
+                {
+                    flag &= ~O_NONBLOCK;
+                    fcntl(conn->fd, F_SETFL, flag);
+                }
+            }
+            else 
+            {
+                if(!(flag & O_NONBLOCK))
+                {
+                    flag |= O_NONBLOCK;
+                    fcntl(conn->fd, F_SETFL, flag);
+                }
+            }
             //if(!(flag & O_NONBLOCK))fcntl(conn->fd, F_SETFL, flag|O_NONBLOCK);
             if(event & E_CLOSE)
             {
