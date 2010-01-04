@@ -8,7 +8,6 @@ conn.c \
 message.c \
 procthread.c \
 sbase.c \
-sd.c \
 service.c \
 utils/xssl.h 	\
 utils/chunk.h \
@@ -24,11 +23,13 @@ libsbase_la_LDFLAGS = -levbase
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = sbase.h
 
-bin_PROGRAMS = sd lechod
+bin_PROGRAMS = xhttpd lechod
 
-sd_SOURCES = sd.c
-sd_LDADD = libsbase.la
-sd_LDFLAGS = -static
+xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c \
+				 iniparser.h iniparser.c utils/trie.h utils/trie.c
+xhttpd_CPPFLAGS = -I utils
+xhttpd_LDADD = libsbase.la
+xhttpd_LDFLAGS = -static
 
 lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_LDADD = libsbase.la
