@@ -7,16 +7,19 @@
 #include <sys/resource.h>
 #include <sbase.h>
 #include "iniparser.h"
+#include "http.h"
+#include "mime.h"
+
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static dictionary *dict = NULL;
-
-int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
+/* xhttpd packet reader */
+int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 {
     return buffer->ndata;
 }
-
-int lechod_packet_handler(CONN *conn, CB_DATA *packet)
+/* packet handler */
+int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
 	if(conn && conn->push_chunk)
     {
@@ -24,12 +27,12 @@ int lechod_packet_handler(CONN *conn, CB_DATA *packet)
     }
     return -1;
 }
-
-int lechod_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
+/* data handler */
+int xhttpd_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
 }
-
-int lechod_oob_handler(CONN *conn, CB_DATA *oob)
+/* OOB handler */
+int xhttpd_oob_handler(CONN *conn, CB_DATA *oob)
 {
     if(conn && conn->push_chunk)
     {
@@ -38,12 +41,14 @@ int lechod_oob_handler(CONN *conn, CB_DATA *oob)
     }
     return -1;
 }
-
-static void lechod_stop(int sig){
-    switch (sig) {
+/* signal */
+static void xhttpd_stop(int sig)
+{
+    switch (sig) 
+    {
         case SIGINT:
         case SIGTERM:
-            fprintf(stderr, "lhttpd server is interrupted by user.\n");
+            fprintf(stderr, "xhttpd server is interrupted by user.\n");
             if(sbase)sbase->stop(sbase);
             break;
         default:
@@ -67,23 +72,23 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
 	sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
 	sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
-	/* LECHOD */
+	/* XHTTPD */
 	if((service = service_init()) == NULL)
 	{
 		fprintf(stderr, "Initialize service failed, %s", strerror(errno));
 		_exit(-1);
 	}
-	service->family = iniparser_getint(dict, "LECHOD:inet_family", AF_INET);
-	service->sock_type = iniparser_getint(dict, "LECHOD:socket_type", SOCK_STREAM);
-	service->ip = iniparser_getstr(dict, "LECHOD:service_ip");
-	service->port = iniparser_getint(dict, "LECHOD:service_port", 80);
-	service->working_mode = iniparser_getint(dict, "LECHOD:working_mode", WORKING_PROC);
-	service->service_type = iniparser_getint(dict, "LECHOD:service_type", C_SERVICE);
-	service->service_name = iniparser_getstr(dict, "LECHOD:service_name");
-	service->nprocthreads = iniparser_getint(dict, "LECHOD:nprocthreads", 1);
-	service->ndaemons = iniparser_getint(dict, "LECHOD:ndaemons", 0);
-    service->session.packet_type=iniparser_getint(dict, "LECHOD:packet_type",PACKET_DELIMITER);
-    if((service->session.packet_delimiter = iniparser_getstr(dict, "LECHOD:packet_delimiter")))
+	service->family = iniparser_getint(dict, "XHTTPD:inet_family", AF_INET);
+	service->sock_type = iniparser_getint(dict, "XHTTPD:socket_type", SOCK_STREAM);
+	service->ip = iniparser_getstr(dict, "XHTTPD:service_ip");
+	service->port = iniparser_getint(dict, "XHTTPD:service_port", 80);
+	service->working_mode = iniparser_getint(dict, "XHTTPD:working_mode", WORKING_PROC);
+	service->service_type = iniparser_getint(dict, "XHTTPD:service_type", C_SERVICE);
+	service->service_name = iniparser_getstr(dict, "XHTTPD:service_name");
+	service->nprocthreads = iniparser_getint(dict, "XHTTPD:nprocthreads", 1);
+	service->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
+    service->session.packet_type=iniparser_getint(dict, "XHTTPD:packet_type",PACKET_DELIMITER);
+    if((service->session.packet_delimiter = iniparser_getstr(dict, "XHTTPD:packet_delimiter")))
     {
         p = s = service->session.packet_delimiter;
         while(*p != 0 )
@@ -104,20 +109,20 @@ int sbase_initialize(SBASE *sbase, char *conf)
         *s++ = 0;
         service->session.packet_delimiter_length = strlen(service->session.packet_delimiter);
     }
-	service->session.buffer_size = iniparser_getint(dict, "LECHOD:buffer_size", SB_BUF_SIZE);
-	service->session.packet_reader = &lechod_packet_reader;
-	service->session.packet_handler = &lechod_packet_handler;
-	service->session.data_handler = &lechod_data_handler;
-    service->session.oob_handler = &lechod_oob_handler;
-    cacert_file = iniparser_getstr(dict, "LECHOD:cacert_file");
-    privkey_file = iniparser_getstr(dict, "LECHOD:privkey_file");
-    if(cacert_file && privkey_file && iniparser_getint(dict, "LECHOD:is_use_SSL", 0))
+	service->session.buffer_size = iniparser_getint(dict, "XHTTPD:buffer_size", SB_BUF_SIZE);
+	service->session.packet_reader = &xhttpd_packet_reader;
+	service->session.packet_handler = &xhttpd_packet_handler;
+	service->session.data_handler = &xhttpd_data_handler;
+    service->session.oob_handler = &xhttpd_oob_handler;
+    cacert_file = iniparser_getstr(dict, "XHTTPD:cacert_file");
+    privkey_file = iniparser_getstr(dict, "XHTTPD:privkey_file");
+    if(cacert_file && privkey_file && iniparser_getint(dict, "XHTTPD:is_use_SSL", 0))
     {
         service->is_use_SSL = 1;
         service->cacert_file = cacert_file;
         service->privkey_file = privkey_file;
     }
-    if((p = iniparser_getstr(dict, "LECHOD:logfile")))
+    if((p = iniparser_getstr(dict, "XHTTPD:logfile")))
     {
         service->set_log(service, p);
     }
@@ -126,7 +131,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	return sbase->add_service(sbase, service);
     /*
     if(service->sock_type == SOCK_DGRAM 
-            && (p = iniparser_getstr(dict, "LECHOD:multicast")) && ret == 0)
+            && (p = iniparser_getstr(dict, "XHTTPD:multicast")) && ret == 0)
     {
         ret = service->add_multicast(service, p);
     }
@@ -154,9 +159,9 @@ int main(int argc, char **argv)
     /* locale */
     setlocale(LC_ALL, "C");
     /* signal */
-    signal(SIGTERM, &lechod_stop);
-    signal(SIGINT,  &lechod_stop);
-    signal(SIGHUP,  &lechod_stop);
+    signal(SIGTERM, &xhttpd_stop);
+    signal(SIGINT,  &xhttpd_stop);
+    signal(SIGHUP,  &xhttpd_stop);
     signal(SIGPIPE, SIG_IGN);
     //daemon
     if(is_daemon)
@@ -192,7 +197,7 @@ int main(int argc, char **argv)
     }
     fprintf(stdout, "Initialized successed\n");
     if(service->sock_type == SOCK_DGRAM 
-            && (p = iniparser_getstr(dict, "LECHOD:multicast")))
+            && (p = iniparser_getstr(dict, "XHTTPD:multicast")))
     {
         if(service->add_multicast(service, p) != 0)
         {

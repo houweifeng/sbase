@@ -145,7 +145,9 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-EXTRA_DIST = libsbase.spec rc.lechod rc.lechod.ini
+EXTRA_DIST = libsbase.spec rc.lechod rc.lechod.ini rc.xhttpd rc.xhttpd.ini
+conftodir = "`echo $(sysconfdir)|sed -e 's|/usr/etc|/etc|'`"
+sysconftodir = $(conftodir)
 all: all-am
 
 .SUFFIXES:
@@ -226,7 +228,6 @@ check-am: all-am
 check: check-am
 all-am: Makefile
 installdirs:
-install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -306,6 +307,24 @@ uninstall-am: uninstall-info-am
 	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am \
 	uninstall-info-am
 
+install: install-ini
+
+install-ini:
+	@echo install xhttpd.ini lechod.ini to $(sysconftodir)
+	@test -d $(sysconftodir)      || mkdir -p $(sysconftodir)
+	@test -d $(sysconftodir)/init.d || mkdir -p $(sysconftodir)/init.d
+	@test -f $(sysconftodir)/lechod.ini \
+		|| cp -p $(top_srcdir)/doc/rc.lechod.ini $(sysconftodir)/lechod.ini
+	@test -f $(sysconftodir)/xhttpd.ini \
+		|| cp -p $(top_srcdir)/doc/rc.xhttpd.ini $(sysconftodir)/xhttpd.ini
+	@test -f $(sysconftodir)/init.d/xhttpd \
+		|| cp -p $(top_srcdir)/doc/rc.xhttpd $(sysconftodir)/init.d/xhttpd
+	@test -f $(sysconftodir)/init.d/lechod \
+		|| cp -p $(top_srcdir)/doc/rc.lechod $(sysconftodir)/init.d/lechod
+	@perl -i -p -e "s@/usr/local/bin@$(prefix)/bin@g" \
+		$(sysconftodir)/init.d/xhttpd $(sysconftodir)/init.d/lechod
+	@perl -i -p -e "s@/usr/local/etc@$(sysconftodir)@g" \
+		$(sysconftodir)/init.d/xhttpd  $(sysconftodir)/init.d/lechod
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:
