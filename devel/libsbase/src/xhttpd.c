@@ -12,23 +12,27 @@
 #include "trie.h"
 #include "stime.h"
 #define HTTP_RESP_OK            "HTTP/1.0 200 OK"
-#define HTTP_BAD_REQUEST        "HTTP/1.0 400 Bad Request\r\n\r\n"
-#define HTTP_NOT_FOUND          "HTTP/1.0 404 Not Found\r\n\r\n" 
-#define HTTP_NOT_MODIFIED       "HTTP/1.0 304 Not Modified\r\n\r\n"
-#define HTTP_NO_CONTENT         "HTTP/1.0 206 No Content\r\n\r\n"
+#define HTTP_BAD_REQUEST        "HTTP/1.0 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
+#define HTTP_NOT_FOUND          "HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
+#define HTTP_NOT_MODIFIED       "HTTP/1.0 304 Not Modified\r\nContent-Length: 0\r\n\r\n"
+#define HTTP_NO_CONTENT         "HTTP/1.0 206 No Content\r\nContent-Length: 0\r\n\r\n"
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static dictionary *dict = NULL;
 static char *httpd_home = "/tmp/xhttpd/html";
 static char *http_indexs[HTTP_INDEX_MAX];
+static int nindexes = 0;
 static char *http_default_charset = "UTF-8";
 static HTTP_VHOST httpd_vhosts[HTTP_VHOST_MAX];
+static int nvhosts = 0;
 static void *namemap = NULL;
+
 /* xhttpd packet reader */
 int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 {
     return buffer->ndata;
 }
+
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
@@ -39,7 +43,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     void *dp = NULL;
     int i = 0, n = 0;
 
-	if(conn && packet)
+    if(conn && packet)
     {
         p = packet->data;
         end = packet->data + packet->ndata;
@@ -62,10 +66,11 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 p += sprintf(p, "%s%s", httpd_home, http_req.path);
             if(http_req.path[1] == '\0') 
             {
-                while(i < HTTP_INDEX_MAX && http_indexs[i])
+                while(i < nindexes && http_indexs[i])
                 {
                     pp = p;
                     pp += sprintf(pp, "%s", http_indexs[i]);
+                    fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
                     if(access(file, F_OK))
                     {
                         p = pp;
@@ -104,14 +109,18 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 }
             }
         }
-    }
 err:
+        return conn->push_chunk(conn, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
+    }
     return -1;
 }
+
 /* data handler */
 int xhttpd_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
+
 }
+
 /* OOB handler */
 int xhttpd_oob_handler(CONN *conn, CB_DATA *oob)
 {
@@ -122,6 +131,7 @@ int xhttpd_oob_handler(CONN *conn, CB_DATA *oob)
     }
     return -1;
 }
+
 /* signal */
 static void xhttpd_stop(int sig)
 {
@@ -141,7 +151,7 @@ static void xhttpd_stop(int sig)
 int sbase_initialize(SBASE *sbase, char *conf)
 {
 	char *logfile = NULL, *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
-	int n = 0, i = 0, ret = -1;
+	int n = 0, ret = -1;
     void *dp = NULL;
 
 	if((dict = iniparser_new(conf)) == NULL)
@@ -212,17 +222,17 @@ int sbase_initialize(SBASE *sbase, char *conf)
     {
         memset(http_indexs, 0, sizeof(char *) * HTTP_INDEX_MAX);
         httpd_home = p;
-        i = 0;
-        while(i < HTTP_INDEX_MAX && p != '\0')
+        nindexes = 0;
+        while(nindexes < HTTP_INDEX_MAX && *p != '\0')
         {
             while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
             if(*p != '\0') 
             {
-                http_indexs[i] = p;
+                http_indexs[nindexes] = p;
                 while(*p != '\0' && *p != 0x20 && *p != '\t' 
                         && *p != ',' && *p != ';')++p;
                 *p++ = '\0';
-                i++;
+                ++nindexes;
             }else break;
         }
     }
@@ -232,24 +242,25 @@ int sbase_initialize(SBASE *sbase, char *conf)
         TRIETAB_INIT(namemap);
         if(namemap)
         {
-            i = 0;
-            while(i < HTTP_VHOST_MAX && *p != '\0')
+            nvhosts = 0;
+            while(nvhosts < HTTP_VHOST_MAX && *p != '\0')
             {
                 while(*p != '[') ++p;
                 ++p;
                 while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
-                httpd_vhosts[i].name = p;
+                httpd_vhosts[nvhosts].name = p;
                 while(*p != ':' && *p != 0x20 && *p != '\t') ++p;
                 *p++ = '\0';
-                if((n = (p - httpd_vhosts[i].name)) > 0)
+                if((n = (p - httpd_vhosts[nvhosts].name)) > 0)
                 {
-                    dp = (void *)((long)(i + 1));
-                    TRIETAB_ADD(namemap, httpd_vhosts[i].name, n, dp);
+                    dp = (void *)((long)(nvhosts + 1));
+                    TRIETAB_ADD(namemap, httpd_vhosts[nvhosts].name, n, dp);
                 }
-                httpd_vhosts[i].home = p;
+                httpd_vhosts[nvhosts].home = p;
                 while(*p != ']' && *p != 0x20 && *p != '\t') ++p;
                 *p++ = '\0';
-                ++i;
+                fprintf(stdout, "%s::%d %s[%s]\n", __FILE__, __LINE__, httpd_vhosts[nvhosts].name, httpd_vhosts[nvhosts].home);
+                ++nvhosts;
             }
         }
     }
