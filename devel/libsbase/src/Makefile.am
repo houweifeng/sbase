@@ -25,8 +25,8 @@ include_HEADERS = sbase.h
 
 bin_PROGRAMS = xhttpd lechod
 
-xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c \
-				 iniparser.h iniparser.c utils/trie.h utils/trie.c
+xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c \
+				 utils/trie.h utils/trie.c utils/stime.h utils/stime.c
 xhttpd_CPPFLAGS = -I utils
 xhttpd_LDADD = libsbase.la
 xhttpd_LDFLAGS = -static

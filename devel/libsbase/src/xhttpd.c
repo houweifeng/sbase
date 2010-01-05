@@ -9,10 +9,21 @@
 #include "iniparser.h"
 #include "http.h"
 #include "mime.h"
-
+#include "trie.h"
+#include "stime.h"
+#define HTTP_RESP_OK            "HTTP/1.0 200 OK"
+#define HTTP_BAD_REQUEST        "HTTP/1.0 400 Bad Request\r\n\r\n"
+#define HTTP_NOT_FOUND          "HTTP/1.0 404 Not Found\r\n\r\n" 
+#define HTTP_NOT_MODIFIED       "HTTP/1.0 304 Not Modified\r\n\r\n"
+#define HTTP_NO_CONTENT         "HTTP/1.0 206 No Content\r\n\r\n"
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static dictionary *dict = NULL;
+static char *httpd_home = "/tmp/xhttpd/html";
+static char *http_indexs[HTTP_INDEX_MAX];
+static char *http_default_charset = "UTF-8";
+static HTTP_VHOST httpd_vhosts[HTTP_VHOST_MAX];
+static void *namemap = NULL;
 /* xhttpd packet reader */
 int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 {
@@ -21,10 +32,80 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
-	if(conn && conn->push_chunk)
+    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], *host = NULL, *home = NULL, 
+         *pp = NULL, *p = NULL, *end = NULL;
+    HTTP_REQ http_req = {0};
+    struct stat st = {0};
+    void *dp = NULL;
+    int i = 0, n = 0;
+
+	if(conn && packet)
     {
-		return conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
+        p = packet->data;
+        end = packet->data + packet->ndata;
+        if(http_request_parse(p, end, &http_req) == -1) goto err;
+        if(http_req.reqid == HTTP_GET)
+        {
+            if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
+            {
+                p = http_req.hlines + n;
+                n = strlen(p);
+                TRIETAB_GET(namemap, p, n, dp);
+                if((i = ((long)dp - 1)) > 0) home = httpd_vhosts[i].home;  
+            }
+            if(home == NULL) home = httpd_home;
+            if(home == NULL) goto err;
+            p = file;
+            if(http_req.path[0] != '/')
+                p += sprintf(p, "%s/%s", home, http_req.path);
+            else
+                p += sprintf(p, "%s%s", httpd_home, http_req.path);
+            if(http_req.path[1] == '\0') 
+            {
+                while(i < HTTP_INDEX_MAX && http_indexs[i])
+                {
+                    pp = p;
+                    pp += sprintf(pp, "%s", http_indexs[i]);
+                    if(access(file, F_OK))
+                    {
+                        p = pp;
+                        break;
+                    }
+                    ++i;
+                }
+            }
+            if((n = (p - file)) > 0 && lstat(file, &st) == 0)
+            {
+                if(st.st_size == 0)
+                {
+                    return conn->push_chunk(conn, HTTP_NO_CONTENT, 
+                            strlen(HTTP_NO_CONTENT));
+                }
+                else if((n = http_req.headers[HEAD_REQ_IF_MODIFIED_SINCE]) > 0
+                        && str2time(http_req.hlines + n) == st.st_mtime)
+                {
+                    return conn->push_chunk(conn, HTTP_NOT_MODIFIED, 
+                            strlen(HTTP_NOT_MODIFIED));
+                }
+                else
+                {
+                    p = buf;
+                    p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n"
+                            "Content-Type: text/html;charset=%s\r\n",
+                            (long long int)(st.st_size), http_default_charset);
+                    if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
+                        p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
+                    p += sprintf(p, "Last-Modified:");
+                    p += GMTstrdate(st.st_mtime, p);
+                    p += sprintf(p, "%s", "\r\n");//date end
+                    p += sprintf(p, "%s", "\r\n");
+                    conn->push_chunk(conn, buf, (p - buf));
+                    return conn->push_file(conn, file, 0, st.st_size);
+                }
+            }
+        }
     }
+err:
     return -1;
 }
 /* data handler */
@@ -60,7 +141,9 @@ static void xhttpd_stop(int sig)
 int sbase_initialize(SBASE *sbase, char *conf)
 {
 	char *logfile = NULL, *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
-	int n = 0, ret = -1;
+	int n = 0, i = 0, ret = -1;
+    void *dp = NULL;
+
 	if((dict = iniparser_new(conf)) == NULL)
 	{
 		fprintf(stderr, "Initializing conf:%s failed, %s\n", conf, strerror(errno));
@@ -122,6 +205,55 @@ int sbase_initialize(SBASE *sbase, char *conf)
         service->cacert_file = cacert_file;
         service->privkey_file = privkey_file;
     }
+    //httpd home
+    if((p = iniparser_getstr(dict, "XHTTPD:httpd_home")))
+        httpd_home = p;
+    if((p = iniparser_getstr(dict, "XHTTPD:httpd_index")))
+    {
+        memset(http_indexs, 0, sizeof(char *) * HTTP_INDEX_MAX);
+        httpd_home = p;
+        i = 0;
+        while(i < HTTP_INDEX_MAX && p != '\0')
+        {
+            while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
+            if(*p != '\0') 
+            {
+                http_indexs[i] = p;
+                while(*p != '\0' && *p != 0x20 && *p != '\t' 
+                        && *p != ',' && *p != ';')++p;
+                *p++ = '\0';
+                i++;
+            }else break;
+        }
+    }
+    if((p = iniparser_getstr(dict, "XHTTPD:httpd_vhosts")))
+    {
+        memset(httpd_vhosts, 0, sizeof(HTTP_VHOST) * HTTP_VHOST_MAX);
+        TRIETAB_INIT(namemap);
+        if(namemap)
+        {
+            i = 0;
+            while(i < HTTP_VHOST_MAX && *p != '\0')
+            {
+                while(*p != '[') ++p;
+                ++p;
+                while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
+                httpd_vhosts[i].name = p;
+                while(*p != ':' && *p != 0x20 && *p != '\t') ++p;
+                *p++ = '\0';
+                if((n = (p - httpd_vhosts[i].name)) > 0)
+                {
+                    dp = (void *)((long)(i + 1));
+                    TRIETAB_ADD(namemap, httpd_vhosts[i].name, n, dp);
+                }
+                httpd_vhosts[i].home = p;
+                while(*p != ']' && *p != 0x20 && *p != '\t') ++p;
+                *p++ = '\0';
+                ++i;
+            }
+        }
+    }
+
     if((p = iniparser_getstr(dict, "XHTTPD:logfile")))
     {
         service->set_log(service, p);
@@ -218,5 +350,6 @@ int main(int argc, char **argv)
     //sbase->running(sbase, 3600);
     //sbase->running(sbase, 90000000);sbase->stop(sbase);
     sbase->clean(&sbase);
+    if(namemap) TRIETAB_CLEAN(namemap);
     if(dict)iniparser_free(dict);
 }
