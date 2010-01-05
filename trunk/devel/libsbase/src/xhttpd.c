@@ -20,7 +20,7 @@ static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static dictionary *dict = NULL;
 static char *httpd_home = "/tmp/xhttpd/html";
-static char *http_indexs[HTTP_INDEX_MAX];
+static char *http_indexes[HTTP_INDEX_MAX];
 static int nindexes = 0;
 static char *http_default_charset = "UTF-8";
 static HTTP_VHOST httpd_vhosts[HTTP_VHOST_MAX];
@@ -63,16 +63,20 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
             if(http_req.path[0] != '/')
                 p += sprintf(p, "%s/%s", home, http_req.path);
             else
-                p += sprintf(p, "%s%s", httpd_home, http_req.path);
+                p += sprintf(p, "%s%s", home, http_req.path);
+            fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
             if(http_req.path[1] == '\0') 
             {
-                while(i < nindexes && http_indexs[i])
+                fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
+                i = 0;
+                while(i < nindexes && http_indexes[i])
                 {
                     pp = p;
-                    pp += sprintf(pp, "%s", http_indexs[i]);
+                    pp += sprintf(pp, "%s", http_indexes[i]);
                     fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
-                    if(access(file, F_OK))
+                    if(access(file, F_OK) == 0)
                     {
+                        fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
                         p = pp;
                         break;
                     }
@@ -220,57 +224,52 @@ int sbase_initialize(SBASE *sbase, char *conf)
         httpd_home = p;
     if((p = iniparser_getstr(dict, "XHTTPD:httpd_index")))
     {
-        memset(http_indexs, 0, sizeof(char *) * HTTP_INDEX_MAX);
-        httpd_home = p;
+        memset(http_indexes, 0, sizeof(char *) * HTTP_INDEX_MAX);
         nindexes = 0;
         while(nindexes < HTTP_INDEX_MAX && *p != '\0')
         {
             while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
             if(*p != '\0') 
             {
-                http_indexs[nindexes] = p;
+                http_indexes[nindexes] = p;
                 while(*p != '\0' && *p != 0x20 && *p != '\t' 
                         && *p != ',' && *p != ';')++p;
                 *p++ = '\0';
+                //fprintf(stdout, "%s::%d %d[%s]\n", __FILE__, __LINE__, nindexes, http_indexes[nindexes]);
                 ++nindexes;
             }else break;
         }
     }
-    if((p = iniparser_getstr(dict, "XHTTPD:httpd_vhosts")))
+    TRIETAB_INIT(namemap);
+    if(namemap && (p = iniparser_getstr(dict, "XHTTPD:httpd_vhosts")))
     {
         memset(httpd_vhosts, 0, sizeof(HTTP_VHOST) * HTTP_VHOST_MAX);
-        TRIETAB_INIT(namemap);
-        if(namemap)
+        nvhosts = 0;
+        while(nvhosts < HTTP_VHOST_MAX && *p != '\0')
         {
-            nvhosts = 0;
-            while(nvhosts < HTTP_VHOST_MAX && *p != '\0')
+            while(*p != '[') ++p;
+            ++p;
+            while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
+            httpd_vhosts[nvhosts].name = p;
+            while(*p != ':' && *p != 0x20 && *p != '\t') ++p;
+            *p++ = '\0';
+            if((n = (p - httpd_vhosts[nvhosts].name)) > 0)
             {
-                while(*p != '[') ++p;
-                ++p;
-                while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
-                httpd_vhosts[nvhosts].name = p;
-                while(*p != ':' && *p != 0x20 && *p != '\t') ++p;
-                *p++ = '\0';
-                if((n = (p - httpd_vhosts[nvhosts].name)) > 0)
-                {
-                    dp = (void *)((long)(nvhosts + 1));
-                    TRIETAB_ADD(namemap, httpd_vhosts[nvhosts].name, n, dp);
-                }
-                httpd_vhosts[nvhosts].home = p;
-                while(*p != ']' && *p != 0x20 && *p != '\t') ++p;
-                *p++ = '\0';
-                fprintf(stdout, "%s::%d %s[%s]\n", __FILE__, __LINE__, httpd_vhosts[nvhosts].name, httpd_vhosts[nvhosts].home);
-                ++nvhosts;
+                dp = (void *)((long)(nvhosts + 1));
+                TRIETAB_ADD(namemap, httpd_vhosts[nvhosts].name, n, dp);
             }
+            httpd_vhosts[nvhosts].home = p;
+            while(*p != ']' && *p != 0x20 && *p != '\t') ++p;
+            *p++ = '\0';
+            ++nvhosts;
         }
     }
-
     if((p = iniparser_getstr(dict, "XHTTPD:logfile")))
     {
         service->set_log(service, p);
     }
 	/* server */
-	fprintf(stdout, "Parsing for server...\n");
+	//fprintf(stdout, "Parsing for server...\n");
 	return sbase->add_service(sbase, service);
     /*
     if(service->sock_type == SOCK_DGRAM 
