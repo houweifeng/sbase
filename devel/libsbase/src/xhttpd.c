@@ -53,9 +53,12 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
             if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
             {
                 p = http_req.hlines + n;
-                n = strlen(p);
-                TRIETAB_GET(namemap, p, n, dp);
-                if((i = ((long)dp - 1)) > 0) home = httpd_vhosts[i].home;  
+                if(strncasecmp(p, "www.", 4) == 0) p += 4;
+                host = p;
+                while(*p != ':' && *p != '\0')++p;
+                n = p - host;
+                TRIETAB_GET(namemap, host, n, dp);
+                if((i = ((long)dp - 1)) >= 0) home = httpd_vhosts[i].home;  
             }
             if(home == NULL) home = httpd_home;
             if(home == NULL) goto err;
@@ -64,19 +67,16 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 p += sprintf(p, "%s/%s", home, http_req.path);
             else
                 p += sprintf(p, "%s%s", home, http_req.path);
-            fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
+            //fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
             if(http_req.path[1] == '\0') 
             {
-                fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
                 i = 0;
                 while(i < nindexes && http_indexes[i])
                 {
                     pp = p;
                     pp += sprintf(pp, "%s", http_indexes[i]);
-                    fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
                     if(access(file, F_OK) == 0)
                     {
-                        fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
                         p = pp;
                         break;
                     }
@@ -252,12 +252,14 @@ int sbase_initialize(SBASE *sbase, char *conf)
             while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
             httpd_vhosts[nvhosts].name = p;
             while(*p != ':' && *p != 0x20 && *p != '\t') ++p;
-            *p++ = '\0';
+            *p = '\0';
             if((n = (p - httpd_vhosts[nvhosts].name)) > 0)
             {
                 dp = (void *)((long)(nvhosts + 1));
                 TRIETAB_ADD(namemap, httpd_vhosts[nvhosts].name, n, dp);
             }
+            ++p;
+            while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
             httpd_vhosts[nvhosts].home = p;
             while(*p != ']' && *p != 0x20 && *p != '\t') ++p;
             *p++ = '\0';
