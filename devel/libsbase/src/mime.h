@@ -1,5 +1,6 @@
 #ifndef _MIME_H
 #define _MIME_H
+#define MIME_NUM_MAX   1024
 typedef struct _MIME_MAP
 {
     void *map;

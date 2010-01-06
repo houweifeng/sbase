@@ -276,7 +276,6 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req)
         }
         //path
         while(s < end && *s == 0x20)++s;
-        //fprintf(stdout, "%s:%d path:%s\n", __FILE__, __LINE__, s);
         ps = http_req->path;
         eps = ps + HTTP_URL_PATH_MAX;
         while(s < end && *s != 0x20 && *s != '\r' && *s != '?' && ps < eps)*ps++ = *s++;
@@ -295,6 +294,7 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req)
                 if((end - s) >= http_headers[i].elen
                         && strncasecmp(s, http_headers[i].e, http_headers[i].elen) == 0)
                 {
+                    //fprintf(stdout, "%s:%d path:%s\n", __FILE__, __LINE__, s);
                     s +=  http_headers[i].elen;
                     while(s < end && *s == 0x20)s++;
                     http_req->headers[i] = pp - http_req->hlines;
