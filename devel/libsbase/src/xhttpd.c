@@ -39,7 +39,7 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], *host = NULL, *mime = NULL, 
-         *home = NULL, *pp = NULL, *p = NULL, *end = NULL;
+         *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL;
     int i = 0, n = 0, found = 0, nmime = 0;
     off_t from = 0, to = 0, len = 0;
     struct dirent *ent = NULL;
@@ -68,68 +68,90 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
             if(home == NULL) home = httpd_home;
             if(home == NULL) goto err;
             p = file;
+            p += sprintf(p, "%s", home);
+            root = p;
             if(http_req.path[0] != '/')
-                p += sprintf(p, "%s/%s", home, http_req.path);
+                p += sprintf(p, "/%s", http_req.path);
             else
-                p += sprintf(p, "%s%s", home, http_req.path);
-            //fprintf(stdout, "%s::%d index:%s\n", __FILE__, __LINE__, file);
-            if(http_req.path[1] == '\0') 
-            {
-                i = 0;
-                found = 0;
-                while(i < nindexes && http_indexes[i])
-                {
-                    pp = p;
-                    pp += sprintf(pp, "%s", http_indexes[i]);
-                    if(access(file, F_OK) == 0)
-                    {
-                        found = 1;
-                        p = pp;
-                        break;
-                    }
-                    ++i;
-                }
-                if(found == 0)
-                {
-                    *p = '\0';
-                    if(http_indexes_view && (dirp = opendir(file)))
-                    {
-                        if((p = pp = (char *)calloc(1, HTTP_INDEXES_MAX)))
-                        {
-                            p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
-                                    "<head><body>%s<hr>", file, file);
-                            while((ent = readdir(dirp)) != NULL)
-                            {
-                                if(ent->d_name[0] != '.' && ent->d_namlen > 0)
-                                {
-                                    p += sprintf(p, "<li><a href='%s' >%s</a></li>", 
-                                            ent->d_name, ent->d_name);
-                                }
-                            }
-                            p += sprintf(p, "<hr></body></html>");
-                            len = (off_t)(p - pp);
-                            p = buf;
-                            p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n"
-                                    "Content-Type: text/html;charset=%s\r\n",
-                                    (long long int)(len), http_default_charset);
-                            if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
-                                p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
-                            p += sprintf(p, "\r\n");
-                            conn->push_chunk(conn, buf, (p - buf));
-                            conn->push_chunk(conn, pp, len);
-                            free(pp);
-                            pp = NULL;
-                        }
-                        closedir(dirp);
-                    }
-                    else
-                    {
-                        return conn->push_chunk(conn, HTTP_BAD_REQUEST, strlen(HTTP_BAD_REQUEST));
-                    }
-                }
-            }
+                p += sprintf(p, "%s", http_req.path);
             if((n = (p - file)) > 0 && lstat(file, &st) == 0)
             {
+                if(S_ISDIR(st.st_mode))
+                {
+                    i = 0;
+                    found = 0;
+                    if(p > file && *(p-1) != '/') *p++ = '/';
+                    while(i < nindexes && http_indexes[i])
+                    {
+                        pp = p;
+                        pp += sprintf(pp, "%s", http_indexes[i]);
+                        if(access(file, F_OK) == 0)
+                        {
+                            found = 1;
+                            p = pp;
+                            break;
+                        }
+                        ++i;
+                    }
+                    if(found == 0)
+                    {
+                        *p = '\0';
+                        end = --p;
+                        if(http_indexes_view && (dirp = opendir(file)))
+                        {
+                            if((p = pp = (char *)calloc(1, HTTP_INDEXES_MAX)))
+                            {
+                                p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
+                                        "<head><body>", root);
+                                if(*end == '/') --end;
+                                while(end > root && *end != '/')--end;
+                                if(end == root)
+                                    p += sprintf(p, "<a href='/' >/</a><br>");
+                                else
+                                {
+                                    *end = '\0';
+                                    p += sprintf(p, "<a href='%s/' >..</a><br>", root);
+                                }
+                                p += sprintf(p, "<hr>");
+                                while((ent = readdir(dirp)) != NULL)
+                                {
+                                    if(ent->d_name[0] != '.' && ent->d_namlen > 0)
+                                    {
+                                        if(ent->d_type == DT_DIR)
+                                        {
+                                            p += sprintf(p, "<li><a href='%s/' >%s/</a></li>", 
+                                                    ent->d_name, ent->d_name);
+                                        }
+                                        else
+                                        {
+                                            p += sprintf(p, "<li><a href='%s' >%s</a></li>", 
+                                                    ent->d_name, ent->d_name);
+                                        }
+                                    }
+                                }
+                                p += sprintf(p, "<hr></body></html>");
+                                len = (off_t)(p - pp);
+                                p = buf;
+                                p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n"
+                                        "Content-Type: text/html;charset=%s\r\n",
+                                        (long long int)(len), http_default_charset);
+                                if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
+                                    p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
+                                p += sprintf(p, "\r\n");
+                                conn->push_chunk(conn, buf, (p - buf));
+                                conn->push_chunk(conn, pp, len);
+                                free(pp);
+                                pp = NULL;
+                            }
+                            closedir(dirp);
+                            return 0;
+                        }
+                        else
+                        {
+                            return conn->push_chunk(conn, HTTP_BAD_REQUEST, strlen(HTTP_BAD_REQUEST));
+                        }
+                    }
+                }
                 mime = pp = p ;
                 while(mime > file && *mime != '.')--mime;
                 if(*mime == '.') nmime = p - ++mime;
@@ -178,7 +200,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         if((i = ((long)dp - 1)) >= 0)
                         {
                             p += sprintf(p, "Content-Type: %s;charset=%s\r\n",
-                                http_mime_types[i].s, http_default_charset);
+                                    http_mime_types[i].s, http_default_charset);
                         }
                     }
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
