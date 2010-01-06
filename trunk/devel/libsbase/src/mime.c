@@ -21,17 +21,6 @@ int mime_add(MIME_MAP *mime_map, char *mime, int len)
     return id;
 }
 
-/* doc_type_map init */
-int mime_map_init(MIME_MAP *mime_map)
-{
-    if(mime_map && mime_map->map == NULL)
-    {
-        TRIETAB_INIT(mime_map->map);
-        return 0;
-    }
-    return -1;
-}
-
 /* add mime line */
 int mime_add_line(MIME_MAP *mime_map, char *p, char *end)
 {
@@ -68,6 +57,17 @@ int mime_id(MIME_MAP *mime_map, char *mime, int len)
         id = (long) dp - 1;
     }
     return id;
+}
+
+/* doc_type_map init */
+int mime_map_init(MIME_MAP *mime_map)
+{
+    if(mime_map && mime_map->map == NULL)
+    {
+        TRIETAB_INIT(mime_map->map);
+        return 0;
+    }
+    return -1;
 }
 
 /* clean doc_type_map */

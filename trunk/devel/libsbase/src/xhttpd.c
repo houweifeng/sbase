@@ -4,6 +4,7 @@
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
+#include <dirent.h>
 #include <sys/resource.h>
 #include <sbase.h>
 #include "iniparser.h"
@@ -21,6 +22,7 @@ static SERVICE *service = NULL;
 static dictionary *dict = NULL;
 static char *httpd_home = "/tmp/xhttpd/html";
 static char *http_indexes[HTTP_INDEX_MAX];
+static int http_indexes_view = 0;
 static int nindexes = 0;
 static char *http_default_charset = "UTF-8";
 static HTTP_VHOST httpd_vhosts[HTTP_VHOST_MAX];
@@ -36,13 +38,15 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
-    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], *host = NULL, *home = NULL, 
-         *pp = NULL, *p = NULL, *end = NULL;
+    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], *host = NULL, *mime = NULL, 
+         *home = NULL, *pp = NULL, *p = NULL, *end = NULL;
+    int i = 0, n = 0, found = 0, nmime = 0;
     off_t from = 0, to = 0, len = 0;
+    struct dirent *ent = NULL;
     HTTP_REQ http_req = {0};
     struct stat st = {0};
+    DIR *dirp = NULL;
     void *dp = NULL;
-    int i = 0, n = 0;
 
     if(conn && packet)
     {
@@ -72,20 +76,63 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
             if(http_req.path[1] == '\0') 
             {
                 i = 0;
+                found = 0;
                 while(i < nindexes && http_indexes[i])
                 {
                     pp = p;
                     pp += sprintf(pp, "%s", http_indexes[i]);
                     if(access(file, F_OK) == 0)
                     {
+                        found = 1;
                         p = pp;
                         break;
                     }
                     ++i;
                 }
+                if(found == 0)
+                {
+                    *p = '\0';
+                    if(http_indexes_view && (dirp = opendir(file)))
+                    {
+                        if((p = pp = (char *)calloc(1, HTTP_INDEXES_MAX)))
+                        {
+                            p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
+                                    "<head><body>%s<hr>", file, file);
+                            while((ent = readdir(dirp)) != NULL)
+                            {
+                                if(ent->d_name[0] != '.' && ent->d_namlen > 0)
+                                {
+                                    p += sprintf(p, "<li><a href='%s' >%s</a></li>", 
+                                            ent->d_name, ent->d_name);
+                                }
+                            }
+                            p += sprintf(p, "<hr></body></html>");
+                            len = (off_t)(p - pp);
+                            p = buf;
+                            p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n"
+                                    "Content-Type: text/html;charset=%s\r\n",
+                                    (long long int)(len), http_default_charset);
+                            if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
+                                p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
+                            p += sprintf(p, "\r\n");
+                            conn->push_chunk(conn, buf, (p - buf));
+                            conn->push_chunk(conn, pp, len);
+                            free(pp);
+                            pp = NULL;
+                        }
+                        closedir(dirp);
+                    }
+                    else
+                    {
+                        return conn->push_chunk(conn, HTTP_BAD_REQUEST, strlen(HTTP_BAD_REQUEST));
+                    }
+                }
             }
             if((n = (p - file)) > 0 && lstat(file, &st) == 0)
             {
+                mime = pp = p ;
+                while(mime > file && *mime != '.')--mime;
+                if(*mime == '.') nmime = p - ++mime;
                 if(st.st_size == 0)
                 {
                     return conn->push_chunk(conn, HTTP_NO_CONTENT, 
@@ -123,9 +170,17 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if(to == 0) to = st.st_size;
                     len = to - from;
                     p = buf;
-                    p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n"
-                            "Content-Type: text/html;charset=%s\r\n",
-                            (long long int)(len), http_default_charset);
+                    p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n", (long long)len);
+                    //fprintf(stdout, "%s::%d mime:%s[%d]\n", __FILE__, __LINE__, mime, nmime);
+                    if(mime && nmime > 0)
+                    {
+                        TRIETAB_GET(namemap, mime, nmime, dp);
+                        if((i = ((long)dp - 1)) >= 0)
+                        {
+                            p += sprintf(p, "Content-Type: %s;charset=%s\r\n",
+                                http_mime_types[i].s, http_default_charset);
+                        }
+                    }
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
                     p += sprintf(p, "Last-Modified:");
@@ -179,7 +234,7 @@ static void xhttpd_stop(int sig)
 int sbase_initialize(SBASE *sbase, char *conf)
 {
 	char *logfile = NULL, *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
-	int n = 0, ret = -1;
+	int n = 0, i = 0, ret = -1;
     void *dp = NULL;
 
 	if((dict = iniparser_new(conf)) == NULL)
@@ -246,6 +301,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     //httpd home
     if((p = iniparser_getstr(dict, "XHTTPD:httpd_home")))
         httpd_home = p;
+    http_indexes_view = iniparser_getint(dict, "XHTTPD:http_indexes_view", 1);
     if((p = iniparser_getstr(dict, "XHTTPD:httpd_index")))
     {
         memset(http_indexes, 0, sizeof(char *) * HTTP_INDEX_MAX);
@@ -264,30 +320,41 @@ int sbase_initialize(SBASE *sbase, char *conf)
             }else break;
         }
     }
+    //name map
     TRIETAB_INIT(namemap);
-    if(namemap && (p = iniparser_getstr(dict, "XHTTPD:httpd_vhosts")))
+    if(namemap)
     {
-        memset(httpd_vhosts, 0, sizeof(HTTP_VHOST) * HTTP_VHOST_MAX);
-        nvhosts = 0;
-        while(nvhosts < HTTP_VHOST_MAX && *p != '\0')
+        for(i = 0; i < HTTP_MIME_NUM; i++)
         {
-            while(*p != '[') ++p;
-            ++p;
-            while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
-            httpd_vhosts[nvhosts].name = p;
-            while(*p != ':' && *p != 0x20 && *p != '\t') ++p;
-            *p = '\0';
-            if((n = (p - httpd_vhosts[nvhosts].name)) > 0)
+            dp = (void *)((long)(i + 1));
+            p = http_mime_types[i].e;
+            n = http_mime_types[i].elen;
+            TRIETAB_ADD(namemap, p, n, dp);
+        }
+        if((p = iniparser_getstr(dict, "XHTTPD:httpd_vhosts")))
+        {
+            memset(httpd_vhosts, 0, sizeof(HTTP_VHOST) * HTTP_VHOST_MAX);
+            nvhosts = 0;
+            while(nvhosts < HTTP_VHOST_MAX && *p != '\0')
             {
-                dp = (void *)((long)(nvhosts + 1));
-                TRIETAB_ADD(namemap, httpd_vhosts[nvhosts].name, n, dp);
+                while(*p != '[') ++p;
+                ++p;
+                while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
+                httpd_vhosts[nvhosts].name = p;
+                while(*p != ':' && *p != 0x20 && *p != '\t') ++p;
+                *p = '\0';
+                if((n = (p - httpd_vhosts[nvhosts].name)) > 0)
+                {
+                    dp = (void *)((long)(nvhosts + 1));
+                    TRIETAB_ADD(namemap, httpd_vhosts[nvhosts].name, n, dp);
+                }
+                ++p;
+                while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
+                httpd_vhosts[nvhosts].home = p;
+                while(*p != ']' && *p != 0x20 && *p != '\t') ++p;
+                *p++ = '\0';
+                ++nvhosts;
             }
-            ++p;
-            while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
-            httpd_vhosts[nvhosts].home = p;
-            while(*p != ']' && *p != 0x20 && *p != '\t') ++p;
-            *p++ = '\0';
-            ++nvhosts;
         }
     }
     if((p = iniparser_getstr(dict, "XHTTPD:logfile")))
