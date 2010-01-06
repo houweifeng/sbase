@@ -38,6 +38,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], *host = NULL, *home = NULL, 
          *pp = NULL, *p = NULL, *end = NULL;
+    off_t from = 0, to = 0, len = 0;
     HTTP_REQ http_req = {0};
     struct stat st = {0};
     void *dp = NULL;
@@ -98,10 +99,33 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 }
                 else
                 {
+                    if((n = http_req.headers[HEAD_REQ_RANGE]) > 0)
+                    {
+                        p = http_req.hlines + n;
+                        while(*p == 0x20 || *p == '\t')++p;
+                        if(strncasecmp(p, "bytes=", 6) == 0) p += 6;
+                        while(*p == 0x20)++p;
+                        if(*p == '-')
+                        {
+                            ++p;
+                            while(*p == 0x20)++p;
+                            if(*p >= '0' && *p <= '9') to = (off_t)atoll(p);
+                        }
+                        else if(*p >= '0' && *p <= '9')
+                        {
+                            from = (off_t) atoll(p++);
+                            while(*p != '-')++p;
+                            ++p;
+                            while(*p == 0x20)++p;
+                            if(*p >= '0' && *p <= '9') to = (off_t)atoll(p);
+                        }
+                    }
+                    if(to == 0) to = st.st_size;
+                    len = to - from;
                     p = buf;
                     p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n"
                             "Content-Type: text/html;charset=%s\r\n",
-                            (long long int)(st.st_size), http_default_charset);
+                            (long long int)(len), http_default_charset);
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
                     p += sprintf(p, "Last-Modified:");
@@ -109,7 +133,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "%s", "\r\n");//date end
                     p += sprintf(p, "%s", "\r\n");
                     conn->push_chunk(conn, buf, (p - buf));
-                    return conn->push_file(conn, file, 0, st.st_size);
+                    return conn->push_file(conn, file, from, len);
                 }
             }
         }
