@@ -117,7 +117,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 end = p;
                                 while((ent = readdir(dirp)) != NULL)
                                 {
-                                    if(ent->d_name[0] != '.' && ent->d_namlen > 0)
+                                    if(ent->d_name[0] != '.' && ent->d_reclen > 0)
                                     {
                                         if(ent->d_type == DT_DIR)
                                         {
