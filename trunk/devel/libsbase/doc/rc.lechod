@@ -11,7 +11,7 @@
 . /etc/rc.d/init.d/functions
 
 #[ -r /etc/sysconfig/lechod ] && . /etc/sysconfig/lechod
-LECHODARGS=" -c /usr/local/etc/lechod.ini > /tmp/lechod.log 2>&1 "
+LECHODARGS=" -d -c /usr/local/etc/lechod.ini > /dev/null 2>&1 "
 
 start() 
 {
