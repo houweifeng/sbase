@@ -317,10 +317,10 @@ install-ini:
 		|| cp -p $(top_srcdir)/doc/rc.lechod.ini $(sysconftodir)/lechod.ini
 	@test -f $(sysconftodir)/xhttpd.ini \
 		|| cp -p $(top_srcdir)/doc/rc.xhttpd.ini $(sysconftodir)/xhttpd.ini
-	@test -f $(sysconftodir)/init.d/xhttpd \
-		|| cp -p $(top_srcdir)/doc/rc.xhttpd $(sysconftodir)/init.d/xhttpd
 	@test -f $(sysconftodir)/init.d/lechod \
 		|| cp -p $(top_srcdir)/doc/rc.lechod $(sysconftodir)/init.d/lechod
+	@test -f $(sysconftodir)/init.d/xhttpd \
+		|| cp -p $(top_srcdir)/doc/rc.xhttpd $(sysconftodir)/init.d/xhttpd
 	@perl -i -p -e "s@/usr/local/bin@$(prefix)/bin@g" \
 		$(sysconftodir)/init.d/xhttpd $(sysconftodir)/init.d/lechod
 	@perl -i -p -e "s@/usr/local/etc@$(sysconftodir)@g" \
