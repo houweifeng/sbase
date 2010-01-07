@@ -102,17 +102,19 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                             if((p = pp = (char *)calloc(1, HTTP_INDEXES_MAX)))
                             {
                                 p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
-                                        "<head><body>", root);
+                                        "<head><body><h2>xhttpd </h2>", root);
                                 if(*end == '/') --end;
                                 while(end > root && *end != '/')--end;
                                 if(end == root)
                                     p += sprintf(p, "<a href='/' >/</a><br>");
-                                else
+                                else if(end > root)
                                 {
                                     *end = '\0';
                                     p += sprintf(p, "<a href='%s/' >..</a><br>", root);
                                 }
-                                p += sprintf(p, "<hr>");
+                                //fprintf(stdout, "%s::%d root:%s\n", __FILE__, __LINE__, root);
+                                p += sprintf(p, "<hr noshade><ul>");
+                                end = p;
                                 while((ent = readdir(dirp)) != NULL)
                                 {
                                     if(ent->d_name[0] != '.' && ent->d_namlen > 0)
@@ -129,7 +131,9 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                         }
                                     }
                                 }
-                                p += sprintf(p, "<hr></body></html>");
+                                p += sprintf(p, "</ul>");
+                                if(end != p) p += sprintf(p, "<hr noshade>");
+                                p += sprintf(p, "<em></body></html>");
                                 len = (off_t)(p - pp);
                                 p = buf;
                                 p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n"
