@@ -12,11 +12,11 @@
 #include "mime.h"
 #include "trie.h"
 #include "stime.h"
-#define HTTP_RESP_OK            "HTTP/1.0 200 OK"
-#define HTTP_BAD_REQUEST        "HTTP/1.0 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
-#define HTTP_NOT_FOUND          "HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
-#define HTTP_NOT_MODIFIED       "HTTP/1.0 304 Not Modified\r\nContent-Length: 0\r\n\r\n"
-#define HTTP_NO_CONTENT         "HTTP/1.0 206 No Content\r\nContent-Length: 0\r\n\r\n"
+#define HTTP_RESP_OK            "HTTP/1.1 200 OK"
+#define HTTP_BAD_REQUEST        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
+#define HTTP_NOT_FOUND          "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
+#define HTTP_NOT_MODIFIED       "HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\n\r\n"
+#define HTTP_NO_CONTENT         "HTTP/1.1 206 No Content\r\nContent-Length: 0\r\n\r\n"
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static dictionary *dict = NULL;
@@ -52,6 +52,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     {
         p = packet->data;
         end = packet->data + packet->ndata;
+        //fprintf(stdout, "%s", p);
         if(http_request_parse(p, end, &http_req) == -1) goto err;
         if(http_req.reqid == HTTP_GET)
         {
@@ -136,7 +137,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 p += sprintf(p, "<em></body></html>");
                                 len = (off_t)(p - pp);
                                 p = buf;
-                                p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n"
+                                p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
                                         "Content-Type: text/html;charset=%s\r\n",
                                         (long long int)(len), http_default_charset);
                                 if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
@@ -196,7 +197,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if(to == 0) to = st.st_size;
                     len = to - from;
                     p = buf;
-                    p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length:%lld\r\n", (long long)len);
+                    p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n", (long long)len);
                     //fprintf(stdout, "%s::%d mime:%s[%d]\n", __FILE__, __LINE__, mime, nmime);
                     if(mime && nmime > 0)
                     {
