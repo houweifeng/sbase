@@ -17,6 +17,7 @@
 #define HTTP_NOT_FOUND          "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
 #define HTTP_NOT_MODIFIED       "HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NO_CONTENT         "HTTP/1.1 206 No Content\r\nContent-Length: 0\r\n\r\n"
+#define LL(x) ((long long)x)
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static dictionary *dict = NULL;
@@ -94,67 +95,82 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         }
                         ++i;
                     }
-                    if(found == 0)
+                    if(found == 0 && http_indexes_view && (*p = '\0') >= 0 
+                            && (dirp = opendir(file)))
                     {
-                        *p = '\0';
                         end = --p;
-                        if(http_indexes_view && (dirp = opendir(file)))
+                        if((p = pp = (char *)calloc(1, HTTP_INDEXES_MAX)))
                         {
-                            if((p = pp = (char *)calloc(1, HTTP_INDEXES_MAX)))
+                            p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
+                                    "<head><body><h1 align=center>xhttpd</h1>", root);
+                            if(*end == '/') --end;
+                            while(end > root && *end != '/')--end;
+                            if(end == root)
+                                p += sprintf(p, "<a href='/' >/</a><br>");
+                            else if(end > root)
                             {
-                                p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
-                                        "<head><body><h2>xhttpd </h2>", root);
-                                if(*end == '/') --end;
-                                while(end > root && *end != '/')--end;
-                                if(end == root)
-                                    p += sprintf(p, "<a href='/' >/</a><br>");
-                                else if(end > root)
-                                {
-                                    *end = '\0';
-                                    p += sprintf(p, "<a href='%s/' >..</a><br>", root);
-                                }
-                                //fprintf(stdout, "%s::%d root:%s\n", __FILE__, __LINE__, root);
-                                p += sprintf(p, "<hr noshade><ul>");
-                                end = p;
-                                while((ent = readdir(dirp)) != NULL)
-                                {
-                                    if(ent->d_name[0] != '.' && ent->d_reclen > 0)
-                                    {
-                                        if(ent->d_type == DT_DIR)
-                                        {
-                                            p += sprintf(p, "<li><a href='%s/' >%s/</a></li>", 
-                                                    ent->d_name, ent->d_name);
-                                        }
-                                        else
-                                        {
-                                            p += sprintf(p, "<li><a href='%s' >%s</a></li>", 
-                                                    ent->d_name, ent->d_name);
-                                        }
-                                    }
-                                }
-                                p += sprintf(p, "</ul>");
-                                if(end != p) p += sprintf(p, "<hr noshade>");
-                                p += sprintf(p, "<em></body></html>");
-                                len = (off_t)(p - pp);
-                                p = buf;
-                                p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
-                                        "Content-Type: text/html;charset=%s\r\n",
-                                        (long long int)(len), http_default_charset);
-                                if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
-                                    p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
-                                p += sprintf(p, "\r\n");
-                                conn->push_chunk(conn, buf, (p - buf));
-                                conn->push_chunk(conn, pp, len);
-                                free(pp);
-                                pp = NULL;
+                                *end = '\0';
+                                p += sprintf(p, "<a href='%s/' >..</a><br>", root);
                             }
-                            closedir(dirp);
-                            return 0;
+                            p += sprintf(p, "<hr noshade><table><tr align=left>"
+                                    "<th width=500>Name</th><th width=200>Size</th>"
+                                    "<th>Last-Modified</th></tr>");
+                            end = p;
+                            while((ent = readdir(dirp)) != NULL)
+                            {
+                                if(ent->d_name[0] != '.' && ent->d_reclen > 0)
+                                {
+                                    p += sprintf(p, "<tr>");
+                                    if(ent->d_type == DT_DIR)
+                                    {
+                                        p += sprintf(p, "<td><a href='%s/' >%s/</a></td>", 
+                                                ent->d_name, ent->d_name);
+                                    }
+                                    else
+                                    {
+                                        p += sprintf(p, "<td><a href='%s' >%s</a></td>", 
+                                                ent->d_name, ent->d_name);
+                                    }
+                                    sprintf(buf, "%s/%s", file, ent->d_name);
+                                    if(lstat(buf, &st) == 0)
+                                    {
+                                        if(st.st_size >= (off_t)HTTP_BYTE_G)
+                                            p += sprintf(p, "<td>%.1fG</td>", 
+                                                    (double)st.st_size/(double) HTTP_BYTE_G);
+                                        else if(st.st_size >= (off_t)HTTP_BYTE_M)
+                                            p += sprintf(p, "<td>%lldM</td>", 
+                                                    st.st_size/(off_t)HTTP_BYTE_M);
+                                        else if(st.st_size >= (off_t)HTTP_BYTE_K)
+                                            p += sprintf(p, "<td>%lldK</td>", 
+                                                    st.st_size/(off_t)HTTP_BYTE_K);
+                                        else 
+                                            p += sprintf(p, "<td>%lldB</td>", st.st_size);
+
+                                    }
+                                    p += sprintf(p, "<td>");
+                                    p += GMTstrdate(st.st_mtime, p);
+                                    p += sprintf(p, "</td>");
+                                    p += sprintf(p, "</tr>");
+                                }
+                            }
+                            p += sprintf(p, "</table>");
+                            if(end != p) p += sprintf(p, "<hr noshade>");
+                            p += sprintf(p, "<em></body></html>");
+                            len = (off_t)(p - pp);
+                            p = buf;
+                            p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
+                                    "Content-Type: text/html;charset=%s\r\n",
+                                    (long long int)(len), http_default_charset);
+                            if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
+                                p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
+                            p += sprintf(p, "Server: xhttpd\r\n\r\n");
+                            conn->push_chunk(conn, buf, (p - buf));
+                            conn->push_chunk(conn, pp, len);
+                            free(pp);
+                            pp = NULL;
                         }
-                        else
-                        {
-                            return conn->push_chunk(conn, HTTP_BAD_REQUEST, strlen(HTTP_BAD_REQUEST));
-                        }
+                        closedir(dirp);
+                        return 0;
                     }
                 }
                 mime = pp = p ;
@@ -183,7 +199,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         {
                             ++p;
                             while(*p == 0x20)++p;
-                            if(*p >= '0' && *p <= '9') to = (off_t)atoll(p);
+                            if(*p >= '0' && *p <= '9') to = (off_t)atoll(p) + 1;
                         }
                         else if(*p >= '0' && *p <= '9')
                         {
@@ -191,13 +207,19 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                             while(*p != '-')++p;
                             ++p;
                             while(*p == 0x20)++p;
-                            if(*p >= '0' && *p <= '9') to = (off_t)atoll(p);
+                            if(*p >= '0' && *p <= '9') to = (off_t)atoll(p) + 1;
                         }
                     }
                     if(to == 0) to = st.st_size;
                     len = to - from;
                     p = buf;
-                    p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n", (long long)len);
+                    if(from > 0)
+                        p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
+                                "Content-Length:%lld\r\nContent-Range: bytes %lld-%lld/%lld\r\n", 
+                                LL(len), LL(from), LL(to - 1), LL(st.st_size));
+                    else
+                        p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n"
+                                "Content-Length:%lld\r\n", LL(len));
                     //fprintf(stdout, "%s::%d mime:%s[%d]\n", __FILE__, __LINE__, mime, nmime);
                     if(mime && nmime > 0)
                     {
@@ -213,8 +235,9 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "Last-Modified:");
                     p += GMTstrdate(st.st_mtime, p);
                     p += sprintf(p, "%s", "\r\n");//date end
-                    p += sprintf(p, "%s", "\r\n");
+                    p += sprintf(p, "Server: xhttpd\r\n\r\n");
                     conn->push_chunk(conn, buf, (p - buf));
+                    //fprintf(stdout, "%s::%d root:%s\n", __FILE__, __LINE__, root);
                     return conn->push_file(conn, file, from, len);
                 }
             }

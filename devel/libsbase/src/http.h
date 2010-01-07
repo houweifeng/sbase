@@ -20,6 +20,9 @@
 #define HTTP_ARGVS_MAX     1024
 #define HTTP_BUFFER_SIZE   65536
 #define HTTP_HEADER_MAX    65536
+#define HTTP_BYTE_K        1024
+#define HTTP_BYTE_M        1048576
+#define HTTP_BYTE_G        1073741824
 typedef struct _HTTP_VHOST
 {
     char *name;
