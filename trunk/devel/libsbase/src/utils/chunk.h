@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/mman.h>
 #ifdef HAVE_SSL
 #include "xssl.h"
 #endif
@@ -22,6 +23,9 @@ typedef struct _CHUNK
     off_t left;
     int bsize;
     char *end;
+    char *mdata;
+    char *offmdata;
+    int nmdata;
     int type;
     int fd;
     char filename[CHUNK_FILE_NAME_MAX];
@@ -34,6 +38,9 @@ typedef struct _CHUNK * PCHUNK;
 #define CK(ptr) ((CHUNK *)ptr)
 #define CK_DATA(ptr) (CK(ptr)->data)
 #define CK_NDATA(ptr) (CK(ptr)->ndata)
+#define CK_MDATA(ptr) (CK(ptr)->mdata)
+#define CK_OFFMDATA(ptr) (CK(ptr)->offmdata)
+#define CK_NMDATA(ptr) (CK(ptr)->nmdata)
 #define CK_LEFT(ptr) (CK(ptr)->left)
 #define CK_END(ptr) (CK(ptr)->end)
 #define CK_TYPE(ptr) (CK(ptr)->type)
@@ -175,26 +182,28 @@ typedef struct _CHUNK * PCHUNK;
             (((CK_LEFT(ptr) -= CKN(ptr)) >= 0 && (CK_OFFSET(ptr) += CKN(ptr)) > 0           \
             && (CK_FD(ptr) = close(CK_FD(ptr))) >= 0                                        \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr): -1): -1)
+/* mmap buffer */
+#define CK_MMAP(ptr) ((CK_NMDATA(ptr) <= 0)?(((CK_MDATA(ptr))?(munmap(CK_MDATA(ptr), CK_BSIZE(ptr)) == 0):1) && (CK_MDATA(ptr) = (char *)mmap(NULL, CK_BSIZE(ptr), PROT_READ, MAP_PRIVATE, CK_FD(ptr), (CK_OFFSET(ptr)/(off_t)CK_BSIZE(ptr)) * (off_t)CK_BSIZE(ptr))) != (char *)-1 && (CK_NMDATA(ptr) = (CK_LEFT(ptr) > CK_BSIZE(ptr))?(CK_BSIZE(ptr) - CK_OFFSET(ptr)%((off_t)CK_BSIZE(ptr))):CK_LEFT(ptr)) && (CK_OFFMDATA(ptr) = (CK_MDATA(ptr) + (CK_OFFSET(ptr)%((off_t)CK_BSIZE(ptr)))))):CK_NMDATA(ptr))
+            //&& (OFFMDATA(ptr) = (CK_MDATA(ptr) + CK_OFFSET(ptr)%((off_t)CK_BSIZE(ptr)))) && (CK_NMDATA(ptr) = (CK_BSIZE(ptr) - (OFFMDATA(ptr) - CK_MDATA(ptr)))) > 0):CK_NMDATA(ptr))
 /* write to fd from file */
 #ifdef HAVE_SSL
 #define CK_WRITE_FROM_FILE_SSL(ptr, ssl) ((ptr && ssl && CK_LEFT(ptr) > 0 && CK_DATA(ptr)   \
-            && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0                   \
-            && lseek(CK_FD(ptr), CK_OFFSET(ptr), SEEK_SET) >= 0                             \
-            && (CKN(ptr) = read(CK_FD(ptr), CK_DATA(ptr), CK_NDATA(ptr))) > 0               \
+            && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0 && CK_MMAP(ptr)   \
             && (CKN(ptr) = SSL_write(XSSL(ssl), CK_DATA(ptr), CKN(ptr))) > 0)?              \
             (((CK_OFFSET(ptr) += CKN(ptr)) > 0 && (CK_LEFT(ptr) -= CKN(ptr)) >= 0           \
-            && (CK_FD(ptr) = close(CK_FD(ptr))) >= 0                                        \
+            && (CK_OFFMDATA(ptr) += CKN(ptr)) && (CK_NMDATA(ptr) -= CKN(ptr)) >= 0          \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr) : -1) : -1)
 #else
 #define CK_WRITE_FROM_FILE_SSL(ptr, ssl)
 #endif
-#define CK_WRITE_FROM_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0 && CK_DATA(ptr)     \
-            && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0                   \
-            && lseek(CK_FD(ptr), CK_OFFSET(ptr), SEEK_SET) >= 0                             \
+//            && lseek(CK_FD(ptr), CK_OFFSET(ptr), SEEK_SET) >= 0                             \
             && (CKN(ptr) = read(CK_FD(ptr), CK_DATA(ptr), CK_NDATA(ptr))) > 0               \
-            && (CKN(ptr) = write(fd, CK_DATA(ptr), CKN(ptr))) > 0)?                         \
+
+#define CK_WRITE_FROM_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0 && CK_DATA(ptr)     \
+            && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0 && CK_MMAP(ptr)   \
+            && (CKN(ptr) = write(fd, CK_OFFMDATA(ptr), CK_NMDATA(ptr))) > 0)?               \
             (((CK_OFFSET(ptr) += CKN(ptr)) > 0 && (CK_LEFT(ptr) -= CKN(ptr)) >= 0           \
-            && (CK_FD(ptr) = close(CK_FD(ptr))) >= 0                                        \
+            && (CK_OFFMDATA(ptr) += CKN(ptr)) && (CK_NMDATA(ptr) -= CKN(ptr)) >= 0          \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr) : -1) : -1)
 /* fill to file from buffer */
 #define CK_FILE_FILL(ptr, pdata, npdata) ((ptr && pdata && npdata > 0                       \
@@ -232,6 +241,7 @@ typedef struct _CHUNK * PCHUNK;
 {                                                                                           \
     if(ptr)                                                                                 \
     {                                                                                       \
+        if(CK_MDATA(ptr)) munmap(CK_MDATA(ptr), CK_BSIZE(ptr));                             \
         if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
         if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                \
         memset(ptr, 0, sizeof(CHUNK));                                                      \
@@ -245,6 +255,9 @@ typedef struct _CHUNK * PCHUNK;
     {                                                                                       \
         if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
 		CK_NDATA(ptr) = 0;                                                                  \
+		CK_NMDATA(ptr) = 0;                                                                  \
+		CK_MDATA(ptr) = NULL;                                                                 \
+		CK_OFFMDATA(ptr) = NULL;                                                                 \
 		CK_END(ptr) = NULL;                                                                 \
 		CK_TYPE(ptr) = 0;                                                                   \
 		CK_FD(ptr) = -1;                                                                    \
