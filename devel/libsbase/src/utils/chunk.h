@@ -11,6 +11,13 @@
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 1024 
+#ifndef MMAP_CHUNK_SIZE
+//#define MMAP_CHUNK_SIZE     1048576
+//#define MMAP_CHUNK_SIZE     2097152
+//#define MMAP_CHUNK_SIZE     3145728
+#define MMAP_CHUNK_SIZE     4194304
+//#define MMAP_CHUNK_SIZE     8388608 
+#endif
 #ifndef CHUNK_BLOCK_SIZE
 #define CHUNK_BLOCK_SIZE    65536 
 #endif
@@ -184,13 +191,13 @@ typedef struct _CHUNK * PCHUNK;
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr): -1): -1)
 /* mmap buffer */
 int ck_mmap(void *);
-#define CK_MMAP(ptr) ((CK_NMDATA(ptr) <= 0)?(((CK_MDATA(ptr))?(munmap(CK_MDATA(ptr), CK_BSIZE(ptr)) == 0):1) && (CK_MDATA(ptr) = (char *)mmap(NULL, CK_BSIZE(ptr), PROT_READ, MAP_PRIVATE, CK_FD(ptr), (CK_OFFSET(ptr)/(off_t)CK_BSIZE(ptr)) * (off_t)CK_BSIZE(ptr))) != (char *)-1 && (CK_OFFMDATA(ptr) = (int)(CK_OFFSET(ptr)%((off_t)CK_BSIZE(ptr)))) >= 0 && (CK_NMDATA(ptr) = (CK_LEFT(ptr) > CK_BSIZE(ptr)) ? (CK_BSIZE(ptr) - CK_OFFMDATA(ptr)) : CK_LEFT(ptr)) > 0):1) 
+#define CK_MMAP(ptr) ((CK_NMDATA(ptr) <= 0)?(((CK_MDATA(ptr))?(munmap(CK_MDATA(ptr), MMAP_CHUNK_SIZE) == 0):1) && (CK_MDATA(ptr) = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_PRIVATE, CK_FD(ptr), (CK_OFFSET(ptr)/(off_t)MMAP_CHUNK_SIZE) * (off_t)MMAP_CHUNK_SIZE)) != (char *)-1 && (CK_OFFMDATA(ptr) = (int)(CK_OFFSET(ptr)%((off_t)MMAP_CHUNK_SIZE))) >= 0 && (CK_NMDATA(ptr) = (CK_LEFT(ptr) > MMAP_CHUNK_SIZE) ? (MMAP_CHUNK_SIZE - CK_OFFMDATA(ptr)) : CK_LEFT(ptr)) > 0):1) 
 
 /* write to fd from file */
 #ifdef HAVE_SSL
 #define CK_WRITE_FROM_FILE_SSL(ptr, ssl) ((ptr && ssl && CK_LEFT(ptr) > 0 && CK_DATA(ptr)   \
             && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0 && CK_MMAP(ptr)   \
-            && (CKN(ptr) = SSL_write(XSSL(ssl), CK_DATA(ptr), CKN(ptr))) > 0)?              \
+            && (CKN(ptr)=SSL_write(XSSL(ssl), CK_MDATA(ptr)+CK_OFFMDATA(ptr),CK_NMDATA(ptr))) > 0)?    \
             (((CK_OFFSET(ptr) += CKN(ptr)) > 0 && (CK_LEFT(ptr) -= CKN(ptr)) >= 0           \
             && (CK_OFFMDATA(ptr) += CKN(ptr)) && (CK_NMDATA(ptr) -= CKN(ptr)) >= 0          \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr) : -1) : -1)
@@ -201,8 +208,8 @@ int ck_mmap(void *);
             && (CKN(ptr) = read(CK_FD(ptr), CK_DATA(ptr), CK_NDATA(ptr))) > 0               \
 
 #define CK_WRITE_FROM_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0 && CK_DATA(ptr)     \
-            && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0 && ck_mmap(ptr)   \
-            && (CKN(ptr) = write(fd, CK_MDATA(ptr) + CK_OFFMDATA(ptr), CK_NMDATA(ptr))) > 0)?               \
+            && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0 && CK_MMAP(ptr)   \
+            && (CKN(ptr)=write(fd, CK_MDATA(ptr)+CK_OFFMDATA(ptr),CK_NMDATA(ptr))) > 0)?    \
             (((CK_OFFSET(ptr) += CKN(ptr)) > 0 && (CK_LEFT(ptr) -= CKN(ptr)) >= 0           \
             && (CK_OFFMDATA(ptr) += CKN(ptr)) && (CK_NMDATA(ptr) -= CKN(ptr)) >= 0          \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr) : -1) : -1)

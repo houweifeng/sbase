@@ -63,7 +63,7 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libsbase_la_LIBADD =
 am_libsbase_la_OBJECTS = libsbase_la-conn.lo libsbase_la-message.lo \
 	libsbase_la-procthread.lo libsbase_la-sbase.lo \
-	libsbase_la-service.lo
+	libsbase_la-service.lo libsbase_la-chunk.lo
 libsbase_la_OBJECTS = $(am_libsbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -204,6 +204,7 @@ sbase.c \
 service.c \
 utils/xssl.h 	\
 utils/chunk.h \
+utils/chunk.c \
 utils/logger.h \
 utils/memb.h \
 utils/mutex.h \
@@ -329,6 +330,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iniparser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-chunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-message.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-procthread.Plo@am__quote@
@@ -396,6 +398,13 @@ libsbase_la-service.lo: service.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='service.c' object='libsbase_la-service.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-service.lo `test -f 'service.c' || echo '$(srcdir)/'`service.c
+
+libsbase_la-chunk.lo: utils/chunk.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-chunk.lo -MD -MP -MF "$(DEPDIR)/libsbase_la-chunk.Tpo" -c -o libsbase_la-chunk.lo `test -f 'utils/chunk.c' || echo '$(srcdir)/'`utils/chunk.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbase_la-chunk.Tpo" "$(DEPDIR)/libsbase_la-chunk.Plo"; else rm -f "$(DEPDIR)/libsbase_la-chunk.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/chunk.c' object='libsbase_la-chunk.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-chunk.lo `test -f 'utils/chunk.c' || echo '$(srcdir)/'`utils/chunk.c
 
 xhttpd-xhttpd.o: xhttpd.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-xhttpd.o -MD -MP -MF "$(DEPDIR)/xhttpd-xhttpd.Tpo" -c -o xhttpd-xhttpd.o `test -f 'xhttpd.c' || echo '$(srcdir)/'`xhttpd.c; \

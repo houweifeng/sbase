@@ -9,20 +9,22 @@
 
 #ifndef _HTTP_H
 #define _HTTP_H
-#define HTTP_VHOST_MAX     256
-#define HTTP_INDEX_MAX     32
-#define HTTP_INDEXES_MAX   1048576
-#define HTTP_URL_PATH_MAX  1024
-#define HTTP_PATH_MAX      1024
-#define HTTP_BUF_SIZE      65536
-#define HTTP_ARGV_LINE_MAX 4096
-#define HTTP_COOKIES_MAX   32
-#define HTTP_ARGVS_MAX     1024
-#define HTTP_BUFFER_SIZE   65536
-#define HTTP_HEADER_MAX    65536
-#define HTTP_BYTE_K        1024
-#define HTTP_BYTE_M        1048576
-#define HTTP_BYTE_G        1073741824
+#define HTTP_VHOST_MAX     	256
+#define HTTP_INDEX_MAX     	32
+#define HTTP_INDEXES_MAX   	1048576
+#define HTTP_URL_PATH_MAX  	1024
+#define HTTP_PATH_MAX      	1024
+#define HTTP_BUF_SIZE      	65536
+#define HTTP_ARGV_LINE_MAX 	4096
+#define HTTP_COOKIES_MAX   	32
+#define HTTP_ARGVS_MAX     	1024
+#define HTTP_BUFFER_SIZE   	65536
+#define HTTP_HEADER_MAX    	65536
+#define HTTP_BYTE_K        	1024
+#define HTTP_BYTE_M        	1048576
+#define HTTP_BYTE_G        	1073741824
+#define HTTP_COMPRESS_GZIP 	0x01
+#define HTTP_COMPRESS_DEFLATE  	0x02
 typedef struct _HTTP_VHOST
 {
     char *name;
