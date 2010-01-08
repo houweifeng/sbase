@@ -11,6 +11,7 @@ sbase.c \
 service.c \
 utils/xssl.h 	\
 utils/chunk.h \
+utils/chunk.c \
 utils/logger.h \
 utils/memb.h \
 utils/mutex.h \

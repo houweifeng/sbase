@@ -26,6 +26,8 @@ static char *http_indexes[HTTP_INDEX_MAX];
 static int http_indexes_view = 0;
 static int nindexes = 0;
 static char *http_default_charset = "UTF-8";
+static int httpd_compress = 1;
+static char *httpd_compress_cachedir = "/tmp/xhttpd/cache";
 static HTTP_VHOST httpd_vhosts[HTTP_VHOST_MAX];
 static int nvhosts = 0;
 static void *namemap = NULL;
@@ -39,9 +41,10 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
-    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], *host = NULL, *mime = NULL, 
-         *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL;
-    int i = 0, n = 0, found = 0, nmime = 0;
+    char buf[HTTP_BUF_SIZE], zfile[HTTP_PATH_MAX], file[HTTP_PATH_MAX], 
+	*host = NULL, *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, 
+	*end = NULL, *root = NULL, *s = NULL, *outfile = NULL;
+    int i = 0, n = 0, found = 0, nmime = 0, is_need_compress = 0;
     off_t from = 0, to = 0, len = 0;
     struct dirent *ent = NULL;
     HTTP_REQ http_req = {0};
@@ -215,11 +218,11 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p = buf;
                     if(from > 0)
                         p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
-                                "Content-Length:%lld\r\nContent-Range: bytes %lld-%lld/%lld\r\n", 
-                                LL(len), LL(from), LL(to - 1), LL(st.st_size));
+                                "Content-Range: bytes %lld-%lld/%lld\r\n", 
+                                LL(from), LL(to - 1), LL(st.st_size));
                     else
-                        p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n"
-                                "Content-Length:%lld\r\n", LL(len));
+                        p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
+                                //"Content-Length:%lld\r\n", LL(len));
                     //fprintf(stdout, "%s::%d mime:%s[%d]\n", __FILE__, __LINE__, mime, nmime);
                     if(mime && nmime > 0)
                     {
@@ -228,8 +231,31 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         {
                             p += sprintf(p, "Content-Type: %s;charset=%s\r\n",
                                     http_mime_types[i].s, http_default_charset);
+#ifdef HAVE_ZLIB
+			    if((n = http_req.headers[HEAD_REQ_ACCEPT_ENCODING]) > 0 
+				&& strstr(http_mime_types[i].s, "text"))
+			    {
+				p = http_req.hlines + n;
+				if(strstr(p, "gzip")) is_need_compress |= HTTP_COMPRESS_GZIP;	
+				if(strstr(p, "deflate")) is_need_compress |= HTTP_COMPRESS_DEFLATE;
+			    }
+#endif
                         }
                     }
+		    if(httpd_compress && is_need_compress > 0)
+		    {
+			sprintf(zfile, "%s%s.%lld.%lld.%d", httpd_compress_cachedir, 
+				root, LL(from), LL(to), st.st_mtime);
+			if(access(zfile, F_OK) == 0 && lstat(zfile, &st) && st.st_size > 0)
+			{
+				outfile = zfile;
+				from = 0;
+				len = st.st_size;
+			}
+#ifdef HAVE_ZLIB
+#endif		
+  		    }
+		    else outfile = file;
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
                     p += sprintf(p, "Last-Modified:");
@@ -238,7 +264,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "Server: xhttpd\r\n\r\n");
                     conn->push_chunk(conn, buf, (p - buf));
                     //fprintf(stdout, "%s::%d root:%s\n", __FILE__, __LINE__, root);
-                    return conn->push_file(conn, file, from, len);
+                    return conn->push_file(conn, outfile, from, len);
                 }
             }
         }
@@ -369,6 +395,17 @@ int sbase_initialize(SBASE *sbase, char *conf)
                 ++nindexes;
             }else break;
         }
+    }
+    if((httpd_compress = iniparser_getint(dict, "XHTTPD:httpd_compress", 0)))
+    {
+	    if((p =  iniparser_getstr(dict, "XHTTPD:httpd_compress_cachedir")))
+		    httpd_compress_cachedir =  p;
+	    if(access(httpd_compress_cachedir, F_OK) && mkdir(httpd_compress_cachedir, 0755)) 
+	    {
+		    fprintf(stderr, "create compress cache dir %s failed, %s\n", 
+			httpd_compress_cachedir, strerror(errno));
+		    return -1;
+	    }
     }
     //name map
     TRIETAB_INIT(namemap);
