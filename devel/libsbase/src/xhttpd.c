@@ -32,6 +32,40 @@ static HTTP_VHOST httpd_vhosts[HTTP_VHOST_MAX];
 static int nvhosts = 0;
 static void *namemap = NULL;
 
+int xhttpd_mkdir(char *path, int mode)
+{
+    char *p = NULL, fullpath[HTTP_PATH_MAX];
+    int ret = 0, level = -1;
+    struct stat st;
+
+    if(path)
+    {
+        strcpy(fullpath, path);
+        p = fullpath;
+        while(*p != '\0')
+        {
+            if(*p == '/' )
+            {
+                level++;
+                while(*p != '\0' && *p == '/' && *(p+1) == '/')++p;
+                if(level > 0)
+                {
+                    *p = '\0';
+                    memset(&st, 0, sizeof(struct stat));
+                    ret = stat(fullpath, &st);
+                    if(ret == 0 && !S_ISDIR(st.st_mode)) return -1;
+                    if(ret != 0 && mkdir(fullpath, mode) != 0) return -1;
+                    *p = '/';
+                }
+            }
+            ++p;
+        }
+        return 0;
+    }
+    return -1;
+}
+
+
 /* xhttpd packet reader */
 int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 {
@@ -41,9 +75,10 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
-    char buf[HTTP_BUF_SIZE], zfile[HTTP_PATH_MAX], file[HTTP_PATH_MAX], 
-	*host = NULL, *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, 
-	*end = NULL, *root = NULL, *s = NULL, *outfile = NULL;
+    char buf[HTTP_BUF_SIZE], zfile[HTTP_PATH_MAX], zoldfile[HTTP_PATH_MAX], 
+         file[HTTP_PATH_MAX], link[HTTP_PATH_MAX], *host = NULL, *mime = NULL, 
+         *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
+         *s = NULL, *outfile = NULL;
     int i = 0, n = 0, found = 0, nmime = 0, is_need_compress = 0;
     off_t from = 0, to = 0, len = 0;
     struct dirent *ent = NULL;
@@ -222,7 +257,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 LL(from), LL(to - 1), LL(st.st_size));
                     else
                         p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
-                                //"Content-Length:%lld\r\n", LL(len));
+                    //"Content-Length:%lld\r\n", LL(len));
                     //fprintf(stdout, "%s::%d mime:%s[%d]\n", __FILE__, __LINE__, mime, nmime);
                     if(mime && nmime > 0)
                     {
@@ -232,30 +267,44 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                             p += sprintf(p, "Content-Type: %s;charset=%s\r\n",
                                     http_mime_types[i].s, http_default_charset);
 #ifdef HAVE_ZLIB
-			    if((n = http_req.headers[HEAD_REQ_ACCEPT_ENCODING]) > 0 
-				&& strstr(http_mime_types[i].s, "text"))
-			    {
-				p = http_req.hlines + n;
-				if(strstr(p, "gzip")) is_need_compress |= HTTP_COMPRESS_GZIP;	
-				if(strstr(p, "deflate")) is_need_compress |= HTTP_COMPRESS_DEFLATE;
-			    }
+                            if((n = http_req.headers[HEAD_REQ_ACCEPT_ENCODING]) > 0 
+                                    && strstr(http_mime_types[i].s, "text"))
+                            {
+                                p = http_req.hlines + n;
+                                if(strstr(p, "gzip")) is_need_compress |= HTTP_COMPRESS_GZIP;	
+                                if(strstr(p, "deflate")) is_need_compress |= HTTP_COMPRESS_DEFLATE;
+                            }
 #endif
                         }
                     }
-		    if(httpd_compress && is_need_compress > 0)
-		    {
-			sprintf(zfile, "%s%s.%lld.%lld.%d", httpd_compress_cachedir, 
-				root, LL(from), LL(to), st.st_mtime);
-			if(access(zfile, F_OK) == 0 && lstat(zfile, &st) && st.st_size > 0)
-			{
-				outfile = zfile;
-				from = 0;
-				len = st.st_size;
-			}
+                    if(httpd_compress && is_need_compress > 0)
+                    {
+                        sprintf(zfile, "%s%s.%lld.%lld.%d", httpd_compress_cachedir, 
+                                root, LL(from), LL(to), st.st_mtime);
+                        if(access(zfile, F_OK) == 0)
+                        {
+                            lstat(zfile, &st);
+                            outfile = zfile;
+                            from = 0;
+                            len = st.st_size;
+                        }
+                        else
+                        {
+                            if(access(link, F_OK))
+                            {
+                                xhttpd_mkdir(link, 0755);
+                            }
+                            else 
+                            {
+                                if(readlink(link, zoldfile, HTTP_PATH_MAX) > 0)
+                                    unlink(zoldfile);
+                            }
 #ifdef HAVE_ZLIB
+                            
 #endif		
-  		    }
-		    else outfile = file;
+                        }
+                    }
+                    else outfile = file;
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
                     p += sprintf(p, "Last-Modified:");
