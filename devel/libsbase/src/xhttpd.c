@@ -18,6 +18,7 @@
 #define HTTP_NOT_MODIFIED       "HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NO_CONTENT         "HTTP/1.1 206 No Content\r\nContent-Length: 0\r\n\r\n"
 #define LL(x) ((long long)x)
+#define UL(x) ((unsigned long int)x)
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static dictionary *dict = NULL;
@@ -266,21 +267,25 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         {
                             p += sprintf(p, "Content-Type: %s;charset=%s\r\n",
                                     http_mime_types[i].s, http_default_charset);
-#ifdef HAVE_ZLIB
                             if((n = http_req.headers[HEAD_REQ_ACCEPT_ENCODING]) > 0 
                                     && strstr(http_mime_types[i].s, "text"))
                             {
                                 p = http_req.hlines + n;
-                                if(strstr(p, "gzip")) is_need_compress |= HTTP_COMPRESS_GZIP;	
-                                if(strstr(p, "deflate")) is_need_compress |= HTTP_COMPRESS_DEFLATE;
-                            }
+#ifdef HAVE_ZLIB
+                                if(strstr(p, "gzip")) is_need_compress |= HTTP_ENCODING_GZIP;	
+                                if(strstr(p, "deflate")) is_need_compress |= HTTP_ENCODING_DEFLATE;
+                                if(strstr(p, "compress")) is_need_compress |= HTTP_ENCODING_COMPRESS;
 #endif
+#ifdef HAVE_BZIP2
+                                if(strstr(p, "bzip2")) is_need_compress |= HTTP_ENCODING_BZIP2;
+#endif
+                            }
                         }
                     }
                     if(httpd_compress && is_need_compress > 0)
                     {
-                        sprintf(zfile, "%s%s.%lld.%lld.%d", httpd_compress_cachedir, 
-                                root, LL(from), LL(to), st.st_mtime);
+                        sprintf(zfile, "%s%s.%lld.%lld.%lu", httpd_compress_cachedir, 
+                            root, LL(from), LL(to), UL(st.st_mtime));
                         if(access(zfile, F_OK) == 0)
                         {
                             lstat(zfile, &st);
@@ -300,8 +305,23 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                     unlink(zoldfile);
                             }
 #ifdef HAVE_ZLIB
-                            
+                            if(is_need_compress & HTTP_ENCODING_DEFLATE)
+                            {
+
+                            }
+                            else if(is_need_compress & HTTP_ENCODING_GZIP)
+                            {
+
+                            }
+                            else if(is_need_compress & HTTP_ENCODING_COMPRESS)
+                            {
+                            }
 #endif		
+#ifdef HAVE_BZIP2
+                            if(is_need_compress & HTTP_ENCODING_BZIP2)
+                            {
+                            }
+#endif
                         }
                     }
                     else outfile = file;
