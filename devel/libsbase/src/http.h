@@ -23,6 +23,7 @@
 #define HTTP_BYTE_K        	    1024
 #define HTTP_BYTE_M        	    1048576
 #define HTTP_BYTE_G        	    1073741824
+#define HTTP_MMAP_MAX           157810688
 #define HTTP_ENCODING_GZIP 	    0x01
 #define HTTP_ENCODING_DEFLATE  	0x02
 #define HTTP_ENCODING_COMPRESS  0x04
@@ -552,4 +553,5 @@ int http_charset_convert(char *content_type, char *content_encoding, char *data,
 void http_charset_convert_free(char *data);
 int http_base64encode(char *src, int src_len, char *dst);
 int http_base64decode(unsigned char *src, int src_len, unsigned char *dst);
+unsigned long http_crc32(unsigned char *in, unsigned int inlen);
 #endif
