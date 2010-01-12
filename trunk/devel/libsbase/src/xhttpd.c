@@ -329,19 +329,157 @@ int xhttpd_bzip2(unsigned char **zstream, unsigned char *in, int inlen)
 }
 #endif
 
+/* httpd file compress */
+int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, int is_need_compress, int mimeid,
+        char *file, char *root, off_t from, off_t to, struct stat *st)
+{
+    char zfile[HTTP_PATH_MAX], linkfile[HTTP_PATH_MAX], buf[HTTP_BUF_SIZE],
+         *encoding = NULL, *outfile = NULL, *p = NULL;
+    unsigned char *block = NULL, *in = NULL, *zstream = NULL;
+    int fd = 0, inlen = 0, zlen = 0, i = 0, id = 0, n = 0;
+    off_t offset = 0, len = 0;
+    struct stat zst = {0};
+
+    if(is_need_compress)
+    {
+        if(httpd_compress)
+        {
+            for(i = 0; i < HTTP_ENCODING_NUM; i++)
+            {
+                if(is_need_compress & ((id = (1 << i))))
+                {
+                    encoding = (char *)http_encodings[i];
+                    sprintf(linkfile, "%s%s-%lld-%lld.%s", httpd_compress_cachedir, 
+                            root, LL(from), LL(to), encoding);
+                    sprintf(zfile, "%s.%lu", linkfile, UL(st->st_mtime));
+                    if(access(zfile, F_OK) == 0)
+                    {
+                        lstat(zfile, &zst);
+                        outfile = zfile;
+                        from = 0;
+                        len = zst.st_size;
+                        goto OVER;
+                    }
+                    else
+                    {
+                        if(access(linkfile, F_OK))
+                        {
+                            xhttpd_mkdir(linkfile, 0755);
+                        }
+                        else 
+                        {
+                            unlink(linkfile);
+                        }
+                        goto COMPRESS;
+                    }
+                    break;
+                }
+            }
+        }
+COMPRESS:
+        offset = (from/(off_t)HTTP_MMAP_MAX) * HTTP_MMAP_MAX;
+        len = to - offset;
+        if(len < HTTP_MMAP_MAX && (fd = open(file, O_RDONLY)) > 0)
+        {
+            if((block = (unsigned char *)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0)))
+            {
+                in = block + (from%(off_t)HTTP_MMAP_MAX);
+                inlen = to - from;
+
+#ifdef HAVE_ZLIB
+                if(is_need_compress & HTTP_ENCODING_DEFLATE)
+                {
+                    if((zlen = xhttpd_deflate(&zstream, in, inlen)) <= 0)
+                        goto err;
+                    encoding = "deflate";
+                    //compressed |= HTTP_ENCODING_DEFLATE;
+                }
+                else if(is_need_compress & HTTP_ENCODING_GZIP)
+                {
+                    if((zlen = xhttpd_gzip(&zstream, in, inlen, 
+                                    st->st_mtime)) <= 0) goto err;
+                    encoding = "gzip";
+                    //compressed |= HTTP_ENCODING_GZIP;
+
+                }
+                /*
+                   else if(is_need_compress & HTTP_ENCODING_COMPRESS)
+                   {
+                   compressed |= HTTP_ENCODING_COMPRESS;
+                   }
+                   */
+#endif		
+#ifdef HAVE_BZIP2
+                if(encoding == NULL && is_need_compress & HTTP_ENCODING_BZIP2)
+                {
+                    if((zlen = xhttpd_bzip2(&zstream, in, inlen)) <= 0) goto err;
+                    encoding = "bzip2";
+                    //compressed |= HTTP_ENCODING_BZIP2;
+                }
+#endif
+                munmap(block, len);
+                block = NULL;
+            }
+            close(fd);
+            if(encoding == NULL) goto err;
+            //write to cache file
+            if(httpd_compress && zstream && zlen > 0)
+            {
+                if((fd = open(zfile, O_CREAT|O_WRONLY, 0644)) > 0)
+                {
+                    link(zfile, linkfile);
+                    write(fd, zstream, zlen);
+                    close(fd); 
+                }
+            }
+        }
+OVER:
+        p = buf;
+        if(from > 0)
+        {
+            p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
+                    "Content-Range: bytes %lld-%lld/%lld\r\n", 
+                    LL(from), LL(to - 1), LL(st->st_size));
+        }
+        else
+            p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
+        p += sprintf(p, "Content-Type: %s;charset=%s\r\n",
+                http_mime_types[mimeid].s, http_default_charset);
+        if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
+            p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
+        p += sprintf(p, "Last-Modified:");
+        p += GMTstrdate(st->st_mtime, p);
+        p += sprintf(p, "%s", "\r\n");//date end
+        if(zstream && zlen > 0) len = zlen;
+        if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
+        p += sprintf(p, "Content-Length: %ld\r\n", (long)len);
+        p += sprintf(p, "Server: xhttpd\r\n\r\n");
+        conn->push_chunk(conn, buf, (p - buf));
+        if(zstream && zlen > 0)
+        {
+            conn->push_chunk(conn, zstream, zlen);
+        }
+        else
+        {
+            conn->push_file(conn, outfile, from, len);
+        }
+        if(zstream) free(zstream);
+        return 0;
+    }
+err:
+    return -1;
+}
+
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
-    char buf[HTTP_BUF_SIZE], zfile[HTTP_PATH_MAX], zoldfile[HTTP_PATH_MAX], 
-         file[HTTP_PATH_MAX], link[HTTP_PATH_MAX], *host = NULL, *mime = NULL, 
+    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX],*host = NULL, *mime = NULL, 
          *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
-         *s = NULL, *outfile = NULL, *block = NULL, *encoding = NULL;
-    int i = 0, n = 0, found = 0, nmime = 0, compressed = 0, 
-        fd = 0, is_need_compress = 0, zlen = 0;
-    unsigned char *zstream = NULL;
+         *s = NULL, *outfile = NULL, *encoding = NULL;
+    int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, fd = 0, is_need_compress = 0;
     off_t from = 0, to = 0, len = 0;
-    struct stat st = {0}, zst = {0};
     struct dirent *ent = NULL;
+    struct stat st = {0};
     HTTP_REQ http_req = {0};
     DIR *dirp = NULL;
     void *dp = NULL;
@@ -354,6 +492,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         if(http_request_parse(p, end, &http_req) == -1) goto err;
         if(http_req.reqid == HTTP_GET)
         {
+            //get vhost
             if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
             {
                 p = http_req.hlines + n;
@@ -384,7 +523,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     {
                         pp = p;
                         pp += sprintf(pp, "%s", http_indexes[i]);
-                        if(access(file, F_OK) == 0)
+                        if(access(file, F_OK) == 0 && lstat(file, &st) == 0)
                         {
                             found = 1;
                             p = pp;
@@ -392,6 +531,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         }
                         ++i;
                     }
+                    //index view
                     if(found == 0 && http_indexes_view && (*p = '\0') >= 0)
                     {
                         end = --p;
@@ -402,11 +542,13 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 mime = pp = p ;
                 while(mime > file && *mime != '.')--mime;
                 if(*mime == '.') nmime = p - ++mime;
+                //no content
                 if(st.st_size == 0)
                 {
                     return conn->push_chunk(conn, HTTP_NO_CONTENT, 
                             strlen(HTTP_NO_CONTENT));
                 }
+                //if not change
                 else if((n = http_req.headers[HEAD_REQ_IF_MODIFIED_SINCE]) > 0
                         && str2time(http_req.hlines + n) == st.st_mtime)
                 {
@@ -415,6 +557,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 }
                 else
                 {
+                    //range 
                     if((n = http_req.headers[HEAD_REQ_RANGE]) > 0)
                     {
                         p = http_req.hlines + n;
@@ -438,6 +581,36 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     }
                     if(to == 0) to = st.st_size;
                     len = to - from;
+                    //fprintf(stdout, "%s::%d mime:%s[%d] len:%lld [%lld-%lld]\n", __FILE__, __LINE__, mime, nmime, LL(len), LL(from), LL(to));
+                    //mime 
+                    if(mime && nmime > 0)
+                    {
+                        TRIETAB_GET(namemap, mime, nmime, dp);
+                        if((mimeid = ((long)dp - 1)) >= 0 
+                                && (n = http_req.headers[HEAD_REQ_ACCEPT_ENCODING]) > 0 
+                                && strstr(http_mime_types[mimeid].s, "text"))
+                        {
+                            p = http_req.hlines + n;
+#ifdef HAVE_ZLIB
+                            if(strstr(p, "deflate")) 
+                                is_need_compress |= HTTP_ENCODING_DEFLATE;
+                            if(strstr(p, "gzip")) 
+                                is_need_compress |= HTTP_ENCODING_GZIP;	
+                            //if(strstr(p, "compress")) is_need_compress |= HTTP_ENCODING_COMPRESS;
+#endif
+#ifdef HAVE_BZIP2
+                            if(strstr(p, "bzip2")) 
+                                is_need_compress |= HTTP_ENCODING_BZIP2;
+#endif
+                        }
+                    }
+                    if(is_need_compress > 0  && xhttpd_compress_handler(conn, 
+                                &http_req, is_need_compress, mimeid, file, 
+                                root, from, to, &st) == 0)
+                    {
+                        return 0;
+                    }
+                    else outfile = file;
                     p = buf;
                     if(from > 0)
                         p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
@@ -445,119 +618,18 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 LL(from), LL(to - 1), LL(st.st_size));
                     else
                         p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
-                    //"Content-Length:%lld\r\n", LL(len));
-                    //fprintf(stdout, "%s::%d mime:%s[%d]\n", __FILE__, __LINE__, mime, nmime);
-                    if(mime && nmime > 0)
-                    {
-                        TRIETAB_GET(namemap, mime, nmime, dp);
-                        if((i = ((long)dp - 1)) >= 0)
-                        {
-                            p += sprintf(p, "Content-Type: %s;charset=%s\r\n",
-                                    http_mime_types[i].s, http_default_charset);
-                            if((n = http_req.headers[HEAD_REQ_ACCEPT_ENCODING]) > 0 
-                                    && strstr(http_mime_types[i].s, "text"))
-                            {
-                                p = http_req.hlines + n;
-#ifdef HAVE_ZLIB
-                                if(strstr(p, "gzip")) is_need_compress |= HTTP_ENCODING_GZIP;	
-                                if(strstr(p, "deflate")) is_need_compress |= HTTP_ENCODING_DEFLATE;
-                            //if(strstr(p, "compress")) is_need_compress |= HTTP_ENCODING_COMPRESS;
-#endif
-#ifdef HAVE_BZIP2
-                                if(strstr(p, "bzip2")) is_need_compress |= HTTP_ENCODING_BZIP2;
-#endif
-                            }
-                        }
-                    }
-                    if(is_need_compress > 0)
-                    {
-                        if(httpd_compress)
-                        {
-                            sprintf(zfile, "%s%s.%lld.%lld.%lu", httpd_compress_cachedir, 
-                                    root, LL(from), LL(to), UL(st.st_mtime));
-                            if(access(zfile, F_OK) == 0)
-                            {
-                                lstat(zfile, &zst);
-                                outfile = zfile;
-                                from = 0;
-                                len = zst.st_size;
-                            }
-                            else
-                            {
-                                if(access(link, F_OK))
-                                {
-                                    xhttpd_mkdir(link, 0755);
-                                }
-                                else 
-                                {
-                                    if(readlink(link, zoldfile, HTTP_PATH_MAX) > 0)
-                                        unlink(zoldfile);
-                                }
-                            }
-                        }
-                        if(st.st_size < HTTP_MMAP_MAX && (fd = open(file, O_RDONLY)) > 0)
-                        {
-                            if((block = (unsigned char *)mmap(NULL, st.st_size, PROT_READ, 
-                                            MAP_PRIVATE, fd, 0)))
-                            {
-#ifdef HAVE_ZLIB
-                                if(is_need_compress & HTTP_ENCODING_DEFLATE)
-                                {
-                                    if((zlen = xhttpd_deflate(&zstream, block, len)) <= 0)
-                                        goto err;
-                                    compressed |= HTTP_ENCODING_DEFLATE;
-                                }
-                                else if(is_need_compress & HTTP_ENCODING_GZIP)
-                                {
-                                    if((zlen = xhttpd_gzip(&zstream, block, len, 
-                                                    st.st_mtime)) <= 0) goto err;
-                                    compressed |= HTTP_ENCODING_GZIP;
-
-                                }
-                                /*
-                                else if(is_need_compress & HTTP_ENCODING_COMPRESS)
-                                {
-                                    compressed |= HTTP_ENCODING_COMPRESS;
-                                }
-                                */
-#endif		
-#ifdef HAVE_BZIP2
-                                if(compressed == 0 && is_need_compress & HTTP_ENCODING_BZIP2)
-                                {
-                                    if((zlen = xhttpd_bzip2(&zstream, block, len)) <= 0) goto err;
-                                    compressed |= HTTP_ENCODING_BZIP2;
-                                }
-#endif
-                                munmap(block, st.st_size);
-                                block = NULL;
-                            }
-                            close(fd);
-                            if(compressed == 0) goto err;
-                        }
-                        else goto err;
-                    }
-                    else outfile = file;
+                    p += sprintf(p, "Content-Type: %s;charset=%s\r\n",
+                            http_mime_types[mimeid].s, http_default_charset);
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
                     p += sprintf(p, "Last-Modified:");
                     p += GMTstrdate(st.st_mtime, p);
                     p += sprintf(p, "%s", "\r\n");//date end
-                    if(zstream && zlen > 0) len = zlen;
-                    if(encoding) 
-                    p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
+                    if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
                     p += sprintf(p, "Content-Length: %ld\r\n", (long)len);
                     p += sprintf(p, "Server: xhttpd\r\n\r\n");
                     conn->push_chunk(conn, buf, (p - buf));
-                    //fprintf(stdout, "%s::%d root:%s\n", __FILE__, __LINE__, root);
-                    if(zstream && zlen > 0)
-                    {
-                        conn->push_chunk(conn, zstream, zlen);
-                    }
-                    else
-                    {
-                        conn->push_file(conn, outfile, from, len);
-                    }
-                    if(zstream) free(zstream);
+                    conn->push_file(conn, outfile, from, len);
                     return 0;
                 }
             }
