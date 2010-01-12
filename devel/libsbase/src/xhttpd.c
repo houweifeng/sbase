@@ -414,7 +414,7 @@ COMPRESS:
                    }
                    */
 #endif		
-#ifdef HAVE_BZIP2
+#ifdef HAVE_BZ2LIB
                 if(encoding == NULL && is_need_compress & HTTP_ENCODING_BZIP2)
                 {
                     if((zlen = xhttpd_bzip2(&zstream, in, inlen)) <= 0) goto err;
@@ -603,7 +603,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 is_need_compress |= HTTP_ENCODING_GZIP;	
                             //if(strstr(p, "compress")) is_need_compress |= HTTP_ENCODING_COMPRESS;
 #endif
-#ifdef HAVE_BZIP2
+#ifdef HAVE_BZ2LIB
                             if(strstr(p, "bzip2")) 
                                 is_need_compress |= HTTP_ENCODING_BZIP2;
 #endif
@@ -771,7 +771,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     {
 	    if((p =  iniparser_getstr(dict, "XHTTPD:httpd_compress_cachedir")))
 		    httpd_compress_cachedir =  p;
-	    if(access(httpd_compress_cachedir, F_OK) && mkdir(httpd_compress_cachedir, 0755)) 
+	    if(access(httpd_compress_cachedir, F_OK) && xhttpd_mkdir(httpd_compress_cachedir, 0755)) 
 	    {
 		    fprintf(stderr, "create compress cache dir %s failed, %s\n", 
 			httpd_compress_cachedir, strerror(errno));
