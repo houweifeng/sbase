@@ -24,10 +24,12 @@
 #define HTTP_BYTE_M        	    1048576
 #define HTTP_BYTE_G        	    1073741824
 #define HTTP_MMAP_MAX           157810688
-#define HTTP_ENCODING_GZIP 	    0x01
-#define HTTP_ENCODING_DEFLATE  	0x02
-#define HTTP_ENCODING_COMPRESS  0x04
-#define HTTP_ENCODING_BZIP2  	0x08
+#define HTTP_ENCODING_DEFLATE  	0x01
+#define HTTP_ENCODING_GZIP 	    0x02
+#define HTTP_ENCODING_BZIP2  	0x04
+#define HTTP_ENCODING_COMPRESS  0x08
+#define HTTP_ENCODING_NUM       4
+static const char *http_encodings[] = {"deflate", "gzip", "bzip2", "compress"}; 
 typedef struct _HTTP_VHOST
 {
     char *name;
