@@ -323,7 +323,7 @@ int http_cookie_parse(char *p, char *end, HTTP_REQ *http_req)
 int http_request_parse(char *p, char *end, HTTP_REQ *http_req)
 {
     char *s = p, *ps = NULL, *eps = NULL, *pp = NULL, *epp = NULL, *sp = NULL;
-    int i  = 0, ret = -1;
+    int i  = 0, high = 0, low = 0, ret = -1;
 
     if(p && end)
     {
@@ -345,7 +345,10 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req)
         while(s < end && *s == 0x20)++s;
         ps = http_req->path;
         eps = ps + HTTP_URL_PATH_MAX;
-        while(s < end && *s != 0x20 && *s != '\r' && *s != '?' && ps < eps)*ps++ = *s++;
+        while(s < end && *s != 0x20 && *s != '\r' && *s != '?' && ps < eps)
+	{
+		URLDECODE(s, end, high, low, ps);
+	}
         if(ps >= eps ) goto end;
         *ps = '\0';
         if(*s == '?') s += http_argv_parse(s+1, end, http_req);

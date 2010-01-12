@@ -78,6 +78,27 @@ int GMTstrdate(time_t times, char *date)
     return n;
 }
 
+/* time to str */
+int strdate(time_t times, char *date)
+{
+    struct tm *tp = NULL;
+    time_t timep;
+    int n = 0;
+
+    if(date)
+    {
+        if(times > 0) tp = gmtime(&times);
+        else
+        {
+            time(&timep);
+            tp = gmtime(&timep);
+        }
+        n = sprintf(date, "%04d-%02d-%02d %02d:%02d:%02d", 1900+tp->tm_year, 
+		tp->tm_mon+1, tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);
+    }
+    return n;
+}
+
 #ifdef _DEBUG_TM
 int main(int argc, char **argv)
 {

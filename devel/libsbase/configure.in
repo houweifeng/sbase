@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(libsbase, [0.4.6], [SounOS])
+AC_INIT(libsbase, [0.4.7], [SounOS])
 AC_CONFIG_SRCDIR([src/procthread.h])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
