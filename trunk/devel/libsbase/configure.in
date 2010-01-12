@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(libsbase, [0.4.5], [SounOS])
+AC_INIT(libsbase, [0.4.6], [SounOS])
 AC_CONFIG_SRCDIR([src/procthread.h])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -46,6 +46,14 @@ AC_CHECK_LIB(z, compress, havezlib=yes)
 if test "$havezlib" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_ZLIB"
     LDFLAGS="${LDFLAGS} -lz"
+fi
+
+#bz2lib
+havebz2lib=no
+AC_CHECK_LIB(bz2, BZ2_bzCompress, havebz2lib=yes)
+if test "$havebz2lib" = "yes" ; then
+    CPPFLAGS="${CPPFLAGS} -DHAVE_BZ2LIB"
+    LDFLAGS="${LDFLAGS} -lbz2"
 fi
 
 AC_CHECK_EXTRA_OPTIONS

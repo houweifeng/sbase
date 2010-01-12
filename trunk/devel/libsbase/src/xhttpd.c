@@ -11,6 +11,9 @@
 #ifdef HAVE_ZLIB
 #include <zlib.h>
 #endif
+#ifdef HAVE_BZ2LIB
+#include <bzlib.h>
+#endif
 #include "iniparser.h"
 #include "http.h"
 #include "mime.h"
@@ -281,7 +284,9 @@ int xhttpd_deflate(unsigned char **zstream, unsigned char *in, int inlen)
 #ifdef HAVE_BZ2LIB
 int xhttpd_bzip2(unsigned char **zstream, unsigned char *in, int inlen)
 {
+    unsigned char *out = NULL;
     bz_stream bz = {0};
+    int outlen = 0;
 
     if(in && inlen > 0)
     {
