@@ -335,11 +335,11 @@ int xhttpd_bzip2(unsigned char **zstream, unsigned char *in, int inlen)
 #endif
 
 /* httpd file compress */
-int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, int is_need_compress, int mimeid,
+int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, char *host, int is_need_compress, int mimeid,
         char *file, char *root, off_t from, off_t to, struct stat *st)
 {
-    char zfile[HTTP_PATH_MAX], linkfile[HTTP_PATH_MAX], buf[HTTP_BUF_SIZE],
-         *encoding = NULL, *outfile = NULL, *p = NULL;
+    char zfile[HTTP_PATH_MAX], zoldfile[HTTP_PATH_MAX], linkfile[HTTP_PATH_MAX], 
+	buf[HTTP_BUF_SIZE], *encoding = NULL, *outfile = NULL, *p = NULL;
     unsigned char *block = NULL, *in = NULL, *zstream = NULL;
     int fd = 0, inlen = 0, zlen = 0, i = 0, id = 0, n = 0;
     off_t offset = 0, len = 0;
@@ -354,8 +354,16 @@ int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, int is_need_compress
                 if(is_need_compress & ((id = (1 << i))))
                 {
                     encoding = (char *)http_encodings[i];
-                    sprintf(linkfile, "%s%s-%lld-%lld.%s", httpd_compress_cachedir, 
-                            root, LL(from), LL(to), encoding);
+		    if(from == 0 && to == st->st_size)
+		    {
+			 sprintf(linkfile, "%s/%s%s.%s",  httpd_compress_cachedir,
+                            host, root, encoding);
+		    }
+		    else
+                    {
+                    	sprintf(linkfile, "%s/%s%s-%lld-%lld.%s", httpd_compress_cachedir, 
+                            host, root, LL(from), LL(to), encoding);
+		    }
                     sprintf(zfile, "%s.%lu", linkfile, UL(st->st_mtime));
                     if(access(zfile, F_OK) == 0)
                     {
@@ -373,6 +381,8 @@ int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, int is_need_compress
                         }
                         else 
                         {
+			    if(readlink(linkfile, zoldfile, (HTTP_PATH_MAX - 1)))
+                            	unlink(zoldfile);
                             unlink(linkfile);
                         }
                         goto COMPRESS;
@@ -432,7 +442,7 @@ COMPRESS:
             {
                 if((fd = open(zfile, O_CREAT|O_WRONLY, 0644)) > 0)
                 {
-                    link(zfile, linkfile);
+                    symlink(zfile, linkfile);
                     write(fd, zstream, zlen);
                     close(fd); 
                 }
@@ -504,9 +514,10 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 if(strncasecmp(p, "www.", 4) == 0) p += 4;
                 host = p;
                 while(*p != ':' && *p != '\0')++p;
+		*p = '\0';
                 n = p - host;
                 TRIETAB_GET(namemap, host, n, dp);
-                if((i = ((long)dp - 1)) >= 0) home = httpd_vhosts[i].home;  
+                if((i = ((long)dp - 1)) >= 0) home = httpd_vhosts[i].home;
             }
             if(home == NULL) home = httpd_home;
             if(home == NULL) goto err;
@@ -610,7 +621,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         }
                     }
                     if(is_need_compress > 0  && xhttpd_compress_handler(conn, 
-                                &http_req, is_need_compress, mimeid, file, 
+                                &http_req, host, is_need_compress, mimeid, file, 
                                 root, from, to, &st) == 0)
                     {
                         return 0;
