@@ -19,6 +19,7 @@
 #include "mime.h"
 #include "trie.h"
 #include "stime.h"
+#define XHTTPD_VERSION 		"0.0.1"
 #define HTTP_RESP_OK            "HTTP/1.1 200 OK"
 #define HTTP_BAD_REQUEST        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NOT_FOUND          "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
@@ -38,8 +39,12 @@ static int httpd_compress = 1;
 static char *httpd_compress_cachedir = "/tmp/xhttpd/cache";
 static HTTP_VHOST httpd_vhosts[HTTP_VHOST_MAX];
 static int nvhosts = 0;
+static int httpd_proxy_timeout = 0;
 static void *namemap = NULL;
+static void *hostmap = NULL;
+static void *urlmap = NULL;
 
+/* mkdir recursive */
 int xhttpd_mkdir(char *path, int mode)
 {
     char *p = NULL, fullpath[HTTP_PATH_MAX];
@@ -83,8 +88,9 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 /* xhttpd index view */
 int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, char *end)
 {
-    char buf[HTTP_BUF_SIZE], *p = NULL, *pp = NULL;
+    char buf[HTTP_BUF_SIZE], url[HTTP_PATH_MAX], *p = NULL, *e = NULL, *pp = NULL;
     struct dirent *ent = NULL;
+    unsigned char *s = NULL;
     struct stat st = {0};
     DIR *dirp = NULL;
     int len = 0, n = 0;
@@ -113,34 +119,45 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
                 if(ent->d_name[0] != '.' && ent->d_reclen > 0)
                 {
                     p += sprintf(p, "<tr>");
+		    s = (unsigned char *)ent->d_name;
+ 	            e = url;
+                    while(*s != '\0') 
+ 		    {
+			if(*s == 0x20 && *s > 127)
+			{
+			   e += sprintf(e, "%%%02x", *s);
+			}else *e++ = *s++;
+                    }
+		    *e = '\0';
                     if(ent->d_type == DT_DIR)
                     {
                         p += sprintf(p, "<td><a href='%s/' >%s/</a></td>", 
-                                ent->d_name, ent->d_name);
+                                url, ent->d_name);
                     }
                     else
                     {
                         p += sprintf(p, "<td><a href='%s' >%s</a></td>", 
-                                ent->d_name, ent->d_name);
+                                url, ent->d_name);
                     }
                     sprintf(buf, "%s/%s", file, ent->d_name);
-                    if(lstat(buf, &st) == 0)
+                    if(ent->d_type != DT_DIR && lstat(buf, &st) == 0)
                     {
                         if(st.st_size >= (off_t)HTTP_BYTE_G)
-                            p += sprintf(p, "<td>%.1fG</td>", 
+                            p += sprintf(p, "<td> %.1fG </td>", 
                                     (double)st.st_size/(double) HTTP_BYTE_G);
                         else if(st.st_size >= (off_t)HTTP_BYTE_M)
-                            p += sprintf(p, "<td>%lldM</td>", 
+                            p += sprintf(p, "<td> %lldM </td>", 
                                     st.st_size/(off_t)HTTP_BYTE_M);
                         else if(st.st_size >= (off_t)HTTP_BYTE_K)
-                            p += sprintf(p, "<td>%lldK</td>", 
+                            p += sprintf(p, "<td> %lldK </td>", 
                                     st.st_size/(off_t)HTTP_BYTE_K);
                         else 
-                            p += sprintf(p, "<td>%lldB</td>", st.st_size);
+                            p += sprintf(p, "<td> %lldB </td>", st.st_size);
 
                     }
+		    else p += sprintf(p, "<td> - </td>");
                     p += sprintf(p, "<td>");
-                    p += GMTstrdate(st.st_mtime, p);
+                    p += strdate(st.st_mtime, p);
                     p += sprintf(p, "</td>");
                     p += sprintf(p, "</tr>");
                 }
@@ -155,7 +172,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
                     (long long int)(len), http_default_charset);
             if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
                 p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
-            p += sprintf(p, "Server: xhttpd\r\n\r\n");
+            p += sprintf(p, "Server: xhttpd(%s)\r\n\r\n", XHTTPD_VERSION);
             conn->push_chunk(conn, buf, (p - buf));
             conn->push_chunk(conn, pp, len);
             free(pp);
@@ -468,7 +485,7 @@ OVER:
         if(zstream && zlen > 0) len = zlen;
         if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
         p += sprintf(p, "Content-Length: %ld\r\n", (long)len);
-        p += sprintf(p, "Server: xhttpd\r\n\r\n");
+        p += sprintf(p, "Server: xhttpd(%s)\r\n\r\n", XHTTPD_VERSION);
         conn->push_chunk(conn, buf, (p - buf));
         if(zstream && zlen > 0)
         {
@@ -485,12 +502,56 @@ err:
     return -1;
 }
 
+/* xhttpd bind proxy */
+int xhttpd_bind_proxy(CONN *conn, char *host, int port) 
+{
+    struct hostent *hp = NULL;
+    CONN *new_conn = NULL;
+    SESSION session = {0};
+    char *ip = NULL, cip[HTTP_IP_MAX];
+    unsigned char *sip = NULL;
+    int bitip = 0;
+
+    if(conn && host && port > 0)
+    {
+	/*
+        if((bitip = ltask->get_host_ip(ltask, host)) != -1) 
+        {
+            sip = (unsigned char *)&bitip;
+            ip = cip;
+            sprintf(ip, "%d.%d.%d.%d", sip[0], sip[1], sip[2], sip[3]);
+        }
+        else
+        {
+            if((hp = gethostbyname(host))
+                && sprintf(cip, "%s", inet_ntoa(*((struct in_addr *)(hp->h_addr))))> 0)
+            {
+                ip = cip;
+                bitip = inet_addr(ip);
+                ltask->set_host_ip(ltask, host, &bitip, 1);
+            }
+        }
+	*/
+        if(ip)
+        {
+            session.packet_type = PACKET_PROXY;
+            session.timeout = httpd_proxy_timeout;
+            if((new_conn = service->newproxy(service, conn, -1, -1, ip, port, &session)))
+            {
+                new_conn->start_cstate(new_conn);
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+ 
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX],*host = NULL, *mime = NULL, 
          *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
-         *s = NULL, *outfile = NULL, *encoding = NULL;
+         *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL;
     int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, fd = 0, is_need_compress = 0;
     off_t from = 0, to = 0, len = 0;
     struct dirent *ent = NULL;
@@ -528,6 +589,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 p += sprintf(p, "/%s", http_req.path);
             else
                 p += sprintf(p, "%s", http_req.path);
+	    //fprintf(stdout, "outfile:%s\r\n", file);
             if((n = (p - file)) > 0 && lstat(file, &st) == 0)
             {
                 if(S_ISDIR(st.st_mode))
@@ -619,6 +681,15 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 is_need_compress |= HTTP_ENCODING_BZIP2;
 #endif
                         }
+			if(mimeid < 0) 
+			{
+			   end = root + 1;
+			   while(*end != '\0')
+			   {
+				if(*end  == '/') name = ++end;
+				else ++end;
+			   }
+			}
                     }
                     if(is_need_compress > 0  && xhttpd_compress_handler(conn, 
                                 &http_req, host, is_need_compress, mimeid, file, 
@@ -627,6 +698,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         return 0;
                     }
                     else outfile = file;
+		    //fprintf(stdout, "outfile:%s\r\n", outfile);
                     p = buf;
                     if(from > 0)
                         p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
@@ -642,8 +714,9 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += GMTstrdate(st.st_mtime, p);
                     p += sprintf(p, "%s", "\r\n");//date end
                     if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
+		    if(name) p += sprintf(p, "Content-Disposition: attachment, filename='%s'\r\n", name);
                     p += sprintf(p, "Content-Length: %ld\r\n", (long)len);
-                    p += sprintf(p, "Server: xhttpd\r\n\r\n");
+                    p += sprintf(p, "Server: xhttpd(%s)\r\n\r\n", XHTTPD_VERSION);
                     conn->push_chunk(conn, buf, (p - buf));
                     conn->push_file(conn, outfile, from, len);
                     return 0;
@@ -826,6 +899,9 @@ int sbase_initialize(SBASE *sbase, char *conf)
             }
         }
     }
+    //host map
+    TRIETAB_INIT(hostmap);
+    TRIETAB_INIT(urlmap);
     if((p = iniparser_getstr(dict, "XHTTPD:logfile")))
     {
         service->set_log(service, p);
@@ -923,5 +999,7 @@ int main(int argc, char **argv)
     //sbase->running(sbase, 90000000);sbase->stop(sbase);
     sbase->clean(&sbase);
     if(namemap) TRIETAB_CLEAN(namemap);
+    if(hostmap) TRIETAB_CLEAN(hostmap);
+    if(urlmap) TRIETAB_CLEAN(urlmap);
     if(dict)iniparser_free(dict);
 }

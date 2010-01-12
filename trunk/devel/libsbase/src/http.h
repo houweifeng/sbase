@@ -9,6 +9,7 @@
 
 #ifndef _HTTP_H
 #define _HTTP_H
+#define HTTP_IP_MAX 		    16
 #define HTTP_VHOST_MAX     	    256
 #define HTTP_INDEX_MAX     	    32
 #define HTTP_INDEXES_MAX   	    1048576
