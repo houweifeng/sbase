@@ -43,6 +43,7 @@ static int httpd_proxy_timeout = 0;
 static void *namemap = NULL;
 static void *hostmap = NULL;
 static void *urlmap = NULL;
+static void *http_headers_map = NULL;
 
 /* mkdir recursive */
 int xhttpd_mkdir(char *path, int mode)
@@ -565,7 +566,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         p = packet->data;
         end = packet->data + packet->ndata;
         //fprintf(stdout, "%s", p);
-        if(http_request_parse(p, end, &http_req) == -1) goto err;
+        if(http_request_parse(p, end, &http_req, http_headers_map) == -1) goto err;
         if(http_req.reqid == HTTP_GET)
         {
             //get vhost
@@ -764,7 +765,8 @@ static void xhttpd_stop(int sig)
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-	char *logfile = NULL, *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
+	char line[HTTP_HEAD_MAX], *logfile = NULL, *s = NULL, *p = NULL, 
+         *cacert_file = NULL, *privkey_file = NULL;
 	int n = 0, i = 0, ret = -1;
     void *dp = NULL;
 
@@ -830,6 +832,26 @@ int sbase_initialize(SBASE *sbase, char *conf)
         service->privkey_file = privkey_file;
     }
     //httpd home
+    TRIETAB_INIT(http_headers_map);
+    if(http_headers_map)
+    {
+        for(i = 0; i < HTTP_HEADER_NUM; i++)
+        {
+            p = http_headers[i].e;
+            s = line;
+            while(*p != '\0')
+            {
+                if(*p >= 'A' && *p <= 'Z')
+                {
+                    *s++ = *p++ - ('A' - 'a'); 
+                }
+                else *s++ = *p++;
+            }
+            *s = '\0';
+            dp = (void *)((long)(i + 1));
+            TRIETAB_ADD(http_headers_map, line, http_headers[i].elen, dp);
+        }
+    }
     if((p = iniparser_getstr(dict, "XHTTPD:httpd_home")))
         httpd_home = p;
     http_indexes_view = iniparser_getint(dict, "XHTTPD:http_indexes_view", 1);
@@ -1001,5 +1023,6 @@ int main(int argc, char **argv)
     if(namemap) TRIETAB_CLEAN(namemap);
     if(hostmap) TRIETAB_CLEAN(hostmap);
     if(urlmap) TRIETAB_CLEAN(urlmap);
+    if(http_headers_map) TRIETAB_CLEAN(http_headers_map);
     if(dict)iniparser_free(dict);
 }
