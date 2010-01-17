@@ -17,6 +17,7 @@
 #define HTTP_PATH_MAX      	    1024
 #define HTTP_BUF_SIZE      	    65536
 #define HTTP_ARGV_LINE_MAX 	    4096
+#define HTTP_HEAD_MAX 	        4096
 #define HTTP_COOKIES_MAX   	    32
 #define HTTP_ARGVS_MAX     	    1024
 #define HTTP_BUFFER_SIZE   	    65536
@@ -542,11 +543,11 @@ typedef struct _HTTP_REQ
     HTTP_KV auth;
 }HTTP_REQ;
 /* HTTP request HEADER parser */
-int http_request_parse(char *p, char *end, HTTP_REQ *http_req);
+int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map);
 /* HTTP argvs  parser */
 int http_argv_parse(char *p, char *end, HTTP_REQ *http_req);
 /* HTTP response HEADER parser */
-int http_response_parse(char *p, char *end, HTTP_RESPONSE *resp);
+int http_response_parse(char *p, char *end, HTTP_RESPONSE *resp, void *map);
 /* return HTTP key/value */
 int http_kv(HTTP_KV *kv, char *line, int nline, char **name, char **key);
 /* HTTP charset convert */
