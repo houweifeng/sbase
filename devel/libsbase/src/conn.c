@@ -668,6 +668,7 @@ end:
     }
     return len;
 }
+
 /* packet handler */
 int conn_packet_handler(CONN *conn)
 {
@@ -723,7 +724,10 @@ int conn_data_handler(CONN *conn)
                     conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
         //reset session
-        SESSION_RESET(conn);
+        if(conn->s_state != S_STATE_TASKING)
+        {
+            SESSION_RESET(conn);
+        }
     }
     return ret;
 }
@@ -1010,6 +1014,20 @@ int conn_set_session(CONN *conn, SESSION *session)
     return ret;
 }
 
+/* over session */
+int conn_over_session(CONN *conn)
+{
+    int ret = -1;
+
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+    if(conn)
+    {
+        SESSION_RESET(conn);
+        ret = 0;
+    }
+    return ret;
+}
+
 /* transaction handler */
 int conn_transaction_handler(CONN *conn, int tid)
 {
@@ -1171,7 +1189,6 @@ CONN *conn_init()
         conn->wait_evstate          = conn_wait_evstate;
         conn->over_evstate          = conn_over_evstate;
         conn->timeout_handler       = conn_timeout_handler;
-        conn->set_session           = conn_set_session;
         conn->push_message          = conn_push_message;
         conn->read_handler          = conn_read_handler;
         conn->write_handler         = conn_write_handler;
@@ -1191,6 +1208,7 @@ CONN *conn_init()
         conn->recv_file             = conn_recv_file;
         conn->push_file             = conn_push_file;
         conn->set_session           = conn_set_session;
+        conn->over_session          = conn_over_session;
         conn->reset                 = conn_reset;
         conn->clean                 = conn_clean;
     }

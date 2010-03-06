@@ -46,9 +46,10 @@ extern "C" {
 #define S_STATE_WRITE_STATE     0x04
 #define S_STATE_PACKET_HANDLING 0x08
 #define S_STATE_DATA_HANDLING   0x10
-#define S_STATE_REQ             0x20
-#define S_STATE_CLOSE           0x40
-#define S_STATES                0x7e
+#define S_STATE_TASKING         0x20
+#define S_STATE_REQ             0x40
+#define S_STATE_CLOSE           0x80
+#define S_STATES                0xee
 #endif
 #ifndef D_STATES
 #define D_STATE_FREE            0x00
@@ -397,6 +398,7 @@ typedef struct _CONN
     /* session option and callback  */
     SESSION session;
     int (*set_session)(struct _CONN *, SESSION *session);
+    int (*over_session)(struct _CONN *);
 
     /* normal */
     void (*reset)(struct _CONN *);
