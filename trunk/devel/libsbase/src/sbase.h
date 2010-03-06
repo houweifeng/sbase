@@ -399,6 +399,7 @@ typedef struct _CONN
     SESSION session;
     int (*set_session)(struct _CONN *, SESSION *session);
     int (*over_session)(struct _CONN *);
+    int (*newtask)(struct _CONN *, CALLBACK *);
 
     /* normal */
     void (*reset)(struct _CONN *);

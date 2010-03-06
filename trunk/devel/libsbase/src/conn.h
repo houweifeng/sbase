@@ -92,6 +92,9 @@ int conn_set_session(CONN *conn, SESSION *session);
 /* over session */
 int conn_over_session(CONN *conn);
 
+/* new task */
+int conn_newtask(CONN *conn, CALLBACK *);
+
 /* transaction handler */
 int conn_transaction_handler(CONN *conn, int tid);
 
