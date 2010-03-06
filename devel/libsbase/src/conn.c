@@ -724,7 +724,7 @@ int conn_data_handler(CONN *conn)
                     conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
         //reset session
-        if(conn->s_state != S_STATE_TASKING)
+        if(conn->s_state == S_STATE_DATA_HANDLING)
         {
             SESSION_RESET(conn);
         }
@@ -1028,6 +1028,17 @@ int conn_over_session(CONN *conn)
     return ret;
 }
 
+/* new task */
+int conn_newtask(CONN *conn, CALLBACK *handler)
+{
+    if(conn && handler)
+    {
+        conn->s_state = S_STATE_TASKING;
+        return PPARENT(conn)->service->newtask(PPARENT(conn)->service, handler, conn);
+    }
+    return -1;
+}
+
 /* transaction handler */
 int conn_transaction_handler(CONN *conn, int tid)
 {
@@ -1209,6 +1220,7 @@ CONN *conn_init()
         conn->push_file             = conn_push_file;
         conn->set_session           = conn_set_session;
         conn->over_session          = conn_over_session;
+        conn->newtask               = conn_newtask;
         conn->reset                 = conn_reset;
         conn->clean                 = conn_clean;
     }
