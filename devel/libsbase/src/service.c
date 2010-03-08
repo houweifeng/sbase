@@ -766,6 +766,19 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
     return ret;
 }
 
+/* new chunk */
+CB_DATA *service_newchunk(SERVICE *service, int len)
+{
+    CB_DATA *chunk = NULL;
+    CHUNK *cp = NULL;
+
+    if((cp = service_popchunk(service)))
+    {
+        CK_MEM(cp, len); 
+        chunk = (CB_DATA *)cp;
+    }
+    return chunk;
+}
 
 /* set service session */
 int service_set_session(SERVICE *service, SESSION *session)
@@ -1124,6 +1137,7 @@ SERVICE *service_init()
         service->findconn           = service_findconn;
         service->popchunk           = service_popchunk;
         service->pushchunk          = service_pushchunk;
+        service->newchunk           = service_newchunk;
         service->set_session        = service_set_session;
         service->add_multicast      = service_add_multicast;
         service->drop_multicast     = service_drop_multicast;
