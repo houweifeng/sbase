@@ -201,6 +201,7 @@ typedef struct _SERVICE
     void *chunks_queue;
     struct _CHUNK *(*popchunk)(struct _SERVICE *service);
     int (*pushchunk)(struct _SERVICE *service, struct _CHUNK *cp);
+    CB_DATA *(*newchunk)(struct _SERVICE *service, int len);
 
 
     /* connections option */
@@ -394,6 +395,7 @@ typedef struct _CONN
     int (*recv_file)(struct _CONN *, char *file, long long offset, long long size);
     int (*push_chunk)(struct _CONN *, void *data, int size);
     int (*push_file)(struct _CONN *, char *file, long long offset, long long size);
+    int (*send_chunk)(struct _CONN *, CB_DATA *chunk, int len);
 
     /* session option and callback  */
     SESSION session;

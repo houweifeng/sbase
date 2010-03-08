@@ -972,6 +972,7 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
     return ret;
 }
 
+
 /* push chunk file */
 int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
 {
@@ -994,6 +995,22 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
                     conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
         }else return ret;
+    }
+    return ret;
+}
+
+/* send chunk */
+int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
+{
+    int ret = -1;
+    CHUNK *cp = NULL;
+    CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
+
+    if(conn && (cp = (CHUNK *)chunk))
+    {
+        CK_LEFT(cp) = len;
+        QUEUE_PUSH(conn->send_queue, PCHUNK, &cp);
+        ret = 0;
     }
     return ret;
 }
@@ -1218,6 +1235,7 @@ CONN *conn_init()
         conn->push_chunk            = conn_push_chunk;
         conn->recv_file             = conn_recv_file;
         conn->push_file             = conn_push_file;
+        conn->send_chunk            = conn_send_chunk;
         conn->set_session           = conn_set_session;
         conn->over_session          = conn_over_session;
         conn->newtask               = conn_newtask;
