@@ -1010,6 +1010,10 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
     {
         CK_LEFT(cp) = len;
         QUEUE_PUSH(conn->send_queue, PCHUNK, &cp);
+        if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
+        DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d send_queue "
+                "total %d on %s:%d via %d", len, CK_BSIZE(cp),conn->remote_ip,conn->remote_port, 
+                QTOTAL(conn->send_queue), conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
     return ret;
