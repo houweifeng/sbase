@@ -165,17 +165,17 @@ running:
         sbase->running_status = 1;
         while(sbase->running_status)
         {
-            //running evbase 
-            sbase->evbase->loop(sbase->evbase, 0, NULL);
-            //sbase->nheartbeat++;
-            //check evtimer for heartbeat and timeout
-            EVTIMER_CHECK(sbase->evtimer);
-            //EVTIMER_LIST(sbase->evtimer, stdout);
-            //running message queue
-            while(QTOTAL(sbase->message_queue) > 0)
+            do
             {
+                //running evbase 
+                sbase->evbase->loop(sbase->evbase, 0, NULL);
+                //sbase->nheartbeat++;
+                //check evtimer for heartbeat and timeout
+                EVTIMER_CHECK(sbase->evtimer);
+                //EVTIMER_LIST(sbase->evtimer, stdout);
+                //running message queue
                 message_handler(sbase->message_queue, sbase->logger);
-            }
+            }while(QTOTAL(sbase->message_queue) > 0);
             //running and check timeout
             usleep(sbase->usec_sleep);
         }
