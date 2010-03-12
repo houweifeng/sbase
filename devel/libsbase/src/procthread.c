@@ -16,11 +16,11 @@ void procthread_run(void *arg)
         pth->running_status = 1;
         while(pth->running_status)
         {
-            pth->evbase->loop(pth->evbase, 0, NULL);
-            while(QTOTAL(pth->message_queue) > 0)
+            do
             {
+                pth->evbase->loop(pth->evbase, 0, NULL);
                 message_handler(pth->message_queue, pth->logger);
-            }
+            }while(QTOTAL(pth->message_queue) > 0);
             usleep(pth->usec_sleep);
         }
     }
