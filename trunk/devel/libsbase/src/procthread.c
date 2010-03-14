@@ -4,19 +4,20 @@
 #include "message.h"
 #include "evtimer.h"
 #include "chunk.h"
+#ifdef HAVE_PTHREAD
+#define PUSH_MESSAGE(pth, pmsg)                                                         \
+do                                                                                      \
+{                                                                                       \
+    if(pth->lock == 0){QUEUE_PUSH(pth->message_queue, MESSAGE, pmsg);}                  \
+    pthread_cond_signal((pthread_cond_t *)pth->cond);                                   \
+}while(0)
+#else
 #define PUSH_MESSAGE(pth, pmsg)                                                         \
 do                                                                                      \
 {                                                                                       \
     if(pth->lock == 0){QUEUE_PUSH(pth->message_queue, MESSAGE, pmsg);}                  \
 }while(0)
-int procthread_newmessage(PROCTHREAD *pth, MESSAGE *msg)
-{
-    if(pth && msg)
-    {
-
-    }
-    return -1;
-}
+#endif
 /* run procthread */
 void procthread_run(void *arg)
 {
@@ -36,7 +37,10 @@ void procthread_run(void *arg)
             //{
             if(QTOTAL(pth->message_queue) > 0)
                 message_handler(pth->message_queue, pth->logger);
-            usleep(pth->usec_sleep);
+#ifdef  HAVE_PHTREAD
+            pthread_cond_wait((pthread_cond_t *)pth->cond, (pthread_mutex_t *)pth->mutex);
+#endif
+            //usleep(pth->usec_sleep);
             //}while(QTOTAL(pth->message_queue) > 0);
         }while(pth->running_status);
     }
@@ -227,6 +231,10 @@ void procthread_clean(PROCTHREAD **ppth)
 
     if(ppth && *ppth)
     {
+#ifdef  HAVE_PTHREAD
+        if((*ppth)->cond) free((*ppth)->cond);
+        if((*ppth)->mutex) free((*ppth)->mutex);
+#endif
         if((*ppth)->service->working_mode != WORKING_PROC)
         {
             //(*ppth)->evbase->clean(&((*ppth)->evbase));
@@ -246,6 +254,13 @@ PROCTHREAD *procthread_init()
     {
         QUEUE_INIT(pth->message_queue);
         //pth->evbase                  = evbase_init();
+#ifdef HAVE_PTHREAD
+        /* initialize mutex/cond */
+        pth->cond                   = calloc(1, sizeof(pthread_cond_t));
+        pth->mutex                  = calloc(1, sizeof(pthread_mutex_t));
+        pthread_cond_init((pthread_cond_t *)pth->cond, NULL);
+        pthread_mutex_init((pthread_mutex_t *)pth->mutex, NULL);
+#endif
         pth->run                     = procthread_run;
         pth->addconn                 = procthread_addconn;
         pth->add_connection          = procthread_add_connection;
