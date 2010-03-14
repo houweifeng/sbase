@@ -133,7 +133,7 @@ void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
     short ev_flags = 0;
     fd_set rd_fd_set, wr_fd_set ;
 
-    if(evbase && evbase->nfd  > 0)
+    if(evbase)
     {
         FD_ZERO(&rd_fd_set);
         memcpy(&rd_fd_set, evbase->ev_read_fds, sizeof(fd_set));
