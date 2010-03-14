@@ -111,9 +111,10 @@ void sbase_evtimer_handler(void *arg)
 /* running all service */
 int sbase_running(SBASE *sbase, int useconds)
 {
+    struct timeval tv = {0};
+    SERVICE *service = NULL;
     int ret = -1, i = -1;
     pid_t pid = 0;
-    SERVICE *service = NULL;
 
     if(sbase)
     {
@@ -163,22 +164,22 @@ running:
         }
         //running sbase 
         sbase->running_status = 1;
-        while(sbase->running_status)
+        tv.tv_usec = SB_USEC_SLEEP;
+        if(sbase->usec_sleep > 0) tv.tv_usec = sbase->usec_sleep;
+        do
         {
+            //running evbase 
+            sbase->evbase->loop(sbase->evbase, 0, &tv);
+            //sbase->nheartbeat++;
+            //check evtimer for heartbeat and timeout
+            EVTIMER_CHECK(sbase->evtimer);
+            //EVTIMER_LIST(sbase->evtimer, stdout);
+            //running message queue
             do
             {
-                //running evbase 
-                sbase->evbase->loop(sbase->evbase, 0, NULL);
-                //sbase->nheartbeat++;
-                //check evtimer for heartbeat and timeout
-                EVTIMER_CHECK(sbase->evtimer);
-                //EVTIMER_LIST(sbase->evtimer, stdout);
-                //running message queue
                 message_handler(sbase->message_queue, sbase->logger);
             }while(QTOTAL(sbase->message_queue) > 0);
-            //running and check timeout
-            usleep(sbase->usec_sleep);
-        }
+        }while(sbase->running_status);
         ret = 0;
     }
     return ret;
