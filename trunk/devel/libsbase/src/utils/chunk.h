@@ -265,27 +265,27 @@ int ck_mmap(void *);
         if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_NMDATA(ptr) = 0;                                                                 \
-		CK_MDATA(ptr) = NULL;                                                               \
 		CK_OFFMDATA(ptr) = 0;                                                               \
 		CK_END(ptr) = NULL;                                                                 \
 		CK_TYPE(ptr) = 0;                                                                   \
 		CK_FD(ptr) = -1;                                                                    \
 		memset(CK_FILENAME(ptr), 0, CHUNK_FILE_NAME_MAX);                                   \
 		CK_SIZE(ptr) = 0;                                                                   \
-		CK_BSIZE(ptr) = 0;                                                                  \
 		CK_OFFSET(ptr) = 0;                                                                 \
 		CK_STATUS(ptr) = 0;                                                                 \
 		CKN(ptr) = 0;                                                                       \
         CK_LEFT(ptr) = 0;                                                                   \
-        if(CK_DATA(ptr) && (CK_END(ptr) = CK_DATA(ptr)  = (char *)realloc(CK_DATA(ptr),     \
-                        CHUNK_BLOCK_SIZE)))                                                 \
-        {                                                                                   \
-            memset(CK_DATA(ptr), 0, CHUNK_BLOCK_SIZE);                                      \
-            CK_BSIZE(ptr)  = CHUNK_BLOCK_SIZE;                                              \
-        }                                                                                   \
+        CK_END(ptr) = CK_DATA(ptr);                                                         \
     }                                                                                       \
 }
 #endif
+//        if(CK_DATA(ptr) && (CK_END(ptr) = CK_DATA(ptr)  = (char *)realloc(CK_DATA(ptr),     
+//                        CHUNK_BLOCK_SIZE)))                                                 
+//        {                                                                                   
+//            memset(CK_DATA(ptr), 0, CHUNK_BLOCK_SIZE);                                      
+//            CK_BSIZE(ptr)  = CHUNK_BLOCK_SIZE;                                              
+//        }                                                                                   
+
 /* clean chunk */
 #define CK_CLEAN(ptr)                                                                       \
 {                                                                                           \
