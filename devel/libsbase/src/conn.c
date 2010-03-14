@@ -159,15 +159,15 @@ void conn_event_handler(int event_fd, short event, void *arg)
             if(event & E_READ)
             {
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
-                conn->read_handler(conn);
-                //conn->push_message(conn, MESSAGE_INPUT);
+                //conn->read_handler(conn);
+                conn->push_message(conn, MESSAGE_INPUT);
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d OVER ", E_READ, event_fd);
             }
             if(event & E_WRITE)
             {
-                //conn->push_message(conn, MESSAGE_OUTPUT);
+                conn->push_message(conn, MESSAGE_OUTPUT);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
-                conn->write_handler(conn);
+                //conn->write_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
             /*
@@ -431,7 +431,7 @@ int conn_over_cstate(CONN *conn)
 /* push message to message queue */
 int conn_push_message(CONN *conn, int message_id)
 {
-    MESSAGE msg = {0};
+    MESSAGE msg = {0}, *pmsg = &msg;
     int ret = -1;
 
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
@@ -443,7 +443,7 @@ int conn_push_message(CONN *conn, int message_id)
         msg.index = conn->index;
         msg.handler  = conn;
         msg.parent   = conn->parent;
-        QUEUE_PUSH(conn->message_queue, MESSAGE, &msg);
+        QUEUE_PUSH(conn->message_queue, MESSAGE, pmsg);
         DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%p] "
                 "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
                 MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 

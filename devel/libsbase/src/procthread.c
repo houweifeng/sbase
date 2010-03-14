@@ -4,26 +4,40 @@
 #include "message.h"
 #include "evtimer.h"
 #include "chunk.h"
+#define PUSH_MESSAGE(pth, pmsg)                                                         \
+do                                                                                      \
+{                                                                                       \
+    if(pth->lock == 0){QUEUE_PUSH(pth->message_queue, MESSAGE, pmsg);}                  \
+}while(0)
+int procthread_newmessage(PROCTHREAD *pth, MESSAGE *msg)
+{
+    if(pth && msg)
+    {
 
+    }
+    return -1;
+}
 /* run procthread */
 void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
-    struct timeval tv = {0};
+    //struct timeval tv = {0};
 
     if(pth)
     {
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
-        tv.tv_usec = SB_USEC_SLEEP;
-        if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
+        //tv.tv_usec = SB_USEC_SLEEP;
+        //if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
         do
         {
-            pth->evbase->loop(pth->evbase, 0, &tv);
-            do
-            {
+            //pth->evbase->loop(pth->evbase, 0, &tv);
+            //do
+            //{
+            if(QTOTAL(pth->message_queue) > 0)
                 message_handler(pth->message_queue, pth->logger);
-            }while(QTOTAL(pth->message_queue) > 0);
+            usleep(pth->usec_sleep);
+            //}while(QTOTAL(pth->message_queue) > 0);
         }while(pth->running_status);
     }
 #ifdef HAVE_PTHREAD
@@ -34,7 +48,7 @@ void procthread_run(void *arg)
 /* add new task */
 int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
 {
-    MESSAGE msg = {0};
+    MESSAGE msg = {0}, *pmsg = &msg;
     int ret = -1;
 
     if(pth && pth->message_queue && task_handler)
@@ -44,7 +58,7 @@ int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
         msg.index       = -1;
         msg.handler     = task_handler;
         msg.arg         = arg;
-        if(pth->lock == 0){QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);}
+        PUSH_MESSAGE(pth, pmsg);
         DEBUG_LOGGER(pth->logger, "Added message task to procthreads[%d]", pth->index);
         ret = 0;
     }
@@ -54,7 +68,7 @@ int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
 /* add new transaction */
 int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
 {
-    MESSAGE msg = {0};
+    MESSAGE msg = {0}, *pmsg = &msg;
     int ret = -1;
 
     if(pth && pth->message_queue && conn)
@@ -65,7 +79,7 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
         msg.tid = tid;
         msg.handler = conn;
         msg.parent  = (void *)pth;
-        if(pth->lock == 0){QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);}
+        PUSH_MESSAGE(pth, pmsg);
         DEBUG_LOGGER(pth->logger, "Added message transaction[%d] to %s:%d on %s:%d via %d total %d",
                 tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                 conn->fd, QTOTAL(pth->message_queue));
@@ -77,7 +91,7 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
 /* Add connection message */
 int procthread_addconn(PROCTHREAD *pth, CONN *conn)
 {
-    MESSAGE msg = {0};
+    MESSAGE msg = {0}, *pmsg = &msg;
     int ret = -1;
 
     if(pth && pth->message_queue && conn)
@@ -87,7 +101,7 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
         msg.fd          = conn->fd;
         msg.handler     = (void *)conn;
         msg.parent      = (void *)pth;
-        if(pth->lock == 0){QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);}
+        PUSH_MESSAGE(pth, pmsg);
         DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%s:%d] on "
                 "%s:%d via %d total %d", MESSAGE_DESC(MESSAGE_NEW_SESSION),
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port,
@@ -144,14 +158,14 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 /* stop procthread */
 void procthread_stop(PROCTHREAD *pth)
 {
-    MESSAGE msg = {0};
+    MESSAGE msg = {0}, *pmsg = &msg;
 
     if(pth && pth->message_queue)
     {
         msg.msg_id      = MESSAGE_STOP;
         msg.index       = -1;
         msg.parent      = (void *)pth;
-        QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);
+        QUEUE_PUSH(pth->message_queue, MESSAGE, pmsg);
         DEBUG_LOGGER(pth->logger, "Ready for stopping procthread[%d]", pth->index);
         pth->lock       = 1;
     }
@@ -172,7 +186,7 @@ void procthread_terminate(PROCTHREAD *pth)
 /* state */
 void procthread_state(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 {
-    MESSAGE msg = {0};
+    MESSAGE msg = {0}, *pmsg = &msg;
 
     if(pth && pth->message_queue)
     {
@@ -181,7 +195,7 @@ void procthread_state(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
         msg.handler     = (void *)handler;
         msg.index       = -1;
         msg.arg         = (void *)arg;
-        if(pth->lock == 0){QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);}
+        PUSH_MESSAGE(pth, pmsg);
         //DEBUG_LOGGER(pth->logger, "Ready for state connections on daemon procthread");
     }
     return ;
@@ -190,7 +204,7 @@ void procthread_state(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 /* active heartbeat */
 void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 {
-    MESSAGE msg = {0};
+    MESSAGE msg = {0}, *pmsg = &msg;
 
     if(pth && pth->message_queue)
     {
@@ -199,7 +213,7 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
         msg.handler     = (void *)handler;
         msg.arg         = (void *)arg;
         msg.index       = -1;
-         if(pth->lock == 0){QUEUE_PUSH(pth->message_queue, MESSAGE, &msg);}
+        PUSH_MESSAGE(pth, pmsg);
         //DEBUG_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
     }
     return ;
@@ -215,7 +229,7 @@ void procthread_clean(PROCTHREAD **ppth)
     {
         if((*ppth)->service->working_mode != WORKING_PROC)
         {
-            (*ppth)->evbase->clean(&((*ppth)->evbase));
+            //(*ppth)->evbase->clean(&((*ppth)->evbase));
             QUEUE_CLEAN((*ppth)->message_queue);
         }
         free((*ppth));
@@ -231,7 +245,7 @@ PROCTHREAD *procthread_init()
     if((pth = (PROCTHREAD *)calloc(1, sizeof(PROCTHREAD))))
     {
         QUEUE_INIT(pth->message_queue);
-        pth->evbase                  = evbase_init();
+        //pth->evbase                  = evbase_init();
         pth->run                     = procthread_run;
         pth->addconn                 = procthread_addconn;
         pth->add_connection          = procthread_add_connection;
