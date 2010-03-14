@@ -12,14 +12,14 @@
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 1024 
 #ifndef MMAP_CHUNK_SIZE
-//#define MMAP_CHUNK_SIZE     1048576
-//#define MMAP_CHUNK_SIZE     2097152
-//#define MMAP_CHUNK_SIZE     3145728
-#define MMAP_CHUNK_SIZE     4194304
-//#define MMAP_CHUNK_SIZE     8388608 
+#define MMAP_CHUNK_SIZE         1048576
+//#define MMAP_CHUNK_SIZE       2097152
+//#define MMAP_CHUNK_SIZE       3145728
+//#define MMAP_CHUNK_SIZE       4194304
+//#define MMAP_CHUNK_SIZE       8388608 
 #endif
 #ifndef CHUNK_BLOCK_SIZE
-#define CHUNK_BLOCK_SIZE    65536 
+#define CHUNK_BLOCK_SIZE        8192 
 #endif
 #define CHUNK_STATUS_ON     0x01
 #define CHUNK_STATUS_OVER   0x02
@@ -197,7 +197,7 @@ int ck_mmap(void *);
 #ifdef HAVE_SSL
 #define CK_WRITE_FROM_FILE_SSL(ptr, ssl) ((ptr && ssl && CK_LEFT(ptr) > 0 && CK_DATA(ptr)   \
             && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0 && CK_MMAP(ptr)   \
-            && (CKN(ptr)=SSL_write(XSSL(ssl), CK_MDATA(ptr)+CK_OFFMDATA(ptr),CK_NMDATA(ptr))) > 0)?    \
+            && (CKN(ptr)=SSL_write(XSSL(ssl),CK_MDATA(ptr)+CK_OFFMDATA(ptr),CK_NMDATA(ptr)))>0)? \
             (((CK_OFFSET(ptr) += CKN(ptr)) > 0 && (CK_LEFT(ptr) -= CKN(ptr)) >= 0           \
             && (CK_OFFMDATA(ptr) += CKN(ptr)) && (CK_NMDATA(ptr) -= CKN(ptr)) >= 0          \
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr) : -1) : -1)
@@ -249,7 +249,7 @@ int ck_mmap(void *);
 {                                                                                           \
     if(ptr)                                                                                 \
     {                                                                                       \
-        if(CK_MDATA(ptr)) munmap(CK_MDATA(ptr), CK_BSIZE(ptr));                             \
+        if(CK_MDATA(ptr)){munmap(CK_MDATA(ptr), CK_BSIZE(ptr)); CK_MDATA(ptr) = NULL;}      \
         if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
         if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                \
         memset(ptr, 0, sizeof(CHUNK));                                                      \
@@ -261,7 +261,7 @@ int ck_mmap(void *);
 {                                                                                           \
     if(ptr)                                                                                 \
     {                                                                                       \
-        if(CK_MDATA(ptr)) munmap(CK_MDATA(ptr), CK_BSIZE(ptr));                             \
+        if(CK_MDATA(ptr)){munmap(CK_MDATA(ptr), CK_BSIZE(ptr)); CK_MDATA(ptr) = NULL;}      \
         if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_NMDATA(ptr) = 0;                                                                 \
@@ -291,6 +291,7 @@ int ck_mmap(void *);
 {                                                                                           \
     if(ptr)                                                                                 \
     {                                                                                       \
+        if(CK_MDATA(ptr)){munmap(CK_MDATA(ptr), CK_BSIZE(ptr)); CK_MDATA(ptr) = NULL;}      \
         if(CK_DATA(ptr)) free(CK_DATA(ptr));                                                \
         free(ptr);ptr = NULL;                                                               \
     }                                                                                       \

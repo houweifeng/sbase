@@ -159,15 +159,15 @@ void conn_event_handler(int event_fd, short event, void *arg)
             if(event & E_READ)
             {
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
-                //conn->read_handler(conn);
-                conn->push_message(conn, MESSAGE_INPUT);
+                conn->read_handler(conn);
+                //conn->push_message(conn, MESSAGE_INPUT);
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d OVER ", E_READ, event_fd);
             }
             if(event & E_WRITE)
             {
-                conn->push_message(conn, MESSAGE_OUTPUT);
+                //conn->push_message(conn, MESSAGE_OUTPUT);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
-                //conn->write_handler(conn);
+                conn->write_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
             /*
