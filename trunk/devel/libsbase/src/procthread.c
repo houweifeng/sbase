@@ -27,7 +27,7 @@ void procthread_run(void *arg)
             if(QTOTAL(pth->message_queue) > 0)
                 message_handler(pth->message_queue, pth->logger);
             //do{usleep(1);}while(QTOTAL(pth->message_queue) <= 0);
-            usleep(16);
+            usleep(8);
         }while(pth->running_status);
     }
 #ifdef HAVE_PTHREAD
