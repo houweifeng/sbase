@@ -18,7 +18,7 @@ void message_handler(void *message_queue, void *logger)
     MESSAGE msg = {0};
     int fd = -1, index = 0;
 
-    if(message_queue && QTOTAL(message_queue) > 0 
+    while(message_queue && QTOTAL(message_queue) > 0 
             && QUEUE_POP(message_queue, MESSAGE, &msg) == 0)
     {
         if((msg.msg_id & MESSAGE_ALL) != msg.msg_id) 

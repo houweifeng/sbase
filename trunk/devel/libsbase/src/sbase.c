@@ -175,10 +175,8 @@ running:
             EVTIMER_CHECK(sbase->evtimer);
             //EVTIMER_LIST(sbase->evtimer, stdout);
             //running message queue
-            do
-            {
+            if(QTOTAL(sbase->message_queue) > 0)
                 message_handler(sbase->message_queue, sbase->logger);
-            }while(QTOTAL(sbase->message_queue) > 0);
         }while(sbase->running_status);
         ret = 0;
     }
