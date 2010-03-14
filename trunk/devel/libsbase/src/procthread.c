@@ -9,20 +9,22 @@
 void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
+    struct timeval tv = {0};
 
     if(pth)
     {
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
-        while(pth->running_status)
+        tv.tv_usec = SB_USEC_SLEEP;
+        if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
+        do
         {
+            pth->evbase->loop(pth->evbase, 0, &tv);
             do
             {
-                pth->evbase->loop(pth->evbase, 0, NULL);
                 message_handler(pth->message_queue, pth->logger);
             }while(QTOTAL(pth->message_queue) > 0);
-            usleep(pth->usec_sleep);
-        }
+        }while(pth->running_status);
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
