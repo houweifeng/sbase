@@ -13,22 +13,33 @@ do                                                                              
 void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
-    //struct timeval tv = {0};
+    struct timeval tv = {0};
 
     if(pth)
     {
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
-        //tv.tv_usec = SB_USEC_SLEEP;
-        //if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
-        do
+        tv.tv_usec = SB_USEC_SLEEP;
+        if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
+        if(pth->is_need_evbase)
         {
-            //pth->evbase->loop(pth->evbase, 0, &tv);
-            if(QTOTAL(pth->message_queue) > 0)
-                message_handler(pth->message_queue, pth->logger);
-            //do{usleep(1);}while(QTOTAL(pth->message_queue) <= 0);
-            usleep(8);
-        }while(pth->running_status);
+            do
+            {
+                pth->evbase->loop(pth->evbase, 0, &tv);
+                if(QTOTAL(pth->message_queue) > 0)
+                    message_handler(pth->message_queue, pth->logger);
+                else usleep(1);
+            }while(pth->running_status);
+        }
+        else
+        {
+            do
+            {
+                if(QTOTAL(pth->message_queue) > 0)
+                    message_handler(pth->message_queue, pth->logger);
+                usleep(pth->usec_sleep);
+            }while(pth->running_status);
+        }
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
@@ -219,7 +230,10 @@ void procthread_clean(PROCTHREAD **ppth)
     {
         if((*ppth)->service->working_mode != WORKING_PROC)
         {
-            //(*ppth)->evbase->clean(&((*ppth)->evbase));
+            if((*ppth)->is_need_evbase)
+            {
+                (*ppth)->evbase->clean(&((*ppth)->evbase));
+            }
             QUEUE_CLEAN((*ppth)->message_queue);
         }
         free((*ppth));
@@ -228,14 +242,18 @@ void procthread_clean(PROCTHREAD **ppth)
 }
 
 /* Initialize procthread */
-PROCTHREAD *procthread_init()
+PROCTHREAD *procthread_init(int is_need_evbase)
 {
     PROCTHREAD *pth = NULL;
 
     if((pth = (PROCTHREAD *)calloc(1, sizeof(PROCTHREAD))))
     {
         QUEUE_INIT(pth->message_queue);
-        //pth->evbase                  = evbase_init();
+        if(is_need_evbase)
+        {
+            pth->is_need_evbase      = is_need_evbase;
+            pth->evbase              = evbase_init();
+        }
         pth->run                     = procthread_run;
         pth->addconn                 = procthread_addconn;
         pth->add_connection          = procthread_add_connection;

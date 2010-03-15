@@ -266,6 +266,7 @@ typedef struct _PROCTHREAD
     void *message_queue;
 
     /* evbase */
+    int is_need_evbase;
     EVBASE *evbase;
 
     /* connection */
@@ -292,7 +293,7 @@ typedef struct _PROCTHREAD
     void (*clean)(struct _PROCTHREAD **procthread);
 }PROCTHREAD;
 /* Initialize procthread */
-PROCTHREAD *procthread_init();
+PROCTHREAD *procthread_init(int is_need_evbase);
 
 typedef struct _CONN
 {
