@@ -162,14 +162,16 @@ int service_run(SERVICE *service)
         return ret;
 running_proc:
         //procthreads setting 
-        if((service->daemon = procthread_init()))
+        if((service->daemon = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->daemon);
             if(service->daemon->message_queue)
             {
-                QUEUE_CLEAN(service->daemon->message_queue);
+                if(service->daemon->message_queue)
+                {
+                    QUEUE_CLEAN(service->daemon->message_queue);
+                }
                 service->daemon->message_queue = service->message_queue;
-                //service->daemon->evbase->clean(&(service->daemon->evbase));
                 service->daemon->evbase = service->evbase;
             }
             DEBUG_LOGGER(service->logger, "sbase->q[%p] service->q[%p] daemon->q[%p]",
@@ -187,7 +189,7 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         //daemon 
-        if((service->daemon = procthread_init()))
+        if((service->daemon = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->daemon);
             NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
@@ -206,10 +208,10 @@ running_threads:
         {
             for(i = 0; i < service->nprocthreads; i++)
             {
-                if((service->procthreads[i] = procthread_init()))
+                if((service->procthreads[i] = procthread_init(1)))
                 {
                     PROCTHREAD_SET(service, service->procthreads[i]);
-                    service->procthreads[i]->evbase = service->evbase;
+                    //service->procthreads[i]->evbase = service->evbase;
                 }
                 else
                 {
@@ -227,7 +229,7 @@ running_threads:
         {
             for(i = 0; i < service->ndaemons; i++)
             {
-                if((service->daemons[i] = procthread_init()))
+                if((service->daemons[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
                 }
