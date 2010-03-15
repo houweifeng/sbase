@@ -169,7 +169,7 @@ running_proc:
             {
                 QUEUE_CLEAN(service->daemon->message_queue);
                 service->daemon->message_queue = service->message_queue;
-                service->daemon->evbase->clean(&(service->daemon->evbase));
+                //service->daemon->evbase->clean(&(service->daemon->evbase));
                 service->daemon->evbase = service->evbase;
             }
             DEBUG_LOGGER(service->logger, "sbase->q[%p] service->q[%p] daemon->q[%p]",
@@ -208,8 +208,8 @@ running_threads:
             {
                 if((service->procthreads[i] = procthread_init()))
                 {
-                    service->procthreads[i]->evbase = service->evbase;
                     PROCTHREAD_SET(service, service->procthreads[i]);
+                    service->procthreads[i]->evbase = service->evbase;
                 }
                 else
                 {
@@ -772,10 +772,15 @@ CB_DATA *service_newchunk(SERVICE *service, int len)
     CB_DATA *chunk = NULL;
     CHUNK *cp = NULL;
 
-    if((cp = service_popchunk(service)))
+    if(service)
     {
-        CK_MEM(cp, len); 
-        chunk = (CB_DATA *)cp;
+        MUTEX_LOCK(service->mutex);
+        if((cp = service_popchunk(service)))
+        {
+            CK_MEM(cp, len); 
+            chunk = (CB_DATA *)cp;
+        }
+        MUTEX_UNLOCK(service->mutex);
     }
     return chunk;
 }
