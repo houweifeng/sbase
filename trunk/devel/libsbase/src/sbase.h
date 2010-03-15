@@ -226,6 +226,9 @@ typedef struct _SERVICE
     /* MULTICAST */
     int (*add_multicast)(struct _SERVICE *service, char *multicast_ip);
     int (*drop_multicast)(struct _SERVICE *service, char *multicast_ip);
+
+    /* broadcast */
+    int (*broadcast)(struct _SERVICE *service, char *data, int len);
     
     /* evtimer */
     void *evtimer;

@@ -40,6 +40,8 @@ int service_set_session(SERVICE *service, SESSION *session);
 int service_add_multicast(SERVICE *service, char *multicast_ip);
 /* drop multicast */
 int service_drop_multicast(SERVICE *service, char *multicast_ip);
+/* broadcast */
+int service_broadcast(SERVICE *service, char *data, int len);
 /* new task */
 int service_newtask(SERVICE *service, CALLBACK *callback, void *arg);
 /* add new transaction */

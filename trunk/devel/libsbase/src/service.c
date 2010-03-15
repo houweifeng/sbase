@@ -795,6 +795,7 @@ int service_set_session(SERVICE *service, SESSION *session)
     }
     return -1;
 }
+
 /* add multicast */
 int service_add_multicast(SERVICE *service, char *multicast_ip)
 {
@@ -826,6 +827,28 @@ int service_drop_multicast(SERVICE *service, char *multicast_ip)
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
         mreq.imr_interface.s_addr = inet_addr(service->ip);
         ret = setsockopt(service->fd, IPPROTO_IP, IP_DROP_MEMBERSHIP,(char*)&mreq, sizeof(mreq));
+    }
+    return ret;
+}
+
+/* broadcast */
+int service_broadcast(SERVICE *service, char *data, int len)
+{
+    int ret = -1, i = 0;
+    CONN *conn = NULL;
+
+    if(service && service->running_connections > 0)
+    {
+        MUTEX_LOCK(service->mutex);
+        for(i = 0; i < service->index_max; i++)
+        {
+            if((conn = service->connections[i]))
+            {
+                conn->push_chunk(conn, data, len);
+            }
+        }
+        MUTEX_UNLOCK(service->mutex);
+        ret = 0;
     }
     return ret;
 }
@@ -1146,6 +1169,7 @@ SERVICE *service_init()
         service->set_session        = service_set_session;
         service->add_multicast      = service_add_multicast;
         service->drop_multicast     = service_drop_multicast;
+        service->broadcast          = service_broadcast;
         service->newtask            = service_newtask;
         service->newtransaction     = service_newtransaction;
         service->set_heartbeat      = service_set_heartbeat;
