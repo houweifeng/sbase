@@ -1086,7 +1086,8 @@ void conn_reset(CONN *conn)
         DEBUG_LOGGER(conn->logger, "Reset connection[%s:%d] local[%s:%d] via %d",
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* global */
-        conn->index = 0;
+        conn->groupid = -1;
+        conn->index = -1;
         conn->d_state = 0;
         /* connection */
         conn->fd = 0;

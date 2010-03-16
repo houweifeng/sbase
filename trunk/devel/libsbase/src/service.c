@@ -40,7 +40,7 @@ int service_set(SERVICE *service)
         service->sa.sin_family = service->family;
         service->sa.sin_addr.s_addr = (p)? inet_addr(p):INADDR_ANY;
         service->sa.sin_port = htons(service->port);
-        service->connections = (CONN **)calloc(service->connections_limit, sizeof(CONN *));
+        //service->connections = (CONN **)calloc(service->connections_limit, sizeof(CONN *));
         if(service->backlog <= 0) service->backlog = SB_CONN_MAX;
         SERVICE_CHECK_SSL_CLIENT(service);
         if(service->service_type == S_SERVICE)
@@ -628,7 +628,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 /* push connection to connections pool */
 int service_pushconn(SERVICE *service, CONN *conn)
 {
-    int ret = -1, i = 0;
+    int ret = -1, x = 0, i = 0;
     CONN *parent = NULL;
 
     if(service && conn && service->connections)
@@ -641,6 +641,11 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 service->connections[i] = conn;
                 conn->index = i;
                 service->running_connections++;
+                if((x = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX
+                        && service->groups[x].limit > 0 )
+                {
+                    service->groups[x].total--;
+                }
                 if(i >= service->index_max) service->index_max = i;
                 ret = 0;
                 DEBUG_LOGGER(service->logger, "Added new connection[%s:%d] on %s:%d via %d "
@@ -699,21 +704,41 @@ CONN *service_getconn(SERVICE *service)
     if(service)
     {
         MUTEX_LOCK(service->mutex);
-        for(i = 0; i <= service->index_max; i++)
+        if(service->nconns_free > 0)
         {
-            if((conn = service->connections[i]) && conn->status == CONN_STATUS_FREE
-                    && conn->c_state == C_STATE_FREE)
+            i = --(service->nconns_free);
+            if((conn = service->conns_free[i]))
             {
-                //DEBUG_LOGGER(service->logger, "Got connection[%s:%d] on %s:%d via %d", 
-                //conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 conn->start_cstate(conn);
-                break;
             }
-            conn = NULL;
         }
         MUTEX_UNLOCK(service->mutex);
     }
     return conn;
+}
+
+/* freeconn */
+int service_freeconn(SERVICE *service, CONN *conn)
+{
+    int id = 0, x = 0;
+
+    if(service && conn)
+    {
+        MUTEX_LOCK(service->mutex);
+        if((id = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX)
+        {
+            x = ++(service->groups[id].nconns_free);
+            service->groups[id].conns_free[x] = conn; 
+        }
+        else
+        {
+            x = ++(service->nconns_free); 
+            service->conns_free[x] = conn;
+        }
+        MUTEX_UNLOCK(service->mutex);
+        return 0;
+    }
+    return -1;
 }
 
 /* find connection as index */
@@ -851,6 +876,80 @@ int service_broadcast(SERVICE *service, char *data, int len)
         ret = 0;
     }
     return ret;
+}
+
+/* add group */
+int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *session)
+{
+    int id = -1;
+    if(service && service->ngroups < SB_GROUPS_MAX)
+    {
+        MUTEX_LOCK(service->mutex);
+        id = service->ngroups++;
+        strcpy(service->groups[id].ip, ip);
+        service->groups[id].port = port;
+        service->groups[id].limit = limit;
+        memcpy(&(service->groups[id].session), session, sizeof(SESSION));
+        MUTEX_UNLOCK(service->mutex);
+    }
+    return id;
+}
+
+/* group cast */
+int service_groupcast(SERVICE *service, char *data, int len)
+{
+    CONN *conn = NULL;
+    int i = 0, x = 0;
+
+    if(service && data && len > 0 && service->ngroups > 0)
+    {
+        MUTEX_LOCK(service->mutex);
+        for(i = 0; i < service->ngroups; i++)
+        {
+            if(service->groups[i].nconns_free > 0)
+            {
+                x = --(service->groups[i].nconns_free);
+                if((conn = service->groups[i].conns_free[x]))
+                {
+                    conn->push_chunk(conn, data, len);
+                    continue;
+                }
+            }
+            /* new conn */
+            if((conn = service_newconn(service, 0, 0, service->groups[i].ip, 
+                            service->groups[i].port, &(service->groups[i].session))))
+            {
+                conn->start_cstate(conn);
+                conn->groupid = i;
+                conn->push_chunk(conn, data, len);
+            }
+        }
+        MUTEX_UNLOCK(service->mutex);
+    }
+    return -1;
+}
+
+/* state groups */
+int service_stategroup(SERVICE *service)
+{
+    int i = 0, x = 0;
+    CONN *conn = NULL;
+
+    if(service && service->ngroups)
+    {
+        for(i = 0; i < service->ngroups; i++)
+        {
+            while(service->groups[i].total < service->groups[i].limit
+                    && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
+                            service->groups[i].port, &(service->groups[i].session))))
+            {
+                conn->groupid = i;
+                service->groups[i].total++;
+            }
+        }
+        return 0;
+    }
+    return -1;
 }
 
 /* new task */
@@ -1068,7 +1167,7 @@ void service_clean(SERVICE **pservice)
     if(pservice && *pservice)
     {
         
-        if((*pservice)->connections) free((*pservice)->connections);
+        //if((*pservice)->connections) free((*pservice)->connections);
         if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
         if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
         

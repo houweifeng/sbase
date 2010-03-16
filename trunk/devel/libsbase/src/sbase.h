@@ -17,6 +17,7 @@ extern "C" {
 #endif
 #define SB_CONN_MAX         65536
 #define SB_IP_MAX           16
+#define SB_GROUPS_MAX       256
 #define SB_NDAEMONS_MAX     64
 #define SB_BUF_SIZE         65536
 #define SB_USEC_SLEEP       1000
@@ -140,6 +141,18 @@ typedef struct _SBASE
 int setrlimiter(char *name, int rlimid, int nset);
 SBASE *sbase_init();
 
+/* group */
+typedef struct _CNGROUP
+{
+  SESSION session;
+  char ip[SB_IP_MAX];
+  short port;
+  short limit;
+  short total;
+  short nconns_free;
+  struct _CONN *conns_free[SB_CONN_MAX];
+}CNGROUP;
+
 /* service */
 typedef struct _SERVICE
 {
@@ -164,7 +177,6 @@ typedef struct _SERVICE
     struct _PROCTHREAD **procthreads;
     int ndaemons;
     struct _PROCTHREAD **daemons;
-
 
     /* socket and inet addr option  */
     int family;
@@ -203,14 +215,16 @@ typedef struct _SERVICE
     int (*pushchunk)(struct _SERVICE *service, struct _CHUNK *cp);
     CB_DATA *(*newchunk)(struct _SERVICE *service, int len);
 
-
     /* connections option */
     int connections_limit; 
     int index_max;
     int running_connections;
+    int nconns_free;
+    struct _CONN *conns_free[SB_CONN_MAX];
     int nconnection;
-    struct _CONN **connections;
+    struct _CONN *connections[SB_CONN_MAX];
     void *connection_queue;
+
     /* C_SERVICE ONLY */
     int client_connections_limit;
     struct _CONN *(*newproxy)(struct _SERVICE *service, struct _CONN * parent, int inet_family, 
@@ -223,12 +237,17 @@ typedef struct _SERVICE
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
     int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
     struct _CONN *(*findconn)(struct _SERVICE *service, int index);
-    /* MULTICAST */
+
+    /* CAST */
     int (*add_multicast)(struct _SERVICE *service, char *multicast_ip);
     int (*drop_multicast)(struct _SERVICE *service, char *multicast_ip);
-
-    /* broadcast */
     int (*broadcast)(struct _SERVICE *service, char *data, int len);
+
+    /* group */
+    CNGROUP groups[SB_GROUPS_MAX];
+    int ngroups;
+    int (*addgroup)(struct _SERVICE *service, char *ip, int port, int limit, SESSION *session);
+    int (*groupcast)(struct _SERVICE *service, char *data, int len);
     
     /* evtimer */
     void *evtimer;
@@ -302,6 +321,7 @@ typedef struct _CONN
 {
     /* global */
     int index;
+    int groupid;
     /* die state */
     int d_state;
     void *parent;
