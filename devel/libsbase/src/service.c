@@ -628,7 +628,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 /* push connection to connections pool */
 int service_pushconn(SERVICE *service, CONN *conn)
 {
-    int ret = -1, x = 0, i = 0;
+    int ret = -1, x = 0, id = 0, i = 0;
     CONN *parent = NULL;
 
     if(service && conn && service->connections)
@@ -641,10 +641,10 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 service->connections[i] = conn;
                 conn->index = i;
                 service->running_connections++;
-                if((x = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX
-                        && service->groups[x].limit > 0 )
+                if((x = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX)
                 {
-                    service->groups[x].total--;
+                    id = (service->groups[x].nconns_free)++;
+                    service->groups[x].conns_free[id] = i;
                 }
                 if(i >= service->index_max) service->index_max = i;
                 ret = 0;
@@ -672,7 +672,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
 /* pop connection from connections pool with index */
 int service_popconn(SERVICE *service, CONN *conn)
 {
-    int ret = -1;
+    int ret = -1, x = 0;
 
     if(service && service->connections && conn)
     {
@@ -680,6 +680,11 @@ int service_popconn(SERVICE *service, CONN *conn)
         if(conn->index >= 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
+            if((x = conn->groupid) >= 0 && x < SB_GROUPS_MAX)
+            {
+                if(service->groups[x].total > 0)
+                    --(service->groups[x].total);
+            }
             service->connections[conn->index] = NULL;
             service->running_connections--;
             if(service->index_max == conn->index) 
@@ -696,20 +701,36 @@ int service_popconn(SERVICE *service, CONN *conn)
 }
 
 /* get connection with free state */
-CONN *service_getconn(SERVICE *service)
+CONN *service_getconn(SERVICE *service, int groupid)
 {
     CONN *conn = NULL;
-    int i = 0;
+    int i = 0, x = 0;
 
     if(service)
     {
         MUTEX_LOCK(service->mutex);
-        if(service->nconns_free > 0)
+        if(groupid >= 0 && groupid < service->ngroups)
         {
-            i = --(service->nconns_free);
-            if((conn = service->conns_free[i]))
+            if(service->groups[groupid].nconns_free > 0)
             {
-                conn->start_cstate(conn);
+                x = --(service->groups[groupid].nconns_free);
+                if((i = service->groups[groupid].conns_free[x]) >= 0 && i < SB_CONN_MAX 
+                        && (conn = service->connections[i]))
+                {
+                    conn->start_cstate(conn);
+                }
+            }
+        }
+        else
+        {
+            if(service->nconns_free > 0)
+            {
+                x = --(service->nconns_free);
+                if((i = service->conns_free[x]) >= 0 && i < SB_CONN_MAX 
+                        && (conn = service->connections[i]))
+                {
+                    conn->start_cstate(conn);
+                }
             }
         }
         MUTEX_UNLOCK(service->mutex);
@@ -728,12 +749,12 @@ int service_freeconn(SERVICE *service, CONN *conn)
         if((id = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX)
         {
             x = ++(service->groups[id].nconns_free);
-            service->groups[id].conns_free[x] = conn; 
+            service->groups[id].conns_free[x] = conn->index; 
         }
         else
         {
             x = ++(service->nconns_free); 
-            service->conns_free[x] = conn;
+            service->conns_free[x] = conn->index;
         }
         MUTEX_UNLOCK(service->mutex);
         return 0;
@@ -896,35 +917,23 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
 }
 
 /* group cast */
-int service_groupcast(SERVICE *service, char *data, int len)
+int service_castgroup(SERVICE *service, char *data, int len)
 {
     CONN *conn = NULL;
     int i = 0, x = 0;
 
     if(service && data && len > 0 && service->ngroups > 0)
     {
-        MUTEX_LOCK(service->mutex);
         for(i = 0; i < service->ngroups; i++)
         {
-            if(service->groups[i].nconns_free > 0)
-            {
-                x = --(service->groups[i].nconns_free);
-                if((conn = service->groups[i].conns_free[x]))
-                {
-                    conn->push_chunk(conn, data, len);
-                    continue;
-                }
-            }
-            /* new conn */
-            if((conn = service_newconn(service, 0, 0, service->groups[i].ip, 
-                            service->groups[i].port, &(service->groups[i].session))))
+            if((conn = service_getconn(service, i)))
             {
                 conn->start_cstate(conn);
                 conn->groupid = i;
                 conn->push_chunk(conn, data, len);
             }
         }
-        MUTEX_UNLOCK(service->mutex);
+        return 0;
     }
     return -1;
 }
@@ -935,11 +944,12 @@ int service_stategroup(SERVICE *service)
     int i = 0, x = 0;
     CONN *conn = NULL;
 
-    if(service && service->ngroups)
+    if(service && service->ngroups > 0)
     {
         for(i = 0; i < service->ngroups; i++)
         {
-            while(service->groups[i].total < service->groups[i].limit
+            while(service->groups[i].limit > 0 
+                    && service->groups[i].total < service->groups[i].limit
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
                             service->groups[i].port, &(service->groups[i].session))))
             {
@@ -1081,21 +1091,25 @@ void service_state(void *arg)
     {
         if(service->service_type == C_SERVICE)
         {
-            if(service->running_connections < service->client_connections_limit)
+            if(service->ngroups > 0)service_stategroup(service);
+            else
             {
-                DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",
-                        service->ip, service->port, service->client_connections_limit,
-                        service->running_connections);
-                n = service->client_connections_limit - service->running_connections;
-                while(n > 0)
+                if(service->running_connections < service->client_connections_limit)
                 {
-                    if(service->newconn(service, -1, -1, NULL, -1, NULL) == NULL)
+                    DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",
+                            service->ip, service->port, service->client_connections_limit,
+                            service->running_connections);
+                    n = service->client_connections_limit - service->running_connections;
+                    while(n > 0)
                     {
-                        FATAL_LOGGER(service->logger, "connect to %s:%d failed, %s", 
-                                service->ip, service->port, strerror(errno));
+                        if(service->newconn(service, -1, -1, NULL, -1, NULL) == NULL)
+                        {
+                            FATAL_LOGGER(service->logger, "connect to %s:%d failed, %s", 
+                                    service->ip, service->port, strerror(errno));
                             break;
+                        }
+                        n--;
                     }
-                    n--;
                 }
             }
         }
@@ -1269,6 +1283,9 @@ SERVICE *service_init()
         service->add_multicast      = service_add_multicast;
         service->drop_multicast     = service_drop_multicast;
         service->broadcast          = service_broadcast;
+        service->addgroup           = service_addgroup;
+        service->castgroup          = service_castgroup;
+        service->stategroup         = service_stategroup;
         service->newtask            = service_newtask;
         service->newtransaction     = service_newtransaction;
         service->set_heartbeat      = service_set_heartbeat;

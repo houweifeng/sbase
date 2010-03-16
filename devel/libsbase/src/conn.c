@@ -467,6 +467,7 @@ int conn_read_handler(CONN *conn)
         DEBUG_LOGGER(conn->logger, "Ready for read data from %s:%d on %s:%d via %d ",
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* Receive OOB */
+        /*
         if((n = MB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
             conn->recv_oob_total += n;
@@ -478,9 +479,9 @@ int conn_read_handler(CONN *conn)
             {
                 MB_DEL(conn->oob, n);
             }
-            /* CONN TIMER sample */
+            // CONN TIMER sample 
             return (ret = 0);
-        }
+        }*/
         /* Receive to chunk with chunk_read_state before reading to buffer */
         if(conn->s_state == S_STATE_READ_CHUNK  && conn->session.packet_type != PACKET_PROXY
             && CK_LEFT(conn->chunk) > 0)
@@ -1044,6 +1045,8 @@ int conn_over_session(CONN *conn)
     if(conn)
     {
         SESSION_RESET(conn);
+        if(PPARENT(conn)->service->service_type == C_SERVICE)
+            PPARENT(conn)->service->freeconn(PPARENT(conn)->service, conn);
         ret = 0;
     }
     return ret;

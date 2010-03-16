@@ -150,7 +150,7 @@ typedef struct _CNGROUP
   short limit;
   short total;
   short nconns_free;
-  struct _CONN *conns_free[SB_CONN_MAX];
+  int   conns_free[SB_CONN_MAX];
 }CNGROUP;
 
 /* service */
@@ -220,7 +220,7 @@ typedef struct _SERVICE
     int index_max;
     int running_connections;
     int nconns_free;
-    struct _CONN *conns_free[SB_CONN_MAX];
+    int conns_free[SB_CONN_MAX];
     int nconnection;
     struct _CONN *connections[SB_CONN_MAX];
     void *connection_queue;
@@ -233,7 +233,8 @@ typedef struct _SERVICE
             char *ip, int port, SESSION *session);
     struct _CONN *(*addconn)(struct _SERVICE *service, int sock_type, int fd, 
             char *remote_ip, int remote_port, char *local_ip, int local_port, SESSION *);
-    struct _CONN *(*getconn)(struct _SERVICE *service);
+    struct _CONN *(*getconn)(struct _SERVICE *service, int groupid);
+    int     (*freeconn)(struct _SERVICE *service, struct _CONN *);
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
     int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
     struct _CONN *(*findconn)(struct _SERVICE *service, int index);
@@ -247,7 +248,8 @@ typedef struct _SERVICE
     CNGROUP groups[SB_GROUPS_MAX];
     int ngroups;
     int (*addgroup)(struct _SERVICE *service, char *ip, int port, int limit, SESSION *session);
-    int (*groupcast)(struct _SERVICE *service, char *data, int len);
+    int (*castgroup)(struct _SERVICE *service, char *data, int len);
+    int (*stategroup)(struct _SERVICE *service);
     
     /* evtimer */
     void *evtimer;
