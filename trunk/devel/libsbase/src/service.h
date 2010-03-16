@@ -25,7 +25,7 @@ int service_pushconn(SERVICE *service, CONN *conn);
 /* pop connection from connections pool */
 int service_popconn(SERVICE *service, CONN *conn);
 /* get free connection */
-CONN *service_getconn(SERVICE *service);
+CONN *service_getconn(SERVICE *service, int groupid);
 /* find connection as index */
 CONN *service_findconn(SERVICE *service, int index);
 /* pop chunk from service  */
@@ -42,6 +42,12 @@ int service_add_multicast(SERVICE *service, char *multicast_ip);
 int service_drop_multicast(SERVICE *service, char *multicast_ip);
 /* broadcast */
 int service_broadcast(SERVICE *service, char *data, int len);
+/* add group */
+int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *session);
+/* group cast */
+int service_castgroup(SERVICE *service, char *data, int len);
+/* state groups */
+int service_stategroup(SERVICE *service);
 /* new task */
 int service_newtask(SERVICE *service, CALLBACK *callback, void *arg);
 /* add new transaction */
