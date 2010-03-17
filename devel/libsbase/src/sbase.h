@@ -19,6 +19,7 @@ extern "C" {
 #define SB_IP_MAX           16
 #define SB_GROUPS_MAX       256
 #define SB_NDAEMONS_MAX     64
+#define SB_CHUNKS_MAX       65536
 #define SB_BUF_SIZE         65536
 #define SB_USEC_SLEEP       1000
 #define SB_PROXY_TIMEOUT    20000000
@@ -210,7 +211,9 @@ typedef struct _SERVICE
     void *message_queue;
 
     /* chunks queue */
-    void *chunks_queue;
+    //void *chunks_queue;
+    int  nqchunks;
+    struct _CHUNK *qchunks[SB_CHUNKS_MAX];
     struct _CHUNK *(*popchunk)(struct _SERVICE *service);
     int (*pushchunk)(struct _SERVICE *service, struct _CHUNK *cp);
     CB_DATA *(*newchunk)(struct _SERVICE *service, int len);
@@ -223,7 +226,8 @@ typedef struct _SERVICE
     int conns_free[SB_CONN_MAX];
     int nconnection;
     struct _CONN *connections[SB_CONN_MAX];
-    void *connection_queue;
+    int nqconns;
+    struct _CONN *qconns[SB_CONN_MAX];
 
     /* C_SERVICE ONLY */
     int client_connections_limit;

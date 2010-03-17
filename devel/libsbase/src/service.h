@@ -30,6 +30,10 @@ CONN *service_getconn(SERVICE *service, int groupid);
 CONN *service_findconn(SERVICE *service, int index);
 /* pop chunk from service  */
 CHUNK *service_popchunk(SERVICE *service);
+/* push to qconns */
+int service_pushtoq(SERVICE *service, CONN *conn);
+/* push to qconn */
+CONN *service_popfromq(SERVICE *service);
 /* push chunk to service  */
 int service_pushchunk(SERVICE *service, CHUNK *cp);
 /* new chunk */

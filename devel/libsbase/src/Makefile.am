@@ -16,6 +16,7 @@ utils/logger.h \
 utils/memb.h \
 utils/mutex.h \
 utils/queue.h \
+utils/queue.c \
 utils/evtimer.h \
 utils/timer.h
 

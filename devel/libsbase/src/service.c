@@ -3,7 +3,6 @@
 #include "xssl.h"
 #include "logger.h"
 #include "service.h"
-#include "queue.h"
 #include "mutex.h"
 #include "memb.h"
 #include "message.h"
@@ -167,10 +166,7 @@ running_proc:
             PROCTHREAD_SET(service, service->daemon);
             if(service->daemon->message_queue)
             {
-                if(service->daemon->message_queue)
-                {
-                    QUEUE_CLEAN(service->daemon->message_queue);
-                }
+                if(service->daemon->message_queue) qmessage_clean(service->daemon->message_queue);
                 service->daemon->message_queue = service->message_queue;
                 service->daemon->evbase = service->evbase;
             }
@@ -356,12 +352,8 @@ err_conn:
                                 ip, port, service->ip, service->port, &(service->session))))
                         {
                             MB_PUSH(conn->buffer, buf, n);
-                            msg.fd          = conn->fd;
-                            msg.msg_id      = MESSAGE_INPUT;
-                            msg.index       = -1;
-                            msg.parent      = conn->parent;
-                            msg.handler     = conn;
-                            QUEUE_PUSH(((PROCTHREAD *)(conn->parent))->message_queue, MESSAGE, &msg);
+                            qmessage_push(((PROCTHREAD *)(conn->parent))->message_queue, 
+                                    MESSAGE_INPUT, -1, conn->fd, -1, conn, conn->parent, NULL);
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
                                     " buffer:%d", ip, port, fd, MB_NDATA(conn->buffer));
                         }
@@ -569,14 +561,16 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 {
     PROCTHREAD *procthread = NULL;
     CONN *conn = NULL, **pconn = NULL;
-    int index = 0;
+    int index = 0, x = 0;
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
-        pconn = &conn;
-        QUEUE_POP(service->connection_queue, PCONN, pconn);
-        if(conn) conn->reset(conn);
-        else conn = conn_init();
+        if((conn = service_popfromq(service)))
+        {
+            conn->reset(conn);
+        }
+        else 
+            conn = conn_init();
         if(conn)
         {
             conn->fd = fd;
@@ -777,40 +771,74 @@ CONN *service_findconn(SERVICE *service, int index)
 /* pop chunk from service  */
 CHUNK * service_popchunk(SERVICE *service)
 {
-    int ret = -1;
+    int ret = -1, x = 0;
     CHUNK *cp = NULL;
 
-    if(service && service->chunks_queue)
+    if(service && service->qchunks)
     {
-        //MUTEX_LOCK(service->mutex);
-        if(QUEUE_POP(service->chunks_queue, PCHUNK, &cp) == 0) 
+        MUTEX_LOCK(service->mutex);
+        if(service->nqchunks > 0 && (x = --(service->nqchunks)) >= 0 
+                && (cp = service->qchunks[x]))
         {
-            DEBUG_LOGGER(service->logger, "chunk_pop(%p) bsize:%d total:%d", cp, CK_BSIZE(cp), QTOTAL(service->chunks_queue));
-
+            service->qchunks[x] = NULL;
+            DEBUG_LOGGER(service->logger, "chunk_pop(%p) bsize:%d total:%d", cp, CK_BSIZE(cp), service->nqchunks);
         }
         else
         {
             CK_INIT(cp);
             if(cp){DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d", cp, CK_BSIZE(cp));}
         }
-        //MUTEX_UNLOCK(service->mutex);
+        MUTEX_UNLOCK(service->mutex);
     }
     return cp;
+}
+
+/* push to qconns */
+int service_pushtoq(SERVICE *service, CONN *conn)
+{
+    int x = 0;
+
+    if(service && conn)
+    {
+        MUTEX_LOCK(service->mutex);
+        x = service->nqconns++;
+        service->qconns[x] = conn;
+        MUTEX_UNLOCK(service->mutex);
+    }
+}
+
+/* push to qconn */
+CONN *service_popfromq(SERVICE *service)
+{
+    CONN *conn = NULL;
+    int x = 0;
+
+    if(service)
+    {
+        MUTEX_LOCK(service->mutex);
+        if(service->nqconns > 0)
+        {
+            x = --(service->nqconns);
+            conn = service->qconns[x];
+        }
+        MUTEX_UNLOCK(service->mutex);
+    }
 }
 
 /* push chunk to service  */
 int service_pushchunk(SERVICE *service, CHUNK *cp)
 {
-    int ret = -1;
+    int ret = -1, x = 0;
 
-    if(service && service->chunks_queue && cp)
+    if(service && service->qchunks && cp)
     {
-        //MUTEX_LOCK(service->mutex);
+        MUTEX_LOCK(service->mutex);
         CK_RESET(cp);
-        QUEUE_PUSH(service->chunks_queue, PCHUNK, &cp);
+        x = service->nqchunks++;
+        service->qchunks[x] = cp;
         DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d total:%d", 
-                cp, CK_BSIZE(cp), QTOTAL(service->chunks_queue));
-        //MUTEX_UNLOCK(service->mutex);
+                cp, CK_BSIZE(cp), service->nqchunks);
+        MUTEX_UNLOCK(service->mutex);
     }
     return ret;
 }
@@ -1226,34 +1254,33 @@ void service_clean(SERVICE **pservice)
         }
         //clean connection_queue
         DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk");
-        if((*pservice)->connection_queue)
+        if((*pservice)->nqconns > 0)
         {
             DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
-            while(QTOTAL((*pservice)->connection_queue) > 0)
+            while((i = --((*pservice)->nqconns)) >= 0)
             {
-                conn = NULL;
-                QUEUE_POP((*pservice)->connection_queue, PCONN, &conn);
-        
-                DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", conn);
-                if(conn) conn->clean(&conn);
+                if(conn = ((*pservice)->qconns[i])) 
+                {
+                    DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", conn);
+                    conn->clean(&conn);
+                }
             }
-            QUEUE_CLEAN((*pservice)->connection_queue);
         }
         
         //clean chunks queue
         DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue");
         
-        if((*pservice)->chunks_queue)
+        if((*pservice)->nqchunks > 0)
         {
             DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
-            while(QTOTAL((*pservice)->chunks_queue) > 0)
+            while((i = --((*pservice)->nqchunks)) >= 0)
             {
-                cp = NULL;
-                QUEUE_POP((*pservice)->chunks_queue, PCONN, &cp);
-                DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", cp);
-                if(cp){CK_CLEAN(cp);}
+                if((cp = (*pservice)->qchunks[i]))
+                {
+                    DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", cp);
+                    CK_CLEAN(cp);
+                }
             }
-            QUEUE_CLEAN((*pservice)->chunks_queue);
         }
         /* SSL */
 #ifdef HAVE_SSL
@@ -1277,8 +1304,6 @@ SERVICE *service_init()
     if((service = (SERVICE *)calloc(1, sizeof(SERVICE))))
     {
         MUTEX_INIT(service->mutex);
-        QUEUE_INIT(service->connection_queue);
-        QUEUE_INIT(service->chunks_queue);
         service->set                = service_set;
         service->run                = service_run;
         service->set_log            = service_set_log;
