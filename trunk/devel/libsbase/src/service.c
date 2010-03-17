@@ -568,12 +568,13 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         char *local_ip, int local_port, SESSION *session)
 {
     PROCTHREAD *procthread = NULL;
-    CONN *conn = NULL;
+    CONN *conn = NULL, **pconn = NULL;
     int index = 0;
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
-        QUEUE_POP(service->connection_queue, PCONN, &conn);
+        pconn = &conn;
+        QUEUE_POP(service->connection_queue, PCONN, pconn);
         if(conn) conn->reset(conn);
         else conn = conn_init();
         if(conn)
