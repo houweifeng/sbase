@@ -175,8 +175,8 @@ running:
             EVTIMER_CHECK(sbase->evtimer);
             //EVTIMER_LIST(sbase->evtimer, stdout);
             //running message queue
-            if(QTOTAL(sbase->message_queue) > 0)
-                message_handler(sbase->message_queue, sbase->logger);
+            if(QMTOTAL(sbase->message_queue) > 0)
+                qmessage_handler(sbase->message_queue, sbase->logger);
             else usleep(1);
         }while(sbase->running_status);
         ret = 0;
@@ -223,7 +223,7 @@ void sbase_clean(SBASE **psbase)
         if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
         if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
         if((*psbase)->evbase){(*psbase)->evbase->clean(&((*psbase)->evbase));}
-        if((*psbase)->message_queue){QUEUE_CLEAN((*psbase)->message_queue);}
+        if((*psbase)->message_queue){qmessage_clean((*psbase)->message_queue);}
 #ifdef HAVE_SSL
         ERR_free_strings();
 #endif
@@ -239,7 +239,8 @@ SBASE *sbase_init()
     if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
     {
         EVTIMER_INIT(sbase->evtimer);
-        QUEUE_INIT(sbase->message_queue);
+        sbase->message_queue    = qmessage_init();
+        //QUEUE_INIT(sbase->message_queue);
         sbase->set_log		    = sbase_set_log;
         sbase->set_evlog	    = sbase_set_evlog;
         sbase->add_service	    = sbase_add_service;

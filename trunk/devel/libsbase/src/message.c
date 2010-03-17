@@ -1,8 +1,7 @@
 #include "message.h"
-#include "queue.h"
 #include "sbase.h"
 #include "logger.h"
-
+#include "mutex.h"
 int get_msg_no(int message_id)
 {
     int msg_no = 0;
@@ -11,56 +10,166 @@ int get_msg_no(int message_id)
     return msg_no;
 }
 
-void message_handler(void *message_queue, void *logger)
+/* initialize */
+void *qmessage_init()
 {
-    PROCTHREAD *pth = NULL;
-    CONN *conn = NULL;
-    MESSAGE msg = {0};
-    int fd = -1, index = 0;
+    QMESSAGE *q = NULL;
 
-    if(message_queue)
+    if((q = (QMESSAGE *)calloc(1, sizeof(QMESSAGE))))
     {
-        do
+        MUTEX_INIT(q->mutex);
+    }
+    return q;
+}
+
+/* qmessage */
+void qmessage_push(void *qmsg, int id, int index, int fd, int tid, 
+        void *parent, void *handler, void *arg)
+{
+    QMESSAGE *q = (QMESSAGE *)qmsg;
+    MESSAGE *msg = NULL;
+
+    if(q)
+    {
+        MUTEX_LOCK(q->mutex);
+        if((msg = q->left))
         {
-            QUEUE_POP(message_queue, MESSAGE, &msg);
-            if((msg.msg_id & MESSAGE_ALL) != msg.msg_id) 
+            q->left = msg->next;
+        }
+        else
+        {
+            msg = (MESSAGE *)calloc(1, sizeof(MESSAGE));
+        }
+        if(msg)
+        {
+            msg->msg_id = id;
+            msg->index = index;
+            msg->fd = fd;
+            msg->tid = tid;
+            msg->handler = handler;
+            msg->parent = parent;
+            msg->arg = arg;
+            if(q->last)
+            {
+                q->last->next = msg;
+                q->last = msg;
+            }
+            else
+            {
+                q->first = q->last = msg;
+            }
+        }
+        MUTEX_UNLOCK(q->mutex);
+    }
+    return ;
+}
+
+MESSAGE *qmessage_pop(void *qmsg)
+{
+    QMESSAGE *q = (QMESSAGE *)qmsg;
+    MESSAGE *msg = NULL;
+
+    if(qmsg)
+    {
+        MUTEX_LOCK(q->mutex);
+        if((msg = q->first))
+        {
+            if((q->first = q->first->next) == NULL)
+            {
+                q->last = NULL;
+            }
+        }
+        MUTEX_UNLOCK(q->mutex);
+    }
+    return msg;
+}
+
+/* clean qmessage */
+void qmessage_clean(void *qmsg)
+{
+    QMESSAGE *q = (QMESSAGE *)qmsg;
+    MESSAGE *msg = NULL;
+
+    if(q)
+    {
+        while((msg = q->first))
+        {
+            q->first = q->first->next;
+            free(msg);
+        }
+        while((msg = q->left))
+        {
+            q->left = q->left->next;
+            free(msg);
+        }
+        MUTEX_DESTROY(q->mutex);
+    }
+    return ;
+}
+
+/* to qleft */
+void qmessage_left(void *qmsg, MESSAGE *msg)
+{
+    QMESSAGE *q = (QMESSAGE *)qmsg;
+
+    if(q && msg)
+    {
+        msg->next = q->left;
+        q->left = msg;
+    }
+    return ;
+}
+
+void qmessage_handler(void *qmsg, void *logger)
+{
+    QMESSAGE *q = (QMESSAGE *)qmsg;
+    int fd = -1, index = 0;
+    PROCTHREAD *pth = NULL;
+    MESSAGE *msg = NULL;
+    CONN *conn = NULL;
+
+    if(q)
+    {
+        while((msg = qmessage_pop(qmsg)))
+        {
+            if((msg->msg_id & MESSAGE_ALL) != msg->msg_id) 
             {
                 FATAL_LOGGER(logger, "Invalid message[%04x:%04x:%04x] handler[%p] parent[%p] fd[%d]",
-                        msg.msg_id, MESSAGE_ALL, (msg.msg_id & MESSAGE_ALL), msg.handler, 
-                        msg.parent, msg.fd);
+                        msg->msg_id, MESSAGE_ALL, (msg->msg_id & MESSAGE_ALL), msg->handler, 
+                        msg->parent, msg->fd);
                 goto next;
             }
-            conn = (CONN *)(msg.handler);
-            pth = (PROCTHREAD *)(msg.parent);
-            index = msg.index;
-            if(msg.msg_id == MESSAGE_STOP && pth)
+            conn = (CONN *)(msg->handler);
+            pth = (PROCTHREAD *)(msg->parent);
+            index = msg->index;
+            if(msg->msg_id == MESSAGE_STOP && pth)
             {
                 return pth->terminate(pth);
             }
             //task and heartbeat
-            if(msg.msg_id == MESSAGE_TASK || msg.msg_id == MESSAGE_HEARTBEAT 
-                    || msg.msg_id == MESSAGE_STATE)
+            if(msg->msg_id == MESSAGE_TASK || msg->msg_id == MESSAGE_HEARTBEAT 
+                    || msg->msg_id == MESSAGE_STATE)
             {
-                if(msg.handler)
+                if(msg->handler)
                 {
-                    ((CALLBACK *)(msg.handler))(msg.arg);
+                    ((CALLBACK *)(msg->handler))(msg->arg);
                 }
                 goto next;
             }
             if(conn) fd = conn->fd;
-            if(conn == NULL || pth == NULL || msg.fd != conn->fd || pth->service == NULL)
+            if(conn == NULL || pth == NULL || msg->fd != conn->fd || pth->service == NULL)
             {
                 ERROR_LOGGER(logger, "Invalid MESSAGE[%d] fd[%d] conn->fd[%d] handler[%p] "
-                        "parent[%p] service[%p]", msg.msg_id, msg.fd, fd, conn, pth, pth->service);
+                        "parent[%p] service[%p]", msg->msg_id, msg->fd, fd, conn, pth, pth->service);
                 goto next;
             }
             if(index >= 0 && pth->service->connections[index] != conn) goto next;
             DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%p] "
-                    "connection[%s:%d] local[%s:%d] via %d", MESSAGE_DESC(msg.msg_id), 
+                    "connection[%s:%d] local[%s:%d] via %d", MESSAGE_DESC(msg->msg_id), 
                     pth->service->service_name, pth, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
             //message  on connection 
-            switch(msg.msg_id)
+            switch(msg->msg_id)
             {
                 case MESSAGE_NEW_SESSION :
                     pth->add_connection(pth, conn);
@@ -81,7 +190,7 @@ void message_handler(void *message_queue, void *logger)
                     conn->data_handler(conn);
                     break;
                 case MESSAGE_TRANSACTION :
-                    conn->transaction_handler(conn, msg.tid);
+                    conn->transaction_handler(conn, msg->tid);
                     break;
                 case MESSAGE_TIMEOUT :
                     conn->timeout_handler(conn);
@@ -91,8 +200,8 @@ void message_handler(void *message_queue, void *logger)
                     break;
             }
 next:
-            memset(&msg, 0, sizeof(MESSAGE));
-        }while(QTOTAL(message_queue) > 0);
+            qmessage_left(qmsg, msg);
+        }
     }
     return ;
 }

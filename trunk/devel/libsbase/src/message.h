@@ -47,14 +47,27 @@ typedef struct _MESSAGE
     int             msg_id;
     int             index;
     int             fd;
+    int             tid;
     void            *handler;
     void 	        *parent;
     void            *arg;
-    int             tid;
+    struct _MESSAGE *next;
 }MESSAGE;
+typedef struct _QMESSAGE
+{
+    int total;
+    void *mutex;
+    MESSAGE *left;
+    MESSAGE *first;
+    MESSAGE *last;
+}QMESSAGE;
 int get_msg_no(int message_id);
-void message_handler(void *message_queue, void *logger);
+void *qmessage_init();
+void qmessage_handler(void *q, void *logger);
+void qmessage_push(void *q, int id, int index, int fd, int tid, void *parent, void *handler, void *arg);
+void qmessage_clean(void *q);
 /* Initialize message */
+#define QMTOTAL(q) (((QMESSAGE *)q)->total)
 #define MESSAGE_INIT() ((MESSAGE *)calloc(1, sizeof(MESSAGE)))
 #define MESSAGE_CLEAN(ptr) {if(ptr){free(ptr);ptr = NULL;}}
 #define MESSAGE_SIZE    sizeof(MESSAGE)
