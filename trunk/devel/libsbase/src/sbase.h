@@ -248,6 +248,7 @@ typedef struct _SERVICE
     CNGROUP groups[SB_GROUPS_MAX];
     int ngroups;
     int (*addgroup)(struct _SERVICE *service, char *ip, int port, int limit, SESSION *session);
+    int (*closegroup)(struct _SERVICE *service, int groupid);
     int (*castgroup)(struct _SERVICE *service, char *data, int len);
     int (*stategroup)(struct _SERVICE *service);
     

@@ -44,6 +44,8 @@ int service_drop_multicast(SERVICE *service, char *multicast_ip);
 int service_broadcast(SERVICE *service, char *data, int len);
 /* add group */
 int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *session);
+/* close group */
+int service_closegroup(SERVICE *service, int groupid);
 /* group cast */
 int service_castgroup(SERVICE *service, char *data, int len);
 /* state groups */

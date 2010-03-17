@@ -916,6 +916,19 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
     return id;
 }
 
+/* add group */
+int service_closegroup(SERVICE *service, int groupid)
+{
+    int id = -1;
+    if(service && groupid < SB_GROUPS_MAX)
+    {
+        MUTEX_LOCK(service->mutex);
+        service->groups[groupid].limit = 0;
+        MUTEX_UNLOCK(service->mutex);
+    }
+    return id;
+}
+
 /* group cast */
 int service_castgroup(SERVICE *service, char *data, int len)
 {
@@ -1284,6 +1297,7 @@ SERVICE *service_init()
         service->drop_multicast     = service_drop_multicast;
         service->broadcast          = service_broadcast;
         service->addgroup           = service_addgroup;
+        service->closegroup         = service_closegroup;
         service->castgroup          = service_castgroup;
         service->stategroup         = service_stategroup;
         service->newtask            = service_newtask;
