@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#ifdef HAVE_SSL
+#ifdef USE_SSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/crypto.h>
@@ -36,7 +36,7 @@ static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
 static int ev_sock_count = 2;
 static int is_use_ssl = 1;
-#ifdef HAVE_SSL
+#ifdef USE_SSL
 static SSL_CTX *ctx = NULL;
 static const char *cert_file = "cacert.pem";
 static const char *priv_file = "privkey.pem";
@@ -47,7 +47,7 @@ typedef struct _CONN
     EVENT *event;
     char buffer[EV_BUF_SIZE];
     int n;
-#ifdef HAVE_SSL
+#ifdef USE_SSL
     SSL *ssl;
 #endif
 }CONN;
@@ -226,7 +226,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
             }
             if(is_use_ssl)
             {
-#ifdef HAVE_SSL
+#ifdef USE_SSL
                 if((conns[rfd].ssl = SSL_new(ctx)) == NULL)
                 {
                     FATAL_LOG("SSL_new() failed, %s", ERR_reason_error_string(ERR_get_error()));
@@ -272,7 +272,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
         {
             if(is_use_ssl)
             {
-#ifdef HAVE_SSL
+#ifdef USE_SSL
                 n = SSL_read(conns[fd].ssl, conns[fd].buffer, EV_BUF_SIZE - 1);
 #else
                 n = read(fd, conns[fd].buffer, EV_BUF_SIZE - 1);
@@ -304,10 +304,13 @@ void ev_handler(int fd, short ev_flags, void *arg)
         {
             if(is_use_ssl)
             {
-#ifdef HAVE_SSL
+#ifdef USE_SSL
                 n = SSL_write(conns[fd].ssl, conns[fd].buffer, conns[fd].n);
 #else
-                n = read(fd, conns[fd].buffer, conns[fd].n);
+                char *s = "daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
+                conns[fd].n = sprintf(conns[fd].buffer, 
+                        "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", strlen(s), s);
+                n = write(fd, conns[fd].buffer, conns[fd].n);
 #endif
             }
             else
@@ -336,7 +339,7 @@ err:
                 conns[fd].event = NULL;
                 shutdown(fd, SHUT_RDWR);
                 close(fd);
-#ifdef HAVE_SSL
+#ifdef USE_SSL
                 if(conns[fd].ssl)
                 {   SSL_shutdown(conns[fd].ssl);
                     SSL_free(conns[fd].ssl);
@@ -381,7 +384,7 @@ int main(int argc, char **argv)
     //memset(events, 0, sizeof(EVENT *) * CONN_MAX);
     if((conns = (CONN *)calloc(CONN_MAX, sizeof(CONN))))
     {
-#ifdef HAVE_SSL
+#ifdef USE_SSL
         SSL_library_init();
         OpenSSL_add_all_algorithms();
         SSL_load_error_strings();
@@ -416,7 +419,7 @@ int main(int argc, char **argv)
         sa_len = sizeof(struct sockaddr_in );
         /* Initialize inet */ 
         lfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
-#ifdef HAVE_SSL
+#ifdef USE_SSL
         /*
            if(lfd > 0 && is_use_ssl && ev_sock_list[ev_sock_type] == SOCK_STREAM)
            {
@@ -535,7 +538,7 @@ running:
         }
         for(i = 0; i < CONN_MAX; i++)
         {
-#ifdef HAVE_SSL
+#ifdef USE_SSL
             if(conns[i].ssl)
             {
                 SSL_shutdown(conns[i].ssl);
@@ -552,7 +555,7 @@ running:
             }
 
         }
-#ifdef HAVE_SSL
+#ifdef USE_SSL
         ERR_free_strings();
         SSL_CTX_free(ctx);
 #endif
