@@ -476,7 +476,7 @@ int conn_read_handler(CONN *conn)
             return (ret = 0);
         }
         /* Receive to chunk with chunk_read_state before reading to buffer */
-        if(conn->s_state == S_STATE_READ_CHUNK  && conn->lock == 0 
+        if(conn->lock == 0 && conn->s_state == S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
                 && CK_LEFT(conn->chunk) > 0)
         {
@@ -870,7 +870,7 @@ int conn_chunk_reader(CONN *conn)
     int ret = -1, n = -1;
     CHUNK *cp = NULL;
 
-    if(conn && conn->chunk) 
+    if(conn)
     {
         conn->lock = 1;
         if(MB_NDATA(conn->buffer) > 0)
