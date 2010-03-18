@@ -476,8 +476,9 @@ int conn_read_handler(CONN *conn)
             return (ret = 0);
         }
         /* Receive to chunk with chunk_read_state before reading to buffer */
-        if(conn->s_state == S_STATE_READ_CHUNK  && conn->session.packet_type != PACKET_PROXY
-            && CK_LEFT(conn->chunk) > 0)
+        if(conn->s_state == S_STATE_READ_CHUNK  && conn->lock == 0 
+                && conn->session.packet_type != PACKET_PROXY
+                && CK_LEFT(conn->chunk) > 0)
         {
             if(PCB(conn->buffer)->ndata > 0) ret = conn_chunk_reader(conn);
             if(PCB(conn->buffer)->ndata <= 0){CONN_CHUNK_READ(conn, n);}
@@ -871,6 +872,7 @@ int conn_chunk_reader(CONN *conn)
 
     if(conn && conn->chunk) 
     {
+        conn->lock = 1;
         if(MB_NDATA(conn->buffer) > 0)
         {
             if((n = CHUNK_FILL(conn->chunk, MB_DATA(conn->buffer), MB_NDATA(conn->buffer))) > 0)
@@ -894,6 +896,7 @@ int conn_chunk_reader(CONN *conn)
                 ret = 0;
             }
         }
+        conn->lock = 0;
     }
     return ret;
 }
