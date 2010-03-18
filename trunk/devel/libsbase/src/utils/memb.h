@@ -43,7 +43,6 @@ do                                                                              
     {                                                                               \
         MB_BSIZE(ptr) = MB_BLOCK_SIZE;                                              \
         if(b_size > MB_BLOCK_SIZE) MB_BSIZE(ptr) = b_size;                          \
-        MB_RESIZE(ptr, b_size);                                                     \
     }                                                                               \
 }while(0)
 #define MB_SET_BLOCK_SIZE(ptr, b_size) {MB_BSIZE(ptr) = b_size;}
