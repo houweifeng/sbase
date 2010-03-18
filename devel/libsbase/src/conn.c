@@ -27,7 +27,9 @@
     {                                                                                       \
         if(!(conn->d_state & (_state_)))                                                    \
         {                                                                                   \
-        DEBUG_LOGGER(conn->logger, "Ready for closing connection[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);\
+            DEBUG_LOGGER(conn->logger, "Ready for close remote[%s:%d] local[%s:%d] via %d", \
+                    conn->remote_ip, conn->remote_port, conn->local_ip,                     \
+                    conn->local_port, conn->fd);                                            \
             conn->push_message(conn, MESSAGE_QUIT);                                         \
             conn->d_state |= _state_;                                                       \
             if(conn->event)conn->event->del(conn->event, E_WRITE|E_READ);                   \
@@ -92,14 +94,25 @@ do{                                                                             
         }                                                                                   \
     }                                                                                       \
 }while(0)
-#define SESSION_RESET(conn)                                                             \
-do                                                                                      \
-{                                                                                       \
-    CONN_STATE_RESET(conn);                                                             \
-    MB_RESET(conn->packet);                                                             \
-    MB_RESET(conn->cache);                                                              \
-    CK_RESET(conn->chunk);                                                              \
-    if(PCB(conn->buffer)->ndata > 0) conn->packet_reader(conn);                         \
+
+#define SERVICE_PUSH_MESSAGE(conn, msgid)                                                   \
+do                                                                                          \
+{                                                                                           \
+    if(conn)                                                                                \
+    {                                                                                       \
+        qmessage_push(PPARENT(conn)->service->message_queue, MESSAGE_CHUNK,                 \
+                conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
+    }                                                                                       \
+}while(0)
+
+#define SESSION_RESET(conn)                                                                 \
+do                                                                                          \
+{                                                                                           \
+    CONN_STATE_RESET(conn);                                                                 \
+    MB_RESET(conn->packet);                                                                 \
+    MB_RESET(conn->cache);                                                                  \
+    CK_RESET(conn->chunk);                                                                  \
+    if(PCB(conn->buffer)->ndata > 0){SERVICE_PUSH_MESSAGE(conn, MESSAGE_BUFFER);}           \
 }while(0)
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
@@ -441,7 +454,8 @@ int conn_push_message(CONN *conn, int message_id)
                 conn->remote_port, conn->local_ip, conn->local_port, 
                 conn->fd, QMTOTAL(conn->message_queue),
                 PPL(conn), PPL(conn->parent));
-        qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1,conn->parent, conn, NULL);
+        qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
+                -1, conn->parent, conn, NULL);
         ret = 0;
     }
     return ret;
@@ -589,7 +603,6 @@ int conn_packet_reader(CONN *conn)
 
     if(conn)
     {
-        MUTEX_LOCK(conn->mutex);
         data = PCB(conn->buffer);
         packet_type = conn->session.packet_type;
         DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%p][%d]", 
@@ -658,7 +671,6 @@ end:
             conn->s_state = S_STATE_PACKET_HANDLING;
             conn->push_message(conn, MESSAGE_PACKET);
         }
-        MUTEX_UNLOCK(conn->mutex);
     }
     return len;
 }
@@ -872,7 +884,6 @@ int conn_chunk_reader(CONN *conn)
 
     if(conn)
     {
-        MUTEX_LOCK(conn->mutex);
         if(MB_NDATA(conn->buffer) > 0)
         {
             if((n = CHUNK_FILL(conn->chunk, MB_DATA(conn->buffer), MB_NDATA(conn->buffer))) > 0)
@@ -896,7 +907,6 @@ int conn_chunk_reader(CONN *conn)
                 ret = 0;
             }
         }
-        MUTEX_UNLOCK(conn->mutex);
     }
     return ret;
 }
@@ -914,7 +924,8 @@ int conn_recv_chunk(CONN *conn, int size)
                 conn->local_ip, conn->local_port, conn->fd);
         CK_MEM(conn->chunk, size);
         conn->s_state = S_STATE_READ_CHUNK;
-        conn->chunk_reader(conn);
+        SERVICE_PUSH_MESSAGE(conn, MESSAGE_CHUNK);
+        //conn->chunk_reader(conn);
         //CONN_CHUNK_READ(conn, n);
         ret = 0;
     }
@@ -961,7 +972,8 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
         CK_FILE(conn->chunk, filename, offset, size);
         CK_SET_BSIZE(conn->chunk, conn->session.buffer_size);
         conn->s_state = S_STATE_READ_CHUNK;
-        conn->chunk_reader(conn);
+        SERVICE_PUSH_MESSAGE(conn, MESSAGE_CHUNK);
+        //conn->chunk_reader(conn);
         //CONN_CHUNK_READ(conn, n);
         ret = 0;
     }
@@ -1174,8 +1186,6 @@ void conn_clean(CONN **pconn)
         MB_CLEAN((*pconn)->exchange);
         /* Clean chunk */
         CK_CLEAN((*pconn)->chunk);
-        /* clean mutex */
-        MUTEX_DESTROY((*pconn)->mutex);
         /* Clean send queue */
         if((*pconn)->send_queue)
         {
@@ -1212,7 +1222,6 @@ CONN *conn_init()
         MB_INIT(conn->oob, MB_BLOCK_SIZE);
         MB_INIT(conn->exchange, MB_BLOCK_SIZE);
         CK_INIT(conn->chunk);
-        MUTEX_INIT(conn->mutex);
         conn->send_queue            = queue_init();
         conn->event                 = ev_init();
         conn->set                   = conn_set;

@@ -355,9 +355,6 @@ typedef struct _CONN
     /* evbase */
     EVBASE *evbase;
     EVENT *event;
-    void *mutex;
-    //int lockread;
-    //int lockwrite;
 
     /* SSL */
     void *ssl;

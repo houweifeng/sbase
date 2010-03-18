@@ -189,7 +189,13 @@ void qmessage_handler(void *qmsg, void *logger)
                 case MESSAGE_OUTPUT :
                     conn->write_handler(conn);
                     break;
+                case MESSAGE_BUFFER:
+                    conn->packet_reader(conn);
+                    break;
                 case MESSAGE_PACKET :
+                    conn->packet_handler(conn);
+                    break;
+                case MESSAGE_CHUNK :
                     conn->packet_handler(conn);
                     break;
                 case MESSAGE_DATA :
