@@ -7,7 +7,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 /* MESSAGE DEFINE*/
 #ifndef _TYPEDEF_MESSAGE
 #define _TYPEDEF_MESSAGE
@@ -15,23 +14,27 @@ extern "C" {
 #define MESSAGE_NEW_SESSION     0x01
 #define MESSAGE_INPUT           0x02
 #define MESSAGE_OUTPUT          0x04
-#define MESSAGE_PACKET          0x08
-#define MESSAGE_DATA            0x10
-#define MESSAGE_QUIT            0x20
-#define MESSAGE_TRANSACTION     0x40
-#define MESSAGE_TASK            0x80
-#define MESSAGE_HEARTBEAT       0x100
-#define MESSAGE_STATE           0x200
-#define MESSAGE_TIMEOUT         0x400
-#define MESSAGE_STOP            0x800
-#define MESSAGE_PROXY           0x1000
-#define MESSAGE_ALL		        0x1fff
+#define MESSAGE_BUFFER          0x08
+#define MESSAGE_PACKET          0x10
+#define MESSAGE_CHUNK           0x20
+#define MESSAGE_DATA            0x40
+#define MESSAGE_QUIT            0x80
+#define MESSAGE_TRANSACTION     0x100
+#define MESSAGE_TASK            0x200
+#define MESSAGE_HEARTBEAT       0x400
+#define MESSAGE_STATE           0x800
+#define MESSAGE_TIMEOUT         0x1000
+#define MESSAGE_STOP            0x2000
+#define MESSAGE_PROXY           0x4000
+#define MESSAGE_ALL		        0x7fff
 static char *messagelist[] = 
 {
 	"MESSAGE_NEW_SESSION",
 	"MESSAGE_INPUT",
 	"MESSAGE_OUTPUT",
+	"MESSAGE_BUFFER",
 	"MESSAGE_PACKET",
+	"MESSAGE_CHUNK",
 	"MESSAGE_DATA",
 	"MESSAGE_QUIT",
 	"MESSAGE_TRANSACTION",
