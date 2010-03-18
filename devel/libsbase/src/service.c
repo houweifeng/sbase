@@ -132,8 +132,8 @@ int service_set(SERVICE *service)
 /* running */
 int service_run(SERVICE *service)
 {
-    int ret = -1;
-    int i = 0;
+    int ret = -1, i = 0, x = 0;
+    CONN *conn = NULL;
 
     if(service)
     {
@@ -154,6 +154,16 @@ int service_run(SERVICE *service)
                     (void *)service, (void *)&service_event_handler);
             ret = service->evbase->add(service->evbase, service->event);
         }
+        //initliaze conns
+        for(i = 0; i < SB_INIT_CONNS; i++)
+        {
+            if((conn = conn_init()))
+            {
+                x = service->nqconns++;
+                service->qconns[x] = conn;
+            }
+            else break;
+        }
         if(service->working_mode == WORKING_THREAD)
             goto running_threads;
         else 
@@ -161,7 +171,7 @@ int service_run(SERVICE *service)
         return ret;
 running_proc:
         //procthreads setting 
-        if((service->daemon = procthread_init(0)))
+        if((service->daemon = procthread_init()))
         {
             PROCTHREAD_SET(service, service->daemon);
             if(service->daemon->message_queue)
@@ -185,7 +195,7 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         //daemon 
-        if((service->daemon = procthread_init(0)))
+        if((service->daemon = procthread_init()))
         {
             PROCTHREAD_SET(service, service->daemon);
             NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
@@ -204,10 +214,10 @@ running_threads:
         {
             for(i = 0; i < service->nprocthreads; i++)
             {
-                if((service->procthreads[i] = procthread_init(1)))
+                if((service->procthreads[i] = procthread_init()))
                 {
                     PROCTHREAD_SET(service, service->procthreads[i]);
-                    //service->procthreads[i]->evbase = service->evbase;
+                    service->procthreads[i]->evbase = service->evbase;
                 }
                 else
                 {
@@ -225,7 +235,7 @@ running_threads:
         {
             for(i = 0; i < service->ndaemons; i++)
             {
-                if((service->daemons[i] = procthread_init(0)))
+                if((service->daemons[i] = procthread_init()))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
                 }

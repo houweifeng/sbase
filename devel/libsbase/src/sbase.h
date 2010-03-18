@@ -19,6 +19,7 @@ extern "C" {
 #define SB_IP_MAX           16
 #define SB_GROUPS_MAX       256
 #define SB_NDAEMONS_MAX     64
+#define SB_INIT_CONNS       128
 #define SB_CHUNKS_MAX       65536
 #define SB_BUF_SIZE         65536
 #define SB_USEC_SLEEP       1000
@@ -322,7 +323,7 @@ typedef struct _PROCTHREAD
     void (*clean)(struct _PROCTHREAD **procthread);
 }PROCTHREAD;
 /* Initialize procthread */
-PROCTHREAD *procthread_init(int is_need_evbase);
+PROCTHREAD *procthread_init();
 
 typedef struct _CONN
 {

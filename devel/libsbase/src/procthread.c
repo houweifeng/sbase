@@ -14,27 +14,12 @@ void procthread_run(void *arg)
     {
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
-        tv.tv_usec = SB_USEC_SLEEP;
-        if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
-        if(pth->is_need_evbase)
+        do
         {
-            do
-            {
-                pth->evbase->loop(pth->evbase, 0, &tv);
-                if(QMTOTAL(pth->message_queue) > 0)
-                    qmessage_handler(pth->message_queue, pth->logger);
-                else usleep(1);
-            }while(pth->running_status);
-        }
-        else
-        {
-            do
-            {
-                if(QMTOTAL(pth->message_queue) > 0)
-                    qmessage_handler(pth->message_queue, pth->logger);
-                usleep(pth->usec_sleep);
-            }while(pth->running_status);
-        }
+            if(QMTOTAL(pth->message_queue) > 0)
+                qmessage_handler(pth->message_queue, pth->logger);
+            usleep(1);
+        }while(pth->running_status);
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
@@ -192,10 +177,12 @@ void procthread_clean(PROCTHREAD **ppth)
     {
         if((*ppth)->service->working_mode != WORKING_PROC)
         {
+            /*
             if((*ppth)->is_need_evbase)
             {
                 (*ppth)->evbase->clean(&((*ppth)->evbase));
             }
+            */
             qmessage_clean((*ppth)->message_queue);
         }
         free((*ppth));
@@ -204,17 +191,18 @@ void procthread_clean(PROCTHREAD **ppth)
 }
 
 /* Initialize procthread */
-PROCTHREAD *procthread_init(int is_need_evbase)
+PROCTHREAD *procthread_init()
 {
     PROCTHREAD *pth = NULL;
 
     if((pth = (PROCTHREAD *)calloc(1, sizeof(PROCTHREAD))))
     {
+        /*
         if(is_need_evbase)
         {
             pth->is_need_evbase      = is_need_evbase;
             pth->evbase              = evbase_init();
-        }
+        }*/
         pth->message_queue           = qmessage_init();
         pth->run                     = procthread_run;
         pth->addconn                 = procthread_addconn;

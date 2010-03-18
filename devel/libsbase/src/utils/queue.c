@@ -30,13 +30,14 @@ void queue_push(void *queue, void *ptr)
             node->ptr = ptr;
             if(q->last)
             {
-                q->last->next = qnode;
-                q->last = qnode;
+                q->last->next = node;
+                q->last = node;
             }
             else
             {
-                q->first = q->last = qnode;
+                q->first = q->last = node;
             }
+            node->next = NULL;
             q->total++;
         }
         MUTEX_UNLOCK(q->mutex);
@@ -77,8 +78,8 @@ void *queue_pop(void *queue)
                 q->first = q->last = NULL;
             }
             else q->first = node->next;
-            qnode->next = q->left;
-            q->left = qnode;
+            node->next = q->left;
+            q->left = node;
             q->total--;
         }
         MUTEX_UNLOCK(q->mutex);
