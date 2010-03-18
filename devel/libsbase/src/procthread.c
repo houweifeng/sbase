@@ -29,7 +29,6 @@ void procthread_run(void *arg)
 /* add new task */
 int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
 {
-    MESSAGE msg = {0}, *pmsg = &msg;
     int ret = -1;
 
     if(pth && pth->message_queue && task_handler)
@@ -44,12 +43,11 @@ int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
 /* add new transaction */
 int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
 {
-    MESSAGE msg = {0}, *pmsg = &msg;
     int ret = -1;
 
     if(pth && pth->message_queue && conn)
     {
-        qmessage_push(pth->message_queue, MESSAGE_TRANSACTION, -1, conn->fd, -1, pth, conn, NULL);
+        qmessage_push(pth->message_queue, MESSAGE_TRANSACTION, -1, conn->fd, tid, pth, conn, NULL);
         DEBUG_LOGGER(pth->logger, "Added message transaction[%d] to %s:%d on %s:%d via %d total %d",
                 tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                 conn->fd, QMTOTAL(pth->message_queue));
@@ -61,7 +59,6 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
 /* Add connection message */
 int procthread_addconn(PROCTHREAD *pth, CONN *conn)
 {
-    MESSAGE msg = {0}, *pmsg = &msg;
     int ret = -1;
 
     if(pth && pth->message_queue && conn)
