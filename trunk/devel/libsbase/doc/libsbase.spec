@@ -13,8 +13,8 @@ Packager: SounOS <SounOS@gmail.com>
 Vendor: SounOS
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
-BuildRequires: gcc libevbase >= 0.0.16
-Requires: glibc >= 2.3.4 libevbase >= 0.0.16
+BuildRequires: libevbase >= 0.0.16
+Requires: libevbase >= 0.0.16
 
 %description
 Server Base Library for TCP/UDP communication
@@ -23,7 +23,7 @@ Server Base Library for TCP/UDP communication
 %setup
 
 %build
-%configure --enable-debug
+%configure
 %{__make}
 
 %install
@@ -40,13 +40,8 @@ install -c -m644 doc/rc.lechod.ini %{buildroot}/%{_sysconfdir}/lechod.ini
 
 %post 
 	/sbin/ldconfig
-	/sbin/chkconfig --add lechod
 
 %postun 
-	if [ $1 = 0 ]; then 
-		/sbin/service lechod stop > /dev/null 2>&1
-		/sbin/chkconfig --del lechod
-	fi
 	/sbin/ldconfig
 
 %files
@@ -54,7 +49,8 @@ install -c -m644 doc/rc.lechod.ini %{buildroot}/%{_sysconfdir}/lechod.ini
 %{_includedir}/*
 %{_bindir}/*
 %{_libdir}/*
-%{_sysconfdir}/*
+%{_sysconfdir}/rc.d/*
+%config(noreplace) %{_sysconfdir}/*.ini
 
 %changelog
 * Wed Jun 27 2007 14:19:04 CST SounOS <SounOS@gmail.com>
