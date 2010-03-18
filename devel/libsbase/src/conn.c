@@ -159,15 +159,23 @@ void conn_event_handler(int event_fd, short event, void *arg)
             if(event & E_READ)
             {
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
-                conn->read_handler(conn);
-                //conn->push_message(conn, MESSAGE_INPUT);
+                //conn->read_handler(conn);
+                if(conn->lockread == 0) 
+                {
+                    conn->push_message(conn, MESSAGE_INPUT);
+                    conn->lockread = 1;
+                }
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d OVER ", E_READ, event_fd);
             }
             if(event & E_WRITE)
             {
-                //conn->push_message(conn, MESSAGE_OUTPUT);
+                if(conn->lockwrite == 0)
+                {
+                    conn->push_message(conn, MESSAGE_OUTPUT);
+                    conn->lockwrite = 1;
+                }
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
-                conn->write_handler(conn);
+                //conn->write_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
             /*
@@ -476,7 +484,7 @@ int conn_read_handler(CONN *conn)
             return (ret = 0);
         }
         /* Receive to chunk with chunk_read_state before reading to buffer */
-        if(conn->lock == 0 && conn->s_state == S_STATE_READ_CHUNK
+        if(conn->s_state == S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
                 && CK_LEFT(conn->chunk) > 0)
         {
@@ -872,7 +880,6 @@ int conn_chunk_reader(CONN *conn)
 
     if(conn)
     {
-        conn->lock = 1;
         if(MB_NDATA(conn->buffer) > 0)
         {
             if((n = CHUNK_FILL(conn->chunk, MB_DATA(conn->buffer), MB_NDATA(conn->buffer))) > 0)
@@ -896,7 +903,6 @@ int conn_chunk_reader(CONN *conn)
                 ret = 0;
             }
         }
-        conn->lock = 0;
     }
     return ret;
 }
