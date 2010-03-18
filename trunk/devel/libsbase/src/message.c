@@ -185,11 +185,9 @@ void qmessage_handler(void *qmsg, void *logger)
                     break;
                 case MESSAGE_INPUT :
                     conn->read_handler(conn);
-                    conn->lockread = 0;
                     break;
                 case MESSAGE_OUTPUT :
                     conn->write_handler(conn);
-                    conn->lockwrite = 0;
                     break;
                 case MESSAGE_PACKET :
                     conn->packet_handler(conn);

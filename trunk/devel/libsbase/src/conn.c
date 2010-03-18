@@ -159,23 +159,13 @@ void conn_event_handler(int event_fd, short event, void *arg)
             if(event & E_READ)
             {
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
-                //conn->read_handler(conn);
-                if(conn->lockread == 0) 
-                {
-                    conn->push_message(conn, MESSAGE_INPUT);
-                    conn->lockread = 1;
-                }
+                conn->read_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d OVER ", E_READ, event_fd);
             }
             if(event & E_WRITE)
             {
-                if(conn->lockwrite == 0)
-                {
-                    conn->push_message(conn, MESSAGE_OUTPUT);
-                    conn->lockwrite = 1;
-                }
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
-                //conn->write_handler(conn);
+                conn->write_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
             /*
@@ -599,6 +589,7 @@ int conn_packet_reader(CONN *conn)
 
     if(conn)
     {
+        MUTEX_LOCK(conn->mutex);
         data = PCB(conn->buffer);
         packet_type = conn->session.packet_type;
         DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%p][%d]", 
@@ -667,6 +658,7 @@ end:
             conn->s_state = S_STATE_PACKET_HANDLING;
             conn->push_message(conn, MESSAGE_PACKET);
         }
+        MUTEX_UNLOCK(conn->mutex);
     }
     return len;
 }
@@ -880,6 +872,7 @@ int conn_chunk_reader(CONN *conn)
 
     if(conn)
     {
+        MUTEX_LOCK(conn->mutex);
         if(MB_NDATA(conn->buffer) > 0)
         {
             if((n = CHUNK_FILL(conn->chunk, MB_DATA(conn->buffer), MB_NDATA(conn->buffer))) > 0)
@@ -903,6 +896,7 @@ int conn_chunk_reader(CONN *conn)
                 ret = 0;
             }
         }
+        MUTEX_UNLOCK(conn->mutex);
     }
     return ret;
 }
@@ -1180,6 +1174,8 @@ void conn_clean(CONN **pconn)
         MB_CLEAN((*pconn)->exchange);
         /* Clean chunk */
         CK_CLEAN((*pconn)->chunk);
+        /* clean mutex */
+        MUTEX_DESTROY((*pconn)->mutex);
         /* Clean send queue */
         if((*pconn)->send_queue)
         {
@@ -1216,6 +1212,7 @@ CONN *conn_init()
         MB_INIT(conn->oob, MB_BLOCK_SIZE);
         MB_INIT(conn->exchange, MB_BLOCK_SIZE);
         CK_INIT(conn->chunk);
+        MUTEX_INIT(conn->mutex);
         conn->send_queue            = queue_init();
         conn->event                 = ev_init();
         conn->set                   = conn_set;
