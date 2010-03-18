@@ -2,7 +2,7 @@
 
 Summary: Server Base Library for TCP/UDP communication
 Name: libsbase
-Version: 0.3.0
+Version: 0.5.0
 Release: 1%{?dist}
 License: BSD
 Group: System Environment/Libraries
@@ -13,8 +13,8 @@ Packager: SounOS <SounOS@gmail.com>
 Vendor: SounOS
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
-BuildRequires: gcc libevbase >= 0.0.14
-Requires: glibc >= 2.3.4 libevbase >= 0.0.14
+BuildRequires: gcc libevbase >= 0.0.16
+Requires: glibc >= 2.3.4 libevbase >= 0.0.16
 
 %description
 Server Base Library for TCP/UDP communication
