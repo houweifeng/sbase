@@ -171,13 +171,14 @@ int service_run(SERVICE *service)
         return ret;
 running_proc:
         //procthreads setting 
-        if((service->daemon = procthread_init()))
+        if((service->daemon = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->daemon);
             if(service->daemon->message_queue)
             {
                 if(service->daemon->message_queue) qmessage_clean(service->daemon->message_queue);
                 service->daemon->message_queue = service->message_queue;
+                service->daemon->ioqmessage = service->message_queue;
                 service->daemon->evbase = service->evbase;
             }
             DEBUG_LOGGER(service->logger, "sbase->q[%p] service->q[%p] daemon->q[%p]",
@@ -195,10 +196,24 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         //daemon 
-        if((service->daemon = procthread_init()))
+        if((service->daemon = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->daemon);
             NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
+            ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
+                    service->working_mode, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
+        //iodaemon 
+        if((service->iodaemon = procthread_init(1)))
+        {
+            PROCTHREAD_SET(service, service->iodaemon);
+            NEW_PROCTHREAD("iodaemon", 0, service->iodaemon->threadid, service->iodaemon, service->logger);
             ret = 0;
         }
         else
@@ -214,10 +229,11 @@ running_threads:
         {
             for(i = 0; i < service->nprocthreads; i++)
             {
-                if((service->procthreads[i] = procthread_init()))
+                if((service->procthreads[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->procthreads[i]);
-                    service->procthreads[i]->evbase = service->evbase;
+                    service->procthreads[i]->evbase = service->iodaemon->evbase;
+                    service->procthreads[i]->ioqmessage = service->iodaemon->message_queue;
                 }
                 else
                 {
@@ -235,7 +251,7 @@ running_threads:
         {
             for(i = 0; i < service->ndaemons; i++)
             {
-                if((service->daemons[i] = procthread_init()))
+                if((service->daemons[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
                 }
@@ -597,7 +613,9 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             {
                 if(service->daemon && service->daemon->addconn)
                 {
-                    conn->parent = service->daemon;
+                    conn->parent    = service->daemon;
+                    conn->ioqmessage = service->iodaemon->message_queue;
+                    conn->message_queue = service->daemon->message_queue;
                     service->daemon->addconn(service->daemon, conn);
                 }
                 else
@@ -615,6 +633,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                         && procthread->addconn)
                 {
                     conn->parent = procthread;
+                    conn->ioqmessage = service->iodaemon->message_queue;
+                    conn->message_queue = procthread->message_queue;
                     procthread->addconn(procthread, conn);   
                 }
                 else

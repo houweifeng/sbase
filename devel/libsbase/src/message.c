@@ -196,7 +196,7 @@ void qmessage_handler(void *qmsg, void *logger)
                     conn->packet_handler(conn);
                     break;
                 case MESSAGE_CHUNK :
-                    conn->packet_handler(conn);
+                    conn->chunk_reader(conn);
                     break;
                 case MESSAGE_DATA :
                     conn->data_handler(conn);

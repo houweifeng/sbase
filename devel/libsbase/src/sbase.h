@@ -175,6 +175,7 @@ typedef struct _SERVICE
     /* working mode */
     int working_mode;
     struct _PROCTHREAD *daemon;
+    struct _PROCTHREAD *iodaemon;
     int nprocthreads;
     struct _PROCTHREAD **procthreads;
     int ndaemons;
@@ -293,10 +294,11 @@ typedef struct _PROCTHREAD
     long threadid;
 
     /* message queue */
+    void *ioqmessage;
     void *message_queue;
 
     /* evbase */
-    int is_need_evbase;
+    int have_evbase;
     EVBASE *evbase;
 
     /* connection */
@@ -323,7 +325,7 @@ typedef struct _PROCTHREAD
     void (*clean)(struct _PROCTHREAD **procthread);
 }PROCTHREAD;
 /* Initialize procthread */
-PROCTHREAD *procthread_init();
+PROCTHREAD *procthread_init(int have_evbase);
 
 typedef struct _CONN
 {
@@ -378,6 +380,7 @@ typedef struct _CONN
     void *send_queue;
 
     /* message queue */
+    void *ioqmessage;
     void *message_queue;
 
     /* client transaction state */

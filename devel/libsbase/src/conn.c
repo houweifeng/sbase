@@ -95,12 +95,12 @@ do{                                                                             
     }                                                                                       \
 }while(0)
 
-#define SERVICE_PUSH_MESSAGE(conn, msgid)                                                   \
+#define PUSH_IOQMESSAGE(conn, msgid)                                                        \
 do                                                                                          \
 {                                                                                           \
-    if(conn)                                                                                \
+    if(conn && conn->ioqmessage)                                                            \
     {                                                                                       \
-        qmessage_push(PPARENT(conn)->service->message_queue, MESSAGE_CHUNK,                 \
+        qmessage_push(conn->ioqmessage, MESSAGE_CHUNK,                                      \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
     }                                                                                       \
 }while(0)
@@ -112,7 +112,7 @@ do                                                                              
     MB_RESET(conn->packet);                                                                 \
     MB_RESET(conn->cache);                                                                  \
     CK_RESET(conn->chunk);                                                                  \
-    if(PCB(conn->buffer)->ndata > 0){SERVICE_PUSH_MESSAGE(conn, MESSAGE_BUFFER);}           \
+    if(PCB(conn->buffer)->ndata > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}           \
 }while(0)
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
@@ -924,7 +924,7 @@ int conn_recv_chunk(CONN *conn, int size)
                 conn->local_ip, conn->local_port, conn->fd);
         CK_MEM(conn->chunk, size);
         conn->s_state = S_STATE_READ_CHUNK;
-        SERVICE_PUSH_MESSAGE(conn, MESSAGE_CHUNK);
+        PUSH_IOQMESSAGE(conn, MESSAGE_CHUNK);
         //conn->chunk_reader(conn);
         //CONN_CHUNK_READ(conn, n);
         ret = 0;
@@ -972,7 +972,7 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
         CK_FILE(conn->chunk, filename, offset, size);
         CK_SET_BSIZE(conn->chunk, conn->session.buffer_size);
         conn->s_state = S_STATE_READ_CHUNK;
-        SERVICE_PUSH_MESSAGE(conn, MESSAGE_CHUNK);
+        PUSH_IOQMESSAGE(conn, MESSAGE_CHUNK);
         //conn->chunk_reader(conn);
         //CONN_CHUNK_READ(conn, n);
         ret = 0;
@@ -1127,6 +1127,7 @@ void conn_reset(CONN *conn)
 
         /* timer, logger, message_queue and send_queue */
         conn->message_queue = NULL;
+        conn->ioqmessage = NULL;
         if(conn->send_queue)
         {
             while((cp = (CHUNK *)queue_pop(conn->send_queue)))
