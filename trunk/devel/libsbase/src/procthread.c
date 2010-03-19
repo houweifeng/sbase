@@ -14,12 +14,27 @@ void procthread_run(void *arg)
     {
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
-        do
+        tv.tv_usec = SB_USEC_SLEEP;
+        if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
+        if(pth->have_evbase)
         {
-            if(QMTOTAL(pth->message_queue) > 0)
-                qmessage_handler(pth->message_queue, pth->logger);
-            usleep(8);
-        }while(pth->running_status);
+            do
+            {
+                pth->evbase->loop(pth->evbase, 0, &tv);
+                if(QMTOTAL(pth->message_queue) > 0)
+                    qmessage_handler(pth->message_queue, pth->logger);
+                else usleep(1);
+            }while(pth->running_status);
+        }
+        else
+        {
+            do
+            {
+                if(QMTOTAL(pth->message_queue) > 0)
+                    qmessage_handler(pth->message_queue, pth->logger);
+                else usleep(8);
+            }while(pth->running_status);
+        }
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
@@ -83,6 +98,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] on %s:%d via %d to pool",
         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn->message_queue = pth->message_queue;
+        conn->ioqmessage    = pth->ioqmessage;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
         if(conn->set(conn) == 0)
@@ -174,12 +190,10 @@ void procthread_clean(PROCTHREAD **ppth)
     {
         if((*ppth)->service->working_mode != WORKING_PROC)
         {
-            /*
-            if((*ppth)->is_need_evbase)
+            if((*ppth)->have_evbase)
             {
                 (*ppth)->evbase->clean(&((*ppth)->evbase));
             }
-            */
             qmessage_clean((*ppth)->message_queue);
         }
         free((*ppth));
@@ -188,30 +202,29 @@ void procthread_clean(PROCTHREAD **ppth)
 }
 
 /* Initialize procthread */
-PROCTHREAD *procthread_init()
+PROCTHREAD *procthread_init(int have_evbase)
 {
     PROCTHREAD *pth = NULL;
 
     if((pth = (PROCTHREAD *)calloc(1, sizeof(PROCTHREAD))))
     {
-        /*
-        if(is_need_evbase)
+        if(have_evbase)
         {
-            pth->is_need_evbase      = is_need_evbase;
-            pth->evbase              = evbase_init();
-        }*/
-        pth->message_queue           = qmessage_init();
-        pth->run                     = procthread_run;
-        pth->addconn                 = procthread_addconn;
-        pth->add_connection          = procthread_add_connection;
-        pth->newtask                 = procthread_newtask;
-        pth->newtransaction          = procthread_newtransaction;
-        pth->terminate_connection    = procthread_terminate_connection;
-        pth->stop                    = procthread_stop;
-        pth->terminate               = procthread_terminate;
-        pth->state                   = procthread_state;
-        pth->active_heartbeat        = procthread_active_heartbeat;
-        pth->clean                   = procthread_clean;
+            pth->have_evbase        = have_evbase;
+            pth->evbase             = evbase_init();
+        }
+        pth->message_queue          = qmessage_init();
+        pth->run                    = procthread_run;
+        pth->addconn                = procthread_addconn;
+        pth->add_connection         = procthread_add_connection;
+        pth->newtask                = procthread_newtask;
+        pth->newtransaction         = procthread_newtransaction;
+        pth->terminate_connection   = procthread_terminate_connection;
+        pth->stop                   = procthread_stop;
+        pth->terminate              = procthread_terminate;
+        pth->state                  = procthread_state;
+        pth->active_heartbeat       = procthread_active_heartbeat;
+        pth->clean                  = procthread_clean;
     }
     return pth;
 }
