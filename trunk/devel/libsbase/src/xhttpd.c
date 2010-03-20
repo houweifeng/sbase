@@ -612,18 +612,20 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         else goto err;
                     }
                 }
-                s = mime = line + HTTP_PATH_MAX;
-                pp = p ;
+                s = mime = line + HTTP_PATH_MAX - 1;
+                *s = '\0';
+                pp = --p ;
                 while(pp > file && *pp != '.')
                 {
                     if(*pp >= 'A' && *pp <= 'Z')
                     {
-                        *--mime = *pp-- + ('a' - 'A');
+                        *--mime = *pp + ('a' - 'A');
                     }
-                    else *--mime = *pp--;
+                    else *--mime = *pp;
+                    --pp;
                 }
                 //while( > file && *mime != '.')--mime;
-                if(mime >= line) nmime = s - mime;
+                if(mime > line) nmime = s - mime;
                 //no content
                 if(st.st_size == 0)
                 {
