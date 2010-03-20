@@ -19,7 +19,7 @@
 #include "mime.h"
 #include "trie.h"
 #include "stime.h"
-#define XHTTPD_VERSION 		"0.0.1"
+#define XHTTPD_VERSION 		    "0.0.1"
 #define HTTP_RESP_OK            "HTTP/1.1 200 OK"
 #define HTTP_BAD_REQUEST        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NOT_FOUND          "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
@@ -170,7 +170,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             p = buf;
             p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
                     "Content-Type: text/html; charset=%s\r\n",
-                    (long long int)(len), http_default_charset);
+                    LL(len), http_default_charset);
             /*
             if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
             {
@@ -495,7 +495,7 @@ OVER:
         p += sprintf(p, "%s", "\r\n");//date end
         if(zstream && zlen > 0) len = zlen;
         if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
-        p += sprintf(p, "Content-Length: %ld\r\n", (long)len);
+        p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
         p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
         p += sprintf(p, "Connection: close\r\n");
         p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
@@ -527,24 +527,6 @@ int xhttpd_bind_proxy(CONN *conn, char *host, int port)
 
     if(conn && host && port > 0)
     {
-        /*
-           if((bitip = ltask->get_host_ip(ltask, host)) != -1) 
-           {
-           sip = (unsigned char *)&bitip;
-           ip = cip;
-           sprintf(ip, "%d.%d.%d.%d", sip[0], sip[1], sip[2], sip[3]);
-           }
-           else
-           {
-           if((hp = gethostbyname(host))
-           && sprintf(cip, "%s", inet_ntoa(*((struct in_addr *)(hp->h_addr))))> 0)
-           {
-           ip = cip;
-           bitip = inet_addr(ip);
-           ltask->set_host_ip(ltask, host, &bitip, 1);
-           }
-           }
-           */
         if(ip)
         {
             session.packet_type = PACKET_PROXY;
@@ -562,8 +544,8 @@ int xhttpd_bind_proxy(CONN *conn, char *host, int port)
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
-    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX],*host = NULL, *mime = NULL, 
-         *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
+    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = NULL,
+         *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
          *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL;
     int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, fd = 0, is_need_compress = 0;
     off_t from = 0, to = 0, len = 0;
@@ -630,9 +612,18 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         else goto err;
                     }
                 }
-                mime = pp = p ;
-                while(mime > file && *mime != '.')--mime;
-                if(*mime == '.') nmime = p - ++mime;
+                s = mime = line + HTTP_PATH_MAX;
+                pp = p ;
+                while(pp > file && *pp != '.')
+                {
+                    if(*pp >= 'A' && *pp <= 'Z')
+                    {
+                        *--mime = *pp-- + ('a' - 'A');
+                    }
+                    else *--mime = *pp--;
+                }
+                //while( > file && *mime != '.')--mime;
+                if(mime >= line) nmime = s - mime;
                 //no content
                 if(st.st_size == 0)
                 {
@@ -735,7 +726,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if(name) 
                         p += sprintf(p, "Content-Disposition: attachment, filename='%s'\r\n", name);
                     p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL),p);p += sprintf(p,"\r\n");
-                    p += sprintf(p, "Content-Length: %ld\r\n", (long)len);
+                    p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
                     conn->push_chunk(conn, buf, (p - buf));
                     conn->push_file(conn, outfile, from, len);
