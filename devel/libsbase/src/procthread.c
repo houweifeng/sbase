@@ -23,7 +23,7 @@ void procthread_run(void *arg)
                 pth->evbase->loop(pth->evbase, 0, &tv);
                 if(QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
-                else usleep(1000);
+                else usleep(pth->usec_sleep);
             }while(pth->running_status);
         }
         else
@@ -32,9 +32,11 @@ void procthread_run(void *arg)
             {
                 if(QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
-                else usleep(1000);
+                else usleep(pth->usec_sleep);
             }while(pth->running_status);
         }
+        if(QMTOTAL(pth->message_queue) > 0)
+            qmessage_handler(pth->message_queue, pth->logger);
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);

@@ -105,6 +105,7 @@ void queue_clean(void *queue)
             free(node);
         }
         MUTEX_DESTROY(q->mutex);
+        free(q);
     }
     return ;
 }

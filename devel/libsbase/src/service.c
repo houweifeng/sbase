@@ -594,7 +594,10 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         if((conn = service_popfromq(service)))
             conn->reset(conn);
         else 
+        {
             conn = conn_init();
+            fprintf(stdout, "newconn:%p\n", conn);
+        }
         if(conn)
         {
             conn->fd = fd;
@@ -609,38 +612,40 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             /* add  to procthread */
             if(service->working_mode == WORKING_PROC)
             {
-                if(service->daemon && service->daemon->addconn)
+                if(service->daemon && service->daemon->add_connection)
                 {
                     conn->parent    = service->daemon;
                     conn->ioqmessage = service->iodaemon->message_queue;
                     conn->message_queue = service->daemon->message_queue;
-                    service->daemon->addconn(service->daemon, conn);
+                    service->daemon->add_connection(service->daemon, conn);
                 }
                 else
                 {
-                    conn->clean(&conn);
+                    //conn->clean(&conn);
                     FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d "
                             "via %d  to service[%s]", remote_ip, remote_port, 
                             local_ip, local_port, fd, service->service_name);
+                    service_pushtoq(service, conn);
                 }
             }
             else if(service->working_mode == WORKING_THREAD)
             {
                 index = fd % service->nprocthreads;
                 if(service->procthreads && (procthread = service->procthreads[index]) 
-                        && procthread->addconn)
+                        && procthread->add_connection)
                 {
                     conn->parent = procthread;
                     conn->ioqmessage = service->iodaemon->message_queue;
                     conn->message_queue = procthread->message_queue;
-                    procthread->addconn(procthread, conn);   
+                    procthread->add_connection(procthread, conn);   
                 }
                 else
                 {
-                    conn->clean(&conn);
+                    //conn->clean(&conn);
                     FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d "
                             "via %d  to service[%s]", remote_ip, remote_port, 
                             local_ip, local_port, fd, service->service_name);
+                    service_pushtoq(service, conn);
                 }
             }
         }
@@ -722,6 +727,13 @@ int service_popconn(SERVICE *service, CONN *conn)
                     conn->local_ip, conn->local_port, conn->fd, 
                     conn->index, service->running_connections);
             ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d "
+                    "index[%d] of total %d failed", conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port, conn->fd, 
+                    conn->index, service->running_connections);
         }
         MUTEX_UNLOCK(service->mutex);
         return service_pushtoq(service, conn);
@@ -839,6 +851,7 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         service->qconns[x] = conn;
         MUTEX_UNLOCK(service->mutex);
     }
+    return x;
 }
 
 /* push to qconn */
@@ -854,9 +867,12 @@ CONN *service_popfromq(SERVICE *service)
         {
             x = --(service->nqconns);
             conn = service->qconns[x];
+            service->qconns[x] = NULL;
         }
+        //fprintf(stdout, "nqconns:%d\n", service->nqconns);
         MUTEX_UNLOCK(service->mutex);
     }
+    return conn;
 }
 
 /* push chunk to service  */
@@ -1117,6 +1133,7 @@ void service_stop(SERVICE *service)
             }
         }
         //stop all procthreads
+        //daemon
         if(service->daemon)
         {
             DEBUG_LOGGER(service->logger, "Ready for stop daemon");
@@ -1126,6 +1143,17 @@ void service_stop(SERVICE *service)
             DEBUG_LOGGER(service->logger, "Joinning daemon thread");
             DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
+        //iodaemon
+        if(service->iodaemon)
+        {
+            DEBUG_LOGGER(service->logger, "Ready for stop daemon");
+            service->iodaemon->stop(service->iodaemon);
+            DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
+            PROCTHREAD_EXIT(service->iodaemon->threadid, thread_exit);
+            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
+            DEBUG_LOGGER(service->logger, "over for stop daemon");
+        }
+        //threads
         if(service->procthreads && service->nprocthreads > 0)
         {
             DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
@@ -1138,6 +1166,7 @@ void service_stop(SERVICE *service)
                 }
             }
         }
+        //daemons
         if(service->daemons && service->ndaemons > 0)
         {
             DEBUG_LOGGER(service->logger, "Ready for stop daemonss");
@@ -1260,7 +1289,7 @@ void service_clean(SERVICE **pservice)
         //if((*pservice)->connections) free((*pservice)->connections);
         if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
         if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
-        
+        if((*pservice)->iodaemon) (*pservice)->iodaemon->clean(&((*pservice)->iodaemon));
         //clean procthreads
         if((*pservice)->procthreads && (*pservice)->nprocthreads)
         {
@@ -1273,7 +1302,6 @@ void service_clean(SERVICE **pservice)
             }
             free((*pservice)->procthreads);
         }
-        
         //clean daemons
         if((*pservice)->daemons && (*pservice)->ndaemons)
         {
@@ -1290,20 +1318,27 @@ void service_clean(SERVICE **pservice)
         DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk");
         if((*pservice)->nqconns > 0)
         {
+            //fprintf(stdout, "nqconns:%d\n", (*pservice)->nqconns);
             DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
             while((i = --((*pservice)->nqconns)) >= 0)
             {
-                if(conn = ((*pservice)->qconns[i])) 
+                if((conn = ((*pservice)->qconns[i]))) 
                 {
                     DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", conn);
                     conn->clean(&conn);
                 }
             }
         }
-        
+        //clean connections
+        for(i = 0; i < SB_CONN_MAX; i++)
+        {
+            if((conn = (*pservice)->connections[i]))
+            {
+                conn->clean(&conn);
+            }
+        }
         //clean chunks queue
         DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue");
-        
         if((*pservice)->nqchunks > 0)
         {
             DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");

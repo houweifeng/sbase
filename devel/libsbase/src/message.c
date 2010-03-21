@@ -107,6 +107,7 @@ void qmessage_clean(void *qmsg)
             free(msg);
         }
         MUTEX_DESTROY(q->mutex);
+        free(q);
     }
     return ;
 }
@@ -150,7 +151,8 @@ void qmessage_handler(void *qmsg, void *logger)
             index = msg->index;
             if(msg->msg_id == MESSAGE_STOP && pth)
             {
-                return pth->terminate(pth);
+                 pth->terminate(pth);
+                 goto next;
             }
             //task and heartbeat
             if(msg->msg_id == MESSAGE_TASK || msg->msg_id == MESSAGE_HEARTBEAT 
