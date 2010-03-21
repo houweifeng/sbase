@@ -1124,6 +1124,7 @@ void conn_reset(CONN *conn)
         MB_RESET(conn->packet);
         MB_RESET(conn->oob);
         MB_RESET(conn->cache);
+        MB_RESET(conn->exchange);
         CK_RESET(conn->chunk);
 
         /* timer, logger, message_queue and send_queue */
@@ -1223,7 +1224,7 @@ CONN *conn_init()
         MB_INIT(conn->buffer, MB_BLOCK_SIZE);
         MB_CHECK(conn->buffer);
         MB_INIT(conn->packet, MB_BLOCK_SIZE);
-        MB_CHECK(conn->buffer);
+        MB_CHECK(conn->packet);
         MB_INIT(conn->cache, MB_BLOCK_SIZE);
         MB_INIT(conn->oob, MB_BLOCK_SIZE);
         MB_INIT(conn->exchange, MB_BLOCK_SIZE);
