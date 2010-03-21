@@ -25,7 +25,7 @@ libsbase_la_LDFLAGS = -levbase
 AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = sbase.h
 
-bin_PROGRAMS = xhttpd lechod
+bin_PROGRAMS = xhttpd lechod wbenchmark
 
 xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c \
 				 utils/trie.h utils/trie.c utils/stime.h utils/stime.c
@@ -36,3 +36,7 @@ xhttpd_LDFLAGS = -static
 lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
+
+wbenchmark_SOURCES = wbenchmark.c
+wbenchmark_LDADD = libsbase.la
+wbenchmark_LDFLAGS = -static

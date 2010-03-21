@@ -6,14 +6,16 @@
 #include <locale.h>
 #include <sys/resource.h>
 #include <sbase.h>
+#define HTTP_BUF_SIZE  65536
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
-static int concurrent = 1;
-static int nconns = 1024;
+static int concurrency = 1;
+static int ntasks = 1024;
 static int nrequests = 0;
 static int nfailed = 0;
 static int nerrors = 0;
-static int is_keepalive = 1;
+static int ncompleted = 0;
+static int is_keepalive = 0;
 static char *server_ip = NULL;
 static int server_port = 0;
 static int server_is_ssl = 0;
@@ -23,8 +25,9 @@ static int request_len = 0;
 CONN *http_newconn(char *ip, int port, int is_ssl)
 {
     CONN *conn = NULL;
+    int id = 0;
 
-    if(nrequests < nconns && ip && port > 0)
+    if(nrequests < ntasks && ip && port > 0)
     {
         if(is_ssl) service->session.is_use_SSL = 1;
         if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
@@ -82,7 +85,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
 	if(conn)
     {
         p = packet->data;
-        end = packet->end;
+        end = packet->data + packet->ndata;
         //check response code 
         if((s = strstr(p, "HTTP/")))
         {
@@ -91,7 +94,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             while(*s == 0x20)++s;
             if(*s >= '0' && *s <= '9') respcode = atoi(s);
         }
-        conn->sid = respcode;
+        conn->s_id = respcode;
         if(respcode < 200 || respcode > 300)
         {
             return http_over(conn, respcode);
@@ -119,7 +122,10 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
 {
     if(conn)
     {
-        return http_over(conn, conn->sid);
+        if(is_keepalive)
+            return http_request(conn);
+        else
+            return http_over(conn, conn->s_id);
     }
 }
 
@@ -127,7 +133,7 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
 {
     if(conn)
     {
-        return http_over(conn, conn->sid);
+        return http_over(conn, conn->s_id);
     }
 }
 
@@ -135,7 +141,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
 {
     if(conn)
     {
-        return http_over(conn, conn->sid);
+        return http_over(conn, conn->s_id);
     }
 }
 
@@ -148,7 +154,8 @@ int benchmark_oob_handler(CONN *conn, CB_DATA *oob)
     return -1;
 }
 
-static void benchmark_stop(int sig){
+static void benchmark_stop(int sig)
+{
     switch (sig) {
         case SIGINT:
         case SIGTERM:
@@ -163,22 +170,51 @@ static void benchmark_stop(int sig){
 int main(int argc, char **argv)
 {
     pid_t pid;
-    char *conf = NULL, *p = NULL, ch = 0;
+    char *url = NULL, *p = NULL, ch = 0;
     int is_daemon = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "c:n:kd")) != -1)
+    while((ch = getopt(argc, argv, "kdc:n:")) != -1)
     {
-        if(ch == 'c') concurrent = atoi(optarg);
-        else if(ch == 'n') nconns = atoi(optarg);
-        else if(ch == 'k') is_keepalive = atoi(optarg);
-        else if(ch == 'd') is_daemon = 1;
+        switch(ch)
+        {
+            case 'c': 
+                concurrency = atoi(optarg);
+                break;
+            case 'n':
+                ntasks = atoi(optarg);
+                break;
+            case 'k':
+                is_keepalive = 1;
+                break;
+            case 'd':
+                is_daemon = 1;
+                break;
+            case '?':
+                url = argv[optind];
+                break;
+            default:
+                break;
+        }
     }
-    if(conf == NULL)
+    if(url == NULL && optind < argc)
     {
-        fprintf(stderr, "Usage:%s -d -c config_file\n", argv[0]);
+        //fprintf(stdout, "opt:%c optind:%d arg:%s\n", ch, optind, argv[optind]);
+        url = argv[optind];
+    }
+    //fprintf(stdout, "concurrency:%d nrequests:%d is_keepalive:%d is_daemon:%d\n",
+    //       concurrency, ntasks, is_keepalive, is_daemon);
+    if(url == NULL)
+    {
+        fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
+                "Options:\n\t-c concurrency\n\t-n requests\n"
+                "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
         _exit(-1);
     }
+    fprintf(stdout, "url:%s\n", url);
+    _exit(-1);
+    //parser url 
+
     /* locale */
     setlocale(LC_ALL, "C");
     /* signal */
@@ -224,15 +260,15 @@ int main(int argc, char **argv)
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;
         service->service_name = "benchmark";
-        session.packet_type = PACKET_DELIMITER;
-        session.packet_delimiter = "\r\n\r\n";
-        session.packet_delimiter_length = 4;
-        session.packet_handler = &benchmark_packet_handler;
-        session.data_handler = &benchmark_data_handler;
-        session.error_handler = &benchmark_error_handler;
-        session.timeout_handler = &benchmark_timeout_handler;
-        session.buffer_size = 2097152;
-        service->set_session(service, &session);
+        service->session.packet_type = PACKET_DELIMITER;
+        service->session.packet_delimiter = "\r\n\r\n";
+        service->session.packet_delimiter_length = 4;
+        service->session.packet_handler = &benchmark_packet_handler;
+        service->session.data_handler = &benchmark_data_handler;
+        service->session.error_handler = &benchmark_error_handler;
+        service->session.timeout_handler = &benchmark_timeout_handler;
+        service->session.buffer_size = 2097152;
+        //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark_access.log");
     }
     if(sbase->add_service(sbase, service) == 0)
