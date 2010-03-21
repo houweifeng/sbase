@@ -592,9 +592,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
     if(service && service->lock == 0 && fd > 0 && session)
     {
         if((conn = service_popfromq(service)))
-        {
             conn->reset(conn);
-        }
         else 
             conn = conn_init();
         if(conn)
@@ -670,6 +668,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 {
                     id = (service->groups[x].nconns_free)++;
                     service->groups[x].conns_free[id] = i;
+                    conn->gindex = id;
                 }
                 if(i >= service->index_max) service->index_max = i;
                 ret = 0;
@@ -697,7 +696,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
 /* pop connection from connections pool with index */
 int service_popconn(SERVICE *service, CONN *conn)
 {
-    int ret = -1, x = 0;
+    int ret = -1, id = 0, x = 0;
 
     if(service && service->connections && conn)
     {
@@ -707,13 +706,17 @@ int service_popconn(SERVICE *service, CONN *conn)
         {
             if((x = conn->groupid) >= 0 && x < SB_GROUPS_MAX)
             {
-                if(service->groups[x].total > 0)
+                if((id = conn->gindex) >= 0 && id < SB_GROUPS_MAX)
+                {
+                    service->groups[x].conns_free[id] = -1;
                     --(service->groups[x].total);
+                }
             }
             service->connections[conn->index] = NULL;
             service->running_connections--;
             if(service->index_max == conn->index) 
                 service->index_max--;
+
             DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d "
                     "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd, 
@@ -721,6 +724,7 @@ int service_popconn(SERVICE *service, CONN *conn)
             ret = 0;
         }
         MUTEX_UNLOCK(service->mutex);
+        return service_pushtoq(service, conn);
     }
     return ret;
 }
@@ -773,12 +777,12 @@ int service_freeconn(SERVICE *service, CONN *conn)
         MUTEX_LOCK(service->mutex);
         if((id = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX)
         {
-            x = ++(service->groups[id].nconns_free);
+            x = service->groups[id].nconns_free++;
             service->groups[id].conns_free[x] = conn->index; 
         }
         else
         {
-            x = ++(service->nconns_free); 
+            x = service->nconns_free++; 
             service->conns_free[x] = conn->index;
         }
         MUTEX_UNLOCK(service->mutex);

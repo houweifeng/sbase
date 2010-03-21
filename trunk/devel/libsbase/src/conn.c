@@ -1098,6 +1098,7 @@ void conn_reset(CONN *conn)
         /* global */
         conn->groupid = -1;
         conn->index = -1;
+        conn->gindex = -1;
         conn->d_state = 0;
         /* connection */
         conn->fd = 0;
@@ -1215,6 +1216,10 @@ CONN *conn_init()
 
     if((conn = calloc(1, sizeof(CONN))))
     {
+        conn->groupid = -1;
+        conn->index = -1;
+        conn->gindex = -1;
+
         MB_INIT(conn->buffer, MB_BLOCK_SIZE);
         MB_CHECK(conn->buffer);
         MB_INIT(conn->packet, MB_BLOCK_SIZE);

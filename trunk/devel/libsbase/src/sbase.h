@@ -332,6 +332,7 @@ typedef struct _CONN
     /* global */
     int index;
     int groupid;
+    int gindex;
     /* die state */
     int d_state;
     void *parent;
