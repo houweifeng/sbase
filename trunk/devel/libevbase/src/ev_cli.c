@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#ifdef HAVE_SSL
+#ifdef USE_SSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/bio.h>
@@ -31,7 +31,7 @@ static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
 static int ev_sock_count  = 2;
 static int is_use_ssl = 1;
-#ifdef HAVE_SSL
+#ifdef USE_SSL
 static SSL_CTX *ctx = NULL;
 #endif
 typedef struct _CONN
@@ -40,7 +40,7 @@ typedef struct _CONN
     EVENT *event;
     char request[EV_BUF_SIZE];
     char response[EV_BUF_SIZE];
-#ifdef HAVE_SSL
+#ifdef USE_SSL
     SSL *ssl;
 #endif
 }CONN;
@@ -134,7 +134,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
     {
         if(is_use_ssl)
         {
-#ifdef HAVE_SSL
+#ifdef USE_SSL
             n = SSL_read(conns[fd].ssl, conns[fd].response, EV_BUF_SIZE - 1);
 #else
             n = read(fd, conns[fd].response, EV_BUF_SIZE - 1);
@@ -165,7 +165,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
     {
         if(is_use_ssl)
         {
-#ifdef HAVE_SSL
+#ifdef USE_SSL
             n = SSL_write(conns[fd].ssl, conns[fd].request, strlen(conns[fd].request));
 #else
             n = write(fd, conns[fd].request, strlen(conns[fd].request));
@@ -197,7 +197,7 @@ err:
             conns[fd].event = NULL;
             shutdown(fd, SHUT_RDWR);
             close(fd);
-#ifdef HAVE_SSL
+#ifdef USE_SSL
             if(conns[fd].ssl)
             {
                 SSL_shutdown(conns[fd].ssl);
@@ -257,7 +257,7 @@ int main(int argc, char **argv)
         if((evbase = evbase_init()))
         {
             LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
-#ifdef HAVE_SSL
+#ifdef USE_SSL
             SSL_library_init();
             OpenSSL_add_all_algorithms();
             SSL_load_error_strings();
@@ -279,7 +279,7 @@ int main(int argc, char **argv)
                 }
                 if(is_use_ssl && sock_type == SOCK_STREAM)
                 {
-#ifdef HAVE_SSL
+#ifdef USE_SSL
                     conns[fd].ssl = SSL_new(ctx);
                     if(conns[fd].ssl == NULL )
                     {
@@ -341,7 +341,7 @@ int main(int argc, char **argv)
                     conns[i].event->destroy(conns[i].event);
                     conns[i].event = NULL;
                 }
-#ifdef HAVE_SSL
+#ifdef USE_SSL
                 if(conns[i].ssl)
                 {
                     SSL_shutdown(conns[i].ssl);
@@ -349,7 +349,7 @@ int main(int argc, char **argv)
                 }
 #endif
             }
-#ifdef HAVE_SSL
+#ifdef USE_SSL
             ERR_free_strings();
             SSL_CTX_free(ctx);
 #endif
