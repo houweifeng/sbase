@@ -4,20 +4,29 @@
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
-#include <sys/resource.h>
+#include <netdb.h>
 #include <sbase.h>
-#define HTTP_BUF_SIZE  65536
+#include <sys/resource.h>
+#define HTTP_BUF_SIZE   65536
+#define HTTP_IP_MAX     16
+#define HTTP_TIMEOUT     10000000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
+static int ncurrent = 0;
 static int ntasks = 1024;
 static int nrequests = 0;
-static int nfailed = 0;
+static int ntimeout = 0;
 static int nerrors = 0;
 static int ncompleted = 0;
 static int is_keepalive = 0;
-static char *server_ip = NULL;
-static int server_port = 0;
+static int is_post = 0;
+static int is_verbosity = 0;
+static char *server_host = NULL;
+static char server_ip[HTTP_IP_MAX];
+static int server_port = 80;
+static char *server_url = "";
+static char *server_argv = "";
 static int server_is_ssl = 0;
 static char request[HTTP_BUF_SIZE];
 static int request_len = 0; 
@@ -27,12 +36,12 @@ CONN *http_newconn(char *ip, int port, int is_ssl)
     CONN *conn = NULL;
     int id = 0;
 
-    if(nrequests < ntasks && ip && port > 0)
+    if(ncurrent <  concurrency && ip && port > 0)
     {
         if(is_ssl) service->session.is_use_SSL = 1;
         if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
         {
-            id = ++nrequests;
+            id = ++ncurrent;
             conn->start_cstate(conn);
             service->newtransaction(service, conn, id);
         }
@@ -45,6 +54,15 @@ int http_request(CONN *conn)
 {
     if(conn && request_len > 0)
     {
+        if((ncompleted%1000) == 0)
+        {
+            fprintf(stdout, "completed %d\n", ncompleted);
+        }
+        if(nrequests >= ntasks)
+        {
+            return -1;
+        }
+        ++nrequests;
         return conn->push_chunk(conn, request, request_len);
     }
     return -1;
@@ -55,6 +73,12 @@ int http_over(CONN *conn, int respcode)
 {
     if(conn)
     {
+        ncompleted++;
+        if(ncompleted >= ntasks)
+        {
+            fprintf(stdout, "timeouts:%d\nerrors:%d\n", ntimeout, nerrors);
+            _exit(-1);
+        }
         if(respcode < 200 || respcode >= 300)
         {
             nerrors++;
@@ -65,7 +89,6 @@ int http_over(CONN *conn, int respcode)
         }
         else
         {
-            ncompleted++;
             http_request(conn);
         }
     }
@@ -129,6 +152,21 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
     }
 }
 
+int benchmark_trans_handler(CONN *conn, int tid)
+{
+    if(conn)
+    {
+        if(conn->status == 0)
+        {
+            return http_request(conn);
+        }
+        else
+        {
+            return conn->set_timeout(conn, HTTP_TIMEOUT);
+        }
+    }
+}
+
 int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
     if(conn)
@@ -154,6 +192,20 @@ int benchmark_oob_handler(CONN *conn, CB_DATA *oob)
     return -1;
 }
 
+/* heartbeat */
+void benchmark_heartbeat_handler(void *arg)
+{
+    CONN *conn = NULL;
+
+    while(ncurrent < concurrency)
+    {
+        if((conn = http_newconn(server_ip, server_port, server_is_ssl)) == NULL)
+        {
+            break;
+        }
+    }
+    return ;
+}
 static void benchmark_stop(int sig)
 {
     switch (sig) {
@@ -170,11 +222,13 @@ static void benchmark_stop(int sig)
 int main(int argc, char **argv)
 {
     pid_t pid;
-    char *url = NULL, *p = NULL, ch = 0;
+    char *url = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
+    struct hostent *hent = NULL;
+    unsigned char *ip = NULL;
     int is_daemon = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "kdc:n:")) != -1)
+    while((ch = getopt(argc, argv, "vpkdc:n:")) != -1)
     {
         switch(ch)
         {
@@ -189,6 +243,12 @@ int main(int argc, char **argv)
                 break;
             case 'd':
                 is_daemon = 1;
+                break;
+            case 'p':
+                is_post = 1;
+                break;
+            case 'v':
+                is_verbosity = 1;
                 break;
             case '?':
                 url = argv[optind];
@@ -208,13 +268,101 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
                 "Options:\n\t-c concurrency\n\t-n requests\n"
+                "\t-p is_POST\n\t-v is_verbosity\n"
                 "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
         _exit(-1);
     }
-    fprintf(stdout, "url:%s\n", url);
-    _exit(-1);
-    //parser url 
-
+    p = url;
+    s = line;
+    while(*p != '\0')
+    {
+        if(*p >= 'A' && *p <= 'Z')
+        {
+            *s++ = *p++ + 'a' - 'A';
+        }
+        else if(*((unsigned char *)p) > 127 || *p == 0x20)
+        {
+            s += sprintf(s, "%%%02x", *((unsigned char *)p));
+            ++p;
+        }
+        else *s++ = *p++;
+    }
+    *s = '\0';
+    s = line;
+    if(strncmp(s, "http://", 7) == 0)
+    {
+        s += 7;
+        server_host = s;
+    }
+    else if(strncmp(s, "https://", 8) == 0)
+    {
+        s += 8;
+        server_host = s;
+        server_is_ssl = 1;
+    }
+    else goto invalid_url;
+    while(*s != '\0' && *s != ':' && *s != '/')s++;
+    if(*s == ':')
+    {
+        *s = '\0';
+        ++s;
+        server_port = atoi(s);          
+        while(*s != '\0' && *s != '/')++s;
+    }
+    if(*s == '/')
+    {
+        *s = '\0';
+        ++s;
+        server_url = s;
+    }
+    while(*s != '\0' && *s != '?')++s;
+    if(*s == '?')
+    {
+        *s = '\0';
+        ++s;
+        server_argv = s;
+    }
+invalid_url:
+    if(server_host == NULL || server_port <= 0)
+    {
+        fprintf(stderr, "Invalid url:%s, url must be http://host:port/path?argv "
+                " or https://host:port/path?argv\n", url);
+        _exit(-1);
+    }
+    if(is_post)
+    {
+        p = request;
+        p += sprintf(p, "POST /%s HTTP/1.1\r\n", server_url);
+        p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
+        if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+        p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
+        p += sprintf(p, "%s", server_argv);
+        request_len = p - request;
+    }
+    else
+    {
+        p = request;
+        p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", server_url, server_argv);
+        p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
+        if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+        p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
+        request_len = p - request;
+    }
+    if((hent = gethostbyname(server_host)) == NULL)
+    {
+        fprintf(stderr, "resolve hostname:%s failed, %s\n", server_host, strerror(h_errno));
+        _exit(-1);
+    }
+    else
+    {
+        //memcpy(&ip, &(hent->h_addr), sizeof(int));
+        sprintf(server_ip, "%s", inet_ntoa(*((struct in_addr *)(hent->h_addr))));
+        if(is_verbosity)
+        {
+            fprintf(stdout, "ip:%s request:%s\n", server_ip, request);
+        }
+    }
+    //_exit(-1);
     /* locale */
     setlocale(LC_ALL, "C");
     /* signal */
@@ -265,9 +413,11 @@ int main(int argc, char **argv)
         service->session.packet_delimiter_length = 4;
         service->session.packet_handler = &benchmark_packet_handler;
         service->session.data_handler = &benchmark_data_handler;
+        service->session.transaction_handler = &benchmark_trans_handler;
         service->session.error_handler = &benchmark_error_handler;
         service->session.timeout_handler = &benchmark_timeout_handler;
         service->session.buffer_size = 2097152;
+        service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark_access.log");
     }
