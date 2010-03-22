@@ -403,8 +403,8 @@ invalid_url:
     //sbase->set_evlog(sbase, "/tmp/evsd.log");
     if((service = service_init()))
     {
-        service->working_mode = 1;
-        service->nprocthreads = 2;
+        service->working_mode = 0;
+        service->nprocthreads = 1;
         service->ndaemons = 0;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
