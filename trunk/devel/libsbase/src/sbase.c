@@ -177,7 +177,6 @@ running:
             //running message queue
             if(QMTOTAL(sbase->message_queue) > 0)
                 qmessage_handler(sbase->message_queue, sbase->logger);
-            else usleep(100);
         }while(sbase->running_status);
         ret = 0;
     }
