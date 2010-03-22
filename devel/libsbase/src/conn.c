@@ -1204,10 +1204,10 @@ void conn_clean(CONN **pconn)
             (*pconn)->ssl = NULL;
         }
 #endif
-
         free(*pconn);
         (*pconn) = NULL;
     }
+    return ;
 }
 
 /* Initialize connection */

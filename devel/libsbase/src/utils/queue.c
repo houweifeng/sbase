@@ -73,14 +73,13 @@ void *queue_pop(void *queue)
         if((node = q->first))
         {
             ptr = node->ptr;
-            if(node->next == NULL)
+            if((q->first = q->first->next) == NULL)
             {
-                q->first = q->last = NULL;
+                q->last = NULL;
             }
-            else q->first = node->next;
             node->next = q->left;
             q->left = node;
-            q->total--;
+            --(q->total);
         }
         MUTEX_UNLOCK(q->mutex);
     } 
