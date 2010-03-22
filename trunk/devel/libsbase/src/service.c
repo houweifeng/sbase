@@ -636,12 +636,12 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             {
                 index = fd % service->nprocthreads;
                 if(service->procthreads && (procthread = service->procthreads[index]) 
-                        && procthread->add_connection)
+                        && procthread->addconn)
                 {
                     conn->parent = procthread;
                     conn->ioqmessage = service->iodaemon->message_queue;
                     conn->message_queue = procthread->message_queue;
-                    procthread->add_connection(procthread, conn);   
+                    procthread->addconn(procthread, conn);   
                     DEBUG_LOGGER(service->logger, "adding connection[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->fd);
                 }
                 else

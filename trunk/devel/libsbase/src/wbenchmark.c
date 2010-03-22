@@ -6,10 +6,11 @@
 #include <locale.h>
 #include <netdb.h>
 #include <sbase.h>
+#include "timer.h"
 #include <sys/resource.h>
-#define HTTP_BUF_SIZE   65536
-#define HTTP_IP_MAX     16
-#define HTTP_TIMEOUT     10000000
+#define HTTP_BUF_SIZE    65536
+#define HTTP_IP_MAX      16
+#define HTTP_TIMEOUT     1000000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -30,6 +31,7 @@ static char *server_argv = "";
 static int server_is_ssl = 0;
 static char request[HTTP_BUF_SIZE];
 static int request_len = 0; 
+static void *timer = NULL;
 
 CONN *http_newconn(char *ip, int port, int is_ssl)
 {
@@ -43,6 +45,8 @@ CONN *http_newconn(char *ip, int port, int is_ssl)
         {
             id = ++ncurrent;
             conn->start_cstate(conn);
+            conn->c_id = id;
+            conn->set_timeout(conn, HTTP_TIMEOUT);
             service->newtransaction(service, conn, id);
         }
     }
@@ -54,13 +58,17 @@ int http_request(CONN *conn)
 {
     if(conn && request_len > 0)
     {
-        if((ncompleted%1000) == 0)
+        if(ncompleted > 0 && (ncompleted%1000) == 0)
         {
             fprintf(stdout, "completed %d\n", ncompleted);
         }
         if(nrequests >= ntasks)
         {
             return -1;
+        }
+        if(nrequests == 0)
+        {
+            TIMER_INIT(timer);
         }
         ++nrequests;
         return conn->push_chunk(conn, request, request_len);
@@ -76,7 +84,11 @@ int http_over(CONN *conn, int respcode)
         ncompleted++;
         if(ncompleted >= ntasks)
         {
+            TIMER_SAMPLE(timer);
             fprintf(stdout, "timeouts:%d\nerrors:%d\n", ntimeout, nerrors);
+            if(PT_LU_USEC(timer) > 0)
+                fprintf(stdout, "time used:%lld\nrequest per sec:%lld\n", PT_LU_USEC(timer), 
+                        ((long long int)ncompleted * 100000ll /PT_LU_USEC(timer)));
             _exit(-1);
         }
         if(respcode < 200 || respcode >= 300)
@@ -156,14 +168,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
 {
     if(conn)
     {
-        if(conn->status == 0)
-        {
-            return http_request(conn);
-        }
-        else
-        {
-            return conn->set_timeout(conn, HTTP_TIMEOUT);
-        }
+        return http_request(conn);
     }
 }
 
