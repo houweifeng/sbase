@@ -123,7 +123,7 @@ int sbase_running(SBASE *sbase, int useconds)
             EVTIMER_ADD(sbase->evtimer, useconds,
                     &sbase_evtimer_handler, (void *)sbase, sbase->evid);
         }
-        if(sbase->nchilds > SB_NDAEMONS_MAX) sbase->nchilds = SB_NDAEMONS_MAX;
+        if(sbase->nchilds > SB_THREADS_MAX) sbase->nchilds = SB_THREADS_MAX;
         //nproc
         if(sbase->nchilds > 0)
         {

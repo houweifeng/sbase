@@ -736,6 +736,16 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 }
             }
         }
+        else if(http_req.reqid == HTTP_POST)
+        {
+            if((n = http_req.headers[HEAD_ENT_CONTENT_LENGTH]) > 0 
+                    && (p = (http_req.hlines + n)) && (n = atoi(p)) > 0)
+            {
+                conn->save_cache(conn, &http_req, sizeof(HTTP_REQ));
+                return conn->recv_chunk(conn, n);
+            }
+            return conn->push_chunk(conn, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
+        }
 err:
         return conn->push_chunk(conn, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
     }
@@ -745,7 +755,11 @@ err:
 /* data handler */
 int xhttpd_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
-
+    if(conn)
+    {
+        return conn->push_chunk(conn, HTTP_NO_CONTENT, strlen(HTTP_NO_CONTENT));
+    }
+    return -1;
 }
 
 /* OOB handler */

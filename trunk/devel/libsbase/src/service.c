@@ -223,7 +223,7 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        if(service->nprocthreads > SB_NDAEMONS_MAX) service->nprocthreads = SB_NDAEMONS_MAX;
+        if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
         if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)calloc(
                         service->nprocthreads, sizeof(PROCTHREAD *))))
         {
@@ -245,7 +245,7 @@ running_threads:
                         service->procthreads[i], service->logger);
             }
         }
-        if(service->ndaemons > SB_NDAEMONS_MAX) service->ndaemons = SB_NDAEMONS_MAX;
+        if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
         if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)calloc(
                         service->ndaemons, sizeof(PROCTHREAD *))))
         {
@@ -591,7 +591,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
-            fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         if((conn = service_popfromq(service)))
         {
             conn->reset(conn);
@@ -601,10 +601,9 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             conn = conn_init();
             //fprintf(stdout, "newconn:%p\n", conn);
         }
-            fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         if(conn)
         {
-            fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+            //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
             conn->fd = fd;
             strcpy(conn->remote_ip, remote_ip);
             conn->remote_port = remote_port;
@@ -620,10 +619,9 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 if(service->daemon && service->daemon->addconn)
                 {
                     conn->parent    = service->daemon;
-                    conn->ioqmessage = service->message_queue;
+                    conn->ioqmessage = service->daemon->message_queue;
                     conn->message_queue = service->daemon->message_queue;
                     service->daemon->addconn(service->daemon, conn);
-            fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
                 }
                 else
                 {
@@ -632,22 +630,18 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                             "via %d  to service[%s]", remote_ip, remote_port, 
                             local_ip, local_port, fd, service->service_name);
                     service_pushtoq(service, conn);
-            fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
                 }
             }
             else if(service->working_mode == WORKING_THREAD)
             {
-            fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
                 index = fd % service->nprocthreads;
                 if(service->procthreads && (procthread = service->procthreads[index]) 
-                        && procthread->addconn)
+                        && procthread->add_connection)
                 {
-            fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
                     conn->parent = procthread;
                     conn->ioqmessage = service->iodaemon->message_queue;
                     conn->message_queue = procthread->message_queue;
-                    procthread->addconn(procthread, conn);   
-            fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+                    procthread->add_connection(procthread, conn);   
                     DEBUG_LOGGER(service->logger, "adding connection[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->fd);
                 }
                 else
@@ -747,7 +741,7 @@ int service_popconn(SERVICE *service, CONN *conn)
                     conn->index, service->running_connections);
         }
         MUTEX_UNLOCK(service->mutex);
-        return service_pushtoq(service, conn);
+        //return service_pushtoq(service, conn);
     }
     return ret;
 }
