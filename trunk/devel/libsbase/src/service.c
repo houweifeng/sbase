@@ -454,7 +454,7 @@ new_conn:
             getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
             local_ip    = inet_ntoa(lsa.sin_addr);
             local_port  = ntohs(lsa.sin_port);
-            if((conn = service->addconn(service, sock_type, fd, remote_ip, 
+            if((conn = service_addconn(service, sock_type, fd, remote_ip, 
                             remote_port, local_ip, local_port, sess)))
             {
                 if(flag != 0) conn->status = CONN_STATUS_READY; 
@@ -539,7 +539,7 @@ new_conn:
             getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
             local_ip    = inet_ntoa(lsa.sin_addr);
             local_port  = ntohs(lsa.sin_port);
-            if((conn = service->addconn(service, sock_type, fd, remote_ip, remote_port, 
+            if((conn = service_addconn(service, sock_type, fd, remote_ip, remote_port, 
                             local_ip, local_port, sess)))
             {
                 if(conn->session.timeout == 0)
@@ -596,7 +596,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         else 
         {
             conn = conn_init();
-            fprintf(stdout, "newconn:%p\n", conn);
+            //fprintf(stdout, "newconn:%p\n", conn);
         }
         if(conn)
         {
@@ -612,12 +612,12 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             /* add  to procthread */
             if(service->working_mode == WORKING_PROC)
             {
-                if(service->daemon && service->daemon->add_connection)
+                if(service->daemon && service->daemon->addconn)
                 {
                     conn->parent    = service->daemon;
                     conn->ioqmessage = service->iodaemon->message_queue;
                     conn->message_queue = service->daemon->message_queue;
-                    service->daemon->add_connection(service->daemon, conn);
+                    service->daemon->addconn(service->daemon, conn);
                 }
                 else
                 {
@@ -632,12 +632,13 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             {
                 index = fd % service->nprocthreads;
                 if(service->procthreads && (procthread = service->procthreads[index]) 
-                        && procthread->add_connection)
+                        && procthread->addconn)
                 {
                     conn->parent = procthread;
                     conn->ioqmessage = service->iodaemon->message_queue;
                     conn->message_queue = procthread->message_queue;
-                    procthread->add_connection(procthread, conn);   
+                    procthread->addconn(procthread, conn);   
+                    DEBUG_LOGGER(service->logger, "adding connection[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->fd);
                 }
                 else
                 {
