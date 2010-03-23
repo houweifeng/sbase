@@ -71,8 +71,8 @@ PROGRAMS = $(bin_PROGRAMS)
 am_lechod_OBJECTS = lechod.$(OBJEXT) iniparser.$(OBJEXT)
 lechod_OBJECTS = $(am_lechod_OBJECTS)
 lechod_DEPENDENCIES = libsbase.la
-am_wbenchmark_OBJECTS = wbenchmark-wbenchmark.$(OBJEXT)
-wbenchmark_OBJECTS = $(am_wbenchmark_OBJECTS)
+wbenchmark_SOURCES = wbenchmark.c
+wbenchmark_OBJECTS = wbenchmark-wbenchmark.$(OBJEXT)
 wbenchmark_DEPENDENCIES = libsbase.la
 am_xhttpd_OBJECTS = xhttpd-xhttpd.$(OBJEXT) xhttpd-mime.$(OBJEXT) \
 	xhttpd-http.$(OBJEXT) xhttpd-iniparser.$(OBJEXT) \
@@ -90,10 +90,10 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
-	$(wbenchmark_SOURCES) $(xhttpd_SOURCES)
-DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
-	$(wbenchmark_SOURCES) $(xhttpd_SOURCES)
+SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) wbenchmark.c \
+	$(xhttpd_SOURCES)
+DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) wbenchmark.c \
+	$(xhttpd_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -231,7 +231,6 @@ xhttpd_LDFLAGS = -static
 lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
-wbenchmark_SOURCES = wbenchmark.c timer.h
 wbenchmark_CPPFLAGS = -I utils/
 wbenchmark_LDADD = libsbase.la
 wbenchmark_LDFLAGS = -static

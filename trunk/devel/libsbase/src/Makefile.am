@@ -37,7 +37,6 @@ lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
 
-wbenchmark_SOURCES = wbenchmark.c timer.h
 wbenchmark_CPPFLAGS = -I utils/
 wbenchmark_LDADD = libsbase.la
 wbenchmark_LDFLAGS = -static
