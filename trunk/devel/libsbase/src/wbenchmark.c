@@ -32,13 +32,14 @@ static int server_is_ssl = 0;
 static char request[HTTP_BUF_SIZE];
 static int request_len = 0; 
 static void *timer = NULL;
+static int running_status = 0;
 
 CONN *http_newconn(char *ip, int port, int is_ssl)
 {
     CONN *conn = NULL;
     int id = 0;
 
-    if(ncurrent <  concurrency && ip && port > 0)
+    if(running_status && ncurrent <  concurrency && ip && port > 0)
     {
         if(is_ssl) service->session.is_use_SSL = 1;
         if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
@@ -56,7 +57,7 @@ CONN *http_newconn(char *ip, int port, int is_ssl)
 /* http request */
 int http_request(CONN *conn)
 {
-    if(conn && request_len > 0)
+    if(running_status && conn && request_len > 0)
     {
         if(ncompleted > 0 && (ncompleted%1000) == 0)
         {
@@ -71,6 +72,7 @@ int http_request(CONN *conn)
             TIMER_INIT(timer);
         }
         ++nrequests;
+        conn->start_cstate(conn);
         conn->set_timeout(conn, HTTP_TIMEOUT);
         return conn->push_chunk(conn, request, request_len);
     }
@@ -87,7 +89,7 @@ int http_over(CONN *conn, int respcode)
         {
             TIMER_SAMPLE(timer);
             fprintf(stdout, "timeouts:%d\nerrors:%d\n", ntimeout, nerrors);
-            if(PT_LU_USEC(timer) > 0)
+            if(PT_LU_USEC(timer) conn> 0)
                 fprintf(stdout, "time used:%lld\nrequest per sec:%lld\n", PT_LU_USEC(timer), 
                         ((long long int)ncompleted * 1000000ll /PT_LU_USEC(timer)));
             _exit(-1);
@@ -171,13 +173,19 @@ int benchmark_trans_handler(CONN *conn, int tid)
 {
     if(conn)
     {
+        fprintf(stdout, "trans on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
+        //fprintf(stdout, "conn[%d]->status:%d\n", conn->fd, conn->status);
         if(conn->status == 0)
         {
+            conn->over_evstate(conn);
+            conn->over_cstate(conn);
             return http_request(conn);
         }
         else
         {
-            return service->newtransaction(service, conn, tid);
+            conn->wait_evstate(conn);
+            return conn->set_timeout(conn, HTTP_TIMEOUT);
+            //return service->newtransaction(service, conn, tid);
         }
     }
     return 0;
@@ -188,6 +196,7 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
 {
     if(conn)
     {
+        fprintf(stdout, "error on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
         return http_over(conn, conn->s_id);
     }
 }
@@ -197,7 +206,15 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
 {
     if(conn)
     {
-        return http_over(conn, conn->s_id);
+        fprintf(stdout, "timeout on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
+        if(conn->evstate == EVSTATE_WAIT)
+        {
+            return benchmark_trans_handler(conn, conn->c_id);
+        }
+        else
+        {
+            return http_over(conn, conn->s_id);
+        }
     }
     return -1;
 }
@@ -233,6 +250,7 @@ static void benchmark_stop(int sig)
         case SIGINT:
         case SIGTERM:
             fprintf(stderr, "benchmark  is interrupted by user.\n");
+            running_status = 0;
             if(sbase)sbase->stop(sbase);
             break;
         default:
@@ -422,7 +440,7 @@ invalid_url:
     //sbase->set_evlog(sbase, "/tmp/evsd.log");
     if((service = service_init()))
     {
-        service->working_mode = 0;
+        service->working_mode = 1;
         service->nprocthreads = 1;
         service->ndaemons = 0;
         service->service_type = C_SERVICE;
@@ -437,13 +455,14 @@ invalid_url:
         service->session.transaction_handler = &benchmark_trans_handler;
         service->session.error_handler = &benchmark_error_handler;
         service->session.timeout_handler = &benchmark_timeout_handler;
-        service->session.buffer_size = 2097152;
+        service->session.buffer_size = 65536;
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark_access.log");
     }
     if(sbase->add_service(sbase, service) == 0)
     {
+        running_status = 1;
         sbase->running(sbase, 0);
         //sbase->running(sbase, 3600);
         //sbase->running(sbase, 90000000);sbase->stop(sbase);

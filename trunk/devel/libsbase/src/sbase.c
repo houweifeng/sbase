@@ -177,6 +177,7 @@ running:
             //running message queue
             if(QMTOTAL(sbase->message_queue) > 0)
                 qmessage_handler(sbase->message_queue, sbase->logger);
+            else usleep(10);
         }while(sbase->running_status);
         ret = 0;
     }
@@ -190,7 +191,6 @@ void sbase_stop(SBASE *sbase)
 
     if(sbase)
     {
-        sbase->running_status = 0;
 	//fprintf(stdout, "%d::%d\n", __LINE__, sbase->running_services);
         for(i = 0; i < sbase->running_services; i++)
         {
@@ -199,6 +199,7 @@ void sbase_stop(SBASE *sbase)
                 sbase->services[i]->stop(sbase->services[i]);
             }
         }
+        sbase->running_status = 0;
     }
     return ;
 }
