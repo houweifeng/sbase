@@ -173,7 +173,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
 {
     if(conn)
     {
-        fprintf(stdout, "trans on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
+        //fprintf(stdout, "trans on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
         //fprintf(stdout, "conn[%d]->status:%d\n", conn->fd, conn->status);
         if(conn->status == 0)
         {
@@ -196,7 +196,7 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
 {
     if(conn)
     {
-        fprintf(stdout, "error on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
+        //fprintf(stdout, "error on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
         return http_over(conn, conn->s_id);
     }
 }
@@ -206,7 +206,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
 {
     if(conn)
     {
-        fprintf(stdout, "timeout on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
+        //fprintf(stdout, "timeout on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
         if(conn->evstate == EVSTATE_WAIT)
         {
             return benchmark_trans_handler(conn, conn->c_id);
@@ -440,7 +440,7 @@ invalid_url:
     //sbase->set_evlog(sbase, "/tmp/evsd.log");
     if((service = service_init()))
     {
-        service->working_mode = 1;
+        service->working_mode = 0;
         service->nprocthreads = 1;
         service->ndaemons = 0;
         service->service_type = C_SERVICE;
