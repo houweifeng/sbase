@@ -71,6 +71,7 @@ int http_request(CONN *conn)
             TIMER_INIT(timer);
         }
         ++nrequests;
+        conn->set_timeout(conn, HTTP_TIMEOUT);
         return conn->push_chunk(conn, request, request_len);
     }
     return -1;
@@ -101,7 +102,7 @@ int http_over(CONN *conn, int respcode)
         }
         else
         {
-            http_request(conn);
+            return http_request(conn);
         }
     }
     return -1;
@@ -162,16 +163,27 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
         else
             return http_over(conn, conn->s_id);
     }
+    return 0;
 }
 
+/* transaction handler */
 int benchmark_trans_handler(CONN *conn, int tid)
 {
     if(conn)
     {
-        return http_request(conn);
+        if(conn->status == 0)
+        {
+            return http_request(conn);
+        }
+        else
+        {
+            return service->newtransaction(service, conn, tid);
+        }
     }
+    return 0;
 }
 
+/* error handler */
 int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
     if(conn)
@@ -180,12 +192,14 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
     }
 }
 
+/* timeout handler*/
 int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
     if(conn)
     {
         return http_over(conn, conn->s_id);
     }
+    return -1;
 }
 
 int benchmark_oob_handler(CONN *conn, CB_DATA *oob)
