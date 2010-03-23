@@ -12,7 +12,7 @@
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 1024 
 #ifndef MMAP_CHUNK_SIZE
-#define MMAP_CHUNK_SIZE         1048576
+#define MMAP_CHUNK_SIZE         65536
 //#define MMAP_CHUNK_SIZE       2097152
 //#define MMAP_CHUNK_SIZE       3145728
 //#define MMAP_CHUNK_SIZE       4194304

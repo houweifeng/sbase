@@ -1124,11 +1124,11 @@ void service_stop(SERVICE *service)
 
     if(service)
     {
+        //DEBUG_LOGGER(service->logger, "ready for stop service:%s\n", service->service_name);
         //stop all connections 
-        service->lock = 1;
         if(service->connections && service->running_connections > 0 && service->index_max >= 0)
         {
-            DEBUG_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
+            //DEBUG_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
             for(i = 0; i <= service->index_max; i++)
             {
                 if((conn = service->connections[i]))
@@ -1141,27 +1141,27 @@ void service_stop(SERVICE *service)
         //daemon
         if(service->daemon)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop daemon");
+            //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
             service->daemon->stop(service->daemon);
-            DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
+            //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
             PROCTHREAD_EXIT(service->daemon->threadid, thread_exit);
-            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
-            DEBUG_LOGGER(service->logger, "over for stop daemon");
+            //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
+            //DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
         //iodaemon
         if(service->iodaemon)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop daemon");
+            //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
             service->iodaemon->stop(service->iodaemon);
-            DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
+            //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
             PROCTHREAD_EXIT(service->iodaemon->threadid, thread_exit);
-            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
-            DEBUG_LOGGER(service->logger, "over for stop daemon");
+            //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
+            //DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
         //threads
         if(service->procthreads && service->nprocthreads > 0)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
+            //DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
             {
                 if(service->procthreads[i])
@@ -1174,7 +1174,7 @@ void service_stop(SERVICE *service)
         //daemons
         if(service->daemons && service->ndaemons > 0)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop daemonss");
+            //DEBUG_LOGGER(service->logger, "Ready for stop daemonss");
             for(i = 0; i < service->ndaemons; i++)
             {
                 if(service->daemons[i])
@@ -1187,8 +1187,10 @@ void service_stop(SERVICE *service)
         EVTIMER_DEL(service->evtimer, service->evid);
         //remove event
         if(service->event)service->event->destroy(service->event);
+        service->lock = 1;
         close(service->fd);
     }
+    return ;
 }
 
 /* state check */
@@ -1206,9 +1208,9 @@ void service_state(void *arg)
             {
                 if(service->running_connections < service->client_connections_limit)
                 {
-                    DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",
-                            service->ip, service->port, service->client_connections_limit,
-                            service->running_connections);
+                    //DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",
+                        //service->ip, service->port, service->client_connections_limit,
+                        // service->running_connections);
                     n = service->client_connections_limit - service->running_connections;
                     while(n > 0)
                     {
@@ -1224,6 +1226,7 @@ void service_state(void *arg)
             }
         }
     }
+    return ;
 }
 
 /* heartbeat handler */
@@ -1320,11 +1323,11 @@ void service_clean(SERVICE **pservice)
             free((*pservice)->daemons);
         }
         //clean connection_queue
-        DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk");
+        //DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk");
         if((*pservice)->nqconns > 0)
         {
             //fprintf(stdout, "nqconns:%d\n", (*pservice)->nqconns);
-            DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
+            //DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
             while((i = --((*pservice)->nqconns)) >= 0)
             {
                 if((conn = ((*pservice)->qconns[i]))) 
@@ -1344,10 +1347,10 @@ void service_clean(SERVICE **pservice)
             }
         }*/
         //clean chunks queue
-        DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue");
+        //DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue");
         if((*pservice)->nqchunks > 0)
         {
-            DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
+            //DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
             while((i = --((*pservice)->nqchunks)) >= 0)
             {
                 if((cp = (*pservice)->qchunks[i]))
@@ -1370,6 +1373,7 @@ void service_clean(SERVICE **pservice)
         free(*pservice);
         *pservice = NULL;
     }
+    return ;
 }
 
 /* Initialize service */
