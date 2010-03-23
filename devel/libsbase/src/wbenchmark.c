@@ -89,7 +89,7 @@ int http_over(CONN *conn, int respcode)
         {
             TIMER_SAMPLE(timer);
             fprintf(stdout, "timeouts:%d\nerrors:%d\n", ntimeout, nerrors);
-            if(PT_LU_USEC(timer) conn> 0)
+            if(PT_LU_USEC(timer) > 0)
                 fprintf(stdout, "time used:%lld\nrequest per sec:%lld\n", PT_LU_USEC(timer), 
                         ((long long int)ncompleted * 1000000ll /PT_LU_USEC(timer)));
             _exit(-1);

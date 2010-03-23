@@ -178,19 +178,10 @@ running:
             if(QMTOTAL(sbase->message_queue) > 0)
                 qmessage_handler(sbase->message_queue, sbase->logger);
         }while(sbase->running_status);
-        ret = 0;
-    }
-    return ret;
-}
-
-/* stop all service */
-void sbase_stop(SBASE *sbase)
-{
-    int i = 0;
-
-    if(sbase)
-    {
-	//fprintf(stdout, "%d::%d\n", __LINE__, sbase->running_services);
+        /* handler left message */
+        if(QMTOTAL(sbase->message_queue) > 0)
+            qmessage_handler(sbase->message_queue, sbase->logger);
+        /* stop service */
         for(i = 0; i < sbase->running_services; i++)
         {
             if(sbase->services[i])
@@ -198,9 +189,18 @@ void sbase_stop(SBASE *sbase)
                 sbase->services[i]->stop(sbase->services[i]);
             }
         }
-        sbase->running_status = 0;
+        ret = 0;
     }
-    return ;
+    return ret;
+}
+
+void sbase_stop(SBASE *sbase)
+{
+    if(sbase)
+    {
+        sbase->running_status = 0;
+        return ;
+    }
 }
 
 /* clean sbase */
