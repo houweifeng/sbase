@@ -209,18 +209,21 @@ running_threads:
             return -1;
         }
         //iodaemon 
-        if(service->use_iodaemon && (service->iodaemon = procthread_init(1)))
+        if(service->use_iodaemon)
         {
-            PROCTHREAD_SET(service, service->iodaemon);
-            NEW_PROCTHREAD("iodaemon", 0, service->iodaemon->threadid, service->iodaemon, service->logger);
-            ret = 0;
-        }
-        else
-        {
-            FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
-                    service->working_mode, strerror(errno));
-            exit(EXIT_FAILURE);
-            return -1;
+            if((service->iodaemon = procthread_init(1)))
+            {
+                PROCTHREAD_SET(service, service->iodaemon);
+                NEW_PROCTHREAD("iodaemon", 0, service->iodaemon->threadid, service->iodaemon, service->logger);
+                ret = 0;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
+                        service->working_mode, strerror(errno));
+                exit(EXIT_FAILURE);
+                return -1;
+            }
         }
         if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
         if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)calloc(
@@ -235,12 +238,14 @@ running_threads:
                         PROCTHREAD_SET(service, service->procthreads[i]);
                         service->procthreads[i]->evbase = service->iodaemon->evbase;
                         service->procthreads[i]->ioqmessage = service->iodaemon->message_queue;
+                        ret = 0;
                     }
                     else
                     {
                         FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
                                 strerror(errno));
                         exit(EXIT_FAILURE);
+                        return -1;
                     }
                 }
                 else
@@ -249,12 +254,14 @@ running_threads:
                     {
                         PROCTHREAD_SET(service, service->procthreads[i]);
                         service->procthreads[i]->ioqmessage = service->procthreads[i]->message_queue;
+                        ret = 0;
                     }
                     else
                     {
                         FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
                                 strerror(errno));
                         exit(EXIT_FAILURE);
+                        return -1;
                     }
                 }
                 NEW_PROCTHREAD("procthreads", i, service->procthreads[i]->threadid, 
@@ -270,12 +277,14 @@ running_threads:
                 if((service->daemons[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
+                    ret = 0;
                 }
                 else
                 {
                     FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
                             strerror(errno));
                     exit(EXIT_FAILURE);
+                    return -1;
                 }
                 NEW_PROCTHREAD("daemons", i, service->daemons[i]->threadid,
                         service->daemons[i], service->logger);
