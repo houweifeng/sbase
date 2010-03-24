@@ -19,6 +19,7 @@
 #include "mime.h"
 #include "trie.h"
 #include "stime.h"
+#include "logger.h"
 #define XHTTPD_VERSION 		    "0.0.1"
 #define HTTP_RESP_OK            "HTTP/1.1 200 OK"
 #define HTTP_BAD_REQUEST        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
@@ -44,6 +45,7 @@ static void *namemap = NULL;
 static void *hostmap = NULL;
 static void *urlmap = NULL;
 static void *http_headers_map = NULL;
+static void *logger = NULL;
 
 /* mkdir recursive */
 int xhttpd_mkdir(char *path, int mode)
@@ -94,7 +96,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
     unsigned char *s = NULL;
     struct stat st = {0};
     DIR *dirp = NULL;
-    int len = 0, n = 0;
+    int len = 0;
 
     if(conn && file && root && end && (dirp = opendir(file)))
     {
@@ -148,12 +150,12 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
                                     (double)st.st_size/(double) HTTP_BYTE_G);
                         else if(st.st_size >= (off_t)HTTP_BYTE_M)
                             p += sprintf(p, "<td> %lldM </td>", 
-                                    st.st_size/(off_t)HTTP_BYTE_M);
+                                    LL(st.st_size/(off_t)HTTP_BYTE_M));
                         else if(st.st_size >= (off_t)HTTP_BYTE_K)
                             p += sprintf(p, "<td> %lldK </td>", 
-                                    st.st_size/(off_t)HTTP_BYTE_K);
+                                    LL(st.st_size/(off_t)HTTP_BYTE_K));
                         else 
-                            p += sprintf(p, "<td> %lldB </td>", st.st_size);
+                            p += sprintf(p, "<td> %lldB </td>", LL(st.st_size));
 
                     }
                     else p += sprintf(p, "<td> - </td>");
@@ -321,14 +323,14 @@ int xhttpd_bzip2(unsigned char **zstream, unsigned char *in, int inlen)
         {
             return -1;
         }
-        bz.next_in = in;
+        bz.next_in = (char *)in;
         bz.avail_in = inlen;
         bz.total_in_lo32 = 0;
         bz.total_in_hi32 = 0;
         outlen = (inlen * 1.1) + 12;
         if((*zstream = out = (unsigned char *)calloc(1, outlen)))
         {
-            bz.next_out = out;
+            bz.next_out = (char *)out;
             bz.avail_out = outlen;
             bz.total_out_lo32 = 0;
             bz.total_out_hi32 = 0;
@@ -365,7 +367,7 @@ int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, char *host, int is_n
     char zfile[HTTP_PATH_MAX], zoldfile[HTTP_PATH_MAX], linkfile[HTTP_PATH_MAX], 
          buf[HTTP_BUF_SIZE], *encoding = NULL, *outfile = NULL, *p = NULL;
     unsigned char *block = NULL, *in = NULL, *zstream = NULL;
-    int fd = 0, inlen = 0, zlen = 0, i = 0, id = 0, n = 0;
+    int fd = 0, inlen = 0, zlen = 0, i = 0, id = 0;
     off_t offset = 0, len = 0;
     struct stat zst = {0};
 
@@ -466,8 +468,11 @@ COMPRESS:
             {
                 if((fd = open(zfile, O_CREAT|O_WRONLY, 0644)) > 0)
                 {
-                    symlink(zfile, linkfile);
-                    write(fd, zstream, zlen);
+                    if(symlink(zfile, linkfile) != 0 || write(fd, zstream, zlen) <= 0 )
+                    {
+                        FATAL_LOGGER(logger, "symlink/write to %s failed, %s", 
+                                linkfile, strerror(errno));
+                    }
                     close(fd); 
                 }
             }
@@ -518,12 +523,9 @@ err:
 /* xhttpd bind proxy */
 int xhttpd_bind_proxy(CONN *conn, char *host, int port) 
 {
-    struct hostent *hp = NULL;
     CONN *new_conn = NULL;
     SESSION session = {0};
-    char *ip = NULL, cip[HTTP_IP_MAX];
-    unsigned char *sip = NULL;
-    int bitip = 0;
+    char *ip = NULL;
 
     if(conn && host && port > 0)
     {
@@ -547,12 +549,10 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = NULL,
          *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
          *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL;
-    int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, fd = 0, is_need_compress = 0;
+    int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0;
     off_t from = 0, to = 0, len = 0;
-    struct dirent *ent = NULL;
     struct stat st = {0};
     HTTP_REQ http_req = {0};
-    DIR *dirp = NULL;
     void *dp = NULL;
 
     if(conn && packet)
@@ -563,6 +563,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) goto err;
         if(http_req.reqid == HTTP_GET)
         {
+            REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
             //get vhost
             if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
             {
@@ -738,6 +739,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         }
         else if(http_req.reqid == HTTP_POST)
         {
+            REALLOG(logger, "[%s:%d] POST %s", conn->remote_ip, conn->remote_port, http_req.path);
             if((n = http_req.headers[HEAD_ENT_CONTENT_LENGTH]) > 0 
                     && (p = (http_req.hlines + n)) && (n = atoi(p)) > 0)
             {
@@ -791,9 +793,9 @@ static void xhttpd_stop(int sig)
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-    char line[HTTP_HEAD_MAX], *logfile = NULL, *s = NULL, *p = NULL, 
+    char line[HTTP_HEAD_MAX], *s = NULL, *p = NULL, 
          *cacert_file = NULL, *privkey_file = NULL;
-    int n = 0, i = 0, ret = -1;
+    int n = 0, i = 0;
     void *dp = NULL;
 
     if((dict = iniparser_new(conf)) == NULL)
@@ -955,6 +957,10 @@ int sbase_initialize(SBASE *sbase, char *conf)
     {
         service->set_log(service, p);
     }
+    if((p = iniparser_getstr(dict, "XHTTPD:access_log")))
+    {
+        LOGGER_INIT(logger, p);
+    }
     /* server */
     //fprintf(stdout, "Parsing for server...\n");
     return sbase->add_service(sbase, service);
@@ -1051,5 +1057,7 @@ int main(int argc, char **argv)
     if(hostmap) TRIETAB_CLEAN(hostmap);
     if(urlmap) TRIETAB_CLEAN(urlmap);
     if(http_headers_map) TRIETAB_CLEAN(http_headers_map);
+    LOGGER_CLEAN(logger);
     if(dict)iniparser_free(dict);
+    return 0;
 }

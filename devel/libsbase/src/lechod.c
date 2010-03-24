@@ -27,6 +27,7 @@ int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 
 int lechod_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
+    return -1;
 }
 
 int lechod_oob_handler(CONN *conn, CB_DATA *oob)
@@ -54,8 +55,7 @@ static void lechod_stop(int sig){
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-	char *logfile = NULL, *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
-	int n = 0, ret = -1;
+	char *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
 	if((dict = iniparser_new(conf)) == NULL)
 	{
 		fprintf(stderr, "Initializing conf:%s failed, %s\n", conf, strerror(errno));
@@ -214,4 +214,5 @@ int main(int argc, char **argv)
     //sbase->running(sbase, 90000000);sbase->stop(sbase);
     sbase->clean(&sbase);
     if(dict)iniparser_free(dict);
+    return 0;
 }

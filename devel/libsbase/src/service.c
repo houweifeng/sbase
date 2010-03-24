@@ -31,7 +31,7 @@ do                                                                              
 int service_set(SERVICE *service)
 {
     char *p = NULL;
-    int ret = -1, opt = 1, flag = 0;
+    int ret = -1, opt = 1;
 
     if(service)
     {
@@ -116,7 +116,6 @@ int service_set(SERVICE *service)
 #ifdef HAVE_PTHREAD
 #define PROCTHREAD_EXIT(id, exitid)                                                         \
 {                                                                                           \
-    pthread_join((pthread_t)id, (void **)&exitid);                                          \
     pthread_detach((pthread_t)id);                                                          \
 }
 #else
@@ -313,7 +312,6 @@ void service_event_handler(int event_fd, short flag, void *arg)
     SERVICE *service = (SERVICE *)arg;
     int fd = -1, port = -1, n = 0, opt = 1;
     char buf[SB_BUF_SIZE], *ip = NULL;
-    MESSAGE msg = {0};
     CONN *conn = NULL;
 #ifdef HAVE_SSL 
     SSL *ssl = NULL;
@@ -603,8 +601,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         char *local_ip, int local_port, SESSION *session)
 {
     PROCTHREAD *procthread = NULL;
-    CONN *conn = NULL, **pconn = NULL;
-    int index = 0, x = 0;
+    CONN *conn = NULL;
+    int index = 0;
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
@@ -839,8 +837,8 @@ CONN *service_findconn(SERVICE *service, int index)
 /* pop chunk from service  */
 CHUNK * service_popchunk(SERVICE *service)
 {
-    int ret = -1, x = 0;
     CHUNK *cp = NULL;
+    int x = 0;
 
     if(service && service->qchunks)
     {
@@ -946,11 +944,13 @@ int service_set_session(SERVICE *service, SESSION *session)
 /* add multicast */
 int service_add_multicast(SERVICE *service, char *multicast_ip)
 {
-    struct ip_mreq mreq = {0};
+    struct ip_mreq mreq;
     int ret = -1;
+
     if(service && service->sock_type == SOCK_DGRAM && multicast_ip 
             && service->ip && service->fd > 0)
     {
+        memset(&mreq, 0, sizeof(struct ip_mreq));
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
         mreq.imr_interface.s_addr = inet_addr(service->ip);
         if((ret = setsockopt(service->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
@@ -966,11 +966,12 @@ int service_add_multicast(SERVICE *service, char *multicast_ip)
 /* drop multicast */
 int service_drop_multicast(SERVICE *service, char *multicast_ip)
 {
-    struct ip_mreq mreq = {0};
+    struct ip_mreq mreq;
     int ret = -1;
 
     if(service && service->sock_type == SOCK_DGRAM && service->ip && service->fd)
     {
+        memset(&mreq, 0, sizeof(struct ip_mreq));
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
         mreq.imr_interface.s_addr = inet_addr(service->ip);
         ret = setsockopt(service->fd, IPPROTO_IP, IP_DROP_MEMBERSHIP,(char*)&mreq, sizeof(mreq));
@@ -1034,7 +1035,7 @@ int service_closegroup(SERVICE *service, int groupid)
 int service_castgroup(SERVICE *service, char *data, int len)
 {
     CONN *conn = NULL;
-    int i = 0, x = 0;
+    int i = 0;
 
     if(service && data && len > 0 && service->ngroups > 0)
     {
@@ -1055,8 +1056,8 @@ int service_castgroup(SERVICE *service, char *data, int len)
 /* state groups */
 int service_stategroup(SERVICE *service)
 {
-    int i = 0, x = 0;
     CONN *conn = NULL;
+    int i = 0;
 
     if(service && service->ngroups > 0)
     {
@@ -1136,8 +1137,8 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
 /* stop service */
 void service_stop(SERVICE *service)
 {
-    int i = 0, *thread_exit = NULL;
     CONN *conn = NULL;
+    int i = 0;
 
     if(service)
     {
@@ -1267,7 +1268,6 @@ void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, vo
 void service_active_heartbeat(void *arg)
 {
     SERVICE *service = (SERVICE *)arg;
-    LOGGER logger = {0};
 
     if(service)
     {

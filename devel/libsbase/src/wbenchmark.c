@@ -199,6 +199,7 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
         //fprintf(stdout, "error on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
         return http_over(conn, conn->s_id);
     }
+    return -1;
 }
 
 /* timeout handler*/
@@ -263,7 +264,6 @@ int main(int argc, char **argv)
     pid_t pid;
     char *url = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
     struct hostent *hent = NULL;
-    unsigned char *ip = NULL;
     int is_daemon = 0;
 
     /* get configure file */
