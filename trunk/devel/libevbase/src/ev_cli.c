@@ -219,13 +219,11 @@ int main(int argc, char **argv)
     int fd = 0;
     struct sockaddr_in sa, lsa;
     socklen_t sa_len, lsa_len = -1;
-    int opt = 1;
     int i = 0;
     int conn_num = 0;
     int sock_type = 0;
-    int ret = -1;
     int flag = 0;
-    EVENT  *event = NULL;
+
     if(argc < 5)
     {
         fprintf(stderr, "Usage:%s sock_type(0/TCP|1/UDP) ip port connection_number\n", argv[0]);	
@@ -336,7 +334,7 @@ int main(int argc, char **argv)
             {
                 if(conns[i].event)
                 {
-                    showdown(conns[i].fd, SHUT_RDWR);
+                    shutdown(conns[i].fd, SHUT_RDWR);
                     close(conns[i].fd);
                     conns[i].event->destroy(conns[i].event);
                     conns[i].event = NULL;
@@ -356,4 +354,5 @@ int main(int argc, char **argv)
         }
         free(conns);
     }
+    return -1;
 }

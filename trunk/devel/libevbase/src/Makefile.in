@@ -69,13 +69,14 @@ am_libevbase_la_OBJECTS = libevbase_la-evdevpoll.lo \
 libevbase_la_OBJECTS = $(am_libevbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_ev_cli_OBJECTS = ev_cli.$(OBJEXT)
+am_ev_cli_OBJECTS = ev_cli-ev_cli.$(OBJEXT)
 ev_cli_OBJECTS = $(am_ev_cli_OBJECTS)
 ev_cli_DEPENDENCIES = libevbase.la
-am_ev_serv_OBJECTS = ev_serv.$(OBJEXT)
+am_ev_serv_OBJECTS = ev_serv-ev_serv.$(OBJEXT)
 ev_serv_OBJECTS = $(am_ev_serv_OBJECTS)
 ev_serv_DEPENDENCIES = libevbase.la
-am_evdns_cli_OBJECTS = evdns_cli.$(OBJEXT) evdns.$(OBJEXT)
+am_evdns_cli_OBJECTS = evdns_cli-evdns_cli.$(OBJEXT) \
+	evdns_cli-evdns.$(OBJEXT)
 evdns_cli_OBJECTS = $(am_evdns_cli_OBJECTS)
 evdns_cli_DEPENDENCIES = libevbase.la
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
@@ -220,12 +221,15 @@ mutex.h
 libevbase_la_CPPFLAGS = -Wall
 include_HEADERS = evbase.h
 ev_serv_SOURCES = ev_serv.c evbase.h log.h
+ev_serv_CPPFLAGS = -Wall
 ev_serv_LDFLAGS = -static
 ev_serv_LDADD = libevbase.la
 ev_cli_SOURCES = ev_cli.c evbase.h log.h
+ev_cli_CPPFLAGS = -Wall
 ev_cli_LDFLAGS = -static
 ev_cli_LDADD = libevbase.la
 evdns_cli_SOURCES = evdns_cli.c evbase.h log.h evdns.h evdns.c timer.h
+evdns_cli_CPPFLAGS = -Wall
 evdns_cli_LDFLAGS = -static
 evdns_cli_LDADD = libevbase.la
 all: all-am
@@ -334,10 +338,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_cli.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_serv.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdns.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdns_cli.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_cli-ev_cli.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_serv-ev_serv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdns_cli-evdns.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdns_cli-evdns_cli.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evdevpoll.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evepoll.Plo@am__quote@
@@ -431,6 +435,62 @@ libevbase_la-evwin32.lo: evwin32.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evwin32.c' object='libevbase_la-evwin32.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evwin32.lo `test -f 'evwin32.c' || echo '$(srcdir)/'`evwin32.c
+
+ev_cli-ev_cli.o: ev_cli.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ev_cli-ev_cli.o -MD -MP -MF "$(DEPDIR)/ev_cli-ev_cli.Tpo" -c -o ev_cli-ev_cli.o `test -f 'ev_cli.c' || echo '$(srcdir)/'`ev_cli.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/ev_cli-ev_cli.Tpo" "$(DEPDIR)/ev_cli-ev_cli.Po"; else rm -f "$(DEPDIR)/ev_cli-ev_cli.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ev_cli.c' object='ev_cli-ev_cli.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ev_cli-ev_cli.o `test -f 'ev_cli.c' || echo '$(srcdir)/'`ev_cli.c
+
+ev_cli-ev_cli.obj: ev_cli.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ev_cli-ev_cli.obj -MD -MP -MF "$(DEPDIR)/ev_cli-ev_cli.Tpo" -c -o ev_cli-ev_cli.obj `if test -f 'ev_cli.c'; then $(CYGPATH_W) 'ev_cli.c'; else $(CYGPATH_W) '$(srcdir)/ev_cli.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/ev_cli-ev_cli.Tpo" "$(DEPDIR)/ev_cli-ev_cli.Po"; else rm -f "$(DEPDIR)/ev_cli-ev_cli.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ev_cli.c' object='ev_cli-ev_cli.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ev_cli-ev_cli.obj `if test -f 'ev_cli.c'; then $(CYGPATH_W) 'ev_cli.c'; else $(CYGPATH_W) '$(srcdir)/ev_cli.c'; fi`
+
+ev_serv-ev_serv.o: ev_serv.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_serv_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ev_serv-ev_serv.o -MD -MP -MF "$(DEPDIR)/ev_serv-ev_serv.Tpo" -c -o ev_serv-ev_serv.o `test -f 'ev_serv.c' || echo '$(srcdir)/'`ev_serv.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/ev_serv-ev_serv.Tpo" "$(DEPDIR)/ev_serv-ev_serv.Po"; else rm -f "$(DEPDIR)/ev_serv-ev_serv.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ev_serv.c' object='ev_serv-ev_serv.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_serv_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ev_serv-ev_serv.o `test -f 'ev_serv.c' || echo '$(srcdir)/'`ev_serv.c
+
+ev_serv-ev_serv.obj: ev_serv.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_serv_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ev_serv-ev_serv.obj -MD -MP -MF "$(DEPDIR)/ev_serv-ev_serv.Tpo" -c -o ev_serv-ev_serv.obj `if test -f 'ev_serv.c'; then $(CYGPATH_W) 'ev_serv.c'; else $(CYGPATH_W) '$(srcdir)/ev_serv.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/ev_serv-ev_serv.Tpo" "$(DEPDIR)/ev_serv-ev_serv.Po"; else rm -f "$(DEPDIR)/ev_serv-ev_serv.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ev_serv.c' object='ev_serv-ev_serv.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_serv_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ev_serv-ev_serv.obj `if test -f 'ev_serv.c'; then $(CYGPATH_W) 'ev_serv.c'; else $(CYGPATH_W) '$(srcdir)/ev_serv.c'; fi`
+
+evdns_cli-evdns_cli.o: evdns_cli.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT evdns_cli-evdns_cli.o -MD -MP -MF "$(DEPDIR)/evdns_cli-evdns_cli.Tpo" -c -o evdns_cli-evdns_cli.o `test -f 'evdns_cli.c' || echo '$(srcdir)/'`evdns_cli.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/evdns_cli-evdns_cli.Tpo" "$(DEPDIR)/evdns_cli-evdns_cli.Po"; else rm -f "$(DEPDIR)/evdns_cli-evdns_cli.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evdns_cli.c' object='evdns_cli-evdns_cli.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o evdns_cli-evdns_cli.o `test -f 'evdns_cli.c' || echo '$(srcdir)/'`evdns_cli.c
+
+evdns_cli-evdns_cli.obj: evdns_cli.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT evdns_cli-evdns_cli.obj -MD -MP -MF "$(DEPDIR)/evdns_cli-evdns_cli.Tpo" -c -o evdns_cli-evdns_cli.obj `if test -f 'evdns_cli.c'; then $(CYGPATH_W) 'evdns_cli.c'; else $(CYGPATH_W) '$(srcdir)/evdns_cli.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/evdns_cli-evdns_cli.Tpo" "$(DEPDIR)/evdns_cli-evdns_cli.Po"; else rm -f "$(DEPDIR)/evdns_cli-evdns_cli.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evdns_cli.c' object='evdns_cli-evdns_cli.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o evdns_cli-evdns_cli.obj `if test -f 'evdns_cli.c'; then $(CYGPATH_W) 'evdns_cli.c'; else $(CYGPATH_W) '$(srcdir)/evdns_cli.c'; fi`
+
+evdns_cli-evdns.o: evdns.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT evdns_cli-evdns.o -MD -MP -MF "$(DEPDIR)/evdns_cli-evdns.Tpo" -c -o evdns_cli-evdns.o `test -f 'evdns.c' || echo '$(srcdir)/'`evdns.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/evdns_cli-evdns.Tpo" "$(DEPDIR)/evdns_cli-evdns.Po"; else rm -f "$(DEPDIR)/evdns_cli-evdns.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evdns.c' object='evdns_cli-evdns.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o evdns_cli-evdns.o `test -f 'evdns.c' || echo '$(srcdir)/'`evdns.c
+
+evdns_cli-evdns.obj: evdns.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT evdns_cli-evdns.obj -MD -MP -MF "$(DEPDIR)/evdns_cli-evdns.Tpo" -c -o evdns_cli-evdns.obj `if test -f 'evdns.c'; then $(CYGPATH_W) 'evdns.c'; else $(CYGPATH_W) '$(srcdir)/evdns.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/evdns_cli-evdns.Tpo" "$(DEPDIR)/evdns_cli-evdns.Po"; else rm -f "$(DEPDIR)/evdns_cli-evdns.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evdns.c' object='evdns_cli-evdns.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o evdns_cli-evdns.obj `if test -f 'evdns.c'; then $(CYGPATH_W) 'evdns.c'; else $(CYGPATH_W) '$(srcdir)/evdns.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
