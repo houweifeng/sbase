@@ -20,7 +20,7 @@ evwin32.h \
 logger.h \
 mutex.h 
 
-libevbase_la_CPPFLAGS = -Wall -Wno-non-virtual-dtor
+libevbase_la_CPPFLAGS = -Wall
 include_HEADERS = evbase.h
 bin_PROGRAMS = ev_serv ev_cli evdns_cli
 ev_serv_SOURCES = ev_serv.c evbase.h log.h

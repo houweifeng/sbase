@@ -68,7 +68,7 @@ am_libsbase_la_OBJECTS = libsbase_la-conn.lo libsbase_la-message.lo \
 libsbase_la_OBJECTS = $(am_libsbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_lechod_OBJECTS = lechod.$(OBJEXT) iniparser.$(OBJEXT)
+am_lechod_OBJECTS = lechod-lechod.$(OBJEXT) lechod-iniparser.$(OBJEXT)
 lechod_OBJECTS = $(am_lechod_OBJECTS)
 lechod_DEPENDENCIES = libsbase.la
 wbenchmark_SOURCES = wbenchmark.c
@@ -218,20 +218,20 @@ utils/queue.c \
 utils/evtimer.h \
 utils/timer.h
 
-libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
+libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
 libsbase_la_LDFLAGS = -levbase
-AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = sbase.h
 xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c \
 				 utils/trie.h utils/trie.c utils/stime.h utils/stime.c utils/logger.h
 
-xhttpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64
+xhttpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 xhttpd_LDADD = libsbase.la
 xhttpd_LDFLAGS = -static
 lechod_SOURCES = lechod.c iniparser.h iniparser.c
+lechod_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
-wbenchmark_CPPFLAGS = -I utils/
+wbenchmark_CPPFLAGS = -I utils/ -Wall 
 wbenchmark_LDADD = libsbase.la
 wbenchmark_LDFLAGS = -static
 all: all-am
@@ -340,8 +340,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iniparser.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod-iniparser.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod-lechod.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-chunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-message.Plo@am__quote@
@@ -426,6 +426,34 @@ libsbase_la-queue.lo: utils/queue.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/queue.c' object='libsbase_la-queue.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-queue.lo `test -f 'utils/queue.c' || echo '$(srcdir)/'`utils/queue.c
+
+lechod-lechod.o: lechod.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lechod-lechod.o -MD -MP -MF "$(DEPDIR)/lechod-lechod.Tpo" -c -o lechod-lechod.o `test -f 'lechod.c' || echo '$(srcdir)/'`lechod.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lechod-lechod.Tpo" "$(DEPDIR)/lechod-lechod.Po"; else rm -f "$(DEPDIR)/lechod-lechod.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lechod.c' object='lechod-lechod.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lechod-lechod.o `test -f 'lechod.c' || echo '$(srcdir)/'`lechod.c
+
+lechod-lechod.obj: lechod.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lechod-lechod.obj -MD -MP -MF "$(DEPDIR)/lechod-lechod.Tpo" -c -o lechod-lechod.obj `if test -f 'lechod.c'; then $(CYGPATH_W) 'lechod.c'; else $(CYGPATH_W) '$(srcdir)/lechod.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lechod-lechod.Tpo" "$(DEPDIR)/lechod-lechod.Po"; else rm -f "$(DEPDIR)/lechod-lechod.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lechod.c' object='lechod-lechod.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lechod-lechod.obj `if test -f 'lechod.c'; then $(CYGPATH_W) 'lechod.c'; else $(CYGPATH_W) '$(srcdir)/lechod.c'; fi`
+
+lechod-iniparser.o: iniparser.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lechod-iniparser.o -MD -MP -MF "$(DEPDIR)/lechod-iniparser.Tpo" -c -o lechod-iniparser.o `test -f 'iniparser.c' || echo '$(srcdir)/'`iniparser.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lechod-iniparser.Tpo" "$(DEPDIR)/lechod-iniparser.Po"; else rm -f "$(DEPDIR)/lechod-iniparser.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='iniparser.c' object='lechod-iniparser.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lechod-iniparser.o `test -f 'iniparser.c' || echo '$(srcdir)/'`iniparser.c
+
+lechod-iniparser.obj: iniparser.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lechod-iniparser.obj -MD -MP -MF "$(DEPDIR)/lechod-iniparser.Tpo" -c -o lechod-iniparser.obj `if test -f 'iniparser.c'; then $(CYGPATH_W) 'iniparser.c'; else $(CYGPATH_W) '$(srcdir)/iniparser.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lechod-iniparser.Tpo" "$(DEPDIR)/lechod-iniparser.Po"; else rm -f "$(DEPDIR)/lechod-iniparser.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='iniparser.c' object='lechod-iniparser.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lechod-iniparser.obj `if test -f 'iniparser.c'; then $(CYGPATH_W) 'iniparser.c'; else $(CYGPATH_W) '$(srcdir)/iniparser.c'; fi`
 
 wbenchmark-wbenchmark.o: wbenchmark.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-wbenchmark.o -MD -MP -MF "$(DEPDIR)/wbenchmark-wbenchmark.Tpo" -c -o wbenchmark-wbenchmark.o `test -f 'wbenchmark.c' || echo '$(srcdir)/'`wbenchmark.c; \
