@@ -175,6 +175,7 @@ typedef struct _SERVICE
     /* working mode */
     int working_mode;
     struct _PROCTHREAD *daemon;
+    int use_iodaemon;
     struct _PROCTHREAD *iodaemon;
     int nprocthreads;
     struct _PROCTHREAD **procthreads;
