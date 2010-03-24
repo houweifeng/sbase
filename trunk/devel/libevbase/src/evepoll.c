@@ -24,14 +24,15 @@ int evepoll_init(EVBASE *evbase)
         evbase->allowed = max_fd;
         return 0;
     }
+    return -1;
 }
 
 /* Add new event to evbase */
 int evepoll_add(EVBASE *evbase, EVENT *event)
 {
-    int op = 0;
     struct epoll_event ep_event = {0, {0}};
-    int ev_flags = 0;
+    int op = 0, ev_flags = 0;
+
     if(evbase && event && event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
     {
         event->ev_base = evbase;
@@ -70,9 +71,9 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 /* Update event in evbase */
 int evepoll_update(EVBASE *evbase, EVENT *event)
 {
-    int op = 0;
     struct epoll_event ep_event = {0, {0}};
-    int ev_flags = 0;
+    int op = 0, ev_flags = 0;
+
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd )
     {
         if(event->ev_flags & E_READ)
@@ -103,6 +104,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
 int evepoll_del(EVBASE *evbase, EVENT *event)
 {
     struct epoll_event ep_event = {0, {0}};
+
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
         ep_event.data.fd = event->ev_fd;
@@ -121,16 +123,10 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
 /* Loop evbase */
 void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
-    int i = 0, n = 0;
-    int timeout = 0;
-    short ev_flags = 0;
-    struct epoll_event ep_event = {0, {0}};
-    int fd = 0;
+    int i = 0, n = 0, timeout = 0, flags = 0, ev_flags = 0, fd = 0 ;
     struct epoll_event *evp = NULL;
     EVENT *ev = NULL;
-    int flags = 0;
-    //DEBUG_LOG("Loop evbase[%p]", evbase);
-    //if(evbase)
+
     if(evbase)
     {
         if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;

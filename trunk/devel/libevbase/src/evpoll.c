@@ -23,6 +23,7 @@ int evpoll_init(EVBASE *evbase)
         evbase->allowed = max_fd;
         return 0;	
     }	
+    return -1;
 }
 /* Add new event to evbase */
 int evpoll_add(EVBASE *evbase, EVENT *event)
@@ -99,7 +100,9 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
             evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
         evbase->nfd--;
+        return 0;
     }	
+    return -1;
 }
 
 /* Loop evbase */
@@ -145,6 +148,7 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
             }
         }
     }
+    return ;
 }
 
 /* Reset evbase */
@@ -159,6 +163,7 @@ void evpoll_reset(EVBASE *evbase)
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
         DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
+    return ;
 }
 
 /* Clean evbase */
@@ -174,5 +179,6 @@ void evpoll_clean(EVBASE **evbase)
         free(*evbase);
         (*evbase) = NULL;
     }
+    return ;
 }
 #endif

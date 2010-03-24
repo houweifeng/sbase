@@ -61,9 +61,11 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libevbase_la_LIBADD =
-am_libevbase_la_OBJECTS = evdevpoll.lo evbase.lo evepoll.lo \
-	evkqueue.lo evpoll.lo evport.lo evrtsig.lo evselect.lo \
-	evwin32.lo
+am_libevbase_la_OBJECTS = libevbase_la-evdevpoll.lo \
+	libevbase_la-evbase.lo libevbase_la-evepoll.lo \
+	libevbase_la-evkqueue.lo libevbase_la-evpoll.lo \
+	libevbase_la-evport.lo libevbase_la-evrtsig.lo \
+	libevbase_la-evselect.lo libevbase_la-evwin32.lo
 libevbase_la_OBJECTS = $(am_libevbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -215,7 +217,7 @@ evwin32.h \
 logger.h \
 mutex.h 
 
-AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
+libevbase_la_CPPFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = evbase.h
 ev_serv_SOURCES = ev_serv.c evbase.h log.h
 ev_serv_LDFLAGS = -static
@@ -334,17 +336,17 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_cli.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev_serv.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evbase.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdevpoll.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evdns_cli.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evepoll.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evkqueue.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evpoll.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evport.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evrtsig.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evselect.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evwin32.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evbase.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evdevpoll.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evepoll.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evkqueue.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evpoll.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evport.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evrtsig.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evselect.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evwin32.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -366,6 +368,69 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+libevbase_la-evdevpoll.lo: evdevpoll.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evdevpoll.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evdevpoll.Tpo" -c -o libevbase_la-evdevpoll.lo `test -f 'evdevpoll.c' || echo '$(srcdir)/'`evdevpoll.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evdevpoll.Tpo" "$(DEPDIR)/libevbase_la-evdevpoll.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evdevpoll.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evdevpoll.c' object='libevbase_la-evdevpoll.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evdevpoll.lo `test -f 'evdevpoll.c' || echo '$(srcdir)/'`evdevpoll.c
+
+libevbase_la-evbase.lo: evbase.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evbase.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evbase.Tpo" -c -o libevbase_la-evbase.lo `test -f 'evbase.c' || echo '$(srcdir)/'`evbase.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evbase.Tpo" "$(DEPDIR)/libevbase_la-evbase.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evbase.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evbase.c' object='libevbase_la-evbase.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evbase.lo `test -f 'evbase.c' || echo '$(srcdir)/'`evbase.c
+
+libevbase_la-evepoll.lo: evepoll.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evepoll.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evepoll.Tpo" -c -o libevbase_la-evepoll.lo `test -f 'evepoll.c' || echo '$(srcdir)/'`evepoll.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evepoll.Tpo" "$(DEPDIR)/libevbase_la-evepoll.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evepoll.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evepoll.c' object='libevbase_la-evepoll.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evepoll.lo `test -f 'evepoll.c' || echo '$(srcdir)/'`evepoll.c
+
+libevbase_la-evkqueue.lo: evkqueue.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evkqueue.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evkqueue.Tpo" -c -o libevbase_la-evkqueue.lo `test -f 'evkqueue.c' || echo '$(srcdir)/'`evkqueue.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evkqueue.Tpo" "$(DEPDIR)/libevbase_la-evkqueue.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evkqueue.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evkqueue.c' object='libevbase_la-evkqueue.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evkqueue.lo `test -f 'evkqueue.c' || echo '$(srcdir)/'`evkqueue.c
+
+libevbase_la-evpoll.lo: evpoll.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evpoll.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evpoll.Tpo" -c -o libevbase_la-evpoll.lo `test -f 'evpoll.c' || echo '$(srcdir)/'`evpoll.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evpoll.Tpo" "$(DEPDIR)/libevbase_la-evpoll.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evpoll.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evpoll.c' object='libevbase_la-evpoll.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evpoll.lo `test -f 'evpoll.c' || echo '$(srcdir)/'`evpoll.c
+
+libevbase_la-evport.lo: evport.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evport.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evport.Tpo" -c -o libevbase_la-evport.lo `test -f 'evport.c' || echo '$(srcdir)/'`evport.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evport.Tpo" "$(DEPDIR)/libevbase_la-evport.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evport.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evport.c' object='libevbase_la-evport.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evport.lo `test -f 'evport.c' || echo '$(srcdir)/'`evport.c
+
+libevbase_la-evrtsig.lo: evrtsig.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evrtsig.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evrtsig.Tpo" -c -o libevbase_la-evrtsig.lo `test -f 'evrtsig.c' || echo '$(srcdir)/'`evrtsig.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evrtsig.Tpo" "$(DEPDIR)/libevbase_la-evrtsig.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evrtsig.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evrtsig.c' object='libevbase_la-evrtsig.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evrtsig.lo `test -f 'evrtsig.c' || echo '$(srcdir)/'`evrtsig.c
+
+libevbase_la-evselect.lo: evselect.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evselect.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evselect.Tpo" -c -o libevbase_la-evselect.lo `test -f 'evselect.c' || echo '$(srcdir)/'`evselect.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evselect.Tpo" "$(DEPDIR)/libevbase_la-evselect.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evselect.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evselect.c' object='libevbase_la-evselect.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evselect.lo `test -f 'evselect.c' || echo '$(srcdir)/'`evselect.c
+
+libevbase_la-evwin32.lo: evwin32.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evwin32.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evwin32.Tpo" -c -o libevbase_la-evwin32.lo `test -f 'evwin32.c' || echo '$(srcdir)/'`evwin32.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evwin32.Tpo" "$(DEPDIR)/libevbase_la-evwin32.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evwin32.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evwin32.c' object='libevbase_la-evwin32.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evwin32.lo `test -f 'evwin32.c' || echo '$(srcdir)/'`evwin32.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
