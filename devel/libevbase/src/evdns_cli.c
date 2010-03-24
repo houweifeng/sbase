@@ -61,8 +61,6 @@ int setrlimiter(char *name, int rlimit, int nset)
 void ev_udp_handler(int fd, short ev_flags, void *arg)
 {
     int i = 0, n = 0, nevdnsbuf = 0, reqfd = -1, respfd = -1;
-    struct sockaddr_in rsa;
-    socklen_t rsa_len = sizeof(struct sockaddr);
     unsigned char evdnsbuf[EVDNS_BUF_SIZE], *p = NULL;
     char ip[DNS_IP_MAX];
     HOSTENT hostent = {0};
@@ -94,7 +92,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
             }
             if((respfd = open("/tmp/dns.response", O_CREAT|O_RDWR, 0644)) > 0)
             {
-                write(respfd, buffer[fd], n);
+                if(write(respfd, buffer[fd], n) <= 0)_exit(-1);
                 close(respfd);
                 respfd = -1;
                 _exit(-1);
@@ -119,7 +117,7 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
         nevdnsbuf = evdns_make_query(domain, 1, 1, 1, 1, evdnsbuf);
         if((reqfd = open("/tmp/dns.query", O_CREAT|O_RDWR, 0644)) > 0)
         {
-            write(reqfd, evdnsbuf, nevdnsbuf);
+            if(write(reqfd, evdnsbuf, nevdnsbuf) <= 0)_exit(-1);
             close(reqfd);
             reqfd = -1;
         }
@@ -163,7 +161,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
         {
             if((respfd = open("/tmp/dns.response", O_CREAT|O_RDWR, 0644)) > 0)
             {
-                write(respfd, buffer[fd], n);
+                if(write(respfd, buffer[fd], n) <= 0)_exit(-1);
                 close(respfd);
                 respfd = -1;
                 _exit(-1);
@@ -188,7 +186,8 @@ void ev_handler(int fd, short ev_flags, void *arg)
         nevdnsbuf = evdns_make_query(domain, 1, 1, 0, 0, evdnsbuf);
         if((reqfd = open("/tmp/dns.query", O_CREAT|O_RDWR, 0644)) > 0)
         {
-            write(reqfd, evdnsbuf, nevdnsbuf);
+            if(write(reqfd, evdnsbuf, nevdnsbuf) <= 0)
+               _exit(-1);
             close(reqfd);
             reqfd = -1;
         }
@@ -227,11 +226,8 @@ int main(int argc, char **argv)
     int fd = 0;
     struct sockaddr_in sa, lsa;
     socklen_t sa_len, lsa_len = -1;
-    int opt = 1;
-    int i = 0;
-    int conn_num = 0;
     int sock_type = 0;
-    EVENT  *event = NULL;
+
     if(argc < 5)
     {
         fprintf(stderr, "Usage:%s sock_type(0/TCP|1/UDP) ip port domain\n", argv[0]);	
@@ -303,4 +299,5 @@ int main(int argc, char **argv)
         }
         TIMER_CLEAN(timer);
     }
+    return -1;
 }

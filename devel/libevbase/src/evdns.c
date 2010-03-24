@@ -10,7 +10,7 @@ int evdns_make_query(char *domain, int dnsclass, int type,
         unsigned short id, int rd, unsigned char *buf)
 {
     unsigned char *p = NULL, *q = NULL, *s = NULL, *name = NULL;
-    int buflen = 0, len = 0, tmpfd = 0;
+    int buflen = 0, len = 0;
 
     if(domain)
     {
@@ -68,6 +68,7 @@ int evdns_make_query(char *domain, int dnsclass, int type,
         */
         return buflen;
     }
+    return 0;
 }
 
 /* prase name */
@@ -94,7 +95,7 @@ unsigned char *evdns_expand_name(unsigned char *ptr, unsigned char *start,
         }
     }
     if(flag == 0) ret = p+1;
-    *q == '\0';
+    *q = '\0';
     if(q > name && *(q-1) == '.') *(q-1) = '\0';
     //fprintf(stdout, "name:%s\n", name);
     return ret;
@@ -105,7 +106,7 @@ int evdns_parse_reply(unsigned char *buf, int nbuf, HOSTENT *hostent)
 {
     unsigned char *p = NULL, *end = NULL, *s = NULL, *ps = NULL; 
     int i = 0, qdcount = 0, ancount = 0, nscount = 0, arcount = 0, 
-        id = 0, qr = 0, opcode = 0, aa = 0, tc = 0, rd = 0, 
+        qr = 0, opcode = 0, aa = 0, tc = 0, rd = 0, 
         ra = 0, rcode = 0, type = 0, dnsclass = 0, ttl = 0, rrlen = 0;
 
     if(buf && nbuf > HFIXEDSZ)

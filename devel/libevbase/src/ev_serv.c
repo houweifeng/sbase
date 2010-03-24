@@ -309,7 +309,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
 #else
                 char *s = "daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
                 conns[fd].n = sprintf(conns[fd].buffer, 
-                        "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", strlen(s), s);
+                        "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(s), s);
                 n = write(fd, conns[fd].buffer, conns[fd].n);
 #endif
             }
@@ -356,11 +356,9 @@ err:
 
 int main(int argc, char **argv)
 {
-    int port = 0, connection_limit = 0, fd = 0, sockfd = 0, 
-        ret = 0, opt = 1, i = 0, nprocess = 0;
-    EVENT  *event = NULL;
-    pid_t pid ;
+    int port = 0, connection_limit = 0, fd = 0, opt = 1, i = 0, nprocess = 0;
     char *multicast_ip = NULL;
+
     if(argc < 5)
     {
         fprintf(stderr, "Usage:%s sock_type(0/TCP|1/UDP) port "
@@ -454,13 +452,14 @@ int main(int argc, char **argv)
         /* set multicast */
         if(ev_sock_list[ev_sock_type] == SOCK_DGRAM && multicast_ip)
         {
-            struct ip_mreq mreq = {0};
+            struct ip_mreq mreq;
+            memset(&mreq, 0, sizeof(struct ip_mreq));
             mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
             mreq.imr_interface.s_addr = INADDR_ANY;
             if(setsockopt(lfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
             {
                 SHOW_LOG("Setsockopt(MULTICAST) failed, %s", strerror(errno));
-                return ;
+                return -1;
             }
         }
         fprintf(stdout, "%d::OK\n", __LINE__);
@@ -468,7 +467,7 @@ int main(int argc, char **argv)
         if(bind(lfd, (struct sockaddr *)&sa, sa_len) != 0 )
         {
             SHOW_LOG("Binding failed, %s", strerror(errno));
-            return ;
+            return -1;
         }
         /* set FD NON-BLOCK */
         /*
@@ -484,7 +483,7 @@ int main(int argc, char **argv)
             if(listen(lfd, CONN_MAX) != 0 )
             {
                 SHOW_LOG("Listening  failed, %s", strerror(errno));
-                return ;
+                return -1;
             }
         }
         SHOW_LOG("Initialize evbase ");
@@ -561,4 +560,5 @@ running:
 #endif
         free(conns);
     }
+    return 0;
 }
