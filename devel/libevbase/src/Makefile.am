@@ -20,7 +20,7 @@ evwin32.h \
 logger.h \
 mutex.h 
 
-AM_CXXFLAGS = -Wall -Wno-non-virtual-dtor
+libevbase_la_CPPFLAGS = -Wall -Wno-non-virtual-dtor
 include_HEADERS = evbase.h
 bin_PROGRAMS = ev_serv ev_cli evdns_cli
 ev_serv_SOURCES = ev_serv.c evbase.h log.h
@@ -32,5 +32,3 @@ ev_cli_LDADD = libevbase.la
 evdns_cli_SOURCES = evdns_cli.c evbase.h log.h evdns.h evdns.c timer.h
 evdns_cli_LDFLAGS = -static
 evdns_cli_LDADD = libevbase.la
-
-

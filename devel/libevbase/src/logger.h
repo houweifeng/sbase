@@ -86,7 +86,7 @@ do{                                                                             
         (unsigned int)THREADID(), __FILE__, __LINE__, _logger_level_s[__level__]);  \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
-    write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                             \
+    PLID(ptr) = write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                 \
     MUTEX_UNLOCK(PL(ptr)->mutex);                                                   \
     }                                                                               \
 }while(0)
@@ -98,7 +98,7 @@ do{                                                                             
     PLPS(ptr) = PLB(ptr);                                                           \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
-    write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                             \
+    PLID(ptr) = write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                 \
     MUTEX_UNLOCK(PL(ptr)->mutex);                                                   \
     }                                                                               \
 }while(0)

@@ -42,7 +42,7 @@ typedef struct _EVOPS
     void    (*reset)(struct _EVBASE *);
     void    (*clean)(struct _EVBASE **);
 }EVOPS;
-static EVOPS evops[EOP_LIMIT] = {0};
+static EVOPS evops[EOP_LIMIT];
 static int evops_default =      -1;
 /* Set event */
 void event_set(EVENT *event, int fd, short flags, void *arg, void *handler);
@@ -95,7 +95,6 @@ int evbase_set_evops(EVBASE *evbase, int evopid)
 EVBASE *evbase_init()
 {
 	EVBASE *evbase = (EVBASE *)calloc(1, sizeof(EVBASE));	
-	char *s = NULL;
 	if(evbase)
     {
 #ifdef HAVE_EVPORT
@@ -186,8 +185,6 @@ EVBASE *evbase_init()
         evops[EOP_WIN32].reset    = evwin32_reset;
         evops[EOP_WIN32].clean    = evwin32_clean;
 #endif
-
-
         evbase->set_logfile = evbase_set_logfile;
         evbase->set_evops   = evbase_set_evops;
         //evbase->clean 	=  evbase_clean;
