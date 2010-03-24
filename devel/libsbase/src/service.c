@@ -316,11 +316,11 @@ int service_set_log(SERVICE *service, char *logfile)
 /* event handler */
 void service_event_handler(int event_fd, short flag, void *arg)
 {
-    struct sockaddr_in rsa;
-    socklen_t rsa_len = sizeof(rsa);
-    SERVICE *service = (SERVICE *)arg;
+    char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
     int fd = -1, port = -1, n = 0, opt = 1;
-    char buf[SB_BUF_SIZE], *ip = NULL;
+    SERVICE *service = (SERVICE *)arg;
+    socklen_t rsa_len = sizeof(struct sockaddr_in);
+    struct sockaddr_in rsa;
     CONN *conn = NULL;
 #ifdef HAVE_SSL 
     SSL *ssl = NULL;
@@ -401,7 +401,8 @@ err_conn:
                             && (conn = service_addconn(service, service->sock_type, fd, 
                                 ip, port, service->ip, service->port, &(service->session))))
                         {
-                            MB_PUSH(conn->buffer, buf, n);
+                            p = buf;
+                            MB_PUSH(conn->buffer, p, n);
                             qmessage_push(((PROCTHREAD *)(conn->parent))->message_queue, 
                                     MESSAGE_INPUT, -1, conn->fd, -1, conn, conn->parent, NULL);
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
@@ -750,7 +751,6 @@ int service_popconn(SERVICE *service, CONN *conn)
             service->running_connections--;
             if(service->index_max == conn->index) 
                 service->index_max--;
-
             DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d "
                     "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd, 
@@ -781,25 +781,27 @@ CONN *service_getconn(SERVICE *service, int groupid)
         MUTEX_LOCK(service->mutex);
         if(groupid >= 0 && groupid < service->ngroups)
         {
-            if(service->groups[groupid].nconns_free > 0)
+            while(service->groups[groupid].nconns_free > 0)
             {
                 x = --(service->groups[groupid].nconns_free);
                 if((i = service->groups[groupid].conns_free[x]) >= 0 && i < SB_CONN_MAX 
                         && (conn = service->connections[i]))
                 {
                     conn->start_cstate(conn);
+                    break;
                 }
             }
         }
         else
         {
-            if(service->nconns_free > 0)
+            while(service->nconns_free > 0)
             {
                 x = --(service->nconns_free);
                 if((i = service->conns_free[x]) >= 0 && i < SB_CONN_MAX 
                         && (conn = service->connections[i]))
                 {
                     conn->start_cstate(conn);
+                    break;
                 }
             }
         }
