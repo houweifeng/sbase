@@ -23,7 +23,7 @@ int ck_mmap(void *ptr)
                 CK_NMDATA(ptr) = CK_LEFT(ptr);
             }
             fprintf(stdout, "%s::%d mmap[%p] offset[%lld] off[%d] nmdata[%d]\n", __FILE__, __LINE__, 
-                    CK_MDATA(ptr), CK_OFFSET(ptr), CK_OFFMDATA(ptr), CK_NMDATA(ptr));
+                    CK_MDATA(ptr), (long long int)CK_OFFSET(ptr), CK_OFFMDATA(ptr), CK_NMDATA(ptr));
             return 1;
         }
         else 

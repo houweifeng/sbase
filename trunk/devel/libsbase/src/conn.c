@@ -744,7 +744,7 @@ int conn_data_handler(CONN *conn)
 int conn_bind_proxy(CONN *conn, CONN *child)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, D_STATE_CLOSE, ret);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
     if(conn && child)
     {
@@ -761,7 +761,6 @@ int conn_bind_proxy(CONN *conn, CONN *child)
 /* proxy data handler */
 int conn_proxy_handler(CONN *conn)
 {
-    int ret = -1;
     //CONN_CHECK_RET(conn, ret);
     CONN *parent = NULL, *child = NULL, *oconn = NULL;
     CB_DATA *exchange = NULL, *chunk = NULL, *buffer = NULL;
@@ -864,7 +863,7 @@ int conn_push_exchange(CONN *conn, void *data, int size)
 int conn_save_cache(CONN *conn, void *data, int size)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, D_STATE_CLOSE, ret);
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
     if(conn)
     {
@@ -882,7 +881,7 @@ int conn_save_cache(CONN *conn, void *data, int size)
 int conn_chunk_reader(CONN *conn)
 {
     int ret = -1, n = -1;
-    CHUNK *cp = NULL;
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
     if(conn)
     {
@@ -916,8 +915,7 @@ int conn_chunk_reader(CONN *conn)
 /* receive chunk */
 int conn_recv_chunk(CONN *conn, int size)
 {
-    int ret = -1, n = -1;
-    CHUNK *cp = NULL;
+    int ret = -1;
 
     if(conn && conn->chunk && size > 0)
     {
@@ -963,8 +961,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
 /* receive chunk file */
 int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
 {
-    int ret = -1, n = -1;
-    CHUNK *cp = NULL;
+    int ret = -1;
 
     if(conn && conn->chunk && filename && offset >= 0 && size > 0)
     {

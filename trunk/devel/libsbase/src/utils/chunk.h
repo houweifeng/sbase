@@ -204,8 +204,8 @@ int ck_mmap(void *);
 #else
 #define CK_WRITE_FROM_FILE_SSL(ptr, ssl)
 #endif
-//            && lseek(CK_FD(ptr), CK_OFFSET(ptr), SEEK_SET) >= 0                             \
-            && (CKN(ptr) = read(CK_FD(ptr), CK_DATA(ptr), CK_NDATA(ptr))) > 0               \
+//            && lseek(CK_FD(ptr), CK_OFFSET(ptr), SEEK_SET) >= 0                       
+            //&& (CKN(ptr) = read(CK_FD(ptr), CK_DATA(ptr), CK_NDATA(ptr))) > 0               
 
 #define CK_WRITE_FROM_FILE(ptr, fd) ((ptr && fd > 0 && CK_LEFT(ptr) > 0 && CK_DATA(ptr)     \
             && (CK_NDATA(ptr) = CK_FLEFT(ptr)) > 0 && CK_CHECKFD(ptr) > 0 && CK_MMAP(ptr)   \

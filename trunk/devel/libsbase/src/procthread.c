@@ -1,3 +1,4 @@
+#include "service.h"
 #include "procthread.h"
 #include "queue.h"
 #include "logger.h"
@@ -172,8 +173,6 @@ void procthread_state(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 /* active heartbeat */
 void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 {
-    MESSAGE msg = {0}, *pmsg = &msg;
-
     if(pth && pth->message_queue)
     {
         qmessage_push(pth->message_queue, MESSAGE_HEARTBEAT, -1, -1, -1, pth, handler, arg);
@@ -186,8 +185,6 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 /* clean procthread */
 void procthread_clean(PROCTHREAD **ppth)
 {
-    CHUNK *cp = NULL;
-
     if(ppth && *ppth)
     {
         if((*ppth)->service->working_mode != WORKING_PROC)
