@@ -1,31 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/time.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include "mutex.h"
-
 #ifndef _LOGGER_H
 #define _LOGGER_H
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#ifndef _TYPEDEF_LOGGER
-#define _TYPEDEF_LOGGER
-#define LOGGER_FILENAME_LIMIT  	1024
-#define LOGGER_LINE_LIMIT  	    512000
-#define __DEBUG__		0
-#define	__WARN__ 		1
-#define	__ERROR__ 		2
-#define	__FATAL__ 		3
-#define	__ACCESS__ 		4
 static char *_logger_level_s[] = {"DEBUG", "WARN", "ERROR", "FATAL", ""};
 #ifndef _STATIS_YMON
 #define _STATIS_YMON
@@ -35,6 +24,15 @@ static char *ymonths[]= {
         "Jul", "Aug", "Sep",
         "Oct", "Nov", "Dec"};
 #endif
+#ifndef _TYPEDEF_LOGGER
+#define _TYPEDEF_LOGGER
+#define LOGGER_FILENAME_LIMIT  	1024
+#define LOGGER_LINE_LIMIT  	    512000
+#define __DEBUG__		0
+#define	__WARN__ 		1
+#define	__ERROR__ 		2
+#define	__FATAL__ 		3
+#define	__ACCESS__ 		4
 typedef struct _LOGGER
 {
 	char file[LOGGER_FILENAME_LIMIT];
@@ -43,7 +41,7 @@ typedef struct _LOGGER
     time_t timep;
     struct tm *p;
     char *ps;
-    int id;
+    int n;
     void *mutex;
 	int fd ;
 }LOGGER;
@@ -58,7 +56,7 @@ typedef struct _LOGGER
 #define PLP(ptr) (PL(ptr)->p)
 #define PLTV(ptr) (PL(ptr)->tv)
 #define PLTP(ptr) (PL(ptr)->timep)
-#define PLID(ptr) (PL(ptr)->id)
+#define PLN(ptr)  (PL(ptr)->n)
 #define PLFD(ptr) (PL(ptr)->fd)
 #define PLB(ptr) (PL(ptr)->buf)
 #define PLPS(ptr) (PL(ptr)->ps)
@@ -86,7 +84,7 @@ do{                                                                             
         (unsigned int)THREADID(), __FILE__, __LINE__, _logger_level_s[__level__]);  \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
-    PLID(ptr) = write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                 \
+    PLN(ptr) = write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                  \
     MUTEX_UNLOCK(PL(ptr)->mutex);                                                   \
     }                                                                               \
 }while(0)
@@ -98,7 +96,7 @@ do{                                                                             
     PLPS(ptr) = PLB(ptr);                                                           \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
-    PLID(ptr) = write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                 \
+    PLN(ptr) = write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                  \
     MUTEX_UNLOCK(PL(ptr)->mutex);                                                   \
     }                                                                               \
 }while(0)
