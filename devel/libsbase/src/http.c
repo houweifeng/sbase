@@ -202,7 +202,7 @@ int http_argv_parse(char *p, char *end, HTTP_REQ *http_req)
         argv->k = http_req->nline;
         pp = http_req->line + http_req->nline;
         epp = http_req->line + HTTP_ARGV_LINE_MAX;
-        while(s < end && *s != '\r' && argv < eargv && pp < epp)
+        while(s < end && *s != '\r' && *s != '\n' && *s != 0x20 && argv < eargv && pp < epp)
         {
             high = 0;low = 0;
             //if(*s == '?'){argv->k = pp - http_req->line; ++s;}
@@ -323,7 +323,7 @@ int http_cookie_parse(char *p, char *end, HTTP_REQ *http_req)
 /* HTTP HEADER parser */
 int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
 {
-    char line[HTTP_HEAD_MAX], *s = p, *es = NULL, *ps = NULL, 
+    char line[HTTP_HEAD_MAX], *s = p, *es = NULL, *ps = NULL, *xp = line, 
          *eps = NULL, *pp = NULL, *epp = NULL, *sp = NULL;
     int i  = 0, high = 0, low = 0, ret = -1, n = 0;
     void *dp = NULL;
@@ -354,7 +354,12 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
 	    }
         if(ps >= eps ) goto end;
         *ps = '\0';
-        if(*s == '?') s += http_argv_parse(s+1, end, http_req);
+        if(*s == '?') 
+        {
+            http_req->argv_off = ++s - p;
+            s += http_argv_parse(s, end, http_req);
+            http_req->argv_len = s - p - http_req->argv_off; 
+        }
         while(s < end && *s != '\n')s++;
         s++;
         while(s < end)
@@ -373,7 +378,8 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
             }
             *es = '\0';
             n = es - line;
-            TRIETAB_GET(map, line, n, dp);
+            xp = line;
+            TRIETAB_GET(map, xp, n, dp);
             if((i = ((long)dp - 1)) >= 0)
             {
                 http_req->headers[i] = pp - http_req->hlines;
@@ -437,7 +443,7 @@ end:
 /* HTTP response parser */
 int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
 {
-    char line[HTTP_HEAD_MAX], *s = p, *es = NULL, *pp = NULL, *epp = NULL;
+    char line[HTTP_HEAD_MAX], *s = p, *xp = line, *es = NULL, *pp = NULL, *epp = NULL;
     int i  = 0, ret = -1, high = 0, low = 0, n = 0;
     HTTP_KV *cookie = NULL, *ecookie = NULL;
     void *dp = NULL;
@@ -477,7 +483,8 @@ int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
             }
             *es = '\0';
             n = es - line;
-            TRIETAB_GET(map, line, n, dp);
+            xp = line;
+            TRIETAB_GET(map, xp, n, dp);
             if((i = ((long)dp - 1)) >= 0)
             {
                 http_resp->headers[i] = pp - http_resp->hlines;
