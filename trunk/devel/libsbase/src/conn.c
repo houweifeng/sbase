@@ -103,7 +103,7 @@ do                                                                              
 {                                                                                           \
     if(conn && conn->ioqmessage)                                                            \
     {                                                                                       \
-        qmessage_push(conn->ioqmessage, MESSAGE_CHUNK,                                      \
+        qmessage_push(conn->ioqmessage, msgid,                                              \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
     }                                                                                       \
 }while(0)
@@ -115,7 +115,7 @@ do                                                                              
     MB_RESET(conn->packet);                                                                 \
     MB_RESET(conn->cache);                                                                  \
     CK_RESET(conn->chunk);                                                                  \
-    if(PCB(conn->buffer)->ndata > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}           \
+    if(MB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                  \
 }while(0)
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
@@ -514,10 +514,10 @@ int conn_read_handler(CONN *conn)
             return (ret = 0);
         }
         conn->recv_data_total += n;
-        DEBUG_LOGGER(conn->logger, "Received %d bytes data total %lld "
-                "from %s:%d on %s:%d via %d", n, conn->recv_data_total, 
-                conn->remote_ip, conn->remote_port, conn->local_ip, 
-                conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "Received %d bytes nbuffer:%d data total %lld "
+                "from %s:%d on %s:%d via %d", n, PCB(conn->buffer)->ndata, 
+                conn->recv_data_total, conn->remote_ip, conn->remote_port, 
+                conn->local_ip, conn->local_port, conn->fd);
         //for proxy
         if(conn->session.packet_type & PACKET_PROXY)
         {
@@ -737,6 +737,7 @@ int conn_data_handler(CONN *conn)
         //reset session
         if(conn->s_state == S_STATE_DATA_HANDLING)
         {
+            DEBUG_LOGGER(conn->logger, "Reset data_handler(%p) buffer:%d on %s:%d via %d", conn->session.packet_handler, PCB(conn->buffer)->ndata, conn->remote_ip, conn->remote_port, conn->fd);
             SESSION_RESET(conn);
         }
     }
