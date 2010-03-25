@@ -11,6 +11,9 @@
 #ifndef PPL
 #define PPL(_x_) ((void *)(_x_))
 #endif
+#ifndef LL
+#define LL(_x_) ((long long int)(_x_))
+#endif
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
     if(conn == NULL ) return ret;                                                           \
@@ -63,7 +66,7 @@
             return -1;                                                                      \
         }                                                                                   \
         DEBUG_LOGGER(conn->logger, "Read %d bytes ndata:%d left:%lld to chunk from %s:%d"   \
-                " on %s:%d via %d", n, CK_NDATA(conn->chunk), CK_LEFT(conn->chunk),         \
+                " on %s:%d via %d", n, CK_NDATA(conn->chunk), LL(CK_LEFT(conn->chunk)),     \
                 conn->remote_ip, conn->remote_port, conn->local_ip,                         \
                 conn->local_port, conn->fd);                                                \
         if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )                                 \
@@ -71,7 +74,7 @@
             conn->s_state = S_STATE_DATA_HANDLING;                                          \
             conn->push_message(conn, MESSAGE_DATA);                                         \
             DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d "             \
-                    "on %s:%d via %d", CK_SIZE(conn->chunk), conn->remote_ip,               \
+                    "on %s:%d via %d", LL(CK_SIZE(conn->chunk)), conn->remote_ip,           \
                     conn->remote_port, conn->local_ip, conn->local_port, conn->fd);         \
         }                                                                                   \
         return 0;                                                                           \
@@ -552,7 +555,7 @@ int conn_write_handler(CONN *conn)
                 DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
                         "to %s:%d on %s:%d via %d leave %lld", n, conn->sent_data_total, 
                         conn->remote_ip, conn->remote_port, conn->local_ip, 
-                        conn->local_port, conn->fd, CK_LEFT(cp));
+                        conn->local_port, conn->fd, LL(CK_LEFT(cp)));
                 /* CONN TIMER sample */
                 if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
                 {
@@ -896,13 +899,13 @@ int conn_chunk_reader(CONN *conn)
                 conn->s_state = S_STATE_DATA_HANDLING;
                 conn->push_message(conn, MESSAGE_DATA);
                 DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d on %s:%d via %d",
-                        CK_SIZE(conn->chunk), conn->remote_ip, conn->remote_port, 
+                        LL(CK_SIZE(conn->chunk)), conn->remote_ip, conn->remote_port, 
                         conn->local_ip, conn->local_port, conn->fd);
             }
             if(n > 0)
             {
                 DEBUG_LOGGER(conn->logger, "Filled  %d byte(s) left:%lld to chunk from buffer "
-                        "to %s:%d on conn[%s:%d] via %d", n, CK_LEFT(conn->chunk),
+                        "to %s:%d on conn[%s:%d] via %d", n, LL(CK_LEFT(conn->chunk)),
                         conn->remote_ip, conn->remote_port, conn->local_ip, 
                         conn->local_port, conn->fd);
                 ret = 0;
@@ -966,7 +969,7 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
     if(conn && conn->chunk && filename && offset >= 0 && size > 0)
     {
         DEBUG_LOGGER(conn->logger, "Ready for recv chunk file:%s offset:%lld size:%lld"
-                " from %s:%d on %s:%d via %d", filename, offset, size, conn->remote_ip, 
+                " from %s:%d on %s:%d via %d", filename, LL(offset), LL(size), conn->remote_ip, 
                 conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         CK_FILE(conn->chunk, filename, offset, size);
         CK_SET_BSIZE(conn->chunk, conn->session.buffer_size);
@@ -997,7 +1000,7 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
             queue_push(conn->send_queue, cp);
             if((QTOTAL(conn->send_queue)) > 0 ) conn->event->add(conn->event, E_WRITE);
             DEBUG_LOGGER(conn->logger, "Pushed file[%s] [%lld][%lld] to %s:%d "
-                    "send_queue total %d on %s:%d via %d ", filename, offset, size, 
+                    "send_queue total %d on %s:%d via %d ", filename, LL(offset), LL(size), 
                     conn->remote_ip, conn->remote_port, QTOTAL(conn->send_queue), 
                     conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
