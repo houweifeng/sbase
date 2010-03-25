@@ -744,8 +744,8 @@ int service_popconn(SERVICE *service, CONN *conn)
                 if((id = conn->gindex) >= 0 && id < SB_GROUPS_MAX)
                 {
                     service->groups[x].conns_free[id] = -1;
-                    --(service->groups[x].total);
                 }
+                --(service->groups[x].total);
             }
             service->connections[conn->index] = NULL;
             service->running_connections--;
