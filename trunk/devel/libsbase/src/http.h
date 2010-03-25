@@ -126,7 +126,7 @@ static const HTTP_ELEMENT response_status[] =
 	{13, "304", 3, "Not Modified"},
 #define RESP_USEPROXY		14
 	{14, "305", 3, "Use Proxy"},
-#define RESP_TEMPREDIRECT	15
+#define RESP_TEMPREDIRECORDT	15
 	{15, "307", 3, "Temporary Redirect"},
 #define RESP_BADREQUEST		16
 	{16, "400", 3, "Bad Request"},
@@ -429,7 +429,7 @@ static const HTTP_ELEMENT http_mime_types[]=
     {25, "war", 3, "application/java-archive"},
     {26, "ear", 3, "application/java-archive"},
     {27, "hqx", 3, "application/mac-binhex40"},
-    {28, "doc", 3, "application/msword"},
+    {28, "doc", 3, "application/msterm"},
     {29, "pdf", 3, "application/pdf"},
     {30, "ps", 2, "application/postscript"},
     {31, "eps", 3, "application/postscript"},
@@ -532,6 +532,8 @@ typedef struct _HTTP_REQ
     short nargvs;
     short nline;
     short ncookies;
+    int   argv_off;
+    int   argv_len;
     int   header_size;
     int  nhline;
     char hlines[HTTP_HEADER_MAX];
