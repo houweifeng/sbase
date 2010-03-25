@@ -886,7 +886,9 @@ int conn_chunk_reader(CONN *conn)
     int ret = -1, n = -1;
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
-    if(conn)
+    if(conn && conn->s_state == S_STATE_READ_CHUNK
+        && conn->session.packet_type != PACKET_PROXY
+        && CK_LEFT(conn->chunk) > 0)
     {
         if(MB_NDATA(conn->buffer) > 0)
         {
