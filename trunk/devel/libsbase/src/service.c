@@ -400,7 +400,8 @@ err_conn:
                         {
                             p = buf;
                             MB_PUSH(conn->buffer, p, n);
-                            qmessage_push(((PROCTHREAD *)(conn->parent))->message_queue, 
+                            QMESSAGE_PUSH(((PROCTHREAD *)(conn->parent))->mutex, 
+                                        ((PROCTHREAD *)(conn->parent))->message_queue, 
                                     MESSAGE_INPUT, -1, conn->fd, -1, conn, conn->parent, NULL);
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
                                     " buffer:%d", ip, port, fd, MB_NDATA(conn->buffer));

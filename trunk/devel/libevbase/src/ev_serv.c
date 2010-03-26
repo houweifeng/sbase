@@ -524,10 +524,12 @@ running:
                     conns[lfd].event->set(conns[lfd].event, lfd, E_READ|E_PERSIST, 
                             (void *)conns[lfd].event, &ev_udp_handler);
                 evbase->add(evbase, conns[lfd].event);
+                struct timeval tv = {0};
+                tv.tv_usec = 1000;
                 while(1)
                 {
-                    evbase->loop(evbase, 0, NULL);
-                    usleep(1000);
+                    evbase->loop(evbase, 0, &tv);
+                    //usleep(1000);
                 }
             }
             else

@@ -211,12 +211,12 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
     int i = 0, n = 0;
     short ev_flags = 0;	
-    struct timespec ts;
+    struct timespec ts = {0};
     struct kevent *kqev = NULL;
 
     if(evbase)
     {
-        memset(&ts, 0, sizeof(struct timespec));
+        //memset(&ts, 0, sizeof(struct timespec));
         if(tv) TIMEVAL_TO_TIMESPEC(tv, &ts);
         n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->allowed, &ts);	
         if(n == -1)

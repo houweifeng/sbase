@@ -59,14 +59,8 @@ do                                                                          \
 #define MUTEX_DESTROY(ptr)                                                  \
 do                                                                          \
 {                                                                           \
-    if(ptr){free(ptr);}                                                     \
+    if(ptr){sem_destroy(&(MT(ptr)->sem));free(ptr);}                        \
 }while(0)
-/*
-#define MUTEX_INIT(mlock) ((mlock = mutex_init()))
-#define MUTEX_LOCK(mlock) (mutex_lock(mlock))
-#define MUTEX_UNLOCK(mlock) (mutex_unlock(mlock))
-#define MUTEX_DESTROY(mlock) (mutex_destroy(mlock))
-*/
 #endif
 #ifdef __cplusplus
  }
