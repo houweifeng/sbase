@@ -10,9 +10,12 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0};
-
+    
     if(pth)
     {
+#ifdef HAVE_PTHREAD
+        pthread_detach((pthread_t)(pth->threadid));
+#endif
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
         tv.tv_usec = SB_USEC_SLEEP;
@@ -24,7 +27,6 @@ void procthread_run(void *arg)
                 pth->evbase->loop(pth->evbase, 0, &tv);
                 if(QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
-                else usleep(10);
             }while(pth->running_status);
         }
         else
@@ -33,7 +35,11 @@ void procthread_run(void *arg)
             {
                 if(QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
-                else usleep(10);
+                else
+                {
+                    //MUTEX_WAIT(pth->mutex);
+                    usleep(10);
+                }
             }while(pth->running_status);
         }
         if(QMTOTAL(pth->message_queue) > 0)
@@ -212,6 +218,7 @@ PROCTHREAD *procthread_init(int have_evbase)
             pth->have_evbase        = have_evbase;
             pth->evbase             = evbase_init();
         }
+        //MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;
         pth->addconn                = procthread_addconn;

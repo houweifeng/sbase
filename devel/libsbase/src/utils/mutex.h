@@ -1,46 +1,66 @@
 #ifndef _MUTEX_H
 #define _MUTEX_H
+#ifdef HAVE_PTHREAD
+#include <pthread.h>
+#endif
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifdef HAVE_PTHREAD
-#include <pthread.h>
-#define MT(ptr) ((pthread_mutex_t *)ptr)
-#define MUTEX_INIT(mlock) 												\
-do{         														\
-    if((mlock = (pthread_mutex_t *)calloc(1, sizeof(pthread_mutex_t)))) 						\
-        pthread_mutex_init(MT(mlock), NULL);										\
-}while(0)
-#define MUTEX_LOCK(mlock) ((mlock) ? pthread_mutex_lock(MT(mlock)): -1)
-#define MUTEX_UNLOCK(mlock) ((mlock) ? pthread_mutex_unlock(MT(mlock)): -1)
-#define MUTEX_DESTROY(mlock) 												\
-do{															\
-	if(mlock)													\
-	{														\
-		pthread_mutex_destroy(MT(mlock)); 									\
-		free(MT(mlock));											\
-		mlock = NULL;												\
-	}														\
-}while(0)
-#else
-#define __MUTEX__WAIT__  100000
+#ifdef USE_PTHREAD
 typedef struct _MUTEX
 {
-    int current;
-    int lockid;
+    pthread_mutex_t mutex;
+    pthread_cond_t  cond;
 }MUTEX;
-/* Initialize */
-MUTEX *mutex_init();
-/* Lock */
-int mutex_lock(MUTEX *mutex);
-/* Unlock*/
-int mutex_unlock(MUTEX *mutex);
-/* Destroy */
-int mutex_destroy(MUTEX **mutex);
-#define MUTEX_INIT(mlock) 
-#define MUTEX_LOCK(mlock) (0)
-#define MUTEX_UNLOCK(mlock) (0)
-#define MUTEX_DESTROY(mlock)
+#define MT(ptr) ((MUTEX *)ptr)
+#define MUTEX_INIT(ptr)                                                     \
+do                                                                          \
+{                                                                           \
+    if((ptr = calloc(1, sizeof(MUTEX))))                                    \
+    {                                                                       \
+        pthread_mutex_init(&(MT(ptr)->mutex), NULL);                        \
+        pthread_cond_init(&(MT(ptr)->cond), NULL);                          \
+    }                                                                       \
+}while(0)
+#define MUTEX_LOCK(ptr) ((ptr) ? pthread_mutex_lock(&(MT(ptr)->mutex)): -1)
+#define MUTEX_UNLOCK(ptr) ((ptr) ? pthread_mutex_unlock(&(MT(ptr)->mutex)): -1)
+#define MUTEX_WAIT(ptr) ((ptr) ? pthread_cond_wait(&(MT(ptr)->cond), &(MT(ptr)->mutex)): -1)
+#define MUTEX_SIGNAL(ptr) ((ptr) ? pthread_cond_signal(&(MT(ptr)->cond)): -1)
+#define MUTEX_DESTROY(ptr)                                                  \
+do                                                                          \
+{															                \
+	if(ptr)													                \
+	{														                \
+		pthread_mutex_destroy(&(MT(ptr)->mutex)); 						    \
+		pthread_cond_destroy(&(MT(ptr)->cond)); 							\
+		free(ptr);											                \
+		ptr = NULL;												            \
+	}														                \
+}while(0)
+#else
+#include <semaphore.h>
+typedef struct _MUTEX
+{
+    sem_t sem;
+}MUTEX;
+#define MT(ptr) ((MUTEX *)ptr)
+#define MUTEX_INIT(ptr)                                                     \
+do                                                                          \
+{                                                                           \
+    if((ptr = calloc(1, sizeof(MUTEX))))                                    \
+    {                                                                       \
+        sem_init(&(MT(ptr)->sem), 0, 0);                                    \
+    }                                                                       \
+}while(0)
+#define MUTEX_LOCK(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
+#define MUTEX_UNLOCK(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1)
+#define MUTEX_WAIT(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
+#define MUTEX_SIGNAL(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1) 
+#define MUTEX_DESTROY(ptr)                                                  \
+do                                                                          \
+{                                                                           \
+    if(ptr){free(ptr);}                                                     \
+}while(0)
 /*
 #define MUTEX_INIT(mlock) ((mlock = mutex_init()))
 #define MUTEX_LOCK(mlock) (mutex_lock(mlock))

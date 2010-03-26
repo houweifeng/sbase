@@ -293,6 +293,7 @@ typedef struct _PROCTHREAD
 	int usec_sleep;
     int index;
     long threadid;
+    void *mutex;
 
     /* message queue */
     void *ioqmessage;
