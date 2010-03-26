@@ -130,7 +130,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     if(evbase)
     {
         if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
-        memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->maxfd);
+        //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->maxfd);
         n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd, timeout);
         if(n == -1)
         {
