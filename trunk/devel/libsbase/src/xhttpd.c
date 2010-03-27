@@ -96,8 +96,8 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
     struct dirent *ent = NULL;
     unsigned char *s = NULL;
     struct stat st = {0};
+    int len = 0, n = 0;
     DIR *dirp = NULL;
-    int len = 0;
 
     if(conn && file && root && end && (dirp = opendir(file)))
     {
@@ -174,17 +174,16 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
                     "Content-Type: text/html; charset=%s\r\n",
                     LL(len), http_default_charset);
-            /*
             if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
             {
                 p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
             }
-            */
+            else p += sprintf(p, "Connection: close\r\n");
             p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
-            p += sprintf(p, "Connection: close\r\n");
             p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
             conn->push_chunk(conn, buf, (p - buf));
             conn->push_chunk(conn, pp, len);
+            //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
             free(pp);
             pp = NULL;
         }
@@ -618,11 +617,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if(found == 0 && http_indexes_view && (*p = '\0') >= 0)
                     {
                         end = --p;
-                        if(xhttpd_index_view(conn, &http_req, file, root, end) != 0) 
-                        {
-                            //fprintf(stdout, "%s::%d REQUEST:%s path:%s root:%s\n", __FILE__, __LINE__, packet->data, http_req.path, root);
-                            goto err;
-                        }
+                        if(xhttpd_index_view(conn, &http_req, file, root, end) == 0) return 0; 
+                        else goto err;
                     }
                 }
                 s = mime = line + HTTP_PATH_MAX - 1;
@@ -717,7 +713,6 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         return 0;
                     }
                     else outfile = file;
-                    //fprintf(stdout, "outfile:%s\r\n", outfile);
                     p = buf;
                     if(from > 0)
                         p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
@@ -727,13 +722,13 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
                     p += sprintf(p, "Content-Type: %s; charset=%s\r\n",
                             http_mime_types[mimeid].s, http_default_charset);
-                    /*
+                    //fprintf(stdout, "%s::%d outfile:%s\n", __FILE__, __LINE__, outfile);
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                     {
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
                     }
-                    */
-                    p += sprintf(p, "Connection: close\r\n");
+                    else
+                        p += sprintf(p, "Connection: close\r\n");
                     p += sprintf(p, "Last-Modified:");
                     p += GMTstrdate(st.st_mtime, p);
                     p += sprintf(p, "%s", "\r\n");//date end
