@@ -10,7 +10,7 @@
 #include <sys/resource.h>
 #define HTTP_BUF_SIZE    65536
 #define HTTP_IP_MAX      16
-#define HTTP_TIMEOUT     1000000
+#define HTTP_TIMEOUT     2000000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -59,10 +59,7 @@ int http_request(CONN *conn)
 {
     if(running_status && conn && request_len > 0)
     {
-        if(ncompleted > 0 && (ncompleted%1000) == 0)
-        {
-            fprintf(stdout, "completed %d\n", ncompleted);
-        }
+        //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
         if(nrequests >= ntasks)
         {
             return -1;
@@ -74,6 +71,7 @@ int http_request(CONN *conn)
         ++nrequests;
         conn->start_cstate(conn);
         conn->set_timeout(conn, HTTP_TIMEOUT);
+        //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
         return conn->push_chunk(conn, request, request_len);
     }
     return -1;
@@ -85,6 +83,10 @@ int http_over(CONN *conn, int respcode)
     if(conn)
     {
         ncompleted++;
+        if(ncompleted > 0 && (ncompleted%1000) == 0)
+        {
+            fprintf(stdout, "completed %d\n", ncompleted);
+        }
         if(ncompleted >= ntasks)
         {
             TIMER_SAMPLE(timer);
@@ -96,9 +98,10 @@ int http_over(CONN *conn, int respcode)
         }
         if(respcode < 200 || respcode >= 300)
         {
+            //fprintf(stdout, "%s::%d ERROR:%d\n", __FILE__, __LINE__, respcode);
             nerrors++;
-            conn->over_cstate(conn);
             conn->over(conn);
+            --nrequests;
             if((conn = http_newconn(server_ip, server_port, server_is_ssl)))
                 return 0;
         }
@@ -135,6 +138,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
         conn->s_id = respcode;
         if(respcode < 200 || respcode > 300)
         {
+            //fprintf(stdout, "HTTP:%s\n", p);
             return http_over(conn, respcode);
         }
         //check Content-Length
@@ -149,7 +153,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             if(*s >= '0' && *s <= '9') 
                 conn->recv_chunk(conn, atoll(s));
             else 
-                return http_request(conn);
+                return http_over(conn, respcode);
             
         }
     }
@@ -160,10 +164,7 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
 {
     if(conn)
     {
-        if(is_keepalive)
-            return http_request(conn);
-        else
-            return http_over(conn, conn->s_id);
+        return http_over(conn, conn->s_id);
     }
     return 0;
 }
@@ -178,7 +179,6 @@ int benchmark_trans_handler(CONN *conn, int tid)
         if(conn->status == 0)
         {
             conn->over_evstate(conn);
-            conn->over_cstate(conn);
             return http_request(conn);
         }
         else
@@ -207,13 +207,15 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
 {
     if(conn)
     {
-        //fprintf(stdout, "timeout on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
+        //fprintf(stdout, "timeout on conn[%s:%d] via %d status:%d\n", conn->local_ip, conn->local_port, conn->fd, conn->status);
         if(conn->evstate == EVSTATE_WAIT)
         {
+            conn->over_evstate(conn);
             return benchmark_trans_handler(conn, conn->c_id);
         }
         else
         {
+            conn->over_cstate(conn);
             return http_over(conn, conn->s_id);
         }
     }
@@ -427,7 +429,7 @@ invalid_url:
                 break;
         }
     }
-    /*setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536)*/
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);
@@ -441,8 +443,9 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 0;
-        service->nprocthreads = 1;
+        service->nprocthreads = 8;
         service->ndaemons = 0;
+        service->use_iodaemon = 1;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;

@@ -191,6 +191,10 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
         closedir(dirp);
         return 0;
     }
+    else
+    {
+        fprintf(stderr, "%s::%d open dir:%s file:%p root:%p end:%p failed, %s\n", __FILE__, __LINE__, file, file, root, end, strerror(errno));
+    }
     return -1;
 }
 #ifdef HAVE_ZLIB
@@ -561,7 +565,11 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         p = packet->data;
         end = packet->data + packet->ndata;
         //fprintf(stdout, "%s", p);
-        if(http_request_parse(p, end, &http_req, http_headers_map) == -1) goto err;
+        if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
+        {
+            //fprintf(stdout, "%s::%d REQUEST:%s path:%s\n", __FILE__, __LINE__, packet->data, http_req.path);
+            goto err;
+        }
         if(http_req.reqid == HTTP_GET)
         {
             REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
@@ -610,8 +618,11 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if(found == 0 && http_indexes_view && (*p = '\0') >= 0)
                     {
                         end = --p;
-                        if(xhttpd_index_view(conn, &http_req, file, root, end) == 0) return 0;
-                        else goto err;
+                        if(xhttpd_index_view(conn, &http_req, file, root, end) != 0) 
+                        {
+                            //fprintf(stdout, "%s::%d REQUEST:%s path:%s root:%s\n", __FILE__, __LINE__, packet->data, http_req.path, root);
+                            goto err;
+                        }
                     }
                 }
                 s = mime = line + HTTP_PATH_MAX - 1;
@@ -733,8 +744,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
                     conn->push_chunk(conn, buf, (p - buf));
-                    conn->push_file(conn, outfile, from, len);
-                    return 0;
+                    return conn->push_file(conn, outfile, from, len);
                 }
             }
         }
@@ -1017,7 +1027,7 @@ int main(int argc, char **argv)
                 break;
         }
     }
-    /*setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536)*/
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);

@@ -176,7 +176,7 @@ int main(int argc, char **argv)
                 break;
         }
     }
-    /*setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536)*/
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);
