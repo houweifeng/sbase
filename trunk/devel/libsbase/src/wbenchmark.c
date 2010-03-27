@@ -429,7 +429,7 @@ invalid_url:
                 break;
         }
     }
-    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 10240);
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);
