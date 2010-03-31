@@ -30,7 +30,7 @@ void procthread_run(void *arg)
                 pth->evbase->loop(pth->evbase, 0, &tv);
                 if(QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
-                //else usleep(1000);
+                else usleep(1);
             }while(pth->running_status);
         }
         else
