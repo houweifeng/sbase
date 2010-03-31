@@ -127,7 +127,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     struct epoll_event *evp = NULL;
     EVENT *ev = NULL;
 
-    if(evbase)
+    if(evbase && evbase->nfd > 0)
     {
         if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->maxfd);
@@ -180,6 +180,7 @@ void evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
             }
         }
     }
+    return ;
 }
 
 /* Reset evbase */

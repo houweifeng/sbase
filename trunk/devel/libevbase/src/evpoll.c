@@ -108,11 +108,12 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
 /* Loop evbase */
 void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
-    int sec = 0;
-    int n = 0, i = 0;
-    short ev_flags = 0;
     struct pollfd *ev = NULL;
-    if(evbase && evbase->ev_fds)
+    short ev_flags = 0;
+    int n = 0, i = 0;
+    int sec = 0;
+
+    if(evbase && evbase->ev_fds && evbase->nfd > 0)
     {	
         if(tv) sec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         n = poll(evbase->ev_fds, evbase->maxfd + 1 , sec);		
