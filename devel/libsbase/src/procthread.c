@@ -42,7 +42,7 @@ void procthread_run(void *arg)
                 else
                 {
                     MUTEX_WAIT(pth->mutex);
-                    //usleep(10);
+                    //usleep(1000);
                 }
             }while(pth->running_status);
         }
