@@ -1022,6 +1022,7 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
         service->groups[id].port = port;
         service->groups[id].limit = limit;
         memcpy(&(service->groups[id].session), session, sizeof(SESSION));
+        //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, id, service->groups[id].session.data_handler);
         MUTEX_UNLOCK(service->mutex);
     }
     return id;
@@ -1077,6 +1078,8 @@ int service_stategroup(SERVICE *service)
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
                             service->groups[i].port, &(service->groups[i].session))))
             {
+                //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, i, service->groups[i].session.data_handler);
+                //fprintf(stdout, "%s::%d newconn[%s:%d] via %d \n", __FILE__, __LINE__, service->groups[i].ip, service->groups[i].port, conn->fd);
                 conn->groupid = i;
                 service->groups[i].total++;
             }
@@ -1419,6 +1422,7 @@ SERVICE *service_init()
         service->pushconn           = service_pushconn;
         service->popconn            = service_popconn;
         service->getconn            = service_getconn;
+        service->freeconn           = service_freeconn;
         service->findconn           = service_findconn;
         service->popchunk           = service_popchunk;
         service->pushchunk          = service_pushchunk;

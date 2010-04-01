@@ -729,6 +729,7 @@ int conn_data_handler(CONN *conn)
         {
             DEBUG_LOGGER(conn->logger, "data_handler(%p) on %s:%d via %d", 
                     conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
+            //fprintf(stdout, "service[%s]->session.data_handler:%p\n", PPARENT(conn)->service->service_name, conn->session.data_handler);
             ret = conn->session.data_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), PCB(conn->chunk));
             DEBUG_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", 

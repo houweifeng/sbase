@@ -146,13 +146,13 @@ SBASE *sbase_init();
 /* group */
 typedef struct _CNGROUP
 {
-  SESSION session;
   char ip[SB_IP_MAX];
   short port;
   short limit;
   short total;
   short nconns_free;
   int   conns_free[SB_CONN_MAX];
+  SESSION session;
 }CNGROUP;
 
 /* service */
