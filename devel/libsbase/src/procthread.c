@@ -41,8 +41,8 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                 else
                 {
-                    //MUTEX_WAIT(pth->mutex);
-                    usleep(10);
+                    MUTEX_WAIT(pth->mutex);
+                    //usleep(1);
                 }
             }while(pth->running_status);
         }
