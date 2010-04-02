@@ -2,7 +2,7 @@
 
 Summary: Server Base Library for TCP/UDP communication
 Name: libsbase
-Version: 0.5.0
+Version: 0.5.4
 Release: 1%{?dist}
 License: BSD
 Group: System Environment/Libraries
@@ -13,8 +13,8 @@ Packager: SounOS <SounOS@gmail.com>
 Vendor: SounOS
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
-BuildRequires: libevbase >= 0.0.16
-Requires: libevbase >= 0.0.16
+BuildRequires: libevbase >= 0.0.18
+Requires: libevbase >= 0.0.18
 
 %description
 Server Base Library for TCP/UDP communication
@@ -48,6 +48,7 @@ install -c -m644 doc/rc.lechod.ini %{buildroot}/%{_sysconfdir}/lechod.ini
 %defattr(-, root, root, 0755)
 %{_includedir}/*
 %{_bindir}/*
+%{_sbindir}/*
 %{_libdir}/*
 %{_sysconfdir}/rc.d/*
 %config(noreplace) %{_sysconfdir}/*.ini

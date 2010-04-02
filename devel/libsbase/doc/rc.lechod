@@ -16,7 +16,7 @@ LECHODARGS=" -d -c /usr/local/etc/lechod.ini > /dev/null 2>&1 "
 start() 
 {
         echo -n $"Starting lechod: "
-        daemon /usr/local/bin/lechod $LECHODARGS
+        daemon /usr/local/sbin/lechod $LECHODARGS
 
 	touch /var/lock/subsys/lechod
         echo
@@ -31,7 +31,7 @@ stop()
         echo
 }
 
-[ -f /usr/local/bin/lechod ] || exit 0
+[ -f /usr/local/sbin/lechod ] || exit 0
 
 # See how we were called.
 case "$1" in

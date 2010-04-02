@@ -24,7 +24,7 @@ libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
 libsbase_la_LDFLAGS = -levbase
 include_HEADERS = sbase.h
 
-bin_PROGRAMS = xhttpd lechod wbenchmark
+sbin_PROGRAMS = xhttpd lechod
 
 xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c \
 				 utils/trie.h utils/trie.c utils/stime.h utils/stime.c utils/logger.h
@@ -36,6 +36,8 @@ lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
+
+bin_PROGRAMS = wbenchmark
 
 wbenchmark_CPPFLAGS = -I utils/ -Wall 
 wbenchmark_LDADD = libsbase.la
