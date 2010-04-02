@@ -321,7 +321,7 @@ install-ini:
 		|| cp -p $(top_srcdir)/doc/rc.lechod $(sysconftodir)/init.d/lechod
 	@test -f $(sysconftodir)/init.d/xhttpd \
 		|| cp -p $(top_srcdir)/doc/rc.xhttpd $(sysconftodir)/init.d/xhttpd
-	@perl -i -p -e "s@/usr/local/bin@$(prefix)/bin@g" \
+	@perl -i -p -e "s@/usr/local/sbin@$(prefix)/sbin@g" \
 		$(sysconftodir)/init.d/xhttpd $(sysconftodir)/init.d/lechod
 	@perl -i -p -e "s@/usr/local/etc@$(sysconftodir)@g" \
 		$(sysconftodir)/init.d/xhttpd  $(sysconftodir)/init.d/lechod

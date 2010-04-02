@@ -16,7 +16,7 @@ XHTTPDARGS=" -d -c /usr/local/etc/xhttpd.ini > /dev/null 2>&1 "
 start() 
 {
         echo -n $"Starting xhttpd: "
-        daemon /usr/local/bin/xhttpd $XHTTPDARGS
+        daemon /usr/local/sbin/xhttpd $XHTTPDARGS
 
 	touch /var/lock/subsys/xhttpd
         echo
@@ -31,7 +31,7 @@ stop()
         echo
 }
 
-[ -f /usr/local/bin/xhttpd ] || exit 0
+[ -f /usr/local/sbin/xhttpd ] || exit 0
 
 # See how we were called.
 case "$1" in
