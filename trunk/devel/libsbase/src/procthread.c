@@ -27,22 +27,23 @@ void procthread_run(void *arg)
         {
             do
             {
-                pth->evbase->loop(pth->evbase, 0, &tv);
+                if(pth->evbase->nfd > 0) pth->evbase->loop(pth->evbase, 0, &tv);
+                else usleep(10);
                 if(QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
-                else usleep(1);
             }while(pth->running_status);
         }
         else
         {
             do
             {
+                
                 if(QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
                 else
                 {
-                    usleep(1);
-                    //MUTEX_WAIT(pth->mutex);
+                    //usleep(10);
+                    MUTEX_WAIT(pth->mutex);
                 }
             }while(pth->running_status);
         }
