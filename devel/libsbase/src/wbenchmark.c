@@ -207,7 +207,6 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
 {
     if(conn)
     {
-        //fprintf(stdout, "timeout on conn[%s:%d] via %d status:%d\n", conn->local_ip, conn->local_port, conn->fd, conn->status);
         if(conn->evstate == EVSTATE_WAIT)
         {
             conn->over_evstate(conn);
@@ -215,8 +214,9 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
         }
         else
         {
+            fprintf(stdout, "timeout on conn[%s:%d] via %d status:%d\n", conn->local_ip, conn->local_port, conn->fd, conn->status);
             conn->over_cstate(conn);
-            return http_over(conn, conn->s_id);
+            return http_over(conn, 0);
         }
     }
     return -1;
