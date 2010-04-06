@@ -6,8 +6,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifdef USE_PTHREAD_MUTEX
-//#ifdef HAVE_PTHREAD
+//#ifdef USE_PTHREAD_MUTEX
+#ifdef HAVE_PTHREAD
 typedef struct _MUTEX
 {
     pthread_mutex_t mutex;
@@ -50,7 +50,7 @@ do                                                                          \
 {                                                                           \
     if((ptr = calloc(1, sizeof(MUTEX))))                                    \
     {                                                                       \
-        sem_init(&(MT(ptr)->sem), 0, 1);                                    \
+        sem_init(&(MT(ptr)->sem), 0, 0);                                    \
     }                                                                       \
 }while(0)
 #define MUTEX_LOCK(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)

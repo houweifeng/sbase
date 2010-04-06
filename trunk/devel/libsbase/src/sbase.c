@@ -169,7 +169,7 @@ running:
         do
         {
             //running evbase 
-            if(sbase->evbase->loop(sbase->evbase, 0, &tv) <= 0) usleep(1);
+            if(sbase->evbase->loop(sbase->evbase, 0, &tv) <= 0) usleep(sbase->usec_sleep);
             //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
             EVTIMER_CHECK(sbase->evtimer);
