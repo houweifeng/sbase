@@ -684,6 +684,7 @@ end:
 int conn_packet_handler(CONN *conn)
 {
     int ret = -1;
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
     if(conn && conn->session.packet_handler)
     {
@@ -955,11 +956,12 @@ int conn_push_chunk(CONN *conn, void *data, int size)
             CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
             queue_push(conn->send_queue, cp);
+            if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
+            DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d][%d] to %s:%d send_queue "
+                    "total %d on %s:%d via %d", size, CK_BSIZE(cp),conn->remote_ip, 
+                    conn->remote_port, QTOTAL(conn->send_queue), conn->local_ip, 
+                    conn->local_port, conn->fd);
         }else return ret;
-        if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
-        DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d][%d] to %s:%d send_queue "
-                "total %d on %s:%d via %d", size, CK_BSIZE(cp),conn->remote_ip,conn->remote_port, 
-                QTOTAL(conn->send_queue), conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
     return ret;
