@@ -6,8 +6,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifdef USE_PTHREAD_MUTEX
-//#ifdef HAVE_PTHREAD
+//#ifdef USE_PTHREAD_MUTEX
+#ifdef HAVE_PTHREAD
 typedef struct _MUTEX
 {
     pthread_mutex_t mutex;
