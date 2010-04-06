@@ -961,8 +961,8 @@ int conn_push_chunk(CONN *conn, void *data, int size)
                     "total %d on %s:%d via %d", size, CK_BSIZE(cp),conn->remote_ip, 
                     conn->remote_port, QTOTAL(conn->send_queue), conn->local_ip, 
                     conn->local_port, conn->fd);
-        }else return ret;
-        ret = 0;
+            ret = 0;
+        }
     }
     return ret;
 }

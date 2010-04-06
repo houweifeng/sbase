@@ -27,8 +27,7 @@ void procthread_run(void *arg)
         {
             do
             {
-                if(pth->evbase->nfd > 0) pth->evbase->loop(pth->evbase, 0, &tv);
-                else usleep(1);
+                if(pth->evbase->loop(pth->evbase, 0, &tv) <= 0) usleep(1);
                 if(QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
             }while(pth->running_status);

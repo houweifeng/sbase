@@ -480,7 +480,6 @@ new_conn:
             if((conn = service_addconn(service, sock_type, fd, remote_ip, 
                             remote_port, local_ip, local_port, sess)))
             {
-                if(flag != 0) conn->status = CONN_STATUS_READY; 
 #ifdef HAVE_SSL
                 conn->ssl = ssl;
 #endif
@@ -609,8 +608,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         char *local_ip, int local_port, SESSION *session)
 {
     PROCTHREAD *procthread = NULL;
+    int index = 0, flag = 0;
     CONN *conn = NULL;
-    int index = 0;
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
@@ -628,6 +627,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         {
             //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
             conn->fd = fd;
+            if((flag = fcntl(fd, F_GETFL, 0)) & O_NONBLOCK)
+                conn->status = CONN_STATUS_READY; 
             strcpy(conn->remote_ip, remote_ip);
             conn->remote_port = remote_port;
             strcpy(conn->local_ip, local_ip);
@@ -639,12 +640,12 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             /* add  to procthread */
             if(service->working_mode == WORKING_PROC)
             {
-                if(service->daemon && service->daemon->addconn)
+                if(service->daemon)
                 {
-                    conn->parent    = service->daemon;
-                    conn->ioqmessage = service->daemon->message_queue;
-                    conn->message_queue = service->daemon->message_queue;
-                    service->daemon->addconn(service->daemon, conn);
+                    //conn->parent    = service->daemon;
+                    //conn->ioqmessage = service->daemon->message_queue;
+                    //conn->message_queue = service->daemon->message_queue;
+                    service->daemon->add_connection(service->daemon, conn);
                 }
                 else
                 {
@@ -658,13 +659,12 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             else if(service->working_mode == WORKING_THREAD)
             {
                 index = fd % service->nprocthreads;
-                if(service->procthreads && (procthread = service->procthreads[index]) 
-                        && procthread->addconn)
+                if(service->procthreads && (procthread = service->procthreads[index])) 
                 {
-                    conn->parent = procthread;
-                    conn->ioqmessage = procthread->ioqmessage;
-                    conn->message_queue = procthread->message_queue;
-                    procthread->addconn(procthread, conn);   
+                    //conn->parent = procthread;
+                    //conn->ioqmessage = procthread->ioqmessage;
+                    //conn->message_queue = procthread->message_queue;
+                    procthread->add_connection(procthread, conn);   
                     DEBUG_LOGGER(service->logger, "adding connection[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->fd);
                 }
                 else
