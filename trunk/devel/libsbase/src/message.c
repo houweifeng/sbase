@@ -71,7 +71,7 @@ MESSAGE *qmessage_pop(void *qmsg)
     QMESSAGE *q = (QMESSAGE *)qmsg;
     MESSAGE *msg = NULL;
 
-    if(qmsg)
+    if(q)
     {
         MUTEX_LOCK(q->mutex);
         if((msg = q->first))
