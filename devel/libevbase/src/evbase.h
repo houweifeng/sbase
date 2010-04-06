@@ -48,7 +48,7 @@ typedef struct _EVBASE
 	int	    (*add)(struct _EVBASE *, struct _EVENT*);
 	int 	(*update)(struct _EVBASE *, struct _EVENT*);
 	int 	(*del)(struct _EVBASE *, struct _EVENT*);
-	void	(*loop)(struct _EVBASE *, short , struct timeval *tv);
+	int	    (*loop)(struct _EVBASE *, short , struct timeval *tv);
 	void	(*reset)(struct _EVBASE *);
 	void 	(*clean)(struct _EVBASE **);
 }EVBASE;

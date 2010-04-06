@@ -127,7 +127,7 @@ int evselect_del(EVBASE *evbase, EVENT *event)
 }
 
 /* Loop evbase */
-void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
+int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
 {
     int i = 0, n = 0;
     short ev_flags = 0;
@@ -140,7 +140,7 @@ void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
         FD_ZERO(&wr_fd_set);
         memcpy(&wr_fd_set, evbase->ev_write_fds, sizeof(fd_set));
         n = select(evbase->maxfd + 1, &rd_fd_set, &wr_fd_set, NULL, tv);
-        if(n <= 0) return ;
+        if(n <= 0) return n;
         DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->maxfd + 1);
         for(i = 0; i <= evbase->maxfd; ++i)
         {
@@ -162,7 +162,7 @@ void evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
             }			
         }
     }
-    return ;
+    return n;
 }
 
 /* Reset evbase */
@@ -177,6 +177,7 @@ void evselect_reset(EVBASE *evbase)
         FD_ZERO((fd_set *)evbase->ev_write_fds);
         DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
+    return ;
 }
 
 /* Clean evbase */
@@ -193,5 +194,6 @@ void evselect_clean(EVBASE **evbase)
         free(*evbase);
         (*evbase) = NULL;
     }
+    return ;
 }
 #endif

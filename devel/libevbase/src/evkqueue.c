@@ -207,7 +207,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
     return -1;
 }
 /* Loop evbase */
-void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
+int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
     int i = 0, n = 0;
     short ev_flags = 0;	
@@ -224,7 +224,7 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
                     evbase, errno, strerror(errno));
         }
-        if(n <= 0 )return ;
+        if(n <= 0 )return n;
         DEBUG_LOGGER(evbase->logger, "actived %d  in %d fd(s)", n, evbase->nfd);
         for(i = 0; i < n; i++)
         {
@@ -244,7 +244,7 @@ void evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 
         }
     }
-    return ;
+    return n;
 }
 
 /* Reset evbase */
@@ -261,6 +261,7 @@ void evkqueue_reset(EVBASE *evbase)
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
         DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
+    return ;
 }
 
 /* Clean evbase */
@@ -278,5 +279,6 @@ void evkqueue_clean(EVBASE **evbase)
         free(*evbase);
         (*evbase) = NULL;
     }	
+    return ;
 }
 #endif

@@ -106,7 +106,7 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
 }
 
 /* Loop evbase */
-void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
+int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
     struct pollfd *ev = NULL;
     short ev_flags = 0;
@@ -122,7 +122,7 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
                     evbase, errno, strerror(errno));
         }
-        if(n <= 0) return ;
+        if(n <= 0) return n;
         DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->maxfd + 1);
         for(i = 0; i <= evbase->maxfd; i++)
         {
@@ -149,7 +149,7 @@ void evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
             }
         }
     }
-    return ;
+    return n;
 }
 
 /* Reset evbase */

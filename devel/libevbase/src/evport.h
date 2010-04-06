@@ -13,7 +13,7 @@ int evport_del(EVBASE *evbase, EVENT *event);
 /* Reset evbase */
 void evport_reset(EVBASE *evbase);
 /* Loop evbase */
-void evport_loop(EVBASE *evbase, short, struct timeval *tv);
+int evport_loop(EVBASE *evbase, short, struct timeval *tv);
 #endif
 #endif
 
