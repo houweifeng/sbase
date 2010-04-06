@@ -15,9 +15,9 @@ void procthread_run(void *arg)
     if(pth)
     {
         //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
-#ifdef HAVE_PTHREAD
-        pthread_detach((pthread_t)(pth->threadid));
-#endif
+//#ifdef HAVE_PTHREAD
+//        pthread_detach((pthread_t)(pth->threadid));
+//#endif
         //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
@@ -30,7 +30,7 @@ void procthread_run(void *arg)
             {
                 if(pth->evbase->loop(pth->evbase, 0, &tv) <= 0) 
                     usleep(pth->usec_sleep);
-                if(QMTOTAL(pth->message_queue) > 0)
+                if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
             }while(pth->running_status);
         }
@@ -39,19 +39,20 @@ void procthread_run(void *arg)
             do
             {
                 
-                if(QMTOTAL(pth->message_queue) > 0)
+                if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     qmessage_handler(pth->message_queue, pth->logger);
                 else
                 {
                     //usleep(10);
-                    //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
                     ret = MUTEX_WAIT(pth->mutex);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
         }
-        if(QMTOTAL(pth->message_queue) > 0)
+        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+        if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
             qmessage_handler(pth->message_queue, pth->logger);
+        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
     }
     return ;
 }
