@@ -50,6 +50,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
     struct kevent kqev;
     if(evbase && event && evbase->evs && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
+        MUTEX_LOCK(evbase->mutex);
         event->ev_base = evbase;
         if(event->ev_flags & E_READ)
         {
@@ -79,6 +80,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
         ++(evbase->nfd);
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -87,12 +89,14 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
 /* Update event in evbase */
 int evkqueue_update(EVBASE *evbase, EVENT *event)
 {
+    short ev_flags = 0, ret = -1, add_ev_flags = 0, del_ev_flags = 0;
     struct kevent kqev;
-    short ev_flags = 0, add_ev_flags = 0, del_ev_flags = 0;
 
     if(evbase && event && evbase->evs 
             && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
+        MUTEX_LOCK(evbase->mutex);
+
         ev_flags = (event->ev_flags ^ event->old_ev_flags);
         add_ev_flags = (event->ev_flags & ev_flags);
         del_ev_flags = (event->old_ev_flags & ev_flags);
@@ -109,7 +113,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             {   
                 ERROR_LOGGER(evbase->logger, "adding EVFILT_READ flags[%d] on fd[%d] failed, %s", 
                         kqev.flags, (int)kqev.ident, strerror(errno));
-                return -1;
+                goto err;
             }
             else
             {
@@ -126,7 +130,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             {   
                 ERROR_LOGGER(evbase->logger, "adding EVFILT_WRITE flags[%d] on fd[%d] failed, %s", 
                         kqev.flags, (int)kqev.ident, strerror(errno));
-                return -1;
+                goto err;
             }
             else
             {
@@ -142,7 +146,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             {   
                 ERROR_LOGGER(evbase->logger, "deleting EVFILT_READ flags[%d] on fd[%d] failed, %s", 
                         kqev.flags, (int)kqev.ident, strerror(errno));
-                return -1;
+                goto err;
             }
             else
             {
@@ -158,7 +162,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             {   
                 ERROR_LOGGER(evbase->logger, "deleting EVFILT_WRITE flags[%d] on %d failed, %s", 
                         kqev.flags, (int)kqev.ident, strerror(errno));
-                return -1;
+                goto err;
             }
             else
             {
@@ -167,9 +171,11 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             }
         }
         evbase->evlist[event->ev_fd] = event;
-        return 0;
+        ret = 0;
+err:
+        MUTEX_UNLOCK(evbase->mutex);
     }
-    return -1;
+    return ret;
 }
 
 /* Delete event from evbase */
@@ -179,6 +185,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
     if(evbase && event && evbase->evs 
             && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
+        MUTEX_LOCK(evbase->mutex);
         if(event->ev_flags & E_READ)
         {
             memset(&kqev, 0, sizeof(struct kevent));
@@ -203,6 +210,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
             evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
         if(evbase->nfd > 0) --(evbase->nfd);
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -270,6 +278,7 @@ void evkqueue_clean(EVBASE **evbase)
 {
     if(*evbase)
     {
+        if((*evbase)->mutex){MUTEX_DESTROY((*evbase)->mutex);}
         if((*evbase)->logger)LOGGER_CLEAN((*evbase)->logger);
         if((*evbase)->evlist)free((*evbase)->evlist);
         if((*evbase)->evs)free((*evbase)->evs);

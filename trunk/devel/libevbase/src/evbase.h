@@ -33,6 +33,7 @@ typedef struct _EVBASE
 	void *evs;
 	int  efd;
 	void *logger;
+    void *mutex;
 
 	int nfd;
     int nevent;
