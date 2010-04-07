@@ -350,6 +350,7 @@ new_conn:
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                         service->ip, service->port, &(service->session))))
                         {
+                            if(flag != 0) conn->status = CONN_STATUS_READY; 
 #ifdef HAVE_SSL
                             conn->ssl = ssl;
 #endif
@@ -608,8 +609,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         char *local_ip, int local_port, SESSION *session)
 {
     PROCTHREAD *procthread = NULL;
-    int index = 0, flag = 0;
     CONN *conn = NULL;
+    int index = 0;
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
@@ -627,8 +628,6 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         {
             //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
             conn->fd = fd;
-            if(service->service_type == C_SERVICE && (flag = fcntl(fd, F_GETFL, 0)) & O_NONBLOCK)
-                conn->status = CONN_STATUS_READY; 
             strcpy(conn->remote_ip, remote_ip);
             conn->remote_port = remote_port;
             strcpy(conn->local_ip, local_ip);
@@ -645,7 +644,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->parent    = service->daemon;
                     //conn->ioqmessage = service->daemon->message_queue;
                     //conn->message_queue = service->daemon->message_queue;
-                    service->daemon->add_connection(service->daemon, conn);
+                    service->daemon->addconn(service->daemon, conn);
                 }
                 else
                 {
@@ -664,7 +663,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->parent = procthread;
                     //conn->ioqmessage = procthread->ioqmessage;
                     //conn->message_queue = procthread->message_queue;
-                    procthread->add_connection(procthread, conn);   
+                    procthread->addconn(procthread, conn);   
                     DEBUG_LOGGER(service->logger, "adding connection[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->fd);
                 }
                 else
@@ -779,12 +778,14 @@ CONN *service_getconn(SERVICE *service, int groupid)
         MUTEX_LOCK(service->mutex);
         if(groupid >= 0 && groupid < service->ngroups)
         {
+            //fprintf(stdout, "%s::%d nconns_free:%d\n", __FILE__, __LINE__, service->groups[groupid].nconns_free);
             while(service->groups[groupid].nconns_free > 0)
             {
                 x = --(service->groups[groupid].nconns_free);
                 if((i = service->groups[groupid].conns_free[x]) >= 0 && i < SB_CONN_MAX 
                         && (conn = service->connections[i]))
                 {
+                    //fprintf(stdout, "%s::%d nconns_free:%d\n", __FILE__, __LINE__, service->groups[groupid].nconns_free);
                     conn->start_cstate(conn);
                     break;
                 }
