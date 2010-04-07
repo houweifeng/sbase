@@ -35,6 +35,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 
     if(evbase && event && event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
     {
+        MUTEX_LOCK(evbase->mutex);
         event->ev_base = evbase;
         /* Delete OLD garbage */
         //epoll_ctl(ebase->efd, EPOLL_CTL_DEL, event->ev_fd, NULL);
@@ -62,8 +63,8 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;
             ++(evbase->nfd);
-            return 0;	
         }
+        MUTEX_UNLOCK(evbase->mutex);
     }
     return -1;
 }
@@ -76,6 +77,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
 
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd )
     {
+        MUTEX_LOCK(evbase->mutex);
         if(event->ev_flags & E_READ)
         {
             ev_flags |= EPOLLIN;
@@ -95,6 +97,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
             epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
         }
         evbase->evlist[event->ev_fd] = event;
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;	
@@ -107,6 +110,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
 
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
+        MUTEX_LOCK(evbase->mutex);
         ep_event.data.fd = event->ev_fd;
         ep_event.events = 0;
         ep_event.data.ptr = (void *)event;
@@ -115,6 +119,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
             evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
         if(evbase->nfd > 0) --(evbase->nfd);
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -206,6 +211,7 @@ void evepoll_clean(EVBASE **evbase)
     if(*evbase)
     {
         close((*evbase)->efd);
+        if((*evbase)->mutex){MUTEX_DESTROY((*evbase)->mutex);}
         if((*evbase)->logger)LOGGER_CLEAN((*evbase)->logger);
         if((*evbase)->evlist)free((*evbase)->evlist);
         if((*evbase)->evs)free((*evbase)->evs);
