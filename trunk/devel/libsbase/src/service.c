@@ -627,7 +627,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         {
             //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
             conn->fd = fd;
-            if((flag = fcntl(fd, F_GETFL, 0)) & O_NONBLOCK)
+            if(service->service_type == C_SERVICE && (flag = fcntl(fd, F_GETFL, 0)) & O_NONBLOCK)
                 conn->status = CONN_STATUS_READY; 
             strcpy(conn->remote_ip, remote_ip);
             conn->remote_port = remote_port;

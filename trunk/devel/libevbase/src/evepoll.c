@@ -61,7 +61,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
             if(event->ev_fd > evbase->maxfd)
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;
-            evbase->nfd++;
+            ++(evbase->nfd);
             return 0;	
         }
     }
@@ -114,7 +114,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
         if(event->ev_fd >= evbase->maxfd)
             evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
-        evbase->nfd--;
+        if(evbase->nfd > 0) --(evbase->nfd);
         return 0;
     }
     return -1;
@@ -127,7 +127,7 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     struct epoll_event *evp = NULL;
     EVENT *ev = NULL;
 
-    if(evbase && evbase->nfd > 0)
+    if(evbase)
     {
         if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->maxfd);

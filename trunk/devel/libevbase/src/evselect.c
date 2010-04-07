@@ -52,7 +52,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
             if(event->ev_fd > evbase->maxfd) 
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
-            evbase->nfd++;
+            ++(evbase->nfd);
             DEBUG_LOGGER(evbase->logger, "Added event[%p] flags[%d] on fd[%d]", 
                     event, ev_flags, event->ev_fd);
             return 0;
@@ -120,7 +120,7 @@ int evselect_del(EVBASE *evbase, EVENT *event)
         if(event->ev_fd >= evbase->maxfd)
             evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;	
-        evbase->nfd--;
+        if(evbase->nfd > 0) --(evbase->nfd);
         return 0;
     }
     return -1;
@@ -133,7 +133,7 @@ int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
     short ev_flags = 0;
     fd_set rd_fd_set, wr_fd_set ;
 
-    if(evbase && evbase->nfd > 0)
+    if(evbase)
     {
         FD_ZERO(&rd_fd_set);
         memcpy(&rd_fd_set, evbase->ev_read_fds, sizeof(fd_set));
