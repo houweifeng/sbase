@@ -78,7 +78,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
         if(event->ev_fd > evbase->maxfd)
             evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
-        evbase->nfd++;
+        ++(evbase->nfd);
         return 0;
     }
     return -1;
@@ -202,6 +202,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
         if(event->ev_fd >= evbase->maxfd)
             evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
+        if(evbase->nfd > 0) --(evbase->nfd);
         return 0;
     }
     return -1;
@@ -214,7 +215,7 @@ int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     struct timespec ts = {0};
     struct kevent *kqev = NULL;
 
-    if(evbase && evbase->nfd > 0)
+    if(evbase)
     {
         //memset(&ts, 0, sizeof(struct timespec));
         if(tv) TIMEVAL_TO_TIMESPEC(tv, &ts);

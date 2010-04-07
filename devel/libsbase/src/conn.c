@@ -218,8 +218,9 @@ int conn_set(CONN *conn)
             if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
             conn->event->set(conn->event, conn->fd, flag, (void *)conn, &conn_event_handler);
             conn->evbase->add(conn->evbase, conn->event);
-            DEBUG_LOGGER(conn->logger, "setting connection[%s:%d] local[%s:%d] via %d", 
-                    conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "setting evbase->nfd[%d][%p] connection[%s:%d]"
+                    "local[%s:%d] via %d", conn->evbase->nfd, conn->event, conn->remote_ip, 
+                    conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             return 0;
         }
         else

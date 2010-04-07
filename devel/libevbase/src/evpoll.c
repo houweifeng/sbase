@@ -51,7 +51,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             if(event->ev_fd > evbase->maxfd)
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
-            evbase->nfd++;
+            ++(evbase->nfd);
             DEBUG_LOGGER(evbase->logger, "Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
         }
         return 0;
@@ -99,7 +99,7 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
         if(event->ev_fd >= evbase->maxfd)
             evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
-        evbase->nfd--;
+        if(evbase->nfd > 0) --(evbase->nfd);
         return 0;
     }	
     return -1;
@@ -113,7 +113,7 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     int n = 0, i = 0;
     int sec = 0;
 
-    if(evbase && evbase->ev_fds && evbase->nfd > 0)
+    if(evbase && evbase->ev_fds)
     {	
         if(tv) sec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         n = poll(evbase->ev_fds, evbase->maxfd + 1 , sec);		
