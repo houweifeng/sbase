@@ -18,7 +18,7 @@ do                                                                          \
 {                                                                           \
     if((ptr = calloc(1, sizeof(MUTEX))))                                    \
     {                                                                       \
-        sem_init(&(MT(ptr)->sem), 0, 0);                                    \
+        sem_init(&(MT(ptr)->sem), 0, 1);                                    \
     }                                                                       \
 }while(0)
 #define MUTEX_LOCK(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
