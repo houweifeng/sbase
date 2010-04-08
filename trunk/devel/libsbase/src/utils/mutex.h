@@ -6,8 +6,33 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef HAVE_SEMAPHORE
+#include <semaphore.h>
+typedef struct _MUTEX
+{
+    sem_t sem;
+}MUTEX;
+#define MT(ptr) ((MUTEX *)ptr)
+#define MUTEX_INIT(ptr)                                                     \
+do                                                                          \
+{                                                                           \
+    if((ptr = calloc(1, sizeof(MUTEX))))                                    \
+    {                                                                       \
+        sem_init(&(MT(ptr)->sem), 0, 0);                                    \
+    }                                                                       \
+}while(0)
+#define MUTEX_LOCK(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
+#define MUTEX_UNLOCK(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1)
+#define MUTEX_WAIT(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
+#define MUTEX_SIGNAL(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1) 
+#define MUTEX_DESTROY(ptr)                                                  \
+do                                                                          \
+{                                                                           \
+    if(ptr){sem_destroy(&(MT(ptr)->sem));free(ptr);}                        \
+}while(0)
+#else
 //#ifdef USE_PTHREAD_MUTEX
-#ifdef HAVE_PTHREAD
+//#ifdef HAVE_PTHREAD
 typedef struct _MUTEX
 {
     pthread_mutex_t mutex;
@@ -37,30 +62,6 @@ do                                                                          \
 		free(ptr);											                \
 		ptr = NULL;												            \
 	}														                \
-}while(0)
-#else
-#include <semaphore.h>
-typedef struct _MUTEX
-{
-    sem_t sem;
-}MUTEX;
-#define MT(ptr) ((MUTEX *)ptr)
-#define MUTEX_INIT(ptr)                                                     \
-do                                                                          \
-{                                                                           \
-    if((ptr = calloc(1, sizeof(MUTEX))))                                    \
-    {                                                                       \
-        sem_init(&(MT(ptr)->sem), 0, 0);                                    \
-    }                                                                       \
-}while(0)
-#define MUTEX_LOCK(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
-#define MUTEX_UNLOCK(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1)
-#define MUTEX_WAIT(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
-#define MUTEX_SIGNAL(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1) 
-#define MUTEX_DESTROY(ptr)                                                  \
-do                                                                          \
-{                                                                           \
-    if(ptr){sem_destroy(&(MT(ptr)->sem));free(ptr);}                        \
 }while(0)
 #endif
 #ifdef __cplusplus

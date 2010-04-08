@@ -93,6 +93,13 @@ if test "$havessl" = "yes" ; then
         LDFLAGS="${LDFLAGS} -lssl -lcrypto"
 fi
 
+#semaphore
+havesemaphore=no
+AC_CHECK_LIB(c, sem_init, havesemaphore=yes)
+if test "$havesemaphore" = "yes" ; then
+        CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+fi
+
 AC_CHECK_EXTRA_OPTIONS
 
 # Checks for header files.
