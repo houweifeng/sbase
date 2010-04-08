@@ -32,7 +32,7 @@ do                                                                          \
 }while(0)
 #else
 //#ifdef USE_PTHREAD_MUTEX
-//#ifdef HAVE_PTHREAD
+#ifdef HAVE_PTHREAD
 typedef struct _MUTEX
 {
     pthread_mutex_t mutex;
@@ -63,6 +63,14 @@ do                                                                          \
 		ptr = NULL;												            \
 	}														                \
 }while(0)
+#else
+#define MUTEX_INIT(ptr)
+#define MUTEX_LOCK(ptr) 0
+#define MUTEX_UNLOCK(ptr) 0
+#define MUTEX_WAIT(ptr) 0
+#define MUTEX_SIGNAL(ptr) 0
+#define MUTEX_DESTROY(ptr) 0
+#endif
 #endif
 #ifdef __cplusplus
  }
