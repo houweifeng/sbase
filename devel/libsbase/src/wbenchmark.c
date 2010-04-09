@@ -386,7 +386,6 @@ invalid_url:
         p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", server_url, server_argv);
         p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
         if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
-        p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
         request_len = p - request;
     }
     if((hent = gethostbyname(server_host)) == NULL)
