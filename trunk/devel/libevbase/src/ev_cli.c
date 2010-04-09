@@ -252,7 +252,7 @@ int main(int argc, char **argv)
         sa.sin_port = htons(port);
         sa_len = sizeof(struct sockaddr);
         /* set evbase */
-        if((evbase = evbase_init()))
+        if((evbase = evbase_init(0)))
         {
             LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
 #ifdef USE_SSL
