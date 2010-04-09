@@ -149,7 +149,7 @@ int sbase_running(SBASE *sbase, int useconds)
         }
 running:
         //evbase 
-        sbase->evbase           = evbase_init(0);
+        sbase->evbase           = evbase_init(1);
         //running services
         if(sbase->services)
         {
