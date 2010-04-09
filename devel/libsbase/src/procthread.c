@@ -223,7 +223,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase        = have_evbase;
-            pth->evbase             = evbase_init();
+            pth->evbase             = evbase_init(0);
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();

@@ -171,6 +171,7 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 SUBDIRS = src
+EXTRA_DIST = libevbase.spec
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

@@ -510,7 +510,7 @@ int main(int argc, char **argv)
 running:
         */
         /* set evbase */
-        if((evbase = evbase_init()))
+        if((evbase = evbase_init(0)))
         {
             evbase->set_logfile(evbase, "/tmp/ev_server.log");
             //evbase->set_evops(evbase, EOP_POLL);

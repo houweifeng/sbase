@@ -53,7 +53,7 @@ typedef struct _EVBASE
 	void	(*reset)(struct _EVBASE *);
 	void 	(*clean)(struct _EVBASE **);
 }EVBASE;
-EVBASE *evbase_init();
+EVBASE *evbase_init(int use_mutex);
 #endif
 #ifndef _TYPEDEF_EVENT
 #define _TYPEDEF_EVENT
