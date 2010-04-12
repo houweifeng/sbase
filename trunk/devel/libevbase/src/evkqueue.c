@@ -223,7 +223,7 @@ int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     struct timespec ts = {0};
     struct kevent *kqev = NULL;
 
-    if(evbase)
+    if(evbase  && evbase->nfd > 0)
     {
         //memset(&ts, 0, sizeof(struct timespec));
         if(tv) TIMEVAL_TO_TIMESPEC(tv, &ts);
