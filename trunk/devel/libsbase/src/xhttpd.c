@@ -96,7 +96,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
     struct dirent *ent = NULL;
     unsigned char *s = NULL;
     struct stat st = {0};
-    int len = 0, n = 0;
+    int len = 0, n = 0, keepalive = 0;
     DIR *dirp = NULL;
 
     if(conn && file && root && end && (dirp = opendir(file)))
@@ -177,8 +177,13 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
             {
                 p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
+                if((strncasecmp(http_req->hlines + n, "close", 5)) !=0 )
+                    keepalive = 1;
             }
-            else p += sprintf(p, "Connection: close\r\n");
+            else 
+            {
+                p += sprintf(p, "Connection: close\r\n");
+            }
             p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
             p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
             conn->push_chunk(conn, buf, (p - buf));
@@ -186,6 +191,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
             free(pp);
             pp = NULL;
+            if(!keepalive) conn->over(conn);
         }
         closedir(dirp);
         return 0;
@@ -371,7 +377,7 @@ int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, char *host, int is_n
     char zfile[HTTP_PATH_MAX], zoldfile[HTTP_PATH_MAX], linkfile[HTTP_PATH_MAX], 
          buf[HTTP_BUF_SIZE], *encoding = NULL, *outfile = NULL, *p = NULL;
     unsigned char *block = NULL, *in = NULL, *zstream = NULL;
-    int fd = 0, inlen = 0, zlen = 0, i = 0, id = 0;
+    int fd = 0, inlen = 0, zlen = 0, i = 0, id = 0, keepalive = 0;
     off_t offset = 0, len = 0;
     struct stat zst = {0};
 
@@ -518,6 +524,7 @@ OVER:
             conn->push_file(conn, outfile, from, len);
         }
         if(zstream) free(zstream);
+        if(!keepalive)conn->over(conn);
         return 0;
     }
 err:
@@ -553,7 +560,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = NULL,
          *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
          *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL;
-    int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0;
+    int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0, keepalive = 0;
     off_t from = 0, to = 0, len = 0;
     struct stat st = {0};
     HTTP_REQ http_req = {0};
@@ -726,9 +733,13 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                     {
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
+                        if((strncasecmp(http_req.hlines + n, "close", 5)) !=0 )
+                            keepalive = 1;
                     }
                     else
+                    {
                         p += sprintf(p, "Connection: close\r\n");
+                    }
                     p += sprintf(p, "Last-Modified:");
                     p += GMTstrdate(st.st_mtime, p);
                     p += sprintf(p, "%s", "\r\n");//date end
@@ -739,7 +750,9 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
                     conn->push_chunk(conn, buf, (p - buf));
-                    return conn->push_file(conn, outfile, from, len);
+                    conn->push_file(conn, outfile, from, len);
+                    if(!keepalive) conn->over(conn);
+                    return 0;
                 }
             }
         }
