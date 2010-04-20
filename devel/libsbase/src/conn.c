@@ -546,10 +546,12 @@ int conn_write_handler(CONN *conn)
                 conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue));
         if(QTOTAL(conn->send_queue) > 0 && (cp = (CHUNK *)queue_head(conn->send_queue)))
         {
+            /*
             DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d ssl:%p "
                     "on %s:%d via %d qtotal:%d pcp:%p", conn->remote_ip, conn->remote_port,
                     conn->ssl, conn->local_ip, conn->local_port, conn->fd, 
                     QTOTAL(conn->send_queue), PPL(cp));   
+            */
             if((n = WRITING_CHUNK(conn, cp)) > 0)
             {
                 conn->sent_data_total += n;

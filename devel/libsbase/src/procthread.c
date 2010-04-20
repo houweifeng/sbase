@@ -43,8 +43,8 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                 else
                 {
-                    usleep(10);
-                    //ret = MUTEX_WAIT(pth->mutex);
+                    //usleep(10);
+                    ret = MUTEX_WAIT(pth->mutex);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
@@ -223,7 +223,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase        = have_evbase;
-            pth->evbase             = evbase_init(1);
+            pth->evbase             = evbase_init(0);
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
