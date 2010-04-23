@@ -452,7 +452,7 @@ int conn_push_message(CONN *conn, int message_id)
 
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
-    if(conn && (message_id & MESSAGE_ALL) )
+    if(conn && conn->message_queue && (message_id & MESSAGE_ALL) )
     {
         DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%p] "
                 "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
