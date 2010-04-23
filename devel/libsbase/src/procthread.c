@@ -208,6 +208,7 @@ void procthread_clean(PROCTHREAD **ppth)
             }
             qmessage_clean((*ppth)->message_queue);
         }
+        MUTEX_DESTROY((*ppth)->mutex);
         free((*ppth));
         (*ppth) = NULL;
     }
