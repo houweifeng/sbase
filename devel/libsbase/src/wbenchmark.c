@@ -9,18 +9,9 @@
 #include "timer.h"
 #include <sys/resource.h>
 #define HTTP_BUF_SIZE    65536
+#define HTTP_PATH_MAX    8192
 #define HTTP_IP_MAX      16
-#define HTTP_HOST_MAX    1024
 #define HTTP_TIMEOUT     2000000
-typedef struct _URLREQ
-{
-    int is_ssl;
-    int port;
-    int nrequest;
-    char host[HTTP_HOST_MAX];
-    char ip[HTTP_IP_MAX];
-    char request[HTTP_BUF_SIZE];
-}URLREQ;
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -33,18 +24,16 @@ static int ncompleted = 0;
 static int is_keepalive = 0;
 static int is_post = 0;
 static int is_verbosity = 0;
-static URLREQ urlreq = {0};
-//static char *server_host = NULL;
-//static char server_ip[HTTP_IP_MAX];
-//static int server_port = 80;
-//static char *server_argv = "";
-//static char *server_url = "";
-//static int server_is_ssl = 0;
-//static char request[HTTP_BUF_SIZE];
-//static int request_len = 0; 
+static char *server_host = NULL;
+static char server_ip[HTTP_IP_MAX];
+static int server_port = 80;
+static char *server_url = "";
+static char *server_argv = "";
+static int server_is_ssl = 0;
+static char request[HTTP_BUF_SIZE];
+static int request_len = 0; 
 static void *timer = NULL;
 static int running_status = 0;
-static char *urllist = NULL;
 static FILE *fp = NULL;
 
 CONN *http_newconn(char *ip, int port, int is_ssl)
@@ -67,110 +56,12 @@ CONN *http_newconn(char *ip, int port, int is_ssl)
     return conn;
 }
 
-/* paser URL */
-int parseURL(char *url, URLREQ *urlreq)
-{
-    char *p = NULL, *s = NULL, *host = NULL, *path = NULL, *argv = NULL, line[HTTP_BUF_SIZE];
-    struct hostent *hent = NULL;
-
-    p = url;
-    s = line;
-    while(*p != '\0')
-    {
-        if(*p >= 'A' && *p <= 'Z')
-        {
-            *s++ = *p++ + 'a' - 'A';
-        }
-        else if(*((unsigned char *)p) > 127 || *p == 0x20)
-        {
-            s += sprintf(s, "%%%02x", *((unsigned char *)p));
-            ++p;
-        }
-        else *s++ = *p++;
-    }
-    *s = '\0';
-    s = line;
-    if(strncmp(s, "http://", 7) == 0)
-    {
-        s += 7;
-        host = s;
-    }
-    else if(strncmp(s, "https://", 8) == 0)
-    {
-        s += 8;
-        host = s;
-        urlreq->is_ssl = 1;
-    }
-    else goto invalid_url;
-    while(*s != '\0' && *s != ':' && *s != '/')s++;
-    if(*s == ':')
-    {
-        *s = '\0';
-        ++s;
-        urlreq->port = atoi(s);          
-        while(*s != '\0' && *s != '/')++s;
-    }
-    if(*s == '/')
-    {
-        *s = '\0';
-        ++s;
-        path = s;
-    }
-    while(*s != '\0' && *s != '?')++s;
-    if(*s == '?')
-    {
-        *s = '\0';
-        ++s;
-        argv = s;
-    }
-invalid_url:
-    if(host == NULL || port <= 0)
-    {
-        fprintf(stderr, "Invalid url:%s, url must be http://host:port/path?argv "
-                " or https://host:port/path?argv\n", url);
-        return -1;
-    }
-    if(is_post)
-    {
-        p = request;
-        p += sprintf(p, "POST /%s HTTP/1.1\r\n", path);
-        p += sprintf(p, "Host: %s:%d\r\n", host, port);
-        if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
-        p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(argv));
-        p += sprintf(p, "\r\n");
-        p += sprintf(p, "%s", argv);
-        urlreq->request_len = p - urlreq->request;
-    }
-    else
-    {
-        p = urlreq->request;
-        if(argv) p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", path, argv);
-        else p += sprintf(p, "GET /%s HTTP/1.1\r\n", path);
-        p += sprintf(p, "Host: %s:%d\r\n", host, port);
-        if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
-        p += sprintf(p, "\r\n");
-        urlreq->request_len = p - urlreq->request;
-    }
-    if((hent = gethostbyname(host)) == NULL)
-    {
-        fprintf(stderr, "resolve hostname:%s failed, %s\n", host, strerror(h_errno));
-        return -1;
-    }
-    else
-    {
-        //memcpy(&ip, &(hent->h_addr), sizeof(int));
-        sprintf(urlreq->ip, "%s", inet_ntoa(*((struct in_addr *)(hent->h_addr))));
-        if(is_verbosity)
-        {
-            fprintf(stdout, "ip:%s request:%s\n", server_ip, request);
-        }
-    }
-    return p - urlreq->request;
-}
-
 /* http request */
 int http_request(CONN *conn)
 {
+    char *p = NULL, path[HTTP_PATH_MAX], buf[HTTP_BUF_SIZE];
+    int n = 0;
+
     if(running_status && conn && request_len > 0)
     {
         //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
@@ -186,7 +77,35 @@ int http_request(CONN *conn)
         conn->start_cstate(conn);
         conn->set_timeout(conn, HTTP_TIMEOUT);
         //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
-        return conn->push_chunk(conn, request, request_len);
+        if(fp && fgets(path, HTTP_PATH_MAX, fp))
+        {
+            if(is_post)
+            {
+                p = buf;
+                p += sprintf(p, "POST /%s HTTP/1.1\r\n", path);
+                p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
+                if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+                p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
+                p += sprintf(p, "\r\n");
+                p += sprintf(p, "%s", server_argv);
+                n = p - buf;
+            }
+            else
+            {
+                p = buf;
+                if(server_argv) p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", path, server_argv);
+                else p += sprintf(p, "GET /%s HTTP/1.1\r\n", path);
+                p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
+                if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+                p += sprintf(p, "\r\n");
+                n = p - buf;
+            }
+            return conn->push_chunk(conn, buf, n);
+        }
+        else
+        {
+            return conn->push_chunk(conn, request, request_len);
+        }
     }
     return -1;
 }
@@ -377,9 +296,10 @@ static void benchmark_stop(int sig)
 
 int main(int argc, char **argv)
 {
-    char *url = NULL, ch = 0;
-    int is_daemon = 0;
     pid_t pid;
+    char *url = NULL, *urllist = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
+    struct hostent *hent = NULL;
+    int is_daemon = 0;
 
     /* get configure file */
     while((ch = getopt(argc, argv, "vpkdl:c:n:")) != -1)
@@ -421,21 +341,105 @@ int main(int argc, char **argv)
     }
     //fprintf(stdout, "concurrency:%d nrequests:%d is_keepalive:%d is_daemon:%d\n",
     //       concurrency, ntasks, is_keepalive, is_daemon);
-    if(url == NULL || urllist == NULL)
+    if(url == NULL)
     {
         fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
                 "Options:\n\t-c concurrency\n\t-n requests\n"
-                "\t-p is_POST\n\t-v is_verbosity\n -l urllist file\n"
+                "\t-p is_POST\n\t-v is_verbosity\n-l urllist"
                 "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
         _exit(-1);
     }
-    if(url)
+    p = url;
+    s = line;
+    while(*p != '\0')
     {
-        n = parseURL(url, &urlreq);
+        if(*p >= 'A' && *p <= 'Z')
+        {
+            *s++ = *p++ + 'a' - 'A';
+        }
+        else if(*((unsigned char *)p) > 127 || *p == 0x20)
+        {
+            s += sprintf(s, "%%%02x", *((unsigned char *)p));
+            ++p;
+        }
+        else *s++ = *p++;
+    }
+    *s = '\0';
+    s = line;
+    if(strncmp(s, "http://", 7) == 0)
+    {
+        s += 7;
+        server_host = s;
+    }
+    else if(strncmp(s, "https://", 8) == 0)
+    {
+        s += 8;
+        server_host = s;
+        server_is_ssl = 1;
+    }
+    else goto invalid_url;
+    while(*s != '\0' && *s != ':' && *s != '/')s++;
+    if(*s == ':')
+    {
+        *s = '\0';
+        ++s;
+        server_port = atoi(s);          
+        while(*s != '\0' && *s != '/')++s;
+    }
+    if(*s == '/')
+    {
+        *s = '\0';
+        ++s;
+        server_url = s;
+    }
+    while(*s != '\0' && *s != '?')++s;
+    if(*s == '?')
+    {
+        *s = '\0';
+        ++s;
+        server_argv = s;
+    }
+invalid_url:
+    if(server_host == NULL || server_port <= 0)
+    {
+        fprintf(stderr, "Invalid url:%s, url must be http://host:port/path?argv "
+                " or https://host:port/path?argv\n", url);
+        _exit(-1);
+    }
+    if(urllist) fp = fopen(urllist, "rd");
+    if(is_post)
+    {
+        p = request;
+        p += sprintf(p, "POST /%s HTTP/1.1\r\n", server_url);
+        p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
+        if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+        p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
+        p += sprintf(p, "\r\n");
+        p += sprintf(p, "%s", server_argv);
+        request_len = p - request;
     }
     else
     {
-        fp = fopen(urllist, "rd");
+        p = request;
+        p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", server_url, server_argv);
+        p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
+        if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+        p += sprintf(p, "\r\n");
+        request_len = p - request;
+    }
+    if((hent = gethostbyname(server_host)) == NULL)
+    {
+        fprintf(stderr, "resolve hostname:%s failed, %s\n", server_host, strerror(h_errno));
+        _exit(-1);
+    }
+    else
+    {
+        //memcpy(&ip, &(hent->h_addr), sizeof(int));
+        sprintf(server_ip, "%s", inet_ntoa(*((struct in_addr *)(hent->h_addr))));
+        if(is_verbosity)
+        {
+            fprintf(stdout, "ip:%s request:%s\n", server_ip, request);
+        }
     }
     //_exit(-1);
     /* locale */
