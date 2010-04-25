@@ -345,7 +345,7 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
                 "Options:\n\t-c concurrency\n\t-n requests\n"
-                "\t-p is_POST\n\t-v is_verbosity\n-l urllist"
+                "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
                 "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
         _exit(-1);
     }
