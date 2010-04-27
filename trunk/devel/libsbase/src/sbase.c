@@ -169,7 +169,7 @@ running:
         do
         {
             //running evbase 
-            sbase->evbase->loop(sbase->evbase, 0, &tv);
+            if(sbase->evbase->loop(sbase->evbase, 0, &tv) <= 0) usleep(1);
             //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
             EVTIMER_CHECK(sbase->evtimer);
@@ -177,7 +177,6 @@ running:
             //running message queue
             if(QMTOTAL(sbase->message_queue) > 0)
                 qmessage_handler(sbase->message_queue, sbase->logger);
-            //else usleep(1);
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)
