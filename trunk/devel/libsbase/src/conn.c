@@ -148,6 +148,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 conn->status = CONN_STATUS_FREE;
+                return ;
             }
             int flag = fcntl(conn->fd, F_GETFL, 0);
             if(conn->ssl) 
@@ -171,19 +172,20 @@ void conn_event_handler(int event_fd, short event, void *arg)
             {
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
                 CONN_TERMINATE(conn, D_STATE_CLOSE);          
+                return ;
                 //conn->push_message(conn, MESSAGE_QUIT);
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d OVER ", E_CLOSE, event_fd);
             }
             if(event & E_READ)
             {
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
-                conn->read_handler(conn);
+                if(conn->read_handler(conn) < 0) return ;
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d OVER ", E_READ, event_fd);
             }
             if(event & E_WRITE)
             {
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
-                conn->write_handler(conn);
+                if(conn->write_handler(conn) < 0) return ;
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
             /*
@@ -194,6 +196,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
             CONN_EVTIMER_SET(conn);
         }
     }
+    return ;
 }
 
 /* set connection */
