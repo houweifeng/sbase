@@ -11,7 +11,7 @@
 #define HTTP_BUF_SIZE    65536
 #define HTTP_PATH_MAX    8192
 #define HTTP_IP_MAX      16
-#define HTTP_TIMEOUT     2000000
+#define HTTP_TIMEOUT     20000000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -36,20 +36,19 @@ static void *timer = NULL;
 static int running_status = 0;
 static FILE *fp = NULL;
 
-CONN *http_newconn(char *ip, int port, int is_ssl)
+CONN *http_newconn(int id, char *ip, int port, int is_ssl)
 {
     CONN *conn = NULL;
-    int id = 0;
 
-    if(running_status && ncurrent <  concurrency && ip && port > 0)
+    if(running_status && ip && port > 0)
     {
         if(is_ssl) service->session.is_use_SSL = 1;
         if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
         {
-            id = ++ncurrent;
-            conn->start_cstate(conn);
             conn->c_id = id;
-            conn->set_timeout(conn, HTTP_TIMEOUT);
+            conn->start_cstate(conn);
+            //conn->c_id = ncurrent;
+            //conn->set_timeout(conn, HTTP_TIMEOUT);
             service->newtransaction(service, conn, id);
         }
     }
@@ -62,7 +61,7 @@ int http_request(CONN *conn)
     char *p = NULL, path[HTTP_PATH_MAX], buf[HTTP_BUF_SIZE];
     int n = 0;
 
-    if(running_status && conn && request_len > 0)
+    if(running_status && conn)
     {
         //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
         if(nrequests >= ntasks)
@@ -76,9 +75,9 @@ int http_request(CONN *conn)
         ++nrequests;
         conn->start_cstate(conn);
         conn->set_timeout(conn, HTTP_TIMEOUT);
-        //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
         if(fp && fgets(path, HTTP_PATH_MAX, fp))
         {
+            //fprintf(stdout, "%s::%d conn[%s:%d][%d]->status:%d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->fd, conn->status);
             if(is_post)
             {
                 p = buf;
@@ -113,8 +112,11 @@ int http_request(CONN *conn)
 /* http over */
 int http_over(CONN *conn, int respcode)
 {
+    int id = 0;
+
     if(conn)
     {
+	id = conn->c_id;
         ncompleted++;
         if(ncompleted > 0 && (ncompleted%1000) == 0)
         {
@@ -135,7 +137,7 @@ int http_over(CONN *conn, int respcode)
             nerrors++;
             conn->over(conn);
             --nrequests;
-            if((conn = http_newconn(server_ip, server_port, server_is_ssl)))
+            if(http_newconn(id, server_ip, server_port, server_is_ssl))
                 return 0;
         }
         else
@@ -211,14 +213,14 @@ int benchmark_trans_handler(CONN *conn, int tid)
         //fprintf(stdout, "conn[%d]->status:%d\n", conn->fd, conn->status);
         if(conn->status == 0)
         {
-            conn->over_evstate(conn);
+            //conn->over_evstate(conn);
             return http_request(conn);
         }
         else
         {
-            conn->wait_evstate(conn);
-            return conn->set_timeout(conn, HTTP_TIMEOUT);
-            //return service->newtransaction(service, conn, tid);
+            //conn->wait_evstate(conn);
+            //return conn->set_timeout(conn, HTTP_TIMEOUT);
+            return service->newtransaction(service, conn, tid);
         }
     }
     return 0;
@@ -268,13 +270,19 @@ int benchmark_oob_handler(CONN *conn, CB_DATA *oob)
 void benchmark_heartbeat_handler(void *arg)
 {
     CONN *conn = NULL;
+    int id = 0;
 
     while(ncurrent < concurrency)
     {
-        if((conn = http_newconn(server_ip, server_port, server_is_ssl)) == NULL)
+	id = ncurrent;
+        if((conn = http_newconn(id, server_ip, server_port, server_is_ssl)) == NULL)
         {
             break;
         }
+	else
+	{
+		++ncurrent;
+	}
     }
     return ;
 }
@@ -480,8 +488,8 @@ invalid_url:
     //sbase->set_evlog(sbase, "/tmp/evsd.log");
     if((service = service_init()))
     {
-        service->working_mode = 0;
-        service->nprocthreads = 8;
+        service->working_mode = 1;
+        service->nprocthreads = 2;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
         service->service_type = C_SERVICE;
@@ -499,7 +507,7 @@ invalid_url:
         service->session.buffer_size = 65536;
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
-        service->set_log(service, "/tmp/benchmark_access.log");
+        service->set_log(service, "/tmp/benchmark.log");
     }
     if(sbase->add_service(sbase, service) == 0)
     {
