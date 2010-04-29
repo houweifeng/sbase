@@ -128,6 +128,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
 
     if(conn)
     {
+        CONN_CHECK(conn, D_STATE_CLOSE);
         //fprintf(stdout, "%s::%d event[%d] on fd[%d]\n", __FILE__, __LINE__, event, event_fd);
         if(event_fd == conn->fd)
         {
@@ -147,7 +148,6 @@ void conn_event_handler(int event_fd, short event, void *arg)
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 conn->status = CONN_STATUS_FREE;
-                return ;
             }
             int flag = fcntl(conn->fd, F_GETFL, 0);
             if(conn->ssl) 

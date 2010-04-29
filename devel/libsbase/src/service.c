@@ -350,7 +350,6 @@ new_conn:
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                         service->ip, service->port, &(service->session))))
                         {
-                            if(flag != 0) conn->status = CONN_STATUS_READY; 
 #ifdef HAVE_SSL
                             conn->ssl = ssl;
 #endif
@@ -481,6 +480,7 @@ new_conn:
             if((conn = service_addconn(service, sock_type, fd, remote_ip, 
                             remote_port, local_ip, local_port, sess)))
             {
+                if(flag != 0) conn->status = CONN_STATUS_READY; 
 #ifdef HAVE_SSL
                 conn->ssl = ssl;
 #endif
