@@ -17,7 +17,10 @@ int conn_terminate(CONN *conn);
 /* set timeout */
 int conn_set_timeout(CONN *conn, int timeout_usec);
 
-/* set evstate as wait*/
+/* over timeout */
+int conn_over_timeout(CONN *conn);
+
+/* set evstate as wait */
 int conn_wait_evstate(CONN *conn);
 
 /* over evstate */

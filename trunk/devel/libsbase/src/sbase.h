@@ -409,6 +409,7 @@ typedef struct _CONN
     int timeout;
     int (*set_timeout)(struct _CONN *, int timeout_usec);
     int (*timeout_handler)(struct _CONN *);
+    int (*over_timeout)(struct _CONN *);
   
     /* message */
     int (*push_message)(struct _CONN *, int message_id);
