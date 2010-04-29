@@ -437,8 +437,8 @@ int conn_start_cstate(CONN *conn)
 int conn_over_cstate(CONN *conn)
 {
     int ret = -1;
-
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
     if(conn)
     {
         conn->c_state = C_STATE_FREE;
