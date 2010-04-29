@@ -193,10 +193,12 @@ do{                                                                             
 #define EVTIMER_DEL(ptr, evid)                                                          \
 do{                                                                                     \
     MUTEX_LOCK(PEVT(ptr)->mutex);                                                       \
-    if(ptr && evid >= 0 && evid < PEVT_NLIST(ptr) && PEVT_EVLIST(ptr) && PEVT_EVN(ptr, evid))   \
+    if(ptr && evid >= 0 && evid < PEVT_NLIST(ptr)                                       \
+            && PEVT_EVLIST(ptr) && PEVT_EVN(ptr, evid))                                 \
     {                                                                                   \
         PEVT_EVN(ptr, evid)->id      = -1;                                              \
     }                                                                                   \
+    evid = -1;                                                                          \
     MUTEX_UNLOCK(PEVT(ptr)->mutex);                                                     \
 }while(0)
 

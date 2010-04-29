@@ -98,6 +98,17 @@ do{                                                                             
     }                                                                                       \
 }while(0)
 
+/* update evtimer */
+#define CONN_UPDATE_EVTIMER(conn)                                                           \
+do                                                                                          \
+{                                                                                           \
+    if(conn && conn->evtimer && conn->timeout > 0 && conn->evid >= 0)                       \
+    {                                                                                       \
+            EVTIMER_UPDATE(conn->evtimer, conn->evid, conn->timeout,                        \
+                    &conn_evtimer_handler, (void *)conn);                                   \
+    }                                                                                       \
+}while(0)
+
 #define PUSH_IOQMESSAGE(conn, msgid)                                                        \
 do                                                                                          \
 {                                                                                           \
@@ -119,6 +130,7 @@ do                                                                              
 }while(0)
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
+
 /* connection event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
@@ -193,7 +205,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     __FILE__, __LINE__, event, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
             */
-            CONN_EVTIMER_SET(conn);
+            CONN_UPDATE_EVTIMER(conn);
         }
     }
     return ;
@@ -341,6 +353,20 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
     return ret;
 }
 
+/* over timeout */
+int conn_over_timeout(CONN *conn)
+{
+    int ret = -1;
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
+    if(conn)
+    {
+        EVTIMER_DEL(conn->evtimer, conn->evid);
+        ret = 0;
+    }
+    return ret;
+}
+
 /* set evstate as wait*/
 int conn_wait_evstate(CONN *conn)
 {
@@ -372,7 +398,7 @@ int conn_timeout_handler(CONN *conn)
 
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
-    if(conn)
+    if(conn && conn->evid >= 0)
     {
         if(conn->session.timeout_handler)
         {
@@ -385,6 +411,7 @@ int conn_timeout_handler(CONN *conn)
                     "local[%s:%d] via %d", conn->timeout, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
             CONN_STATE_RESET(conn);
+            return 0;
         }
         else
         {
@@ -1252,9 +1279,10 @@ CONN *conn_init()
         conn->start_cstate          = conn_start_cstate;
         conn->over_cstate           = conn_over_cstate;
         conn->set_timeout           = conn_set_timeout;
+        conn->over_timeout          = conn_over_timeout;
+        conn->timeout_handler       = conn_timeout_handler;
         conn->wait_evstate          = conn_wait_evstate;
         conn->over_evstate          = conn_over_evstate;
-        conn->timeout_handler       = conn_timeout_handler;
         conn->push_message          = conn_push_message;
         conn->read_handler          = conn_read_handler;
         conn->write_handler         = conn_write_handler;
