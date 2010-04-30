@@ -11,7 +11,7 @@
 #define HTTP_BUF_SIZE    65536
 #define HTTP_PATH_MAX    8192
 #define HTTP_IP_MAX      16
-#define HTTP_TIMEOUT     20000000
+#define HTTP_TIMEOUT     100000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -218,9 +218,9 @@ int benchmark_trans_handler(CONN *conn, int tid)
         }
         else
         {
-            //conn->wait_evstate(conn);
-            //return conn->set_timeout(conn, HTTP_TIMEOUT);
-            return service->newtransaction(service, conn, tid);
+            conn->wait_evstate(conn);
+            return conn->set_timeout(conn, HTTP_TIMEOUT);
+            //return service->newtransaction(service, conn, tid);
         }
     }
     return 0;
