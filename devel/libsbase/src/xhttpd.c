@@ -63,7 +63,6 @@ int xhttpd_mkdir(char *path, int mode)
         {
             if(*p == '/' )
             {
-                level++;
                 while(*p != '\0' && *p == '/' && *(p+1) == '/')++p;
                 if(level > 0)
                 {
@@ -74,6 +73,7 @@ int xhttpd_mkdir(char *path, int mode)
                     if(ret != 0 && mkdir(fullpath, mode) != 0) return -1;
                     *p = '/';
                 }
+                level++;
             }
             ++p;
         }
