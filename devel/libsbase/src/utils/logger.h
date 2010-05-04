@@ -138,11 +138,12 @@ do                                                                              
     }                                                                               \
     else                                                                            \
     {                                                                               \
-        if(PL(ptr)->fd > 0 && fstat(PL(ptr)->fd, &(PL(ptr)->st)) == 0               \
-                && PL(ptr)->st.st_size > LOG_ROTATE_SIZE)                           \
-        PLX(ptr) = ++(PL(ptr)->total);                                              \
+        if(PL(ptr)->fd <= 0 || (PL(ptr)->fd > 0                                     \
+                && fstat(PL(ptr)->fd, &(PL(ptr)->st)) == 0                          \
+                && PL(ptr)->st.st_size > ROTATE_LOG_SIZE))                          \
+            PLX(ptr) = ++(PL(ptr)->total);                                          \
         else                                                                        \
-        PLX(ptr) = 0;                                                               \
+            PLX(ptr) = 0;                                                           \
     }                                                                               \
     if(PLX(ptr) > 0)                                                                \
     {                                                                               \
