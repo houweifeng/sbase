@@ -790,6 +790,15 @@ CONN *service_getconn(SERVICE *service, int groupid)
                     break;
                 }
             }
+            if(conn == NULL)
+            {
+                if((conn = service_newconn(service, 0, 0, service->groups[groupid].ip,
+                    service->groups[groupid].port, &(service->groups[groupid].session))))
+                {
+                    conn->groupid = groupid;
+                    service->groups[groupid].total++;
+                }
+            }
         }
         else
         {
