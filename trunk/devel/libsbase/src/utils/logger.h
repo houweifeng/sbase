@@ -26,12 +26,6 @@ static char *ymonths[]= {
 #endif
 #ifndef _TYPEDEF_LOGGER
 #define _TYPEDEF_LOGGER
-#define LOG_ROTATE_HOUR             0x01
-#define LOG_ROTATE_DAY              0x02
-#define LOG_ROTATE_WEEK             0x04
-#define LOG_ROTATE_MONTH            0x08
-#define LOG_ROTATE_SIZE             0x10
-#define ROTATE_LOG_SIZE             268435456
 #define LOGGER_FILENAME_LIMIT  	1024
 #define LOGGER_LINE_LIMIT  	    1048576
 #define __DEBUG__		0
@@ -44,17 +38,12 @@ typedef struct _LOGGER
 	char file[LOGGER_FILENAME_LIMIT];
     char buf[LOGGER_LINE_LIMIT];
     struct timeval tv;
-    struct stat st;
     time_t timep;
-    time_t uptime;
-    time_t x;
     struct tm *p;
     char *ps;
-    void *mutex;
-    int rflag;
     int n;
+    void *mutex;
 	int fd ;
-    int total;
 }LOGGER;
 #endif
 #ifdef HAVE_PTHREAD
@@ -71,121 +60,22 @@ typedef struct _LOGGER
 #define PLFD(ptr) (PL(ptr)->fd)
 #define PLB(ptr) (PL(ptr)->buf)
 #define PLPS(ptr) (PL(ptr)->ps)
-#define PLST(ptr) (PL(ptr)->st)
-#define PLX(ptr)  (PL(ptr)->x)
-#define PMKDIR(ptr, lp)                                                             \
-do                                                                                  \
-{                                                                                   \
-    strcpy(PLB(ptr), lp);                                                           \
-    PLPS(ptr) = PLB(ptr);                                                           \
-    PLN(ptr) = 0;                                                                   \
-    while(*(PLPS(ptr)) != '\0')                                                     \
-    {                                                                               \
-        if(*(PLPS(ptr)) == '/' )                                                    \
-        {                                                                           \
-            while(*(PLPS(ptr)) != '\0' && *(PLPS(ptr)) == '/'                       \
-                    && *((PLPS(ptr))+1) == '/')++(PLPS(ptr));                       \
-            if(PLN(ptr) > 0)                                                        \
-            {                                                                       \
-                *(PLPS(ptr)) = '\0';                                                \
-                PLX(ptr) = stat(PLB(ptr), &(PL(ptr)->st));                              \
-                if(PLX(ptr) == 0 && !S_ISDIR(PL(ptr)->st.st_mode)) break;             \
-                if(PLX(ptr) != 0 && mkdir(PLB(ptr), 0755) != 0) break;              \
-                *(PLPS(ptr)) = '/';                                                 \
-            }                                                                       \
-            PLN(ptr)++;                                                             \
-        }                                                                           \
-        ++(PLPS(ptr));                                                              \
-    }                                                                               \
-}while(0)
-
-/* log rotate */
-#define LOGGER_ROTATE_CHECK(ptr)                                                    \
-do                                                                                  \
-{                                                                                   \
-    gettimeofday(&(PLTV(ptr)), NULL); time(&(PLTP(ptr)));                           \
-    PLP(ptr) = localtime(&PLTP(ptr));                                               \
-    if(PL(ptr)->rflag == LOG_ROTATE_HOUR)                                           \
-    {                                                                               \
-        PLX(ptr) = (1900+PLP(ptr)->tm_year) * 1000000                               \
-        + (PLP(ptr)->tm_mon+1) * 10000                                              \
-        + PLP(ptr)->tm_mday * 100                                                   \
-        + PLP(ptr)->tm_hour;                                                        \
-        if(PLX(ptr) > PL(ptr)->uptime) PL(ptr)->uptime = PLX(ptr);                  \
-        else PLX(ptr) = 0;                                                          \
-    }                                                                               \
-    else if(PL(ptr)->rflag == LOG_ROTATE_DAY)                                       \
-    {                                                                               \
-        PLX(ptr) = (1900+PLP(ptr)->tm_year) * 10000                                 \
-        + (PLP(ptr)->tm_mon+1) * 100                                                \
-        + PLP(ptr)->tm_mday;                                                        \
-        if(PLX(ptr) > PL(ptr)->uptime) PL(ptr)->uptime = PLX(ptr);                  \
-        else PLX(ptr) = 0;                                                          \
-    }                                                                               \
-    else if(PL(ptr)->rflag == LOG_ROTATE_WEEK)                                      \
-    {                                                                               \
-        PLX(ptr) = (1900+PLP(ptr)->tm_year) * 100                                   \
-        + (PLP(ptr)->tm_yday+1)/7;                                                  \
-        if(PLX(ptr) > PL(ptr)->uptime) PL(ptr)->uptime = PLX(ptr);                  \
-        else PLX(ptr) = 0;                                                          \
-    }                                                                               \
-    else if(PL(ptr)->rflag == LOG_ROTATE_MONTH)                                     \
-    {                                                                               \
-        PLX(ptr) = (1900+PLP(ptr)->tm_year) * 100                                   \
-        + PLP(ptr)->tm_mon;                                                         \
-        if(PLX(ptr) > PL(ptr)->uptime) PL(ptr)->uptime = PLX(ptr);                  \
-        else PLX(ptr) = 0;                                                          \
-    }                                                                               \
-    else                                                                            \
-    {                                                                               \
-        if(PL(ptr)->fd <= 0 || (PL(ptr)->fd > 0                                     \
-                && fstat(PL(ptr)->fd, &(PL(ptr)->st)) == 0                          \
-                && PL(ptr)->st.st_size > ROTATE_LOG_SIZE))                          \
-            PLX(ptr) = ++(PL(ptr)->total);                                          \
-        else                                                                        \
-            PLX(ptr) = 0;                                                           \
-    }                                                                               \
-    if(PLX(ptr) > 0)                                                                \
-    {                                                                               \
-        if(PL(ptr)->fd > 0){close(PL(ptr)->fd);}                                    \
-        sprintf(PL(ptr)->buf, "%s.%u", PL(ptr)->file, (unsigned int)PLX(ptr));      \
-        PL(ptr)->fd = open(PL(ptr)->buf, O_CREAT|O_WRONLY|O_APPEND, 0644);          \
-    }                                                                               \
-}while(0)
-
-/* logger init */
 #define LOGGER_INIT(ptr, lp)                                                        \
-do                                                                                  \
-{                                                                                   \
+do{                                                                                   \
     if((ptr = (LOGGER *)calloc(1, sizeof(LOGGER))))                                 \
     {                                                                               \
         MUTEX_INIT(PL(ptr)->mutex);                                                 \
         strcpy(PLF(ptr), lp);                                                       \
-        PMKDIR(ptr, lp);                                                            \
-        LOGGER_ROTATE_CHECK(ptr);                                                   \
+        PLFD(ptr) = open(PLF(ptr), O_CREAT|O_WRONLY|O_APPEND, 0644);                \
     }                                                                               \
 }while(0)
-
-/* logger-rotate init  */
-#define LOGGER_ROTATE_INIT(ptr, lp, rotate_flag)                                    \
-do                                                                                  \
-{                                                                                   \
-    if((ptr = (LOGGER *)calloc(1, sizeof(LOGGER))))                                 \
-    {                                                                               \
-        MUTEX_INIT(PL(ptr)->mutex);                                                 \
-        PMKDIR(ptr, lp);                                                            \
-        strcpy(PLF(ptr), lp);                                                       \
-        PL(ptr)->rflag = rotate_flag;                                               \
-        LOGGER_ROTATE_CHECK(ptr);                                                   \
-    }                                                                               \
-}while(0)
-
 #define LOGGER_ADD(ptr, __level__, format...)                                       \
 do{                                                                                 \
     if(ptr)                                                                         \
     {                                                                               \
     MUTEX_LOCK(PL(ptr)->mutex);                                                     \
-    LOGGER_ROTATE_CHECK(ptr);                                                       \
+    gettimeofday(&(PLTV(ptr)), NULL); time(&(PLTP(ptr)));                           \
+    PLP(ptr) = localtime(&PLTP(ptr));                                               \
     PLPS(ptr) = PLB(ptr);                                                           \
     PLPS(ptr) += sprintf(PLPS(ptr), "[%02d/%s/%04d:%02d:%02d:%02d +%06u] "          \
             "[%u/%08x] #%s::%d# %s:", PLP(ptr)->tm_mday, ymonths[PLP(ptr)->tm_mon], \
@@ -203,7 +93,6 @@ do{                                                                             
     if(ptr)                                                                         \
     {                                                                               \
     MUTEX_LOCK(PL(ptr)->mutex);                                                     \
-    LOGGER_ROTATE_CHECK(ptr);                                                       \
     PLPS(ptr) = PLB(ptr);                                                           \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
