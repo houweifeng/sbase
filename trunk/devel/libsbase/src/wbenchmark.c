@@ -8,10 +8,11 @@
 #include <sbase.h>
 #include "timer.h"
 #include <sys/resource.h>
-#define HTTP_BUF_SIZE    65536
-#define HTTP_PATH_MAX    8192
-#define HTTP_IP_MAX      16
-#define HTTP_TIMEOUT     100000
+#define HTTP_BUF_SIZE       65536
+#define HTTP_PATH_MAX       8192
+#define HTTP_IP_MAX         16
+#define HTTP_TIMEOUT        10000000
+#define HTTP_WAIT_TIMEOUT   100000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -47,8 +48,6 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
         {
             conn->c_id = id;
             conn->start_cstate(conn);
-            //conn->c_id = ncurrent;
-            //conn->set_timeout(conn, HTTP_TIMEOUT);
             service->newtransaction(service, conn, id);
         }
     }
@@ -219,7 +218,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
         else
         {
             conn->wait_evstate(conn);
-            return conn->set_timeout(conn, HTTP_TIMEOUT);
+            return conn->set_timeout(conn, conn->timeout+HTTP_TIMEOUT);
             //return service->newtransaction(service, conn, tid);
         }
     }
@@ -274,15 +273,16 @@ void benchmark_heartbeat_handler(void *arg)
 
     while(ncurrent < concurrency)
     {
-	id = ncurrent;
+        id = ncurrent;
         if((conn = http_newconn(id, server_ip, server_port, server_is_ssl)) == NULL)
         {
             break;
         }
-	else
-	{
-		++ncurrent;
-	}
+        else
+        {
+            usleep(1000);
+            ++ncurrent;
+        }
     }
     return ;
 }
