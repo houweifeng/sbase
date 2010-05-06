@@ -828,8 +828,15 @@ int service_freeconn(SERVICE *service, CONN *conn)
         MUTEX_LOCK(service->mutex);
         if((id = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX)
         {
-            x = service->groups[id].nconns_free++;
-            service->groups[id].conns_free[x] = conn->index; 
+            if(service->groups[id].limit <= 0)
+            {
+                conn->close(conn);
+            }
+            else
+            {
+                x = service->groups[id].nconns_free++;
+                service->groups[id].conns_free[x] = conn->index; 
+            }
         }
         else
         {
@@ -1043,11 +1050,21 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
 /* add group */
 int service_closegroup(SERVICE *service, int groupid)
 {
-    int id = -1;
+    int i = 0, id = -1;
+    CONN *conn = NULL;
+
     if(service && groupid < SB_GROUPS_MAX)
     {
         MUTEX_LOCK(service->mutex);
         service->groups[groupid].limit = 0;
+        while((i = --(service->groups[groupid].nconns_free)) >= 0)
+        {
+            if((id = service->groups[groupid].conns_free[i]) >= 0
+                && (conn = service->connections[id]))
+            {
+                conn->close(conn);
+            }
+        }
         MUTEX_UNLOCK(service->mutex);
     }
     return id;
