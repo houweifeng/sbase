@@ -218,7 +218,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
         else
         {
             conn->wait_evstate(conn);
-            return conn->set_timeout(conn, conn->timeout+HTTP_TIMEOUT);
+            return conn->set_timeout(conn, conn->timeout+HTTP_WAIT_TIMEOUT);
             //return service->newtransaction(service, conn, tid);
         }
     }
