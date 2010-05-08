@@ -331,7 +331,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
             {
                 if(service->sock_type == SOCK_STREAM)
                 {
-                    if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                    while((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
                     {
                         ip = inet_ntoa(rsa.sin_addr);
                         port = ntohs(rsa.sin_port);
@@ -373,15 +373,17 @@ err_conn:
                         }
                         return ;
                     }
+                    /*
                     else
                     {
                         FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
                                 strerror(errno));
                     }
+                    */
                 }
                 else if(service->sock_type == SOCK_DGRAM)
                 {
-                    if((n = recvfrom(event_fd, buf, SB_BUF_SIZE, 
+                    while((n = recvfrom(event_fd, buf, SB_BUF_SIZE, 
                             0, (struct sockaddr *)&rsa, &rsa_len)) > 0)
                     {
                         ip = inet_ntoa(rsa.sin_addr);
@@ -414,12 +416,13 @@ err_conn:
                                     strerror(errno));
                         }
                     }
+                    /*
                     else
                     {
                         FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
                                 strerror(errno));
                     }
-
+                    */
                 }
             }
         }
