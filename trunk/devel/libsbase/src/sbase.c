@@ -168,16 +168,21 @@ running:
         if(sbase->usec_sleep > 0) tv.tv_usec = sbase->usec_sleep;
         do
         {
+            i = 0;
             //running evbase 
-            //if(sbase->evbase->loop(sbase->evbase, 0, &tv) <= 0) usleep(1);
-            sbase->evbase->loop(sbase->evbase, 0, &tv);
+            if(sbase->evbase->loop(sbase->evbase, 0, &tv) > 0)++i;
+            //sbase->evbase->loop(sbase->evbase, 0, &tv);
             //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
             EVTIMER_CHECK(sbase->evtimer);
             //EVTIMER_LIST(sbase->evtimer, stdout);
             //running message queue
             if(QMTOTAL(sbase->message_queue) > 0)
+            {
                 qmessage_handler(sbase->message_queue, sbase->logger);
+                ++i;
+            }
+            if(i == 0)usleep(sbase->usec_sleep);
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)
