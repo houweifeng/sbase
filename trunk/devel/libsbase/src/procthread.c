@@ -29,7 +29,7 @@ void procthread_run(void *arg)
             do
             {
                 i = 0;
-                if(pth->evbase->loop(pth->evbase, 0, &tv) > 0) ++i;
+                if(pth->evbase->loop(pth->evbase, 0, NULL) > 0) ++i;
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
@@ -48,8 +48,8 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                 else
                 {
-                    //usleep(10);
-                    ret = MUTEX_WAIT(pth->mutex);
+                    usleep(100);
+                    //ret = MUTEX_WAIT(pth->mutex);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
