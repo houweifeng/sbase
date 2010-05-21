@@ -17,6 +17,7 @@ extern "C" {
 #endif
 #define SB_CONN_MAX         65536
 #define SB_IP_MAX           16
+#define SB_XIDS_MAX         16
 #define SB_GROUPS_MAX       256
 #define SB_THREADS_MAX      1024
 #define SB_INIT_CONNS       128
@@ -335,6 +336,10 @@ typedef struct _CONN
     int index;
     int groupid;
     int gindex;
+
+    /* xid */
+    int xids[SB_XIDS_MAX];
+
     /* die state */
     int d_state;
     void *parent;
