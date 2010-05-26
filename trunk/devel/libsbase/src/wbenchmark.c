@@ -156,6 +156,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
 {
     char *p = NULL, *end = NULL, *s = NULL;
     int respcode = -1;
+    long long int len = 0;
 
 	if(conn)
     {
@@ -184,8 +185,8 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
                 if(*s >= '0' && *s <= '9')break;
                 else++s;
             }
-            if(*s >= '0' && *s <= '9') 
-                conn->recv_chunk(conn, atoll(s));
+            if(*s >= '0' && *s <= '9' && (len = atoll(s)) > 0) 
+                conn->recv_chunk(conn, len);
             else 
                 return http_over(conn, respcode);
             
@@ -491,7 +492,7 @@ invalid_url:
         service->working_mode = 1;
         service->nprocthreads = 2;
         service->ndaemons = 0;
-        service->use_iodaemon = 1;
+        service->use_iodaemon = 0;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;
