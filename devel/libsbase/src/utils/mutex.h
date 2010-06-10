@@ -39,6 +39,7 @@ do                                                                          \
 	}														                \
 }while(0)
 #else
+#ifdef HAVE_SEMAPHORE
 #include <semaphore.h>
 typedef struct _MUTEX
 {
@@ -62,6 +63,14 @@ do                                                                          \
 {                                                                           \
     if(ptr){sem_destroy(&(MT(ptr)->sem));free(ptr);}                        \
 }while(0)
+#else
+#define MUTEX_INIT(ptr)
+#define MUTEX_LOCK(ptr)
+#define MUTEX_UNLOCK(ptr)
+#define MUTEX_WAIT(ptr)
+#define MUTEX_SIGNAL(ptr)
+#define MUTEX_DESTROY(ptr)
+#endif
 #endif
 #ifdef __cplusplus
  }
