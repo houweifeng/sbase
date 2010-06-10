@@ -95,7 +95,7 @@ fi
 
 #semaphore
 havesemaphore=no
-AC_CHECK_LIB(c, sem_init, havesemaphore=yes)
+AC_CHECK_LIB(c, sem_wait, havesemaphore=yes)
 if test "$havesemaphore" = "yes" ; then
         CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
 fi
