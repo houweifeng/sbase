@@ -692,7 +692,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
     if(service && conn && service->connections)
     {
         MUTEX_LOCK(service->mutex);
-        for(i = 0; i < service->connections_limit; i++)
+        for(i = 1; i < service->connections_limit; i++)
         {
             if(service->connections[i] == NULL)
             {
@@ -701,9 +701,18 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 service->running_connections++;
                 if((x = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX)
                 {
-                    id = (service->groups[x].nconns_free)++;
-                    service->groups[x].conns_free[id] = i;
-                    conn->gindex = id;
+                    id = 0;
+                    while(id < SB_CONN_MAX)
+                    {
+                        if(service->groups[x].conns_free[id] == 0)
+                        {
+                            service->groups[x].conns_free[id] = i;
+                            service->groups[x].nconns_free++;
+                            conn->gindex = id;
+                            break;
+                        }
+                        ++id;
+                    }
                 }
                 if(i >= service->index_max) service->index_max = i;
                 ret = 0;
@@ -743,8 +752,9 @@ int service_popconn(SERVICE *service, CONN *conn)
             {
                 if((id = conn->gindex) >= 0 && id < SB_GROUPS_MAX)
                 {
-                    service->groups[x].conns_free[id] = -1;
+                    service->groups[x].conns_free[id] = 0;
                 }
+                --(service->groups[x].nconns_free);
                 --(service->groups[x].total);
             }
             service->connections[conn->index] = NULL;
@@ -782,16 +792,18 @@ CONN *service_getconn(SERVICE *service, int groupid)
         if(groupid >= 0 && groupid < service->ngroups)
         {
             //fprintf(stdout, "%s::%d nconns_free:%d\n", __FILE__, __LINE__, service->groups[groupid].nconns_free);
-            while(service->groups[groupid].nconns_free > 0)
+            x = 0;
+            while(x < SB_CONN_MAX)
             {
-                x = --(service->groups[groupid].nconns_free);
-                if((i = service->groups[groupid].conns_free[x]) >= 0 && i < SB_CONN_MAX 
-                        && (conn = service->connections[i]))
+                if((i = service->groups[groupid].conns_free[x]) > 0
+                        && (conn = service->connections[i]) 
+                        && conn->c_state == C_STATE_FREE)
                 {
                     //fprintf(stdout, "%s::%d nconns_free:%d\n", __FILE__, __LINE__, service->groups[groupid].nconns_free);
                     conn->start_cstate(conn);
                     break;
                 }
+                ++x;
             }
             if(conn == NULL)
             {
@@ -839,6 +851,7 @@ int service_freeconn(SERVICE *service, CONN *conn)
             {
                 x = service->groups[id].nconns_free++;
                 service->groups[id].conns_free[x] = conn->index; 
+                conn->over_cstate(conn);
             }
         }
         else
