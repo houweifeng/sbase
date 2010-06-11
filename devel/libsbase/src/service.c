@@ -692,6 +692,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
     if(service && conn && service->connections)
     {
         MUTEX_LOCK(service->mutex);
+        DEBUG_LOGGER(service->logger, "start pushconn()");
         for(i = 1; i < service->connections_limit; i++)
         {
             if(service->connections[i] == NULL)
@@ -732,6 +733,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
         {
             parent->bind_proxy(parent, conn);
         }
+        DEBUG_LOGGER(service->logger, "start pushconn()");
         MUTEX_UNLOCK(service->mutex);
     }
     return ret;
@@ -745,6 +747,7 @@ int service_popconn(SERVICE *service, CONN *conn)
     if(service && service->connections && conn)
     {
         MUTEX_LOCK(service->mutex);
+        DEBUG_LOGGER(service->logger, "start popconn()");
         if(conn->index >= 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
@@ -774,6 +777,7 @@ int service_popconn(SERVICE *service, CONN *conn)
                     conn->local_ip, conn->local_port, conn->fd, 
                     conn->index, service->running_connections);
         }
+        DEBUG_LOGGER(service->logger, "over popconn()");
         MUTEX_UNLOCK(service->mutex);
         //return service_pushtoq(service, conn);
     }
@@ -1116,6 +1120,7 @@ int service_stategroup(SERVICE *service)
 
     if(service && service->ngroups > 0)
     {
+        DEBUG_LOGGER(service->logger, "start stategroup()");
         for(i = 0; i < service->ngroups; i++)
         {
             while(service->groups[i].limit > 0 
@@ -1129,6 +1134,7 @@ int service_stategroup(SERVICE *service)
                 service->groups[i].total++;
             }
         }
+        DEBUG_LOGGER(service->logger, "over stategroup()");
         return 0;
     }
     return -1;
@@ -1283,9 +1289,7 @@ void service_state(void *arg)
             {
                 if(service->running_connections < service->client_connections_limit)
                 {
-                    //DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",
-                        //service->ip, service->port, service->client_connections_limit,
-                        // service->running_connections);
+                    //DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",service->ip, service->port, service->client_connections_limit,service->running_connections);
                     n = service->client_connections_limit - service->running_connections;
                     while(n > 0)
                     {
