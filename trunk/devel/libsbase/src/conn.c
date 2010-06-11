@@ -478,6 +478,7 @@ int conn_over_cstate(CONN *conn)
 /* push message to message queue */
 int conn_push_message(CONN *conn, int message_id)
 {
+    void *mutex = NULL;
     int ret = -1;
 
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
@@ -490,8 +491,12 @@ int conn_push_message(CONN *conn, int message_id)
                 conn->remote_port, conn->local_ip, conn->local_port, 
                 conn->fd, QMTOTAL(conn->message_queue),
                 PPL(conn), PPL(conn->parent));
-        QMESSAGE_PUSH(PPARENT(conn)->mutex, conn->message_queue, message_id, conn->index, conn->fd, 
+        if(conn->parent && (mutex = PPARENT(conn)->mutex))
+        {
+            qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                 -1, conn->parent, conn, NULL);
+            MUTEX_SIGNAL(mutex);
+        }
         ret = 0;
     }
     return ret;
