@@ -98,6 +98,7 @@ int http_request(CONN *conn)
                 p += sprintf(p, "\r\n");
                 n = p - buf;
             }
+            conn->save_cache(conn, path, strlen(path)+1);
             return conn->push_chunk(conn, buf, n);
         }
         else
@@ -249,7 +250,10 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
         }
         else
         {
-            fprintf(stdout, "timeout on conn[%s:%d] via %d status:%d\n", conn->local_ip, conn->local_port, conn->fd, conn->status);
+            if(cache && cache->data)
+                fprintf(stdout, "timeout on conn[%s:%d] uri[%s] via %d status:%d\n", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
+            else
+                fprintf(stdout, "timeout on conn[%s:%d] via %d status:%d\n", conn->local_ip, conn->local_port, conn->fd, conn->status);
             conn->over_cstate(conn);
             return http_over(conn, 0);
         }
