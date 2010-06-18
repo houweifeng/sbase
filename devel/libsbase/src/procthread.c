@@ -54,11 +54,14 @@ void procthread_run(void *arg)
                 }
             }while(pth->running_status);
         }
-        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+        fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
             qmessage_handler(pth->message_queue, pth->logger);
-        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+        fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
     }
+#ifdef HAVE_PTHREAD
+    pthread_exit(NULL);
+#endif
     return ;
 }
 
