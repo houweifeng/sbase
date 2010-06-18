@@ -494,9 +494,9 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 2;
+        service->nprocthreads = 10;
         service->ndaemons = 0;
-        service->use_iodaemon = 0;
+        service->use_iodaemon = 1;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;
