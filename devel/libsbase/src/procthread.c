@@ -48,8 +48,8 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                 else
                 {
-                    //usleep(100);
-                    ret = MUTEX_WAIT(pth->mutex);
+                    usleep(100);
+                    //ret = MUTEX_WAIT(pth->mutex);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
@@ -69,7 +69,7 @@ int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
 
     if(pth && pth->message_queue && task_handler)
     {
-        QMESSAGE_PUSH(pth->mutex, pth->message_queue, MESSAGE_TASK, -1, -1, -1, pth, task_handler, arg);
+        qmessage_push(pth->message_queue, MESSAGE_TASK, -1, -1, -1, pth, task_handler, arg);
         DEBUG_LOGGER(pth->logger, "Added message task to procthreads[%d]", pth->index);
         ret = 0;
     }
@@ -83,7 +83,7 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
 
     if(pth && pth->message_queue && conn)
     {
-        QMESSAGE_PUSH(pth->mutex, pth->message_queue, MESSAGE_TRANSACTION, -1, conn->fd, tid, pth, conn, NULL);
+        qmessage_push(pth->message_queue, MESSAGE_TRANSACTION, -1, conn->fd, tid, pth, conn, NULL);
         DEBUG_LOGGER(pth->logger, "Added message transaction[%d] to %s:%d on %s:%d via %d total %d",
                 tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                 conn->fd, QMTOTAL(pth->message_queue));
@@ -99,7 +99,7 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
 
     if(pth && pth->message_queue && conn)
     {
-        QMESSAGE_PUSH(pth->mutex, pth->message_queue, MESSAGE_NEW_SESSION, -1, conn->fd, -1, pth, conn, NULL);
+        qmessage_push(pth->message_queue, MESSAGE_NEW_SESSION, -1, conn->fd, -1, pth, conn, NULL);
         DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%s:%d] on "
                 "%s:%d via %d total %d", MESSAGE_DESC(MESSAGE_NEW_SESSION),
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port,
@@ -159,7 +159,7 @@ void procthread_stop(PROCTHREAD *pth)
 {
     if(pth && pth->message_queue)
     {
-        QMESSAGE_PUSH(pth->mutex, pth->message_queue, MESSAGE_STOP, -1, -1, -1, pth, NULL, NULL);
+        qmessage_push(pth->message_queue, MESSAGE_STOP, -1, -1, -1, pth, NULL, NULL);
         DEBUG_LOGGER(pth->logger, "Ready for stopping procthread[%d]", pth->index);
         pth->lock       = 1;
     }
@@ -182,7 +182,7 @@ void procthread_state(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 {
     if(pth && pth->message_queue)
     {
-        QMESSAGE_PUSH(pth->mutex, pth->message_queue, MESSAGE_STATE, -1, -1, -1, pth, handler, arg);
+        qmessage_push(pth->message_queue, MESSAGE_STATE, -1, -1, -1, pth, handler, arg);
         //DEBUG_LOGGER(pth->logger, "Ready for state connections on daemon procthread");
     }
     return ;
@@ -193,7 +193,7 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 {
     if(pth && pth->message_queue)
     {
-        QMESSAGE_PUSH(pth->mutex, pth->message_queue, MESSAGE_HEARTBEAT, -1, -1, -1, pth, handler, arg);
+        qmessage_push(pth->message_queue, MESSAGE_HEARTBEAT, -1, -1, -1, pth, handler, arg);
         //DEBUG_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
     }
     return ;

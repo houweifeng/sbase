@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <mutex.h>
 #ifndef _MESSAGE_H
 #define _MESSAGE_H
 #ifdef __cplusplus
@@ -76,15 +75,6 @@ void qmessage_clean(void *q);
 #define MESSAGE_CLEAN(ptr) {if(ptr){free(ptr);ptr = NULL;}}
 #define MESSAGE_SIZE    sizeof(MESSAGE)
 #define MESSAGE_DESC(id) ((id & MESSAGE_ALL)?messagelist[get_msg_no(id)] : "")
-#define QMESSAGE_PUSH(mutex, qmsg, id, index, fd, tid, parent, handler, arg)            \
-do                                                                                      \
-{                                                                                       \
-    if(qmsg)                                                                            \
-    {                                                                                   \
-        qmessage_push(qmsg, id, index, fd, tid, parent, handler, arg);                  \
-        if(mutex){MUTEX_SIGNAL(mutex);}                                                 \
-    }                                                                                   \
-}while(0)
 #endif
 #ifdef __cplusplus
  }

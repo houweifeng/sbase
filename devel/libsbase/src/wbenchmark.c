@@ -494,7 +494,7 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 10;
+        service->nprocthreads = 8;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
         service->service_type = C_SERVICE;
