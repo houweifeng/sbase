@@ -10,7 +10,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0};
-    int ret = -1, i = 0;
+    int i = 0;
 
     if(pth)
     {
@@ -48,16 +48,16 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                 else
                 {
-                    usleep(100);
+                    usleep(64);
                     //ret = MUTEX_WAIT(pth->mutex);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
         }
-        fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
             qmessage_handler(pth->message_queue, pth->logger);
-        fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
