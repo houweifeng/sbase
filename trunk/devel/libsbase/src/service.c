@@ -707,7 +707,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                         if(service->groups[id].conns_free[x] == 0)
                         {
                             service->groups[id].conns_free[x] = i;
-                            service->groups[id].nconns_free++;
+                            ++(service->groups[id].nconns_free);
                             conn->gindex = x;
                             break;
                         }
@@ -846,7 +846,7 @@ int service_freeconn(SERVICE *service, CONN *conn)
     if(service && conn)
     {
         MUTEX_LOCK(service->mutex);
-        if((id = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX)
+        if((id = conn->groupid) >= 0 && id < SB_GROUPS_MAX)
         {
             if(service->groups[id].limit <= 0)
             {
@@ -860,7 +860,7 @@ int service_freeconn(SERVICE *service, CONN *conn)
                     if(service->groups[id].conns_free[x] == 0)
                     {
                         service->groups[id].conns_free[x] = conn->index;
-                        service->groups[id].nconns_free++;
+                        ++(service->groups[id].nconns_free);
                         conn->gindex = x;
                         break;
                     }
