@@ -794,7 +794,6 @@ CONN *service_getconn(SERVICE *service, int groupid)
         MUTEX_LOCK(service->mutex);
         if(groupid >= 0 && groupid < service->ngroups)
         {
-            //fprintf(stdout, "%s::%d nconns_free:%d\n", __FILE__, __LINE__, service->groups[groupid].nconns_free);
             x = 0;
             while(x < SB_CONN_MAX)
             {
@@ -802,8 +801,8 @@ CONN *service_getconn(SERVICE *service, int groupid)
                         && (conn = service->connections[i]) 
                         && conn->c_state == C_STATE_FREE)
                 {
-                    //fprintf(stdout, "%s::%d nconns_free:%d\n", __FILE__, __LINE__, service->groups[groupid].nconns_free);
                     conn->gindex = 0;
+                    service->groups[groupid].nconns_free--;
                     conn->start_cstate(conn);
                     break;
                 }
@@ -1138,8 +1137,6 @@ int service_stategroup(SERVICE *service)
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
                             service->groups[i].port, &(service->groups[i].session))))
             {
-                //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, i, service->groups[i].session.data_handler);
-                //fprintf(stdout, "%s::%d newconn[%s:%d] via %d \n", __FILE__, __LINE__, service->groups[i].ip, service->groups[i].port, conn->fd);
                 conn->groupid = i;
                 service->groups[i].total++;
             }
