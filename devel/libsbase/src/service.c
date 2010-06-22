@@ -699,19 +699,19 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 service->connections[i] = conn;
                 conn->index = i;
                 service->running_connections++;
-                if((x = conn->groupid) >= 0 && conn->groupid < SB_GROUPS_MAX)
+                if((id = conn->groupid) >= 0 && id < SB_GROUPS_MAX)
                 {
-                    id = 0;
-                    while(id < SB_CONN_MAX)
+                    x = 0;
+                    while(x < SB_CONN_MAX)
                     {
-                        if(service->groups[x].conns_free[id] == 0)
+                        if(service->groups[id].conns_free[x] == 0)
                         {
-                            service->groups[x].conns_free[id] = i;
-                            service->groups[x].nconns_free++;
-                            conn->gindex = id;
+                            service->groups[id].conns_free[x] = i;
+                            service->groups[id].nconns_free++;
+                            conn->gindex = x;
                             break;
                         }
-                        ++id;
+                        ++x;
                     }
                 }
                 if(i >= service->index_max) service->index_max = i;
@@ -747,22 +747,23 @@ int service_popconn(SERVICE *service, CONN *conn)
     {
         MUTEX_LOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "start popconn()");
-        if(conn->index >= 0 && conn->index <= service->index_max
+        if(conn->index > 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
-            if((x = conn->groupid) >= 0 && x < SB_GROUPS_MAX)
+            if((id = conn->groupid) >= 0 && id < SB_GROUPS_MAX)
             {
-                if((id = conn->gindex) >= 0 && id < SB_GROUPS_MAX)
+                if((x = conn->gindex) >= 0 && x < SB_CONN_MAX 
+                        && service->groups[id].conns_free[x] > 0
+                        && service->groups[id].conns_free[x] == conn->index)
                 {
-                    service->groups[x].conns_free[id] = 0;
-                    --(service->groups[x].nconns_free);
+                    service->groups[id].conns_free[x] = 0;
+                    --(service->groups[id].nconns_free);
                 }
-                --(service->groups[x].total);
+                --(service->groups[id].total);
             }
             service->connections[conn->index] = NULL;
             service->running_connections--;
-            if(service->index_max == conn->index) 
-                service->index_max--;
+            if(service->index_max == conn->index) service->index_max--;
             DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d "
                     "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd, 
@@ -801,8 +802,9 @@ CONN *service_getconn(SERVICE *service, int groupid)
                         && (conn = service->connections[i]) 
                         && conn->c_state == C_STATE_FREE)
                 {
-                    conn->gindex = 0;
-                    service->groups[groupid].nconns_free--;
+                    conn->gindex = -1;
+                    service->groups[groupid].conns_free[x] = 0;
+                    --(service->groups[groupid].nconns_free);
                     conn->start_cstate(conn);
                     break;
                 }
