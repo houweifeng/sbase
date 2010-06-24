@@ -810,6 +810,7 @@ CONN *service_getconn(SERVICE *service, int groupid)
                 }
                 ++x;
             }
+            /*
             if(conn == NULL)
             {
                 if((conn = service_newconn(service, 0, 0, service->groups[groupid].ip,
@@ -819,6 +820,7 @@ CONN *service_getconn(SERVICE *service, int groupid)
                     service->groups[groupid].total++;
                 }
             }
+            */
         }
         else
         {
@@ -866,7 +868,6 @@ int service_freeconn(SERVICE *service, CONN *conn)
                     }
                     ++x;
                 }
-                conn->over_cstate(conn);
             }
         }
         else
