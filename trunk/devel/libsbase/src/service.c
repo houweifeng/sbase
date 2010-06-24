@@ -732,7 +732,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
         {
             parent->bind_proxy(parent, conn);
         }
-        DEBUG_LOGGER(service->logger, "start pushconn()");
+        DEBUG_LOGGER(service->logger, "over pushconn()");
         MUTEX_UNLOCK(service->mutex);
     }
     return ret;
