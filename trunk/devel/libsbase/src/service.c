@@ -314,9 +314,10 @@ int service_set_log(SERVICE *service, char *logfile)
 void service_event_handler(int event_fd, short flag, void *arg)
 {
     char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
+    socklen_t rsa_len = sizeof(struct sockaddr_in);
     int fd = -1, port = -1, n = 0, opt = 1;
     SERVICE *service = (SERVICE *)arg;
-    socklen_t rsa_len = sizeof(struct sockaddr_in);
+    PROCTHREAD *pth = NULL;
     struct sockaddr_in rsa;
     CONN *conn = NULL;
 #ifdef HAVE_SSL 
@@ -402,8 +403,13 @@ err_conn:
                         {
                             p = buf;
                             MB_PUSH(conn->buffer, p, n);
-                            qmessage_push(((PROCTHREAD *)(conn->parent))->message_queue, 
-                                    MESSAGE_INPUT, -1, conn->fd, -1, conn, conn->parent, NULL);
+                            pth = (PROCTHREAD *)(conn->parent);
+                            if(pth)
+                            {
+                                qmessage_push(pth->message_queue, 
+                                    MESSAGE_INPUT, -1, conn->fd, -1, conn, pth, NULL);
+                                MUTEX_SIGNAL(pth->mutex);
+                            }
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
                                     " buffer:%d", ip, port, fd, MB_NDATA(conn->buffer));
                         }
@@ -799,7 +805,8 @@ CONN *service_getconn(SERVICE *service, int groupid)
             while(x < SB_CONN_MAX)
             {
                 if((i = service->groups[groupid].conns_free[x]) > 0
-                        && (conn = service->connections[i]) 
+                        && (conn = service->connections[i]) && conn->status == 0
+                        && conn->d_state == D_STATE_FREE
                         && conn->c_state == C_STATE_FREE)
                 {
                     conn->gindex = -1;
