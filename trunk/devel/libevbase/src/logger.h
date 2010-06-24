@@ -204,6 +204,11 @@ do{                                                                             
     MUTEX_LOCK(PL(ptr)->mutex);                                                     \
     LOGGER_ROTATE_CHECK(ptr);                                                       \
     PLPS(ptr) = PLB(ptr);                                                           \
+    PLPS(ptr) = PLB(ptr);                                                           \
+    PLPS(ptr) += sprintf(PLPS(ptr), "[%02d/%s/%04d:%02d:%02d:%02d +%06u] ",         \
+            PLP(ptr)->tm_mday, ymonths[PLP(ptr)->tm_mon],                           \
+            (1900+PLP(ptr)->tm_year), PLP(ptr)->tm_hour, PLP(ptr)->tm_min,          \
+        PLP(ptr)->tm_sec, (unsigned int)(PLTV(ptr).tv_usec));                       \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
     PLN(ptr) = write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                  \
