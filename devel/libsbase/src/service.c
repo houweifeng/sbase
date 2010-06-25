@@ -804,18 +804,25 @@ CONN *service_getconn(SERVICE *service, int groupid)
             x = 0;
             while(x < SB_CONN_MAX)
             {
-                if((i = service->groups[groupid].conns_free[x]) > 0
-                        && (conn = service->connections[i]) && conn->status == 0
-                        && conn->d_state == D_STATE_FREE && conn->c_state == C_STATE_FREE)
+                if((i = service->groups[groupid].conns_free[x]) > 0 
+                        && (conn = service->connections[i]))
                 {
-                    conn->gindex = -1;
-                    service->groups[groupid].conns_free[x] = 0;
-                    --(service->groups[groupid].nconns_free);
-                    DEBUG_LOGGER(service->logger, "get conn[%s:%d] from conns_free[%d]", conn->local_ip, conn->local_port, x);
-                    conn->start_cstate(conn);
-                    break;
+                    if(conn->status == CONN_STATUS_FREE && conn->d_state == D_STATE_FREE 
+                            && conn->c_state == C_STATE_FREE)
+                    {
+                        conn->gindex = -1;
+                        service->groups[groupid].conns_free[x] = 0;
+                        --(service->groups[groupid].nconns_free);
+                        DEBUG_LOGGER(service->logger, "get conn[%s:%d] from conns_free[%d]", conn->local_ip, conn->local_port, x);
+                        conn->start_cstate(conn);
+                        break;
+                    }
+                    else 
+                    {
+                        DEBUG_LOGGER(service->logger, "non-free conn[%s::%d] status:%d c_state:%d d_state:%d on conns_free[%d]", conn->local_ip, conn->local_port, conn->status, conn->c_state, conn->d_state, x);
+                        conn = NULL;
+                    }
                 }
-                else conn = NULL;
                 ++x;
             }
         }
