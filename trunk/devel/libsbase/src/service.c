@@ -815,6 +815,7 @@ CONN *service_getconn(SERVICE *service, int groupid)
                     conn->start_cstate(conn);
                     break;
                 }
+                else conn = NULL;
                 ++x;
             }
         }
