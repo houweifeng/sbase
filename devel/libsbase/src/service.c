@@ -868,6 +868,7 @@ int service_freeconn(SERVICE *service, CONN *conn)
                         service->groups[id].conns_free[x] = conn->index;
                         ++(service->groups[id].nconns_free);
                         conn->gindex = x;
+                        conn->over_cstate(conn);
                         DEBUG_LOGGER(service->logger, "free conn[%s:%d] to conns_free[%d]", conn->local_ip, conn->local_port, x);
                         break;
                     }
