@@ -806,12 +806,12 @@ CONN *service_getconn(SERVICE *service, int groupid)
             {
                 if((i = service->groups[groupid].conns_free[x]) > 0
                         && (conn = service->connections[i]) && conn->status == 0
-                        && conn->d_state == D_STATE_FREE
-                        && conn->c_state == C_STATE_FREE)
+                        && conn->d_state == D_STATE_FREE && conn->c_state == C_STATE_FREE)
                 {
                     conn->gindex = -1;
                     service->groups[groupid].conns_free[x] = 0;
                     --(service->groups[groupid].nconns_free);
+                    DEBUG_LOGGER(service->logger, "get conn[%s:%d] from conns_free[%d]", conn->local_ip, conn->local_port, x);
                     conn->start_cstate(conn);
                     break;
                 }
@@ -860,6 +860,7 @@ int service_freeconn(SERVICE *service, CONN *conn)
                         service->groups[id].conns_free[x] = conn->index;
                         ++(service->groups[id].nconns_free);
                         conn->gindex = x;
+                        DEBUG_LOGGER(service->logger, "free conn[%s:%d] to conns_free[%d]", conn->local_ip, conn->local_port, x);
                         break;
                     }
                     ++x;
