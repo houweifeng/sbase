@@ -817,17 +817,6 @@ CONN *service_getconn(SERVICE *service, int groupid)
                 }
                 ++x;
             }
-            /*
-            if(conn == NULL)
-            {
-                if((conn = service_newconn(service, 0, 0, service->groups[groupid].ip,
-                    service->groups[groupid].port, &(service->groups[groupid].session))))
-                {
-                    conn->groupid = groupid;
-                    service->groups[groupid].total++;
-                }
-            }
-            */
         }
         else
         {
@@ -900,7 +889,7 @@ CONN *service_findconn(SERVICE *service, int index)
 }
 
 /* pop chunk from service  */
-CHUNK * service_popchunk(SERVICE *service)
+CHUNK *service_popchunk(SERVICE *service)
 {
     CHUNK *cp = NULL;
     int x = 0;
@@ -1139,7 +1128,7 @@ int service_stategroup(SERVICE *service)
 
     if(service && service->ngroups > 0)
     {
-        DEBUG_LOGGER(service->logger, "start stategroup()");
+        //DEBUG_LOGGER(service->logger, "start stategroup()");
         for(i = 0; i < service->ngroups; i++)
         {
             while(service->groups[i].limit > 0 
@@ -1151,7 +1140,7 @@ int service_stategroup(SERVICE *service)
                 service->groups[i].total++;
             }
         }
-        DEBUG_LOGGER(service->logger, "over stategroup()");
+        //DEBUG_LOGGER(service->logger, "over stategroup()");
         return 0;
     }
     return -1;
