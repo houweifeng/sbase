@@ -142,6 +142,7 @@ do                                                                              
                 && lstat(PL(ptr)->buf, &(PL(ptr)->st)) == 0                         \
                 && PL(ptr)->st.st_size > ROTATE_LOG_SIZE)                           \
             ++(PL(ptr)->total);                                                     \
+        if(PL(ptr)->total == 0) ++(PL(ptr)->total);                                 \
         PLX(ptr) =  (PL(ptr)->total);                                               \
     }                                                                               \
     if(PLX(ptr) > 0)                                                                \
