@@ -138,11 +138,11 @@ do                                                                              
     }                                                                               \
     else                                                                            \
     {                                                                               \
-        if(PL(ptr)->fd <= 0 || (fstat(PL(ptr)->fd, &(PL(ptr)->st)) == 0             \
-                && PL(ptr)->st.st_size > ROTATE_LOG_SIZE))                          \
-            PLX(ptr) = ++(PL(ptr)->total);                                          \
-        else                                                                        \
-            PLX(ptr) = 0;                                                           \
+        while(sprintf(PL(ptr)->buf, "%s.%u", PL(ptr)->file, PL(ptr)->total)>0       \
+                && lstat(PL(ptr)->buf, &(PL(ptr)->st)) == 0                         \
+                && PL(ptr)->st.st_size > ROTATE_LOG_SIZE)                           \
+            ++(PL(ptr)->total);                                                     \
+        PLX(ptr) =  (PL(ptr)->total);                                               \
     }                                                                               \
     if(PLX(ptr) > 0)                                                                \
     {                                                                               \
