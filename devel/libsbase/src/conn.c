@@ -1132,6 +1132,16 @@ int conn_transaction_handler(CONN *conn, int tid)
     return ret;
 }
 
+/* reset xids */
+void conn_reset_xids(CONN *conn)
+{
+    if(conn)
+    {
+        memset(conn->xids, 0, sizeof(int) * SB_XIDS_MAX);
+    }
+    return ;
+}
+
 /* reset connection */
 void conn_reset(CONN *conn)
 {
@@ -1146,6 +1156,7 @@ void conn_reset(CONN *conn)
         conn->index = -1;
         conn->gindex = -1;
         conn->d_state = 0;
+        memset(conn->xids, 0, sizeof(int) * SB_XIDS_MAX);
         /* connection */
         conn->fd = 0;
         conn->sock_type = 0;
@@ -1310,6 +1321,7 @@ CONN *conn_init()
         conn->set_session           = conn_set_session;
         conn->over_session          = conn_over_session;
         conn->newtask               = conn_newtask;
+        conn->reset_xids            = conn_reset_xids;
         conn->reset                 = conn_reset;
         conn->clean                 = conn_clean;
     }
