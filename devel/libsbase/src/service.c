@@ -474,11 +474,11 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 else goto err_conn;
             }
 #endif
-            //flag = fcntl(fd, F_GETFL, 0);
-            //flag |= O_NONBLOCK;
-            //if(fcntl(fd, F_SETFL, flag) == 0  && (connect(fd, (struct sockaddr *)&rsa, 
-            //                sizeof(rsa)) == 0 || errno == EINPROGRESS))
-            if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
+            flag = fcntl(fd, F_GETFL, 0);
+            flag |= O_NONBLOCK;
+            if(fcntl(fd, F_SETFL, flag) == 0  && (connect(fd, (struct sockaddr *)&rsa, 
+                            sizeof(rsa)) == 0 || errno == EINPROGRESS))
+            //if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
             {
                 goto new_conn;
             }else goto err_conn;
