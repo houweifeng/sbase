@@ -110,6 +110,9 @@ int conn_timeout_handler(CONN *conn);
 /* evtimer handler */
 void conn_evtimer_handler(void *arg);
 
+/* reset xids */
+void conn_reset_xids(CONN *conn);
+
 /* reset conn */
 void conn_reset(CONN *conn);
 

@@ -448,6 +448,7 @@ typedef struct _CONN
     int (*newtask)(struct _CONN *, CALLBACK *);
 
     /* normal */
+    void (*reset_xids)(struct _CONN *);
     void (*reset)(struct _CONN *);
     void (*clean)(struct _CONN **pconn);
 }CONN, *PCONN;
