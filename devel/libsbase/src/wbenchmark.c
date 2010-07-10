@@ -11,7 +11,7 @@
 #define HTTP_BUF_SIZE       65536
 #define HTTP_PATH_MAX       8192
 #define HTTP_IP_MAX         16
-#define HTTP_TIMEOUT        60000000
+#define HTTP_TIMEOUT        5000000
 #define HTTP_WAIT_TIMEOUT   100000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
