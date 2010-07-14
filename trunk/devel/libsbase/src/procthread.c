@@ -16,7 +16,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0};
-    int i = 0, ret = 0;
+    int i = 0, x = 0, ret = 0;
 
     if(pth)
     {
@@ -42,20 +42,21 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                     ++i;
                 }
-                if(i == 0) usleep(pth->usec_sleep);
+                if(i == 0 && ++x > 1000){usleep(pth->usec_sleep); x = 0;}
             }while(pth->running_status);
         }
         else
         {
             do
             {
-                
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                {
                     qmessage_handler(pth->message_queue, pth->logger);
+                }
                 else
                 {
-                    //usleep(pth->usec_sleep);
-                    ret = MUTEX_WAIT(pth->mutex);
+                    if(++i > 1000){usleep(pth->usec_sleep);i = 0;}
+                    //ret = MUTEX_WAIT(pth->mutex);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
