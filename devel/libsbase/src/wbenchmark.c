@@ -35,6 +35,7 @@ static char request[HTTP_BUF_SIZE];
 static int request_len = 0; 
 static void *timer = NULL;
 static int running_status = 0;
+static int timeout_max = 0;
 static FILE *fp = NULL;
 
 CONN *http_newconn(int id, char *ip, int port, int is_ssl)
