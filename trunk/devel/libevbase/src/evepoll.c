@@ -164,14 +164,16 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                     && evp->data.ptr == (void *)evbase->evlist[fd])	
             {
                 ev_flags = 0;
-                if(flags & EPOLLHUP )
-                    flags |= (EPOLLIN | EPOLLOUT);
-                else if(flags & EPOLLERR )
-                    flags |= (EPOLLIN | EPOLLOUT);
-                if(flags & EPOLLIN)
+                if(flags & (EPOLLHUP|EPOLLERR))
+                {
                     ev_flags |= E_READ;
-                if(flags & EPOLLOUT)
                     ev_flags |= E_WRITE;
+                }
+                else
+                {
+                    if(flags & EPOLLIN) ev_flags |= E_READ;
+                    if(flags & EPOLLOUT) ev_flags |= E_WRITE;
+                }
                 DEBUG_LOGGER(evbase->logger,
                         "Activing i:%d evp:%p ev:%p fd:%d ev_flags:%d", 
                         i, evp, ev, fd, ev_flags);
