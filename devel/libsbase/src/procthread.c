@@ -34,15 +34,15 @@ void procthread_run(void *arg)
         {
             do
             {
-                //i = 0;
-                //if(pth->evbase->loop(pth->evbase, 0, &tv) > 0) ++i;
-                pth->evbase->loop(pth->evbase, 0, &tv);
+                i = 0;
+                if(pth->evbase->loop(pth->evbase, 0, &tv) > 0) ++i;
+                //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     qmessage_handler(pth->message_queue, pth->logger);
-                    //++i;
+                    ++i;
                 }
-                //if(i == 0){usleep(pth->usec_sleep);}
+                if(i == 0){usleep(pth->usec_sleep);}
             }while(pth->running_status);
         }
         else
