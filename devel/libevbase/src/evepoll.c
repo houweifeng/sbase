@@ -174,6 +174,7 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                     if(flags & EPOLLIN) ev_flags |= E_READ;
                     if(flags & EPOLLOUT) ev_flags |= E_WRITE;
                 }
+                if(ev_flags == 0) continue;
                 DEBUG_LOGGER(evbase->logger,
                         "Activing i:%d evp:%p ev:%p fd:%d ev_flags:%d", 
                         i, evp, ev, fd, ev_flags);
