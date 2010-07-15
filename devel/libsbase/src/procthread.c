@@ -34,15 +34,15 @@ void procthread_run(void *arg)
         {
             do
             {
-                i = 0;
-                if(pth->evbase->loop(pth->evbase, 0, NULL) > 0) ++i;
-                //pth->evbase->loop(pth->evbase, 0, &tv);
+                //i = 0;
+                //if(pth->evbase->loop(pth->evbase, 0, &tv) > 0) ++i;
+                pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     qmessage_handler(pth->message_queue, pth->logger);
-                    ++i;
+                    //++i;
                 }
-                if(i == 0){usleep(pth->usec_sleep);}
+                //if(i == 0){usleep(pth->usec_sleep);}
             }while(pth->running_status);
         }
         else
@@ -55,9 +55,9 @@ void procthread_run(void *arg)
                 }
                 else
                 {
-                    usleep(pth->usec_sleep);
+                    //usleep(pth->usec_sleep);
                     //if(++x > 1000){usleep(pth->usec_sleep);x = 0;}
-                    //ret = MUTEX_WAIT(pth->mutex);
+                    ret = MUTEX_WAIT(pth->mutex);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
