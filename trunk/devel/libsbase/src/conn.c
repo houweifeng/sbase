@@ -47,12 +47,9 @@
         conn->s_state = 0;                                                                  \
     }                                                                                       \
 }
-#define READING_CHUNK(conn) ((conn->ssl)?(CHUNK_READ_SSL(conn->chunk, conn->ssl))           \
-    :(CHUNK_READ(conn->chunk, conn->fd)))
-#define WRITING_CHUNK(conn, cp) ((conn->ssl)?(CHUNK_WRITE_SSL(cp, conn->ssl))               \
-    :(CHUNK_WRITE(cp, conn->fd)))
-#define READING_BUFFER(conn) ((conn->ssl)?(MB_READ_SSL(conn->buffer, conn->ssl))            \
-    :(MB_READ(conn->buffer, conn->fd)))
+#define READING_CHUNK(conn) (((conn->ssl)?(CHUNK_READ_SSL(conn->chunk, conn->ssl)):(CHUNK_READ(conn->chunk, conn->fd))))
+#define WRITING_CHUNK(conn, cp) (((conn->ssl)?(CHUNK_WRITE_SSL(cp, conn->ssl)):(CHUNK_WRITE(cp, conn->fd))))
+#define READING_BUFFER(conn) (((conn->ssl)?(MB_READ_SSL(conn->buffer, conn->ssl)):(MB_READ(conn->buffer, conn->fd))))
 #define CONN_CHUNK_READ(conn, n)                                                            \
 {                                                                                           \
     /* read to chunk */                                                                     \
