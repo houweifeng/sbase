@@ -490,6 +490,7 @@ new_conn:
                             remote_port, local_ip, local_port, sess)))
             {
                 if(flag != 0) conn->status = CONN_STATUS_READY; 
+                conn->c_state = C_STATE_USING;
 #ifdef HAVE_SSL
                 conn->ssl = ssl;
 #endif
