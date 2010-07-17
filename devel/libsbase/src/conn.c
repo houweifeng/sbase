@@ -14,6 +14,21 @@
 #ifndef LL
 #define LL(_x_) ((long long int)(_x_))
 #endif
+int conn_read_chunk(CONN *conn)
+{
+	if(conn->ssl) return CHUNK_READ_SSL(conn->chunk, conn->ssl);
+	else return CHUNK_READ(conn->chunk, conn->fd);
+}
+int conn_write_chunk(CONN *conn, CHUNK *cp)
+{
+	if(conn->ssl) return CHUNK_WRITE_SSL(cp, conn->ssl);
+	else return CHUNK_WRITE(cp, conn->fd);
+}
+int conn_read_buffer(CONN *conn)
+{
+	if(conn->ssl) return MB_READ_SSL(conn->buffer, conn->ssl);
+	else return MB_READ(conn->buffer, conn->fd);
+}
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
     if(conn == NULL ) return ret;                                                           \
@@ -47,15 +62,12 @@
         conn->s_state = 0;                                                                  \
     }                                                                                       \
 }
-#define READING_CHUNK(conn) (((conn->ssl)?(CHUNK_READ_SSL(conn->chunk, conn->ssl)):(CHUNK_READ(conn->chunk, conn->fd))))
-#define WRITING_CHUNK(conn, cp) (((conn->ssl)?(CHUNK_WRITE_SSL(cp, conn->ssl)):(CHUNK_WRITE(cp, conn->fd))))
-#define READING_BUFFER(conn) (((conn->ssl)?(MB_READ_SSL(conn->buffer, conn->ssl)):(MB_READ(conn->buffer, conn->fd))))
 #define CONN_CHUNK_READ(conn, n)                                                            \
 {                                                                                           \
     /* read to chunk */                                                                     \
     if(conn->s_state == S_STATE_READ_CHUNK)                                                 \
     {                                                                                       \
-        if((n = READING_CHUNK(conn)) <= 0 && errno != EAGAIN)                               \
+        if((n = conn_read_chunk(conn)) <= 0 && errno != EAGAIN)                             \
         {                                                                                   \
             FATAL_LOGGER(conn->logger, "Reading %d bytes data from %s:%d ssl:%p "           \
                 "on %s:%d via %d failed, %s", n, conn->remote_ip, conn->remote_port,        \
@@ -536,7 +548,7 @@ int conn_read_handler(CONN *conn)
             return ret;
         }
         /* Receive normal data */
-        if((n = READING_BUFFER(conn)) <= 0)
+        if((n = conn_read_buffer(conn)) <= 0)
         {
             FATAL_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
                     "from %s:%d on %s:%d via %d failed, %s",
@@ -585,7 +597,7 @@ int conn_write_handler(CONN *conn)
                     conn->ssl, conn->local_ip, conn->local_port, conn->fd, 
                     QTOTAL(conn->send_queue), PPL(cp));   
             */
-            if((n = WRITING_CHUNK(conn, cp)) > 0)
+            if((n = conn_write_chunk(conn, cp)) > 0)
             {
                 conn->sent_data_total += n;
                 DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
