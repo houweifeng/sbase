@@ -52,7 +52,7 @@ do                                                                              
          (((MB_END(ptr) += MBN(ptr)) && (MB_NDATA(ptr) += MBN(ptr)) >= 0            \
            && (MB_LEFT(ptr) -= MBN(ptr)) >= 0) ? MBN(ptr): -1) : -1) : -1)
 #else 
-#define MB_READ_SSL(ptr, ssl)
+#define MB_READ_SSL(ptr, ssl) -1
 #endif
 #define MB_READ(ptr, fd) ((MB_CHECK(ptr) == 0) ?                                    \
     (((MBN(ptr) = read(fd, MB_END(ptr), MB_LEFT(ptr))) > 0 )?                       \

@@ -16,7 +16,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0};
-    int i = 0, x = 0, ret = 0;
+    int i = 0, ret = 0;
 
     if(pth)
     {
@@ -55,8 +55,6 @@ void procthread_run(void *arg)
                 }
                 else
                 {
-                    //usleep(pth->usec_sleep);
-                    //if(++x > 1000){usleep(pth->usec_sleep);x = 0;}
                     ret = MUTEX_WAIT(pth->mutex);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
