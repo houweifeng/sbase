@@ -170,6 +170,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 conn->status = CONN_STATUS_FREE;
+                if(QTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
                 return ;
             }
             int flag = fcntl(conn->fd, F_GETFL, 0);
