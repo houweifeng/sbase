@@ -996,7 +996,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
-    if(conn && conn->send_queue && data && size > 0)
+    if(conn && conn->status == C_STATE_FREE && conn->send_queue && data && size > 0)
     {
         //CHUNK_POP(conn, cp);
         if(PPARENT(conn) && PPARENT(conn)->service 
@@ -1045,7 +1045,8 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
-    if(conn && conn->send_queue && filename && offset >= 0 && size > 0)
+    if(conn && conn->status == C_STATE_FREE && conn->send_queue 
+            && filename && offset >= 0 && size > 0)
     {
         //CHUNK_POP(conn, cp);
         if(PPARENT(conn) && PPARENT(conn)->service 
