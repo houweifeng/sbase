@@ -297,9 +297,10 @@ int conn_terminate(CONN *conn)
     if(conn)
     {
         conn->d_state = D_STATE_CLOSE;
-        if(conn->c_state == C_STATE_USING && conn->session.error_handler)
+        if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY) 
+                && conn->session.error_handler)
         {
-            DEBUG_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", 
+            ERROR_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", 
                     conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, conn->c_id, PCB(conn->packet)->ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
