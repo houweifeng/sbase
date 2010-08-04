@@ -126,15 +126,16 @@ int http_over(CONN *conn, int respcode)
         {
             TIMER_SAMPLE(timer);
             fprintf(stdout, "timeouts:%d\nerrors:%d\n", ntimeout, nerrors);
-            if(PT_LU_USEC(timer) > 0)
-                fprintf(stdout, "time used:%lld\nrequest per sec:%lld\n", PT_LU_USEC(timer), 
-                        ((long long int)ncompleted * 1000000ll /PT_LU_USEC(timer)));
+            if(PT_USEC_U(timer) > 0 && ncompleted > 0)
+                fprintf(stdout, "time used:%lld\nrequest per sec:%lld avg_time:%d\n", 
+                        PT_USEC_U(timer), ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
+                        (PT_USEC_U(timer)/ncompleted));
             _exit(-1);
         }
         if(respcode < 200 || respcode >= 300)
         {
             //fprintf(stdout, "%s::%d ERROR:%d\n", __FILE__, __LINE__, respcode);
-            nerrors++;
+            if(respcode != 0)nerrors++;
             conn->over(conn);
             --nrequests;
             if(http_newconn(id, server_ip, server_port, server_is_ssl))
@@ -254,6 +255,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
                 fprintf(stdout, "timeout on conn[%s:%d] uri[%s] via %d status:%d\n", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
             else
                 fprintf(stdout, "timeout on conn[%s:%d] via %d status:%d\n", conn->local_ip, conn->local_port, conn->fd, conn->status);
+            ntimeout++;
             conn->over_cstate(conn);
             return http_over(conn, 0);
         }
