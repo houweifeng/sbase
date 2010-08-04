@@ -77,6 +77,9 @@ int http_request(CONN *conn)
         if(fp && fgets(path, HTTP_PATH_MAX, fp))
         {
             //fprintf(stdout, "%s::%d conn[%s:%d][%d]->status:%d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->fd, conn->status);
+            p = path;
+            while(*p != '\r' && *p != '\n' && *p != '\0')++p;
+            *p = '\0';
             if(is_post)
             {
                 p = buf;
