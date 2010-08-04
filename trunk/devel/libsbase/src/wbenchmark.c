@@ -11,7 +11,6 @@
 #define HTTP_BUF_SIZE       65536
 #define HTTP_PATH_MAX       8192
 #define HTTP_IP_MAX         16
-#define HTTP_TIMEOUT        5000000
 #define HTTP_WAIT_TIMEOUT   100000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
@@ -35,7 +34,7 @@ static char request[HTTP_BUF_SIZE];
 static int request_len = 0; 
 static void *timer = NULL;
 static int running_status = 0;
-static int timeout_max = 0;
+static int req_timeout = 1000000;
 static FILE *fp = NULL;
 
 CONN *http_newconn(int id, char *ip, int port, int is_ssl)
@@ -74,7 +73,7 @@ int http_request(CONN *conn)
         }
         ++nrequests;
         conn->start_cstate(conn);
-        conn->set_timeout(conn, HTTP_TIMEOUT);
+        conn->set_timeout(conn, req_timeout);
         if(fp && fgets(path, HTTP_PATH_MAX, fp))
         {
             //fprintf(stdout, "%s::%d conn[%s:%d][%d]->status:%d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->fd, conn->status);
@@ -316,7 +315,7 @@ int main(int argc, char **argv)
     int is_daemon = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vpkdl:c:n:")) != -1)
+    while((ch = getopt(argc, argv, "vpkdl:c:t:n:")) != -1)
     {
         switch(ch)
         {
@@ -334,6 +333,9 @@ int main(int argc, char **argv)
                 break;
             case 'd':
                 is_daemon = 1;
+                break;
+            case 't':
+                req_timeout = atoi(optarg);
                 break;
             case 'p':
                 is_post = 1;
@@ -359,6 +361,7 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
                 "Options:\n\t-c concurrency\n\t-n requests\n"
+                "\t-t timeout (microseconds, default 1000000)\n"
                 "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
                 "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
         _exit(-1);
