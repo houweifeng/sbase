@@ -130,7 +130,7 @@ int http_over(CONN *conn, int respcode)
             TIMER_SAMPLE(timer);
             fprintf(stdout, "timeouts:%d\nerrors:%d\n", ntimeout, nerrors);
             if(PT_USEC_U(timer) > 0 && ncompleted > 0)
-                fprintf(stdout, "time used:%lld\nrequest per sec:%lld avg_time:%d\n", 
+                fprintf(stdout, "time used:%lld\nrequest per sec:%lld avg_time:%lld\n", 
                         PT_USEC_U(timer), ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
                         (PT_USEC_U(timer)/ncompleted));
             _exit(-1);
