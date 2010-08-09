@@ -55,8 +55,8 @@ void procthread_run(void *arg)
                 }
                 else
                 {
-                    //ret = MUTEX_WAIT(pth->mutex);
-                    usleep(pth->usec_sleep);
+                    ret = MUTEX_WAIT(pth->mutex);
+                    //usleep(pth->usec_sleep);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
