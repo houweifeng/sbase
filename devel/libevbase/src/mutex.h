@@ -11,6 +11,7 @@ extern "C" {
 typedef struct _MUTEX
 {
     pthread_mutex_t mutex;
+    pthread_mutex_t xmutex;
     pthread_cond_t  cond;
 }MUTEX;
 #define MT(ptr) ((MUTEX *)ptr)
@@ -20,19 +21,21 @@ do                                                                          \
     if((ptr = calloc(1, sizeof(MUTEX))))                                    \
     {                                                                       \
         pthread_mutex_init(&(MT(ptr)->mutex), NULL);                        \
+        pthread_mutex_init(&(MT(ptr)->xmutex), NULL);                       \
         pthread_cond_init(&(MT(ptr)->cond), NULL);                          \
     }                                                                       \
 }while(0)
 #define MUTEX_LOCK(ptr) ((ptr) ? pthread_mutex_lock(&(MT(ptr)->mutex)): -1)
 #define MUTEX_UNLOCK(ptr) ((ptr) ? pthread_mutex_unlock(&(MT(ptr)->mutex)): -1)
 #define MUTEX_WAIT(ptr) ((ptr && pthread_mutex_lock(&(MT(ptr)->mutex)) == 0 && pthread_cond_wait(&(MT(ptr)->cond), &(MT(ptr)->mutex)) == 0 && pthread_mutex_unlock(&(MT(ptr)->mutex)) == 0)? 0 : -1)
-#define MUTEX_SIGNAL(ptr) ((ptr && pthread_mutex_lock(&(MT(ptr)->mutex)) == 0 && pthread_cond_signal(&(MT(ptr)->cond)) == 0 && pthread_mutex_unlock(&(MT(ptr)->mutex)) == 0)? 0 : -1)
+#define MUTEX_SIGNAL(ptr) ((ptr && pthread_mutex_lock(&(MT(ptr)->xmutex)) == 0 && pthread_cond_signal(&(MT(ptr)->cond)) == 0 && pthread_mutex_unlock(&(MT(ptr)->xmutex)) == 0)? 0 : -1)
 #define MUTEX_DESTROY(ptr)                                                  \
 do                                                                          \
 {															                \
 	if(ptr)													                \
 	{														                \
 		pthread_mutex_destroy(&(MT(ptr)->mutex)); 						    \
+		pthread_mutex_destroy(&(MT(ptr)->xmutex)); 						    \
 		pthread_cond_destroy(&(MT(ptr)->cond)); 							\
 		free(ptr);											                \
 		ptr = NULL;												            \
