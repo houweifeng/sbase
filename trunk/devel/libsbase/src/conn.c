@@ -497,17 +497,17 @@ int conn_push_message(CONN *conn, int message_id)
 
     if(conn && conn->message_queue && (message_id & MESSAGE_ALL) )
     {
-        DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%p] "
-                "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
-                MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
-                conn->remote_port, conn->local_ip, conn->local_port, 
-                conn->fd, QMTOTAL(conn->message_queue),
-                PPL(conn), PPL(conn->parent));
-        if(conn->parent && (mutex = PPARENT(conn)->mutex))
+        if(conn->parent)
         {
+            DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%p] "
+                    "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
+                    MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
+                    conn->remote_port, conn->local_ip, conn->local_port, 
+                    conn->fd, QMTOTAL(conn->message_queue),
+                    PPL(conn), PPL(conn->parent));
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
-                -1, conn->parent, conn, NULL);
-            MUTEX_SIGNAL(mutex);
+                    -1, conn->parent, conn, NULL);
+            if((mutex = PPARENT(conn)->mutex)){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
     }
