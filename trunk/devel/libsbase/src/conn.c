@@ -144,7 +144,7 @@ do                                                                              
 /* connection event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
-    socklen_t len = sizeof(int);
+    int len = sizeof(int);
     CONN *conn = (CONN *)arg;
     int error = 0;
 
@@ -157,11 +157,12 @@ void conn_event_handler(int event_fd, short event, void *arg)
             //fprintf(stdout, "%s::%d event[%d] on fd[%d]\n", __FILE__, __LINE__, event, event_fd);
             if(conn->status == CONN_STATUS_READY)
             {
-                if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, &len) != 0 || error != 0)
+                if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) != 0 
+                        || error != 0)
                 {
                     ERROR_LOGGER(conn->logger, "socket %d to remote[%s:%d] local[%s:%d] "
-                            "connectting failed,  %s", conn->fd, conn->remote_ip, conn->remote_port,
-                            conn->local_ip, conn->local_port, strerror(errno));
+                    "connectting failed, error:%d %s", conn->fd, conn->remote_ip, conn->remote_port,
+                            conn->local_ip, conn->local_port, error, strerror(errno));
                     conn->status = CONN_STATUS_CLOSED;
                     CONN_TERMINATE(conn, D_STATE_CLOSE);          
                     return ;
