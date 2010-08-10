@@ -35,7 +35,7 @@ void procthread_run(void *arg)
             do
             {
                 i = 0;
-                if(pth->evbase->loop(pth->evbase, 0, &tv) > 0) ++i;
+                if(pth->evbase->loop(pth->evbase, 0, NULL) > 0) ++i;
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
