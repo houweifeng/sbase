@@ -78,7 +78,7 @@ int http_request(CONN *conn)
         {
             //fprintf(stdout, "%s::%d conn[%s:%d][%d]->status:%d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->fd, conn->status);
             p = path;
-            while(*p != '\r' && *p != '\n' && *p != '\0')++p;
+            while(*p != '\0' && *p != '\n' && *p != '\r')++p;
             *p = '\0';
             if(is_post)
             {
@@ -88,19 +88,22 @@ int http_request(CONN *conn)
                 if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
                 p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
                 p += sprintf(p, "\r\n");
-                p += sprintf(p, "%s", server_argv);
+                if(strlen(server_argv) > 0) p += sprintf(p, "%s", server_argv);
                 n = p - buf;
             }
             else
             {
                 p = buf;
-                if(server_argv) p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", path, server_argv);
-                else p += sprintf(p, "GET /%s HTTP/1.1\r\n", path);
+                if(strlen(server_argv) > 0) 
+                    p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", path, server_argv);
+                else 
+                    p += sprintf(p, "GET /%s HTTP/1.1\r\n", path);
                 p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
                 if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
                 p += sprintf(p, "\r\n");
                 n = p - buf;
             }
+            if(is_verbosity) fprintf(stdout, "%s", buf);
             conn->save_cache(conn, path, strlen(path)+1);
             return conn->push_chunk(conn, buf, n);
         }
@@ -437,13 +440,16 @@ invalid_url:
         if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
         p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
         p += sprintf(p, "\r\n");
-        p += sprintf(p, "%s", server_argv);
+        if(strlen(server_argv)) p += sprintf(p, "%s", server_argv);
         request_len = p - request;
     }
     else
     {
         p = request;
-        p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", server_url, server_argv);
+        if(strlen(server_argv) > 0)
+            p += sprintf(p, "GET /%s?%s HTTP/1.1\r\n", server_url, server_argv);
+        else 
+            p += sprintf(p, "GET /%s HTTP/1.1\r\n", server_url);
         p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
         if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
         p += sprintf(p, "\r\n");
