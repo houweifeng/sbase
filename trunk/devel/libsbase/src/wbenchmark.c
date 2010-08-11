@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <sbase.h>
 #include "timer.h"
+#include "logger.h"
 #include <sys/resource.h>
 #define HTTP_BUF_SIZE       65536
 #define HTTP_PATH_MAX       8192
@@ -36,6 +37,7 @@ static void *timer = NULL;
 static int running_status = 0;
 static int req_timeout = 1000000;
 static FILE *fp = NULL;
+static void *logger = NULL;
 
 CONN *http_newconn(int id, char *ip, int port, int is_ssl)
 {
@@ -126,17 +128,20 @@ int http_over(CONN *conn, int respcode)
         ncompleted++;
         if(ncompleted > 0 && (ncompleted%1000) == 0)
         {
-            fprintf(stdout, "completed %d\n", ncompleted);
+            ACCESS_LOGGER(logger, "completed %d", ncompleted);
         }
         if(ncompleted >= ntasks)
         {
             TIMER_SAMPLE(timer);
-            fprintf(stdout, "timeouts:%d\nerrors:%d\n", ntimeout, nerrors);
             if(PT_USEC_U(timer) > 0 && ncompleted > 0)
-                fprintf(stdout, "time used:%lld\nrequest per sec:%lld avg_time:%lld\n", 
-                        PT_USEC_U(timer), ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
+            {
+                ACCESS_LOGGER("times:%d errros:%d time used:%lld "
+                        "request per sec:%lld avg_time:%lld", 
+                        ntimeout, nerrors, PT_USEC_U(timer), 
+                        ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
                         (PT_USEC_U(timer)/ncompleted));
-            _exit(-1);
+            }
+            _exit(0);
         }
         if(respcode < 200 || respcode >= 300)
         {
@@ -258,9 +263,13 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
         else
         {
             if(cache && cache->data)
-                fprintf(stdout, "timeout on conn[%s:%d] uri[%s] via %d status:%d\n", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
+            {
+                ACCESS_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
+            }
             else
-                fprintf(stdout, "timeout on conn[%s:%d] via %d status:%d\n", conn->local_ip, conn->local_port, conn->fd, conn->status);
+            {
+                ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
+            }
             ntimeout++;
             conn->over_cstate(conn);
             return http_over(conn, 0);
@@ -528,15 +537,16 @@ invalid_url:
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark.log");
+        LOGGER_INIT(logger, "/tmp/benchmark_res.log");
+        if(sbase->add_service(sbase, service) == 0)
+        {
+            running_status = 1;
+            sbase->running(sbase, 0);
+            //sbase->running(sbase, 3600);
+            //sbase->running(sbase, 90000000);sbase->stop(sbase);
+        }
+        else fprintf(stderr, "add service failed, %s", strerror(errno));
     }
-    if(sbase->add_service(sbase, service) == 0)
-    {
-        running_status = 1;
-        sbase->running(sbase, 0);
-        //sbase->running(sbase, 3600);
-        //sbase->running(sbase, 90000000);sbase->stop(sbase);
-    }
-    else fprintf(stderr, "add service failed, %s", strerror(errno));
     sbase->clean(&sbase);
     return 0;
 }
