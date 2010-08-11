@@ -82,6 +82,7 @@ typedef struct _CB_DATA
 typedef struct _SESSION
 {
     /* SSL */
+    int flag;
     int is_use_SSL;
     void *ctx;
 

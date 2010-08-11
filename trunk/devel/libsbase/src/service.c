@@ -1,4 +1,6 @@
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include "sbase.h"
 #include "xssl.h"
 #include "logger.h"
@@ -476,19 +478,33 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 else goto err_conn;
             }
 #endif
-            opt=0;setsockopt(fd, SOL_SOCKET, SO_LINGER, &opt, sizeof(opt));
-            opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+            opt =1;
+            //opt=0;setsockopt(fd, SOL_SOCKET, SO_LINGER, &opt, sizeof(opt));
+            //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
-            flag = fcntl(fd, F_GETFL, 0);
-            flag |= O_NONBLOCK;
-            if(fcntl(fd, F_SETFL, flag) == 0  && (connect(fd, (struct sockaddr *)&rsa, 
-                            sizeof(rsa)) == 0 || errno == EINPROGRESS))
-            //if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
+#ifdef SOL_TCP
+#ifdef TCP_NODELAY
+            opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+#endif
+#endif
+            if(sess && (sess->flag & O_NONBLOCK))
             {
-                goto new_conn;
-            }else goto err_conn;
+                flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
+                if(fcntl(fd, F_SETFL, flag) != 0) goto err_conn;
+                if((connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
+                    || errno == EINPROGRESS || errno == EALREADY || errno == EINTR))
+                {
+                    goto new_conn;
+                }else goto err_conn;
+            }
+            else
+            {
+                if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
+                    goto new_conn;
+                else goto err_conn;
+            }
 new_conn:
             getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
             local_ip    = inet_ntoa(lsa.sin_addr);
@@ -497,7 +513,6 @@ new_conn:
                             remote_port, local_ip, local_port, sess)))
             {
                 if(flag != 0) conn->status = CONN_STATUS_READY; 
-                //conn->c_state = C_STATE_USING;
 #ifdef HAVE_SSL
                 conn->ssl = ssl;
 #endif
@@ -1157,6 +1172,7 @@ int service_stategroup(SERVICE *service)
             {
                 conn->groupid = i;
                 service->groups[i].total++;
+                usleep(100);
             }
         }
         //DEBUG_LOGGER(service->logger, "over stategroup()");
@@ -1324,6 +1340,7 @@ void service_state(void *arg)
                                     service->ip, service->port, strerror(errno));
                             break;
                         }
+                        usleep(100);
                         n--;
                     }
                 }
