@@ -123,6 +123,7 @@ int service_set(SERVICE *service)
     pth->service = service;                                                                 \
     pth->logger = service->logger;                                                          \
     pth->usec_sleep = service->usec_sleep;                                                  \
+    pth->use_cond_wait = service->use_cond_wait;                                            \
 }
 
 /* running */
@@ -408,7 +409,7 @@ err_conn:
                             {
                                 qmessage_push(pth->message_queue, 
                                     MESSAGE_INPUT, -1, conn->fd, -1, conn, pth, NULL);
-                                MUTEX_SIGNAL(pth->mutex);
+                                if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
                             }
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
                                     " buffer:%d", ip, port, fd, MB_NDATA(conn->buffer));
@@ -442,7 +443,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
     CONN *conn = NULL;
     struct sockaddr_in rsa, lsa;
     socklen_t lsa_len = sizeof(lsa);
-    int fd = -1, family = -1, sock_type = -1, remote_port = -1, local_port = -1, flag = 0;
+    int fd = -1, family = -1, sock_type = -1, remote_port = -1, 
+        local_port = -1, flag = 0, opt = 0;
     char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
 #ifdef HAVE_SSL
@@ -474,6 +476,11 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 else goto err_conn;
             }
 #endif
+            opt=0;setsockopt(fd, SOL_SOCKET, SO_LINGER, &opt, sizeof(opt));
+            opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+            //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
+            //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
+            //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
             flag = fcntl(fd, F_GETFL, 0);
             flag |= O_NONBLOCK;
             if(fcntl(fd, F_SETFL, flag) == 0  && (connect(fd, (struct sockaddr *)&rsa, 

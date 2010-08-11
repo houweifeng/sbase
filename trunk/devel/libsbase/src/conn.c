@@ -508,7 +508,7 @@ int conn_push_message(CONN *conn, int message_id)
                     PPL(conn), PPL(conn->parent));
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                     -1, conn->parent, conn, NULL);
-            if((mutex = PPARENT(conn)->mutex)){MUTEX_SIGNAL(mutex);}
+            if((mutex = PPARENT(conn)->mutex) && PPARENT(conn)->use_cond_wait){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
     }

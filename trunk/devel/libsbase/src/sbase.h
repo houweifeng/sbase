@@ -163,6 +163,7 @@ typedef struct _SERVICE
     int lock;
     int usec_sleep;
     SBASE *sbase;
+    int use_cond_wait;
     void *mutex;
 
     /* heartbeat */
@@ -294,6 +295,7 @@ typedef struct _PROCTHREAD
 	int usec_sleep;
     int index;
     long threadid;
+    int  use_cond_wait;
     void *mutex;
 
     /* message queue */
