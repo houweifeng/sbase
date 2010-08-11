@@ -9,7 +9,7 @@
 do                                                                                          \
 {                                                                                           \
     qmessage_push(pth->message_queue, msgid, index, fd, tid, pth, handler, arg);            \
-    MUTEX_SIGNAL(pth->mutex);                                                               \
+    if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}                                       \
 }while(0)
 /* run procthread */
 void procthread_run(void *arg)
@@ -55,8 +55,10 @@ void procthread_run(void *arg)
                 }
                 else
                 {
-                    ret = MUTEX_WAIT(pth->mutex);
-                    //usleep(pth->usec_sleep);
+                    if(pth->use_cond_wait)
+                        ret = MUTEX_WAIT(pth->mutex);
+                    else 
+                        usleep(1000);
                     //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
                 }
             }while(pth->running_status);
