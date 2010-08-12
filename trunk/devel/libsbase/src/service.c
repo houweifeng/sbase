@@ -361,7 +361,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
 #endif
 new_conn:
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
-                                        service->ip, service->port, &(service->session))))
+                                service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
                         {
 #ifdef HAVE_SSL
                             conn->ssl = ssl;
@@ -411,7 +411,8 @@ err_conn:
                             && connect(fd, (struct sockaddr *)&rsa, 
                                 sizeof(struct sockaddr_in)) == 0
                             && (conn = service_addconn(service, service->sock_type, fd, 
-                                ip, port, service->ip, service->port, &(service->session))))
+                                ip, port, service->ip, service->port, 
+                                &(service->session), CONN_STATUS_FREE)))
                         {
                             p = buf;
                             MB_PUSH(conn->buffer, p, n);
@@ -455,7 +456,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
     struct sockaddr_in rsa, lsa;
     socklen_t lsa_len = sizeof(lsa);
     int fd = -1, family = -1, sock_type = -1, remote_port = -1, 
-        local_port = -1, flag = 0, opt = 0;
+        local_port = -1, flag = 0, opt = 0, status = 0;
     char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
 #ifdef HAVE_SSL
@@ -487,9 +488,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 else goto err_conn;
             }
 #endif
-            opt =1;
             //opt=0;setsockopt(fd, SOL_SOCKET, SO_LINGER, &opt, sizeof(opt));
-            //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+            opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
@@ -518,10 +518,11 @@ new_conn:
             getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
             local_ip    = inet_ntoa(lsa.sin_addr);
             local_port  = ntohs(lsa.sin_port);
+            status = CONN_STATUS_FREE;
+            if(flag != 0) status = CONN_STATUS_READY; 
             if((conn = service_addconn(service, sock_type, fd, remote_ip, 
-                            remote_port, local_ip, local_port, sess)))
+                    remote_port, local_ip, local_port, sess, status)))
             {
-                if(flag != 0) conn->status = CONN_STATUS_READY; 
 #ifdef HAVE_SSL
                 conn->ssl = ssl;
 #endif
@@ -604,7 +605,7 @@ new_conn:
             local_ip    = inet_ntoa(lsa.sin_addr);
             local_port  = ntohs(lsa.sin_port);
             if((conn = service_addconn(service, sock_type, fd, remote_ip, remote_port, 
-                            local_ip, local_port, sess)))
+                            local_ip, local_port, sess, CONN_STATUS_FREE)))
             {
                 if(conn->session.timeout == 0)
                     conn->session.timeout = SB_PROXY_TIMEOUT;
@@ -647,7 +648,7 @@ err_conn:
 
 /* add new connection */
 CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, int remote_port, 
-        char *local_ip, int local_port, SESSION *session)
+        char *local_ip, int local_port, SESSION *session, int status)
 {
     PROCTHREAD *procthread = NULL;
     CONN *conn = NULL;
@@ -669,6 +670,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         {
             //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
             conn->fd = fd;
+            conn->status = status;
             strcpy(conn->remote_ip, remote_ip);
             conn->remote_port = remote_port;
             strcpy(conn->local_ip, local_ip);
@@ -1181,7 +1183,7 @@ int service_stategroup(SERVICE *service)
             {
                 conn->groupid = i;
                 service->groups[i].total++;
-                usleep(100);
+                usleep(10);
             }
         }
         //DEBUG_LOGGER(service->logger, "over stategroup()");
@@ -1349,7 +1351,7 @@ void service_state(void *arg)
                                     service->ip, service->port, strerror(errno));
                             break;
                         }
-                        usleep(100);
+                        usleep(10);
                         n--;
                     }
                 }

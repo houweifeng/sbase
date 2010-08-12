@@ -242,7 +242,8 @@ typedef struct _SERVICE
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
             char *ip, int port, SESSION *session);
     struct _CONN *(*addconn)(struct _SERVICE *service, int sock_type, int fd, 
-            char *remote_ip, int remote_port, char *local_ip, int local_port, SESSION *);
+            char *remote_ip, int remote_port, char *local_ip, int local_port, 
+            SESSION *, int status);
     struct _CONN *(*getconn)(struct _SERVICE *service, int groupid);
     int     (*freeconn)(struct _SERVICE *service, struct _CONN *);
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);

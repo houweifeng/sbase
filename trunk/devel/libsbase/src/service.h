@@ -19,7 +19,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
         char *ip, int port, SESSION *session);
 /* add new connection */
 CONN *service_addconn(SERVICE *service, int sock_type, int fd, 
-        char *remote_ip, int remote_port, char *local_ip, int local_port, SESSION *session);
+        char *remote_ip, int remote_port, char *local_ip, int local_port, 
+        SESSION *session, int status);
 /* push connection to connections pool */
 int service_pushconn(SERVICE *service, CONN *conn);
 /* pop connection from connections pool */
