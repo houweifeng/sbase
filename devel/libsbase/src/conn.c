@@ -51,7 +51,8 @@ int conn_read_buffer(CONN *conn)
                     conn->local_port, conn->fd);                                            \
             conn->push_message(conn, MESSAGE_QUIT);                                         \
             conn->d_state |= _state_;                                                       \
-            if(conn->event && conn->event->destroy)conn->event->destroy(conn->event);       \
+            if(conn->event && conn->event->del)                                             \
+                conn->event->del(conn->event, E_READ);                                      \
         }                                                                                   \
     }                                                                                       \
 }
@@ -317,7 +318,7 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        //conn->event->destroy(conn->event);
+        conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing session[%s:%d] local[%s:%d] via %d",
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */

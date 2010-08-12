@@ -1002,14 +1002,14 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
     if(service && service->qchunks && cp)
     {
         MUTEX_LOCK(service->mutex);
-        CK_RESET(cp);
+        DEBUG_LOGGER(service->logger, "chunk_total:%d", service->nqchunks);
+        //CK_RESET(cp);
         x = service->nqchunks++;
         service->qchunks[x] = cp;
         DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d total:%d", 
                 cp, CK_BSIZE(cp), service->nqchunks);
         MUTEX_UNLOCK(service->mutex);
         ret = 0;
-        //DEBUG_LOGGER(service->logger, "chunk_total:%d", service->nqchunks);
     }
     return ret;
 }

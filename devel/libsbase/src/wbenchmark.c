@@ -135,8 +135,8 @@ int http_over(CONN *conn, int respcode)
             TIMER_SAMPLE(timer);
             if(PT_USEC_U(timer) > 0 && ncompleted > 0)
             {
-                fprintf(stdout, "times:%d errros:%d time used:%lld"
-                        "request per sec:%lld avg_time:%lld\n", 
+                fprintf(stdout, "times:%d errros:%d total:%d\n"
+                        "time used:%lld request per sec:%lld avg_time:%lld\n", 
                         ntimeout, nerrors, PT_USEC_U(timer), 
                         ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
                         (PT_USEC_U(timer)/ncompleted));
@@ -518,13 +518,15 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 8;
+        service->nprocthreads = 2;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
+        service->use_cond_wait = 1;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;
         service->service_name = "benchmark";
+        service->session.flag = O_NONBLOCK;
         service->session.packet_type = PACKET_DELIMITER;
         service->session.packet_delimiter = "\r\n\r\n";
         service->session.packet_delimiter_length = 4;
