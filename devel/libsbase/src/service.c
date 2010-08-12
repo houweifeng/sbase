@@ -132,6 +132,7 @@ int service_set(SERVICE *service)
 int service_run(SERVICE *service)
 {
     int ret = -1, i = 0, x = 0;
+    char logfile[1024];
     CONN *conn = NULL;
 
     if(service)
@@ -254,6 +255,8 @@ running_threads:
                     {
                         PROCTHREAD_SET(service, service->procthreads[i]);
                         service->procthreads[i]->ioqmessage = service->procthreads[i]->message_queue;
+                        sprintf(logfile, "/tmp/evbase_%s.log", service->service_name);
+                        service->procthreads[i]->evbase->set_logfile(service->procthreads[i]->evbase, logfile);
                         ret = 0;
                     }
                     else
