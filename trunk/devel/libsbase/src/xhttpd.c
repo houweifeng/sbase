@@ -843,7 +843,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
     service->service_name = iniparser_getstr(dict, "XHTTPD:service_name");
     service->nprocthreads = iniparser_getint(dict, "XHTTPD:nprocthreads", 1);
     service->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
-    service->use_iodaemon = iniparser_getint(dict, "XHTTPD:use_iodaemon", 0);
+    service->use_iodaemon = iniparser_getint(dict, "XHTTPD:use_iodaemon", 1);
+    service->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
     service->session.packet_type=iniparser_getint(dict, "XHTTPD:packet_type",PACKET_DELIMITER);
     if((service->session.packet_delimiter = iniparser_getstr(dict, "XHTTPD:packet_delimiter")))
     {
