@@ -47,26 +47,37 @@ void procthread_run(void *arg)
         }
         else
         {
-            do
+            if(pth->use_cond_wait)
             {
-                if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                do
                 {
-                    qmessage_handler(pth->message_queue, pth->logger);
-                }
-                else
-                {
-                    if(pth->use_cond_wait)
+                    if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                    {
+                        qmessage_handler(pth->message_queue, pth->logger);
+                    }
+                    else
+                    {
                         ret = MUTEX_WAIT(pth->mutex);
-                    else 
-                        usleep(1000);
-                    //fprintf(stdout, "%s::%d mutex:%p ret:%d, %s\n", __FILE__, __LINE__, pth->mutex, ret,  strerror(errno));
-                }
-            }while(pth->running_status);
+                    }
+                }while(pth->running_status);
+            }
+            else
+            {
+                do
+                {
+                    if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                    {
+                        qmessage_handler(pth->message_queue, pth->logger);
+                    }
+                    else
+                    {
+                        usleep(100);
+                    }
+                }while(pth->running_status);
+            }
         }
-        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
             qmessage_handler(pth->message_queue, pth->logger);
-        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
@@ -241,7 +252,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase        = have_evbase;
-            pth->evbase             = evbase_init(1);
+            pth->evbase             = evbase_init(0);
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();

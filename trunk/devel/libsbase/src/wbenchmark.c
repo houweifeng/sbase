@@ -120,23 +120,23 @@ int http_request(CONN *conn)
 /* http over */
 int http_over(CONN *conn, int respcode)
 {
-    int id = 0;
+    int id = 0, n = 0;
 
     if(conn)
     {
-	id = conn->c_id;
-        ncompleted++;
-        if(ncompleted > 0 && (ncompleted%1000) == 0)
+        id = conn->c_id;
+        n = ++ncompleted;
+        if(n > 0 && (n%1000) == 0)
         {
-            ACCESS_LOGGER(logger, "completed %d", ncompleted);
+            fprintf(stdout, "completed %d\n", n);
         }
         if(ncompleted >= ntasks)
         {
             TIMER_SAMPLE(timer);
             if(PT_USEC_U(timer) > 0 && ncompleted > 0)
             {
-                ACCESS_LOGGER("times:%d errros:%d time used:%lld "
-                        "request per sec:%lld avg_time:%lld", 
+                fprintf(stdout, "times:%d errros:%d time used:%lld"
+                        "request per sec:%lld avg_time:%lld\n", 
                         ntimeout, nerrors, PT_USEC_U(timer), 
                         ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
                         (PT_USEC_U(timer)/ncompleted));
