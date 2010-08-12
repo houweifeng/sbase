@@ -31,11 +31,12 @@ int evepoll_init(EVBASE *evbase)
 int evepoll_add(EVBASE *evbase, EVENT *event)
 {
     struct epoll_event ep_event = {0, {0}};
-    int op = 0, ev_flags = 0;
+    int op = 0, ev_flags = 0, add = 0;
 
     if(evbase && event && event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
+        DEBUG_LOGGER(evbase->logger, "Ready for adding event %d on fd[%d]", event->ev_flags, event->ev_fd);
         event->ev_base = evbase;
         /* Delete OLD garbage */
         //epoll_ctl(ebase->efd, EPOLL_CTL_DEL, event->ev_fd, NULL);
@@ -43,22 +44,22 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
                 0, sizeof(struct epoll_event));
         if(event->ev_flags & E_READ)
         {
-            op = EPOLL_CTL_ADD;
             ev_flags |= EPOLLIN;
+            add = 1;
         }	
         if(event->ev_flags & E_WRITE)
         {
-            op = EPOLL_CTL_ADD;
             ev_flags |= EPOLLOUT;
+            add = 1;
         }
-        if(ev_flags)
+        if(add)
         {
+            op = EPOLL_CTL_ADD; 
             ep_event.data.fd = event->ev_fd;
             ep_event.events = ev_flags;
             ep_event.data.ptr = (void *)event;
             epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
-            DEBUG_LOGGER(evbase->logger, "Added event %d on %d", 
-                    ev_flags, event->ev_fd);
+            DEBUG_LOGGER(evbase->logger, "Added event %d on fd[%d]", ev_flags, event->ev_fd);
             if(event->ev_fd > evbase->maxfd)
                 evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;
@@ -73,28 +74,32 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 int evepoll_update(EVBASE *evbase, EVENT *event)
 {
     struct epoll_event ep_event = {0, {0}};
-    int op = 0, ev_flags = 0;
+    int op = 0, ev_flags = 0, mod = 0;
 
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd )
     {
         MUTEX_LOCK(evbase->mutex);
+        DEBUG_LOGGER(evbase->logger, "Ready for updating event %d on fd[%d]", event->ev_flags, event->ev_fd);
         if(event->ev_flags & E_READ)
         {
             ev_flags |= EPOLLIN;
+            mod = 1;
         }
         if(event->ev_flags & E_WRITE)
         {
             ev_flags |= EPOLLOUT;
+            mod = 1;
         }
-        op = EPOLL_CTL_MOD;
-        if(ev_flags)
+        if(mod)
         {
+            op = EPOLL_CTL_MOD;
             if(evbase->evlist[event->ev_fd] == NULL)
                 op = EPOLL_CTL_ADD;
             ep_event.data.fd = event->ev_fd;
             ep_event.events = ev_flags;
             ep_event.data.ptr = (void *)event;
             epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
+            DEBUG_LOGGER(evbase->logger, "Updated event %d on fd[%d]", event->ev_flags, event->ev_fd);
         }
         evbase->evlist[event->ev_fd] = event;
         MUTEX_UNLOCK(evbase->mutex);
@@ -140,11 +145,10 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
         n = epoll_wait(evbase->efd, evbase->evs, evbase->allowed, timeout);
         if(n == -1)
         {
-            FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d] EBADF:%d EFAULT:%d EINTR:%d EINVAL, %s",
-                    evbase, errno, strerror(errno));
+            FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d] EBADF:%d EFAULT:%d EINTR:%d EINVAL:%d, %s", evbase, errno, EBADF, EFAULT, EINTR, EINVAL, strerror(errno));
         }
         if(n <= 0) return n;
-        DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n, evbase->maxfd);
+        DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n, evbase->allowed);
         for(i = 0; i < n; i++)
         {
             evp = &(((struct epoll_event *)evbase->evs)[i]);

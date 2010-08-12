@@ -229,6 +229,7 @@ void event_set(EVENT *event, int fd, short flags, void *arg, void *handler)
 			event->ev_handler	=	handler;
 		}		
 	}
+    return ;
 }
 
 /* Add event flags */
@@ -246,6 +247,7 @@ void event_add(EVENT *event, short flags)
 				event, event->ev_flags, event->ev_fd);
 		}
 	}
+    return ;
 }
 
 /* Delete event flags */
@@ -266,6 +268,7 @@ void event_del(EVENT *event, short flags)
 
 		}
 	}	
+    return ;
 }
 
 /* Destroy event */
@@ -277,11 +280,11 @@ void event_destroy(EVENT *event)
         if(event->ev_base && event->ev_base->del)
         {
             event->ev_base->del(event->ev_base, event);
-            DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%p] on fd[%d]",
-                    event, event->ev_fd);
+            DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%p] on fd[%d]",event, event->ev_fd);
             event->ev_base = NULL;
         }
     }
+    return ;
 }
 
 /* Active event */
@@ -298,6 +301,7 @@ void event_active(EVENT *event, short ev_flags)
 			event->destroy(event);
 		}
 	}
+    return ;
 }
 
 /* Clean event */
@@ -308,4 +312,5 @@ void event_clean(EVENT **event)
 		free((*event));
 		(*event) = NULL;	
 	}
+    return ;
 }
