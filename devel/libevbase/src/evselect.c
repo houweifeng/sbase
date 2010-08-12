@@ -146,7 +146,7 @@ int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
         memcpy(&rd_fd_set, evbase->ev_read_fds, sizeof(fd_set));
         FD_ZERO(&wr_fd_set);
         memcpy(&wr_fd_set, evbase->ev_write_fds, sizeof(fd_set));
-        n = select(evbase->allowed, &rd_fd_set, &wr_fd_set, NULL, tv);
+        n = select(evbase->maxfd+1, &rd_fd_set, &wr_fd_set, NULL, tv);
         if(n <= 0) return n;
         DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->maxfd + 1);
         for(i = 0; i <= evbase->maxfd; ++i)

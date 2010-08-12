@@ -228,7 +228,7 @@ int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     {
         //memset(&ts, 0, sizeof(struct timespec));
         if(tv) TIMEVAL_TO_TIMESPEC(tv, &ts);
-        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->allowed, &ts);	
+        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->maxfd+1, &ts);	
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 

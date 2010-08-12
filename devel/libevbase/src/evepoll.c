@@ -142,7 +142,7 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     {
         if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->maxfd);
-        n = epoll_wait(evbase->efd, evbase->evs, evbase->allowed, timeout);
+        n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd+1, timeout);
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d] EBADF:%d EFAULT:%d EINTR:%d EINVAL:%d, %s", evbase, errno, EBADF, EFAULT, EINTR, EINVAL, strerror(errno));

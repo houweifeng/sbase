@@ -1003,7 +1003,7 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
     {
         MUTEX_LOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "chunk_total:%d", service->nqchunks);
-        //CK_RESET(cp);
+        CK_RESET(cp);
         x = service->nqchunks++;
         service->qchunks[x] = cp;
         DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d total:%d", 
