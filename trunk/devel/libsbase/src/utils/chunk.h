@@ -191,7 +191,7 @@ typedef struct _CHUNK * PCHUNK;
             && (CK_STATUS(ptr) = CHUNK_STATUS(ptr)) > 0)? CKN(ptr): -1): -1)
 /* mmap buffer */
 int ck_mmap(void *);
-#define CK_MMAP(ptr) ((CK_NMDATA(ptr) <= 0)?(((CK_MDATA(ptr))?(munmap(CK_MDATA(ptr), MMAP_CHUNK_SIZE) == 0):1) && (CK_MDATA(ptr) = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_PRIVATE, CK_FD(ptr), (CK_OFFSET(ptr)/(off_t)MMAP_CHUNK_SIZE) * (off_t)MMAP_CHUNK_SIZE)) != (char *)-1 && (CK_OFFMDATA(ptr) = (int)(CK_OFFSET(ptr)%((off_t)MMAP_CHUNK_SIZE))) >= 0 && (CK_NMDATA(ptr) = (CK_LEFT(ptr) > MMAP_CHUNK_SIZE) ? (MMAP_CHUNK_SIZE - CK_OFFMDATA(ptr)) : CK_LEFT(ptr)) > 0):1) 
+#define CK_MMAP(ptr) ((CK_NMDATA(ptr) <= 0)?(((CK_MDATA(ptr))?(munmap(CK_MDATA(ptr), MMAP_CHUNK_SIZE) == 0):1) && (CK_MDATA(ptr) = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_SHARED, CK_FD(ptr), (CK_OFFSET(ptr)/(off_t)MMAP_CHUNK_SIZE) * (off_t)MMAP_CHUNK_SIZE)) != (char *)-1 && (CK_OFFMDATA(ptr) = (int)(CK_OFFSET(ptr)%((off_t)MMAP_CHUNK_SIZE))) >= 0 && (CK_NMDATA(ptr) = (CK_LEFT(ptr) > MMAP_CHUNK_SIZE) ? (MMAP_CHUNK_SIZE - CK_OFFMDATA(ptr)) : CK_LEFT(ptr)) > 0):1) 
 
 /* write to fd from file */
 #ifdef HAVE_SSL
