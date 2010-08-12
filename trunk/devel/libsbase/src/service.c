@@ -215,6 +215,10 @@ running_threads:
             if((service->iodaemon = procthread_init(1)))
             {
                 PROCTHREAD_SET(service, service->iodaemon);
+                sprintf(logfile, "/tmp/evbase_%s_io.log", service->service_name);
+#ifdef _DEBUG
+                service->iodaemon->evbase->set_logfile(service->iodaemon->evbase, logfile);
+#endif
                 NEW_PROCTHREAD("iodaemon", 0, service->iodaemon->threadid, service->iodaemon, service->logger);
                 ret = 0;
             }
@@ -255,8 +259,10 @@ running_threads:
                     {
                         PROCTHREAD_SET(service, service->procthreads[i]);
                         service->procthreads[i]->ioqmessage = service->procthreads[i]->message_queue;
-                        sprintf(logfile, "/tmp/evbase_%s.log", service->service_name);
+                        sprintf(logfile, "/tmp/evbase_%s_thread_%d.log", service->service_name, i);
+#ifdef _DEBUG
                         service->procthreads[i]->evbase->set_logfile(service->procthreads[i]->evbase, logfile);
+#endif
                         ret = 0;
                     }
                     else

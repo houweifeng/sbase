@@ -11,6 +11,7 @@ extern "C" {
 #define E_CLOSE		0x04
 #define E_PERSIST	0x08
 #define EV_MAX_FD	1024
+#define EV_MAX_LIMIT    65536
 #define EV_USEC_SLEEP	100
 /*event operating */
 #define EOP_PORT        0x00
