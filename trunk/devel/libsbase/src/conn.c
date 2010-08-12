@@ -219,6 +219,11 @@ void conn_event_handler(int event_fd, short event, void *arg)
             */
             CONN_UPDATE_EVTIMER(conn);
         }
+        else
+        {
+            FATAL_LOGGER(conn->logger, "Invalid f[%d:%d] event:%d", event_fd, conn->fd, event);
+            CONN_TERMINATE(conn, D_STATE_CLOSE);          
+        }
     }
     return ;
 }
