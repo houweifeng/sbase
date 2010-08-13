@@ -49,16 +49,23 @@ int conn_read_buffer(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for close remote[%s:%d] local[%s:%d] via %d", \
                     conn->remote_ip, conn->remote_port, conn->local_ip,                     \
                     conn->local_port, conn->fd);                                            \
-            if(conn->s_state == 0)                                                          \
-            {                                                                               \
-                conn->i_state = 0 ;                                                         \
-                conn->push_message(conn, MESSAGE_QUIT);                                     \
-            }                                                                               \
-            else conn->i_state = C_STATE_OVER;                                              \
+            conn->push_message(conn, MESSAGE_QUIT);                                         \
             conn->d_state |= _state_;                                                       \
             if(conn->event && conn->event->del)                                             \
                 conn->event->del(conn->event, E_READ|E_WRITE);                              \
         }                                                                                   \
+    }                                                                                       \
+}
+#define CONN_OVER(conn, state)                                                              \
+{                                                                                           \
+    if(conn->s_state == 0)                                                                  \
+    {                                                                                       \
+        CONN_TERMINATE(conn, state);                                                        \
+    }                                                                                       \
+    else                                                                                    \
+    {                                                                                       \
+        conn->i_state = C_STATE_OVER;                                                       \
+        conn->event->del(conn->event, E_READ);                                              \
     }                                                                                       \
 }
 #define CONN_STATE_RESET(conn)                                                              \
@@ -207,8 +214,8 @@ void conn_event_handler(int event_fd, short event, void *arg)
             //if(!(flag & O_NONBLOCK))fcntl(conn->fd, F_SETFL, flag|O_NONBLOCK);
             if(event & E_CLOSE)
             {
-                DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
-                CONN_TERMINATE(conn, D_STATE_CLOSE);          
+                //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
+                //CONN_TERMINATE(conn, D_STATE_CLOSE);          
                 return ;
                 //conn->push_message(conn, MESSAGE_QUIT);
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d OVER ", E_CLOSE, event_fd);
@@ -577,7 +584,7 @@ int conn_read_handler(CONN *conn)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
             /* Terminate connection */
-            CONN_TERMINATE(conn, (D_STATE_CLOSE|D_STATE_RCLOSE));
+            CONN_OVER(conn, D_STATE_CLOSE|D_STATE_RCLOSE);
             return (ret = 0);
         }
         conn->recv_data_total += n;
