@@ -64,8 +64,9 @@ int conn_read_buffer(CONN *conn)
     }                                                                                       \
     else                                                                                    \
     {                                                                                       \
+        conn->d_state = state;                                                              \
         conn->i_state = C_STATE_OVER;                                                       \
-        conn->event->del(conn->event, E_READ);                                              \
+        conn->event->del(conn->event, E_READ|E_WRITE);                                      \
     }                                                                                       \
 }
 #define CONN_STATE_RESET(conn)                                                              \
@@ -584,7 +585,7 @@ int conn_read_handler(CONN *conn)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
             /* Terminate connection */
-            CONN_OVER(conn, D_STATE_CLOSE|D_STATE_RCLOSE);
+            CONN_OVER(conn, D_STATE_RCLOSE|D_STATE_WCLOSE);
             return (ret = 0);
         }
         conn->recv_data_total += n;
