@@ -147,7 +147,7 @@ int http_over(CONN *conn, int respcode)
         else
         {
             if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
-            conn->close(conn);
+            //conn->over(conn);
             if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 --ncurrent;
         }
@@ -508,8 +508,6 @@ invalid_url:
     sbase->nchilds = 0;
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
-    //sbase->set_log(sbase, "/tmp/sd.log");
-    //sbase->set_evlog(sbase, "/tmp/evsd.log");
     if((service = service_init()))
     {
         service->working_mode = 1;

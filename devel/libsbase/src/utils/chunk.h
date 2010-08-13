@@ -263,13 +263,12 @@ int ck_mmap(void *);
     if(ptr)                                                                                 \
     {                                                                                       \
         if(CK_MDATA(ptr)){munmap(CK_MDATA(ptr), MMAP_CHUNK_SIZE); CK_MDATA(ptr) = NULL;}    \
-        if(CK_FD(ptr) > 0 ) close(CK_FD(ptr));                                              \
+        if(CK_FD(ptr) > 0){close(CK_FD(ptr)); CK_FD(ptr) = -1;}                            \
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_NMDATA(ptr) = 0;                                                                 \
 		CK_OFFMDATA(ptr) = 0;                                                               \
 		CK_END(ptr) = NULL;                                                                 \
 		CK_TYPE(ptr) = 0;                                                                   \
-		CK_FD(ptr) = -1;                                                                    \
 		memset(CK_FILENAME(ptr), 0, CHUNK_FILE_NAME_MAX);                                   \
 		CK_SIZE(ptr) = 0;                                                                   \
 		CK_OFFSET(ptr) = 0;                                                                 \
