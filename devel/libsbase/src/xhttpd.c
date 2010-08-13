@@ -198,7 +198,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
     }
     else
     {
-        fprintf(stderr, "%s::%d open dir:%s file:%p root:%p end:%p failed, %s\n", __FILE__, __LINE__, file, file, root, end, strerror(errno));
+        FATAL_LOGGER("open dir:%s file:%p root:%p end:%p failed, %s", file, file, root, end, strerror(errno));
     }
     return -1;
 }
