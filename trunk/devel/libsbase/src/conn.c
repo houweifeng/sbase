@@ -21,8 +21,32 @@ int conn_read_chunk(CONN *conn)
 }
 int conn_write_chunk(CONN *conn, CHUNK *cp)
 {
-	if(conn->ssl) return CHUNK_WRITE_SSL(cp, conn->ssl);
-	else return CHUNK_WRITE(cp, conn->fd);
+	if(conn->ssl) 
+    {
+        return CHUNK_WRITE_SSL(cp, conn->ssl);
+    }
+	else 
+    {
+        /*
+        DEBUG_LOGGER(conn->logger, "Ready for write() data to %s:%d on %s:%d via %d "
+                "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
+                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
+                conn->d_state, conn->i_state);
+        if(conn->fd > 0 && (CKN(cp) = write(conn->fd, CK_END(cp), CK_LEFT(cp))) > 0)
+        {
+                CK_END(cp) += CKN(cp);
+                CK_LEFT(cp) -= CKN(cp);
+                CK_STATUS(cp) = CHUNK_STATUS(cp);
+                DEBUG_LOGGER(conn->logger, "Over write(%d) data to %s:%d on %s:%d via %d "
+                "qtotal:%d d_state:%d i_state:%d", CKN(cp), conn->remote_ip, conn->remote_port,
+                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
+                conn->d_state, conn->i_state);
+                return CKN(cp);
+        }
+        */
+        return CHUNK_WRITE(cp, conn->fd);
+    }
+    return -1;
 }
 int conn_read_buffer(CONN *conn)
 {
@@ -56,17 +80,15 @@ int conn_read_buffer(CONN *conn)
         }                                                                                   \
     }                                                                                       \
 }
-#define CONN_OVER(conn, state)                                                              \
+#define CONN_OVER(conn)                                                                     \
 {                                                                                           \
     if(conn->s_state == 0)                                                                  \
     {                                                                                       \
-        CONN_TERMINATE(conn, state);                                                        \
+        CONN_TERMINATE(conn, D_STATE_CLOSE);                                                \
     }                                                                                       \
     else                                                                                    \
     {                                                                                       \
-        conn->d_state = state;                                                              \
         conn->i_state = C_STATE_OVER;                                                       \
-        conn->event->del(conn->event, E_READ|E_WRITE);                                      \
     }                                                                                       \
 }
 #define CONN_STATE_RESET(conn)                                                              \
@@ -213,14 +235,14 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 }
             }
             //if(!(flag & O_NONBLOCK))fcntl(conn->fd, F_SETFL, flag|O_NONBLOCK);
-            if(event & E_CLOSE)
-            {
+            //if(event & E_CLOSE)
+            //{
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
                 //CONN_TERMINATE(conn, D_STATE_CLOSE);          
-                return ;
+                //return ;
                 //conn->push_message(conn, MESSAGE_QUIT);
                 //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d OVER ", E_CLOSE, event_fd);
-            }
+            //}
             if(event & E_READ)
             {
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on %d START", E_READ, event_fd);
@@ -323,6 +345,10 @@ int conn_terminate(CONN *conn)
 
     if(conn)
     {
+        DEBUG_LOGGER(conn->logger, "Ready for closeing %s:%d on %s:%d via %d "
+                "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
+                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
+                conn->d_state, conn->i_state);
         conn->d_state = D_STATE_CLOSE;
         if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY) 
                 && conn->session.error_handler)
@@ -585,7 +611,7 @@ int conn_read_handler(CONN *conn)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
             /* Terminate connection */
-            CONN_OVER(conn, D_STATE_RCLOSE|D_STATE_WCLOSE);
+            CONN_OVER(conn);
             return (ret = 0);
         }
         conn->recv_data_total += n;
@@ -616,16 +642,11 @@ int conn_write_handler(CONN *conn)
     if(conn && conn->send_queue)
     {
         DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d on %s:%d via %d "
-                "qtotal:%d", conn->remote_ip, conn->remote_port,
-                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue));
+                "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
+                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
+                conn->d_state, conn->i_state);
         if(QTOTAL(conn->send_queue) > 0 && (cp = (CHUNK *)queue_head(conn->send_queue)))
         {
-            /*
-            DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d ssl:%p "
-                    "on %s:%d via %d qtotal:%d pcp:%p", conn->remote_ip, conn->remote_port,
-                    conn->ssl, conn->local_ip, conn->local_port, conn->fd, 
-                    QTOTAL(conn->send_queue), PPL(cp));   
-            */
             if((n = conn_write_chunk(conn, cp)) > 0)
             {
                 conn->sent_data_total += n;
