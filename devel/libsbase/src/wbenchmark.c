@@ -130,7 +130,7 @@ int http_over(CONN *conn, int respcode)
         {
             fprintf(stdout, "completed %d\n", n);
         }
-        if(n >= ntasks)
+        if(n == ntasks)
         {
             TIMER_SAMPLE(timer);
             if(PT_USEC_U(timer) > 0 && ncompleted > 0)
@@ -146,7 +146,7 @@ int http_over(CONN *conn, int respcode)
         if(is_keepalive && respcode != 0) return http_request(conn);
         else
         {
-            if(respcode < 200 || respcode >= 300)nerrors++;
+            if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
             conn->close(conn);
             if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 --ncurrent;
