@@ -137,7 +137,7 @@ int http_over(CONN *conn, int respcode)
             {
                 fprintf(stdout, "times:%d errros:%d total:%d\n"
                         "time used:%lld request per sec:%lld avg_time:%lld\n", 
-                        ntimeout, nerrors, PT_USEC_U(timer), 
+                        ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
                         ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
                         (PT_USEC_U(timer)/ncompleted));
             }
@@ -302,7 +302,7 @@ void benchmark_heartbeat_handler(void *arg)
         }
         else
         {
-            usleep(1000);
+            usleep(100);
             ++ncurrent;
         }
     }
@@ -518,7 +518,7 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 2;
+        service->nprocthreads = 4;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
         service->use_cond_wait = 1;

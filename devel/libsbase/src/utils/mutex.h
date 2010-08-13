@@ -26,7 +26,7 @@ do                                                                          \
 #define MUTEX_LOCK(ptr) ((ptr) ? pthread_mutex_lock(&(MT(ptr)->mutex)): -1)
 #define MUTEX_UNLOCK(ptr) ((ptr) ? pthread_mutex_unlock(&(MT(ptr)->mutex)): -1)
 #define MUTEX_WAIT(ptr) ((ptr && pthread_mutex_lock(&(MT(ptr)->mutex)) == 0 && pthread_cond_wait(&(MT(ptr)->cond), &(MT(ptr)->mutex)) == 0 && pthread_mutex_unlock(&(MT(ptr)->mutex)) == 0)? 0 : -1)
-//#define MUTEX_SIGNAL(ptr) ((ptr && pthread_mutex_lock(&(MT(ptr)->xmutex)) == 0 && pthread_cond_signal(&(MT(ptr)->cond)) == 0 && pthread_mutex_unlock(&(MT(ptr)->xmutex)) == 0)? 0 : -1)
+//#define MUTEX_SIGNAL(ptr) ((ptr && pthread_mutex_lock(&(MT(ptr)->mutex)) == 0 && pthread_cond_signal(&(MT(ptr)->cond)) == 0 && pthread_mutex_unlock(&(MT(ptr)->mutex)) == 0)? 0 : -1)
 #define MUTEX_SIGNAL(ptr) ((ptr)?pthread_cond_signal(&(MT(ptr)->cond)): -1)
 #define MUTEX_DESTROY(ptr)                                                  \
 do                                                                          \

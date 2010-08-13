@@ -51,8 +51,7 @@ int conn_read_buffer(CONN *conn)
                     conn->local_port, conn->fd);                                            \
             conn->push_message(conn, MESSAGE_QUIT);                                         \
             conn->d_state |= _state_;                                                       \
-            if(conn->event && conn->event->del)                                             \
-                conn->event->del(conn->event, E_READ);                                      \
+            if(conn->event && conn->event->del)conn->event->destroy(conn->event);           \
         }                                                                                   \
     }                                                                                       \
 }
@@ -318,7 +317,7 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        conn->event->destroy(conn->event);
+        //conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing session[%s:%d] local[%s:%d] via %d",
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
@@ -514,7 +513,7 @@ int conn_push_message(CONN *conn, int message_id)
                     PPL(conn), PPL(conn->parent));
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                     -1, conn->parent, conn, NULL);
-            if((mutex = PPARENT(conn)->mutex) && PPARENT(conn)->use_cond_wait){MUTEX_SIGNAL(mutex);}
+            if((mutex = PPARENT(conn)->mutex)){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
     }
@@ -636,9 +635,10 @@ int conn_write_handler(CONN *conn)
 #ifdef HAVE_SSL
                 if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
-                FATAL_LOGGER(conn->logger, "Sending chunk[%d-%lld] data to %s:%d on %s:%d via %d failed, %s", CKN(cp), (long long)(CK_LEFT(cp)), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
+                FATAL_LOGGER(conn->logger, "Sending chunk[%d-%lld] ndata:%d to %s:%d on %s:%d via %d failed, %s", CKN(cp), (long long)(CK_LEFT(cp)), CK_NMDATA(cp), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
                 /* Terminate connection */
                 CONN_TERMINATE(conn, D_STATE_CLOSE);
+                return 0;
             }
         }
         if(QTOTAL(conn->send_queue) <= 0)
