@@ -130,7 +130,7 @@ int http_over(CONN *conn, int respcode)
         {
             fprintf(stdout, "completed %d\n", n);
         }
-        if(ncompleted >= ntasks)
+        if(n >= ntasks)
         {
             TIMER_SAMPLE(timer);
             if(PT_USEC_U(timer) > 0 && ncompleted > 0)
