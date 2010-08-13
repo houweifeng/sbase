@@ -23,6 +23,7 @@ static int ntimeout = 0;
 static int nerrors = 0;
 static int ncompleted = 0;
 static int is_keepalive = 0;
+static int is_wait_sleep = 0;
 static int is_post = 0;
 static int is_verbosity = 0;
 static char *server_host = NULL;
@@ -125,31 +126,35 @@ int http_over(CONN *conn, int respcode)
     if(conn)
     {
         id = conn->c_id;
-        n = ++ncompleted;
-        if(n > 0 && (n%1000) == 0)
+        if((n = ++ncompleted) <= ntasks)
         {
-            fprintf(stdout, "completed %d\n", n);
-        }
-        if(n == ntasks)
-        {
-            TIMER_SAMPLE(timer);
-            if(PT_USEC_U(timer) > 0 && ncompleted > 0)
+            if(n > 0 && (n%1000) == 0)
             {
-                fprintf(stdout, "times:%d errros:%d total:%d\n"
-                        "time used:%lld request per sec:%lld avg_time:%lld\n", 
-                        ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
-                        ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
-                        (PT_USEC_U(timer)/ncompleted));
+                fprintf(stdout, "completed %d\n", n);
             }
-            _exit(0);
-        }
-        if(is_keepalive && respcode != 0) return http_request(conn);
-        else
-        {
-            if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
-            //conn->close(conn);
-            if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
-                --ncurrent;
+            if(n == ntasks)
+            {
+                TIMER_SAMPLE(timer);
+                if(PT_USEC_U(timer) > 0 && ncompleted > 0)
+                {
+                    fprintf(stdout, "timeout:%d error:%d total:%d\n"
+                            "time used:%lld request per sec:%lld avg_time:%lld\n", 
+                            ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
+                            ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
+                            (PT_USEC_U(timer)/ncompleted));
+                }
+                conn->over(conn);
+                if(is_wait_sleep){while(running_status)sleep(10);}
+                else _exit(0);
+            }
+            if(is_keepalive && respcode != 0) return http_request(conn);
+            else
+            {
+                conn->over(conn);
+                if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
+                if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
+                    --ncurrent;
+            }
         }
     }
     return -1;
@@ -226,8 +231,18 @@ int benchmark_trans_handler(CONN *conn, int tid)
         }
         else
         {
-            conn->wait_evstate(conn);
-            return conn->set_timeout(conn, conn->timeout+HTTP_WAIT_TIMEOUT);
+            if(conn->timeout > req_timeout)
+            {
+                ACCESS_LOGGER(logger, "connecting timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
+                ntimeout++;
+                conn->over_cstate(conn);
+                return http_over(conn, 0);
+            }
+            else
+            {
+                conn->wait_evstate(conn);
+                return conn->set_timeout(conn, conn->timeout+HTTP_WAIT_TIMEOUT);
+            }
             //return service->newtransaction(service, conn, tid);
         }
     }
@@ -327,7 +342,7 @@ int main(int argc, char **argv)
     int is_daemon = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vpkdl:c:t:n:")) != -1)
+    while((ch = getopt(argc, argv, "vpkwdl:c:t:n:")) != -1)
     {
         switch(ch)
         {
@@ -342,6 +357,9 @@ int main(int argc, char **argv)
                 break;
             case 'k':
                 is_keepalive = 1;
+                break;
+            case 'w':
+                is_wait_sleep = 1;
                 break;
             case 'd':
                 is_daemon = 1;
@@ -375,7 +393,7 @@ int main(int argc, char **argv)
                 "Options:\n\t-c concurrency\n\t-n requests\n"
                 "\t-t timeout (microseconds, default 1000000)\n"
                 "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
-                "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
+                "\t-k is_keepalive\n\t-d is_daemon\n\t-w is_wait_sleep\n ", argv[0]);
         _exit(-1);
     }
     p = url;
