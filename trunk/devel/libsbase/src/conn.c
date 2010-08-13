@@ -49,9 +49,15 @@ int conn_read_buffer(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for close remote[%s:%d] local[%s:%d] via %d", \
                     conn->remote_ip, conn->remote_port, conn->local_ip,                     \
                     conn->local_port, conn->fd);                                            \
-            conn->push_message(conn, MESSAGE_QUIT);                                         \
+            if(conn->s_state == 0)                                                          \
+            {                                                                               \
+                conn->i_state = 0 ;                                                         \
+                conn->push_message(conn, MESSAGE_QUIT);                                     \
+            }                                                                               \
+            else conn->i_state = C_STATE_OVER;                                              \
             conn->d_state |= _state_;                                                       \
-            if(conn->event && conn->event->del)conn->event->destroy(conn->event);           \
+            if(conn->event && conn->event->del)                                             \
+                conn->event->del(conn->event, E_READ|E_WRITE);                              \
         }                                                                                   \
     }                                                                                       \
 }
@@ -128,15 +134,22 @@ do                                                                              
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
     }                                                                                       \
 }while(0)
-
+#define SESSION_CLOSE(conn)                                                                 \
+do                                                                                          \
+{                                                                                           \
+    if(conn->i_state == C_STATE_OVER && QTOTAL(conn->send_queue) <= 0)                      \
+    {                                                                                       \
+        CONN_TERMINATE(conn, D_STATE_CLOSE);                                                \
+    }                                                                                       \
+}while(0)
 #define SESSION_RESET(conn)                                                                 \
 do                                                                                          \
 {                                                                                           \
-    CONN_STATE_RESET(conn);                                                                 \
-    MB_RESET(conn->packet);                                                                 \
-    MB_RESET(conn->cache);                                                                  \
-    CK_RESET(conn->chunk);                                                                  \
-    if(MB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                  \
+        CONN_STATE_RESET(conn);                                                             \
+        MB_RESET(conn->packet);                                                             \
+        MB_RESET(conn->cache);                                                              \
+        CK_RESET(conn->chunk);                                                              \
+        if(MB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}              \
 }while(0)
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
@@ -194,7 +207,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
             //if(!(flag & O_NONBLOCK))fcntl(conn->fd, F_SETFL, flag|O_NONBLOCK);
             if(event & E_CLOSE)
             {
-                //DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
+                DEBUG_LOGGER(conn->logger, "E_CLOSE:%d on %d START ", E_CLOSE, event_fd);
                 CONN_TERMINATE(conn, D_STATE_CLOSE);          
                 return ;
                 //conn->push_message(conn, MESSAGE_QUIT);
@@ -221,7 +234,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
         }
         else
         {
-            FATAL_LOGGER(conn->logger, "Invalid f[%d:%d] event:%d", event_fd, conn->fd, event);
+            FATAL_LOGGER(conn->logger, "Invalid fd[%d:%d] event:%d", event_fd, conn->fd, event);
             CONN_TERMINATE(conn, D_STATE_CLOSE);          
         }
     }
@@ -317,7 +330,7 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        //conn->event->destroy(conn->event);
+        conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing session[%s:%d] local[%s:%d] via %d",
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
@@ -379,7 +392,7 @@ int conn_over_timeout(CONN *conn)
 
     if(conn)
     {
-        EVTIMER_DEL(conn->evtimer, conn->evid);
+        if(conn->evtimer){EVTIMER_DEL(conn->evtimer, conn->evid);}
         ret = 0;
     }
     return ret;
@@ -513,7 +526,7 @@ int conn_push_message(CONN *conn, int message_id)
                     PPL(conn), PPL(conn->parent));
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                     -1, conn->parent, conn, NULL);
-            if((mutex = PPARENT(conn)->mutex)){MUTEX_SIGNAL(mutex);}
+            if(PPARENT(conn) && (mutex = PPARENT(conn)->mutex)){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
     }
@@ -741,7 +754,7 @@ end:
 int conn_packet_handler(CONN *conn)
 {
     int ret = -1;
-    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+    //CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
     if(conn && conn->session.packet_handler)
     {
@@ -753,6 +766,7 @@ int conn_packet_handler(CONN *conn)
         {
             DEBUG_LOGGER(conn->logger, "Reset packet_handler(%p) on %s:%d via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->fd);
             SESSION_RESET(conn);
+            SESSION_CLOSE(conn);
         }
     }
     return ret;
@@ -798,6 +812,7 @@ int conn_data_handler(CONN *conn)
         {
             DEBUG_LOGGER(conn->logger, "Reset data_handler(%p) buffer:%d on %s:%d via %d", conn->session.packet_handler, PCB(conn->buffer)->ndata, conn->remote_ip, conn->remote_port, conn->fd);
             SESSION_RESET(conn);
+            SESSION_CLOSE(conn);
         }
     }
     return ret;
@@ -824,7 +839,6 @@ int conn_bind_proxy(CONN *conn, CONN *child)
 /* proxy data handler */
 int conn_proxy_handler(CONN *conn)
 {
-    //CONN_CHECK_RET(conn, ret);
     CONN *parent = NULL, *child = NULL, *oconn = NULL;
     CB_DATA *exchange = NULL, *chunk = NULL, *buffer = NULL;
 
@@ -944,7 +958,7 @@ int conn_save_cache(CONN *conn, void *data, int size)
 int conn_chunk_reader(CONN *conn)
 {
     int ret = -1, n = -1;
-    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+    //CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
     if(conn && conn->s_state == S_STATE_READ_CHUNK
         && conn->session.packet_type != PACKET_PROXY

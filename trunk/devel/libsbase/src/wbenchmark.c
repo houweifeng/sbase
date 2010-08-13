@@ -143,18 +143,13 @@ int http_over(CONN *conn, int respcode)
             }
             _exit(0);
         }
-        if(respcode < 200 || respcode >= 300)
-        {
-            //fprintf(stdout, "%s::%d ERROR:%d\n", __FILE__, __LINE__, respcode);
-            if(respcode != 0)nerrors++;
-            conn->over(conn);
-            --nrequests;
-            if(http_newconn(id, server_ip, server_port, server_is_ssl))
-                return 0;
-        }
+        if(is_keepalive && respcode != 0) return http_request(conn);
         else
         {
-            return http_request(conn);
+            if(respcode < 200 || respcode >= 300)nerrors++;
+            conn->close(conn);
+            if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
+                --ncurrent;
         }
     }
     return -1;
