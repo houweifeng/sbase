@@ -88,6 +88,8 @@ int conn_read_buffer(CONN *conn)
     }                                                                                       \
     else                                                                                    \
     {                                                                                       \
+        conn->d_state = D_STATE_RCLOSE|D_STATE_WCLOSE;                                      \
+        conn->event->del(conn->event, E_READ|E_WRITE);                                      \
         conn->i_state = C_STATE_OVER;                                                       \
     }                                                                                       \
 }
@@ -327,7 +329,7 @@ int conn_over(CONN *conn)
 {
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
-    if(conn)
+    if(conn && conn->i_state != C_STATE_OVER)
     {
         conn->i_state = C_STATE_OVER;
         if(QTOTAL(conn->send_queue) <= 0)
@@ -613,7 +615,7 @@ int conn_read_handler(CONN *conn)
                     conn->fd, strerror(errno));
             /* Terminate connection */
             CONN_OVER(conn);
-            return (ret = 0);
+            return (ret = -1);
         }
         conn->recv_data_total += n;
         DEBUG_LOGGER(conn->logger, "Received %d bytes nbuffer:%d data total %lld "
@@ -681,7 +683,7 @@ int conn_write_handler(CONN *conn)
                 FATAL_LOGGER(conn->logger, "Sending chunk[%d-%lld] ndata:%d to %s:%d on %s:%d via %d failed, %s", CKN(cp), (long long)(CK_LEFT(cp)), CK_NMDATA(cp), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
                 /* Terminate connection */
                 CONN_TERMINATE(conn, D_STATE_CLOSE);
-                return 0;
+                return -1;
             }
         }
         if(QTOTAL(conn->send_queue) <= 0)
