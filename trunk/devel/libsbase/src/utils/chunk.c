@@ -30,7 +30,7 @@ int ck_mmap(void *ptr)
         }
         else 
         {
-            fprintf(stdout, "%s::%d map[%p] failed\n", __FILE__, __LINE__, CK_MDATA(ptr));
+            fprintf(stdout, "%s::%d map[%p] failed, %s\n", __FILE__, __LINE__, CK_MDATA(ptr), strerror(errno));
             return 0;
         }
     }

@@ -35,19 +35,19 @@ void procthread_run(void *arg)
             do
             {
                 i = 0;
-                DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
-                if(pth->evbase->loop(pth->evbase, 0, NULL) > 0) ++i;
-                DEBUG_LOGGER(pth->logger, "over evbase->loop()");
+                //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
+                if(pth->evbase->loop(pth->evbase, 0, &tv) > 0) ++i;
+                //DEBUG_LOGGER(pth->logger, "over evbase->loop()");
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
-                    DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
+                    //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
                     qmessage_handler(pth->message_queue, pth->logger);
-                    DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
+                    //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     ++i;
                 }
-                if(i == 0){usleep(pth->usec_sleep);}
-                DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
+                //if(i == 0){usleep(pth->usec_sleep);}
+                //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
         else
@@ -58,15 +58,15 @@ void procthread_run(void *arg)
                 {
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
-                        DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
+                        //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
                         qmessage_handler(pth->message_queue, pth->logger);
-                        DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
+                        //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     }
                     else
                     {
-                        DEBUG_LOGGER(pth->logger, "starting cond_wait()");
+                        ACCESS_LOGGER(pth->logger, "starting cond_wait()");
                         ret = MUTEX_WAIT(pth->mutex);
-                        DEBUG_LOGGER(pth->logger, "over cond_wait()");
+                        ACCESS_LOGGER(pth->logger, "over cond_wait()");
                     }
                 }while(pth->running_status);
             }
