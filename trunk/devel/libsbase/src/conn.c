@@ -326,6 +326,7 @@ int conn_close(CONN *conn)
 int conn_over(CONN *conn)
 {
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
     if(conn)
     {
         conn->i_state = C_STATE_OVER;

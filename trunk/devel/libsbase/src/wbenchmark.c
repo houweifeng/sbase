@@ -147,7 +147,7 @@ int http_over(CONN *conn, int respcode)
         else
         {
             if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
-            //conn->over(conn);
+            //conn->close(conn);
             if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 --ncurrent;
         }
