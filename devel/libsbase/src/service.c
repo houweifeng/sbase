@@ -965,10 +965,12 @@ int service_pushtoq(SERVICE *service, CONN *conn)
 
     if(service && conn)
     {
+        DEBUG_LOGGER(service->logger, "starting pushq()");
         MUTEX_LOCK(service->mutex);
         x = service->nqconns++;
         service->qconns[x] = conn;
         MUTEX_UNLOCK(service->mutex);
+        DEBUG_LOGGER(service->logger, "over pushq()");
     }
     return x;
 }
