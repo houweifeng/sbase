@@ -542,7 +542,7 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 1;
+        service->nprocthreads = 4;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
         service->use_cond_wait = 1;
