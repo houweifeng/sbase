@@ -63,11 +63,11 @@ int conn_read_buffer(CONN *conn)
     if(conn == NULL) return ;                                                               \
     if(conn->d_state & (_state_)) return ;                                                  \
 }
+        //ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
 #define CONN_TERMINATE(conn, _state_)                                                       \
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);\
         conn->over_timeout(conn);                                                           \
         if(!(conn->d_state & (_state_)))                                                    \
         {                                                                                   \
@@ -174,10 +174,10 @@ do                                                                              
 {                                                                                           \
     if(conn->i_state == C_STATE_OVER && QTOTAL(conn->send_queue) <= 0)                      \
     {                                                                                       \
-        ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);\
         CONN_TERMINATE(conn, D_STATE_CLOSE);                                                \
     }                                                                                       \
 }while(0)
+        //ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
 #define SESSION_RESET(conn)                                                                 \
 do                                                                                          \
 {                                                                                           \
@@ -335,7 +335,7 @@ int conn_over(CONN *conn)
 
     if(conn)
     {
-        ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        //ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(QTOTAL(conn->send_queue) <= 0)
         {
             CONN_TERMINATE(conn, D_STATE_CLOSE);
@@ -364,9 +364,7 @@ int conn_terminate(CONN *conn)
         if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY) 
                 && conn->session.error_handler)
         {
-            ERROR_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", 
-                    conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                    conn->fd, conn->c_id, PCB(conn->packet)->ndata);
+            //ERROR_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, PCB(conn->packet)->ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
             MB_RESET(conn->buffer); 
             MB_RESET(conn->packet); 
@@ -616,7 +614,7 @@ int conn_read_handler(CONN *conn)
         /* Receive normal data */
         if((n = conn_read_buffer(conn)) <= 0)
         {
-            FATAL_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
+            ERROR_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
                     "from %s:%d on %s:%d via %d failed, %s",
                     n, MB_END(conn->buffer), MB_LEFT(conn->buffer), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
@@ -677,7 +675,7 @@ int conn_write_handler(CONN *conn)
 #ifdef HAVE_SSL
                     if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
-                    FATAL_LOGGER(conn->logger, "Sending chunk[%d-%lld] ndata:%d to %s:%d on %s:%d via %d failed, %s", CKN(cp), (long long)(CK_LEFT(cp)), CK_NMDATA(cp), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
+                    ERROR_LOGGER(conn->logger, "Sending chunk[%d-%lld] ndata:%d to %s:%d on %s:%d via %d failed, %s", CKN(cp), (long long)(CK_LEFT(cp)), CK_NMDATA(cp), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
                     /* Terminate connection */
                     CONN_TERMINATE(conn, D_STATE_CLOSE);
                     return ret;
