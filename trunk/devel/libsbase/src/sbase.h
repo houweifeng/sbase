@@ -444,6 +444,7 @@ typedef struct _CONN
     int (*push_chunk)(struct _CONN *, void *data, int size);
     int (*push_file)(struct _CONN *, char *file, long long offset, long long size);
     int (*send_chunk)(struct _CONN *, CB_DATA *chunk, int len);
+    int (*over_chunk)(struct _CONN *);
 
     /* session option and callback  */
     SESSION session;

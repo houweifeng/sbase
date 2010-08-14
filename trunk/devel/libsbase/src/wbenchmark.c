@@ -22,6 +22,7 @@ static int nrequests = 0;
 static int ntimeout = 0;
 static int nerrors = 0;
 static int ncompleted = 0;
+static int is_daemon = 0;
 static int is_keepalive = 0;
 static int is_wait_sleep = 0;
 static int is_post = 0;
@@ -118,6 +119,21 @@ int http_request(CONN *conn)
     return -1;
 }
 
+int http_show_state(int n)
+{
+    TIMER_SAMPLE(timer);
+    if(PT_USEC_U(timer) > 0 && ncompleted > 0)
+    {
+        fprintf(stdout, "timeout:%d error:%d total:%d\n"
+                "time used:%lld request per sec:%lld avg_time:%lld\n", 
+                ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
+                ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
+                (PT_USEC_U(timer)/ncompleted));
+    }
+    if(is_wait_sleep){while(running_status)sleep(1);}
+    if(is_daemon == 0)_exit(0);
+}
+
 /* http over */
 int http_over(CONN *conn, int respcode)
 {
@@ -126,35 +142,33 @@ int http_over(CONN *conn, int respcode)
     if(conn)
     {
         id = conn->c_id;
-        if((n = ++ncompleted) <= ntasks)
+        if(ncompleted < ntasks) 
+            ++ncompleted;
+        else 
+            return conn->over(conn);
+        n = ncompleted;
+        if(n > 0 && n <= ntasks && (n%1000) == 0)
         {
-            if(n > 0 && (n%1000) == 0)
-            {
-                fprintf(stdout, "completed %d\n", n);
-            }
-            if(n == ntasks)
-            {
-                TIMER_SAMPLE(timer);
-                if(PT_USEC_U(timer) > 0 && ncompleted > 0)
-                {
-                    fprintf(stdout, "timeout:%d error:%d total:%d\n"
-                            "time used:%lld request per sec:%lld avg_time:%lld\n", 
-                            ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
-                            ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
-                            (PT_USEC_U(timer)/ncompleted));
-                }
-                conn->over(conn);
-                if(is_wait_sleep){while(running_status)sleep(10);}
-                else _exit(0);
-            }
-            if(is_keepalive && respcode != 0) return http_request(conn);
+            fprintf(stdout, "completed %d current:%d\n", n, ncurrent);
+        }
+        if(ncompleted < ntasks)
+        {
+            if(is_keepalive && respcode != 0) 
+                return http_request(conn);
             else
             {
                 conn->over(conn);
                 if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
-                    --ncurrent;
+                {
+                    if(ncurrent > 0)--ncurrent;
+                }
             }
+        }
+        else 
+        {
+            conn->over(conn);
+            if(n == ntasks) return http_show_state(n);
         }
     }
     return -1;
@@ -339,7 +353,6 @@ int main(int argc, char **argv)
     pid_t pid;
     char *url = NULL, *urllist = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
     struct hostent *hent = NULL;
-    int is_daemon = 0;
 
     /* get configure file */
     while((ch = getopt(argc, argv, "vpkwdl:c:t:n:")) != -1)
@@ -529,7 +542,7 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 4;
+        service->nprocthreads = 1;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
         service->use_cond_wait = 0;

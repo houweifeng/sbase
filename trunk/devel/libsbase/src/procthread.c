@@ -76,7 +76,9 @@ void procthread_run(void *arg)
                 {
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
+                        DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                         qmessage_handler(pth->message_queue, pth->logger);
+                        DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                     }
                     else
                     {
@@ -116,9 +118,7 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
     if(pth && pth->message_queue && conn)
     {
         PUSH_TASK_MESSAGE(pth,MESSAGE_TRANSACTION, -1, conn->fd, tid, conn, NULL);
-        DEBUG_LOGGER(pth->logger, "Added message transaction[%d] to %s:%d on %s:%d via %d total %d",
-                tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                conn->fd, QMTOTAL(pth->message_queue));
+        DEBUG_LOGGER(pth->logger, "Added thread[%p]->qmessage[%p] transaction[%d] to %s:%d on %s:%d via %d total %d", pth->threadid,  pth->message_queue, tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, QMTOTAL(pth->message_queue));
         ret = 0;
     }
     return ret;
