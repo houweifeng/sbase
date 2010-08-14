@@ -83,6 +83,9 @@ int conn_recv_chunk(CONN *conn, int size);
 /* push chunk */
 int conn_push_chunk(CONN *conn, void *chunk_data, int size);
 
+/* over chunk */
+int conn_over_chunk(CONN *conn);
+
 /* receive chunk file */
 int conn_recv_file(CONN *conn, char *file, long long offset, long long size);
 
