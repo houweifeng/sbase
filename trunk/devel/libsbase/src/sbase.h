@@ -348,6 +348,9 @@ typedef struct _CONN
     int d_state;
     void *parent;
 
+    /* mutex */
+    void *mutex;
+
     /* conenction */
     int sock_type;
     int fd;

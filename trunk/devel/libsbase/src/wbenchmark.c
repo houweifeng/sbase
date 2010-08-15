@@ -22,6 +22,7 @@ static int nrequests = 0;
 static int ntimeout = 0;
 static int nerrors = 0;
 static int ncompleted = 0;
+static int is_quiet = 0;
 static int is_daemon = 0;
 static int is_keepalive = 0;
 static int is_wait_sleep = 0;
@@ -107,7 +108,7 @@ int http_request(CONN *conn)
                 p += sprintf(p, "\r\n");
                 n = p - buf;
             }
-            if(is_verbosity) fprintf(stdout, "%s", buf);
+            if(is_verbosity && is_quiet == 0) fprintf(stdout, "%s", buf);
             conn->save_cache(conn, path, strlen(path)+1);
             return conn->push_chunk(conn, buf, n);
         }
@@ -124,11 +125,22 @@ int http_show_state(int n)
     TIMER_SAMPLE(timer);
     if(PT_USEC_U(timer) > 0 && ncompleted > 0)
     {
-        fprintf(stdout, "timeout:%d error:%d total:%d\n"
-                "time used:%lld request per sec:%lld avg_time:%lld\n", 
-                ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
-                ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
-                (PT_USEC_U(timer)/ncompleted));
+        if(is_quiet)
+        {
+            REALLOG(logger, "timeout:%d error:%d total:%d "
+                    "time used:%lld request per sec:%lld avg_time:%lld", 
+                    ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
+                    ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
+                    (PT_USEC_U(timer)/ncompleted));
+        }
+        else
+        {
+            fprintf(stdout, "timeout:%d error:%d total:%d\n"
+                    "time used:%lld request per sec:%lld avg_time:%lld\n", 
+                    ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
+                    ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
+                    (PT_USEC_U(timer)/ncompleted));
+        }
     }
     if(is_wait_sleep){while(running_status)sleep(1);}
     if(is_daemon == 0)_exit(0);
@@ -149,7 +161,11 @@ int http_over(CONN *conn, int respcode)
         n = ncompleted;
         if(n > 0 && n <= ntasks && (n%1000) == 0)
         {
-            fprintf(stdout, "completed %d current:%d\n", n, ncurrent);
+            if(is_quiet)
+            {
+                REALLOG(logger, "completed %d current:%d", n, ncurrent);
+            }
+            else fprintf(stdout, "completed %d current:%d\n", n, ncurrent);
         }
         if(ncompleted < ntasks)
         {
@@ -355,7 +371,7 @@ int main(int argc, char **argv)
     struct hostent *hent = NULL;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vpkwdl:c:t:n:")) != -1)
+    while((ch = getopt(argc, argv, "vqpkwdl:c:t:n:")) != -1)
     {
         switch(ch)
         {
@@ -376,6 +392,9 @@ int main(int argc, char **argv)
                 break;
             case 'd':
                 is_daemon = 1;
+                break;
+            case 'q':
+                is_quiet = 1;
                 break;
             case 't':
                 req_timeout = atoi(optarg);
