@@ -74,6 +74,9 @@ int conn_push_exchange(CONN *conn, void *data, int size);
 /* save cache to connection  */
 int conn_save_cache(CONN *conn, void *data, int size);
 
+/* read chunk */
+int conn__read__chunk(CONN *conn);
+
 /* chunk reader */
 int conn_chunk_reader(CONN *conn);
 

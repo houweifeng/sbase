@@ -64,9 +64,9 @@ void procthread_run(void *arg)
                     }
                     else
                     {
-                        DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
+                        //ACCESS_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                         ret = MUTEX_WAIT(pth->mutex);
-                        DEBUG_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
+                        //ACCESS_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                     }
                 }while(pth->running_status);
             }
@@ -195,6 +195,7 @@ void procthread_stop(PROCTHREAD *pth)
         PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
         DEBUG_LOGGER(pth->logger, "Pushd MESSAGE_QUIT to procthreads[%d]", pth->index);
         pth->lock       = 1;
+        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
@@ -205,8 +206,8 @@ void procthread_terminate(PROCTHREAD *pth)
     if(pth)
     {
         DEBUG_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
-        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
         pth->running_status = 0;
+        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
