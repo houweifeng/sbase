@@ -838,6 +838,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
     sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
     sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
     /* XHTTPD */
     if((service = service_init()) == NULL)
     {
@@ -1047,7 +1048,6 @@ int main(int argc, char **argv)
                 break;
         }
     }
-    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 10240);
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);

@@ -54,7 +54,11 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
             conn->c_id = id;
             conn->start_cstate(conn);
             service->newtransaction(service, conn, id);
-            usleep(1);
+            usleep(10);
+        }
+        else
+        {
+            FATAL_LOGGER(logger, "new_conn(%s:%d) falied, %s", ip, port, strerror(errno));
         }
     }
     return conn;
@@ -145,6 +149,7 @@ int http_show_state(int n)
     }
     if(is_wait_sleep){while(running_status)sleep(1);}
     if(is_daemon == 0)_exit(0);
+    return 0;
 }
 
 /* http over */
@@ -343,7 +348,7 @@ void benchmark_heartbeat_handler(void *arg)
         }
         else
         {
-            usleep(100);
+            usleep(10);
             ++ncurrent;
         }
     }
@@ -551,7 +556,7 @@ invalid_url:
                 break;
         }
     }
-    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 10240);
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, 65536);
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);
