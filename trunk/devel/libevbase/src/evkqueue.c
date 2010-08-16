@@ -240,12 +240,12 @@ int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
         {
             kqev = &(((struct kevent *)evbase->evs)[i]);
             //DEBUG_LOGGER(evbase->logger, "ident:%d fflags:%d", kqev->ident, kqev->filter);
-            if(kqev && kqev->ident >= 0 && kqev->ident <= evbase->maxfd && evbase->evlist
+            if(kqev && kqev->ident >= 0 && kqev->ident < evbase->allowed && evbase->evlist
                     && evbase->evlist[kqev->ident] == kqev->udata && kqev->udata)
             {
                 ev_flags = 0;
                 if(kqev->filter == EVFILT_READ)	ev_flags |= E_READ;
-                else if(kqev->filter == EVFILT_WRITE)	ev_flags |= E_WRITE;
+                else if(kqev->filter == EVFILT_WRITE) ev_flags |= E_WRITE;
                 if(ev_flags == 0) continue;
                 if((ev_flags &=  evbase->evlist[kqev->ident]->ev_flags)) 
                 {

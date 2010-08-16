@@ -46,7 +46,7 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     ++i;
                 }
-                if(i == 0){usleep(pth->usec_sleep);}
+                //if(i == 0){usleep(pth->usec_sleep);}
                 //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
@@ -76,9 +76,9 @@ void procthread_run(void *arg)
                 {
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
-                        DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
+                        DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                         qmessage_handler(pth->message_queue, pth->logger);
-                        DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
+                        DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                     }
                     else
                     {
@@ -87,8 +87,6 @@ void procthread_run(void *arg)
                 }while(pth->running_status);
             }
         }
-        if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
-            qmessage_handler(pth->message_queue, pth->logger);
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
@@ -118,7 +116,7 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
     if(pth && pth->message_queue && conn)
     {
         PUSH_TASK_MESSAGE(pth,MESSAGE_TRANSACTION, -1, conn->fd, tid, conn, NULL);
-        DEBUG_LOGGER(pth->logger, "Added thread[%p]->qmessage[%p] transaction[%d] to %s:%d on %s:%d via %d total %d", pth->threadid,  pth->message_queue, tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, QMTOTAL(pth->message_queue));
+        DEBUG_LOGGER(pth->logger, "Added thread[%p]->qmessage[%p] transaction[%d] to conn[%p][%s:%d] on %s:%d via %d total %d", (void *)(pth->threadid),  pth->message_queue, tid, conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, QMTOTAL(pth->message_queue));
         ret = 0;
     }
     return ret;
@@ -132,8 +130,8 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
     if(pth && pth->message_queue && conn)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_NEW_SESSION, -1, conn->fd, -1, conn, NULL);
-        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%s:%d] on "
-                "%s:%d via %d total %d", MESSAGE_DESC(MESSAGE_NEW_SESSION),
+        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%p][%s:%d] on "
+                "%s:%d via %d total %d", MESSAGE_DESC(MESSAGE_NEW_SESSION), conn,
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port,
                 conn->fd, QMTOTAL(pth->message_queue));
         ret = 0;
@@ -264,7 +262,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase        = have_evbase;
-            pth->evbase             = evbase_init(0);
+            pth->evbase             = evbase_init(1);
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
