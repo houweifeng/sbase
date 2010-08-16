@@ -81,21 +81,6 @@ int conn_read_buffer(CONN *conn)
         }                                                                                   \
     }                                                                                       \
 }
-#define CONN_OVER(conn)                                                                     \
-{                                                                                           \
-    if(conn->d_state == 0)                                                                  \
-    {                                                                                       \
-        if(conn->s_state == 0)                                                              \
-        {                                                                                   \
-            CONN_TERMINATE(conn, D_STATE_CLOSE);                                            \
-        }                                                                                   \
-        else                                                                                \
-        {                                                                                   \
-            conn->i_state = C_STATE_OVER;                                                   \
-            conn->event->destroy(conn->event);                                              \
-        }                                                                                   \
-    }                                                                                       \
-}
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
     if(conn && (conn->d_state == 0))                                                        \
@@ -199,7 +184,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
 
     if(conn)
     {
-        CONN_CHECK(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE);
+        CONN_CHECK(conn, D_STATE_CLOSE);
         //fprintf(stdout, "%s::%d event[%d] on fd[%d]\n", __FILE__, __LINE__, event, event_fd);
         if(event_fd == conn->fd)
         {
@@ -299,8 +284,8 @@ int conn_set(CONN *conn)
             if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
             conn->event->set(conn->event, conn->fd, flag, (void *)conn, &conn_event_handler);
             conn->evbase->add(conn->evbase, conn->event);
-            DEBUG_LOGGER(conn->logger, "setting evbase->nfd[%d][%p] connection[%s:%d]"
-                    "local[%s:%d] via %d", conn->evbase->nfd, conn->event, conn->remote_ip, 
+            DEBUG_LOGGER(conn->logger, "setting conn[%p]->evbase->nfd[%d][%p] connection[%s:%d]"
+                    "local[%s:%d] via %d", conn, conn->evbase->nfd, conn->event, conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             return 0;
         }
@@ -390,7 +375,7 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        conn->event->destroy(conn->event);
+        //conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing session[%s:%d] local[%s:%d] via %d",
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
@@ -569,6 +554,7 @@ int conn_over_cstate(CONN *conn)
 /* push message to message queue */
 int conn_push_message(CONN *conn, int message_id)
 {
+    PROCTHREAD *parent = NULL;
     void *mutex = NULL;
     int ret = -1;
 
@@ -576,17 +562,17 @@ int conn_push_message(CONN *conn, int message_id)
 
     if(conn && conn->message_queue && (message_id & MESSAGE_ALL) )
     {
-        if(conn->parent)
+        if((parent = (PROCTHREAD *)conn->parent))
         {
             DEBUG_LOGGER(conn->logger, "Pushed message[%s] to message_queue[%p] "
                     "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
                     MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, QMTOTAL(conn->message_queue),
-                    PPL(conn), PPL(conn->parent));
+                    PPL(conn), parent);
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
-                    -1, conn->parent, conn, NULL);
-            if(PPARENT(conn) && (mutex = PPARENT(conn)->mutex)){MUTEX_SIGNAL(mutex);}
+                    -1, parent, conn, NULL);
+            if((mutex = parent->mutex)){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
     }

@@ -12,7 +12,7 @@
 #define HTTP_BUF_SIZE       65536
 #define HTTP_PATH_MAX       8192
 #define HTTP_IP_MAX         16
-#define HTTP_WAIT_TIMEOUT   500000
+#define HTTP_WAIT_TIMEOUT   200000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -54,6 +54,7 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
             conn->c_id = id;
             conn->start_cstate(conn);
             service->newtransaction(service, conn, id);
+            usleep(1);
         }
     }
     return conn;
@@ -562,7 +563,7 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 4;
+        service->nprocthreads = 8;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
         service->use_cond_wait = 1;

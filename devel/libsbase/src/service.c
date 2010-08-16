@@ -132,7 +132,7 @@ int service_set(SERVICE *service)
 int service_run(SERVICE *service)
 {
     int ret = -1, i = 0, x = 0;
-    //char logfile[1024];
+    char logfile[1024];
     CONN *conn = NULL;
 
     if(service)
@@ -215,9 +215,9 @@ running_threads:
             if((service->iodaemon = procthread_init(1)))
             {
                 PROCTHREAD_SET(service, service->iodaemon);
-                //sprintf(logfile, "/tmp/evbase_%s_io.log", service->service_name);
+                sprintf(logfile, "/tmp/evbase_%s_io.log", service->service_name);
                 //if(service->use_cond_wait)
-                //service->iodaemon->evbase->set_logfile(service->iodaemon->evbase, logfile);
+                service->iodaemon->evbase->set_logfile(service->iodaemon->evbase, logfile);
                 NEW_PROCTHREAD("iodaemon", 0, service->iodaemon->threadid, service->iodaemon, service->logger);
                 ret = 0;
             }
@@ -258,9 +258,9 @@ running_threads:
                     {
                         PROCTHREAD_SET(service, service->procthreads[i]);
                         service->procthreads[i]->ioqmessage = service->procthreads[i]->message_queue;
-                        //sprintf(logfile, "/tmp/evbase_%s_thread_%d.log", service->service_name, i);
+                        sprintf(logfile, "/tmp/evbase_%s_thread_%d.log", service->service_name, i);
                         //if(service->use_cond_wait)
-                        //service->procthreads[i]->evbase->set_logfile(service->procthreads[i]->evbase, logfile);
+                        service->procthreads[i]->evbase->set_logfile(service->procthreads[i]->evbase, logfile);
                         ret = 0;
                     }
                     else
