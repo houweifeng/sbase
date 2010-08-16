@@ -809,6 +809,16 @@ static void xhttpd_stop(int sig)
     }
 }
 
+/* SIGPIPE */
+/*
+static void xhttpd_sigpipe(int sig)
+{
+    struct sigaction sa = {0};
+    sa.sa_handler = SIG_IGN;
+    sigaction(SIGPIPE, &sa,0); 
+}
+*/
+
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
@@ -1018,6 +1028,7 @@ int main(int argc, char **argv)
     signal(SIGINT,  &xhttpd_stop);
     signal(SIGHUP,  &xhttpd_stop);
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
     //daemon
     if(is_daemon)
     {
