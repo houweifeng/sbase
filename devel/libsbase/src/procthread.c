@@ -46,7 +46,7 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     ++i;
                 }
-                //if(i == 0){usleep(pth->usec_sleep);}
+                if(i == 0){usleep(pth->usec_sleep);}
                 //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
@@ -82,7 +82,7 @@ void procthread_run(void *arg)
                     }
                     else
                     {
-                        usleep(100);
+                        usleep(10);
                     }
                 }while(pth->running_status);
             }

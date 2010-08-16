@@ -12,7 +12,7 @@
 #define HTTP_BUF_SIZE       65536
 #define HTTP_PATH_MAX       8192
 #define HTTP_IP_MAX         16
-#define HTTP_WAIT_TIMEOUT   100000
+#define HTTP_WAIT_TIMEOUT   500000
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -173,7 +173,7 @@ int http_over(CONN *conn, int respcode)
                 return http_request(conn);
             else
             {
-                conn->over(conn);
+                conn->close(conn);
                 if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 {
@@ -183,7 +183,7 @@ int http_over(CONN *conn, int respcode)
         }
         else 
         {
-            conn->over(conn);
+            conn->close(conn);
             if(n == ntasks) return http_show_state(n);
         }
     }
@@ -531,6 +531,7 @@ invalid_url:
     signal(SIGINT,  &benchmark_stop);
     signal(SIGHUP,  &benchmark_stop);
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
     //daemon
     if(is_daemon)
     {
