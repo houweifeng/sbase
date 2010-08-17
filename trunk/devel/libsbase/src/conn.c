@@ -135,12 +135,13 @@ do{                                                                             
 }while(0)
 
 /* update evtimer */
-#define CONN_UPDATE_EVTIMER(conn)                                                           \
+#define CONN_UPDATE_EVTIMER(conn , _evtimer_, _evid_)                                       \
 do                                                                                          \
 {                                                                                           \
-    if(conn && conn->evtimer && conn->timeout > 0 && conn->evid >= 0)                       \
+    if(conn && (_evtimer_ = conn->evtimer) && conn->d_state == 0 && conn->timeout > 0       \
+            && (_evid_ = conn->evid) >= 0)                                                  \
     {                                                                                       \
-            EVTIMER_UPDATE(conn->evtimer, conn->evid, conn->timeout,                        \
+            EVTIMER_UPDATE(_evtimer_, _evid_, conn->timeout,                                \
                     &conn_evtimer_handler, (void *)conn);                                   \
     }                                                                                       \
 }while(0)
@@ -178,9 +179,9 @@ do                                                                              
 /* connection event handler */
 void conn_event_handler(int event_fd, short event, void *arg)
 {
-    int len = sizeof(int);
+    int len = sizeof(int), error = 0, evid = -1;
     CONN *conn = (CONN *)arg;
-    int error = 0;
+    void *evtimer = NULL;
 
     if(conn)
     {
@@ -251,7 +252,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     __FILE__, __LINE__, event, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
             */
-            CONN_UPDATE_EVTIMER(conn);
+            if(conn->d_state == 0){CONN_UPDATE_EVTIMER(conn, evtimer, evid);}
         }
         else
         {
