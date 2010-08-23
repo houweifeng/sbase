@@ -1183,7 +1183,7 @@ int service_stategroup(SERVICE *service)
             {
                 conn->groupid = i;
                 service->groups[i].total++;
-                usleep(10);
+                usleep(100);
             }
         }
         //DEBUG_LOGGER(service->logger, "over stategroup()");
@@ -1351,7 +1351,7 @@ void service_state(void *arg)
                                     service->ip, service->port, strerror(errno));
                             break;
                         }
-                        usleep(10);
+                        usleep(100);
                         n--;
                     }
                 }
