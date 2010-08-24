@@ -252,7 +252,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     __FILE__, __LINE__, event, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
             */
-            if(conn->d_state == 0){CONN_UPDATE_EVTIMER(conn, evtimer, evid);}
+            CONN_UPDATE_EVTIMER(conn, evtimer, evid);
         }
         else
         {
@@ -419,6 +419,7 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
     int ret = -1;
 
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
     if(conn && timeout_usec > 0)
     {
         conn->timeout = timeout_usec;
@@ -438,7 +439,8 @@ int conn_over_timeout(CONN *conn)
 
     if(conn)
     {
-        if(conn->evtimer){EVTIMER_DEL(conn->evtimer, conn->evid);}
+        if(conn->evtimer && conn->timeout > 0){EVTIMER_DEL(conn->evtimer, conn->evid);}
+        conn->timeout = 0;
         ret = 0;
     }
     return ret;
