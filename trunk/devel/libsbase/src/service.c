@@ -189,7 +189,7 @@ running_proc:
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
                     service->working_mode, strerror(errno));
         }
         return ret;
@@ -204,7 +204,7 @@ running_threads:
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
                     service->working_mode, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
@@ -747,6 +747,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                         {
                             service->groups[id].conns_free[x] = i;
                             ++(service->groups[id].nconns_free);
+                            ++(service->groups[id].connected);
                             conn->gindex = x;
                             break;
                         }
@@ -798,6 +799,7 @@ int service_popconn(SERVICE *service, CONN *conn)
                     service->groups[id].conns_free[x] = 0;
                     --(service->groups[id].nconns_free);
                 }
+                --(service->groups[id].connected);
                 --(service->groups[id].total);
             }
             service->connections[conn->index] = NULL;
@@ -1176,14 +1178,14 @@ int service_stategroup(SERVICE *service)
         //DEBUG_LOGGER(service->logger, "start stategroup()");
         for(i = 0; i < service->ngroups; i++)
         {
-            while(service->groups[i].limit > 0 
+            while(service->groups[i].limit > 0  
                     && service->groups[i].total < service->groups[i].limit
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
                             service->groups[i].port, &(service->groups[i].session))))
             {
+                if(service->groups[i].connected == 0) break;
                 conn->groupid = i;
                 service->groups[i].total++;
-                usleep(100);
             }
         }
         //DEBUG_LOGGER(service->logger, "over stategroup()");

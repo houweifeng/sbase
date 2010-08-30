@@ -82,7 +82,7 @@ void procthread_run(void *arg)
                     }
                     else
                     {
-                        usleep(10);
+                        usleep(100);
                     }
                 }while(pth->running_status);
             }
