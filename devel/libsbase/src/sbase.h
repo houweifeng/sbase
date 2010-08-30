@@ -149,6 +149,8 @@ SBASE *sbase_init();
 typedef struct _CNGROUP
 {
   char ip[SB_IP_MAX];
+  short status;
+  short connected;
   short port;
   short limit;
   short total;
