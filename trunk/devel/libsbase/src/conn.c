@@ -198,14 +198,16 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     ERROR_LOGGER(conn->logger, "socket %d to remote[%s:%d] local[%s:%d] "
                     "connectting failed, error:%d %s", conn->fd, conn->remote_ip, conn->remote_port,
                             conn->local_ip, conn->local_port, error, strerror(errno));
-                    conn->status = CONN_STATUS_CLOSED;
+                    //conn->status = CONN_STATUS_CLOSED;
                     CONN_TERMINATE(conn, D_STATE_CLOSE);          
                     return ;
                 }
                 DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
-                conn->status = CONN_STATUS_FREE;
+                //set conn->status
+                PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
+                //conn->status = CONN_STATUS_FREE;
                 if(QTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
                 return ;
             }
@@ -1084,7 +1086,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
-    if(conn && conn->status == C_STATE_FREE && conn->send_queue && data && size > 0)
+    if(conn && conn->status == CONN_STATUS_FREE && conn->send_queue && data && size > 0)
     {
         //CHUNK_POP(conn, cp);
         if(PPARENT(conn) && PPARENT(conn)->service 
@@ -1136,7 +1138,7 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
-    if(conn && conn->status == C_STATE_FREE && conn->send_queue 
+    if(conn && conn->status == CONN_STATUS_FREE && conn->send_queue 
             && filename && offset >= 0 && size > 0)
     {
         //CHUNK_POP(conn, cp);
@@ -1183,7 +1185,7 @@ int conn_over_chunk(CONN *conn)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
-    if(conn && conn->status == C_STATE_FREE && conn->send_queue)
+    if(conn && conn->status == CONN_STATUS_FREE && conn->send_queue)
     {
         if(PPARENT(conn) && PPARENT(conn)->service 
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))

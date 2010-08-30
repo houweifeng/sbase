@@ -747,7 +747,6 @@ int service_pushconn(SERVICE *service, CONN *conn)
                         {
                             service->groups[id].conns_free[x] = i;
                             ++(service->groups[id].nconns_free);
-                            ++(service->groups[id].connected);
                             conn->gindex = x;
                             break;
                         }
@@ -799,7 +798,10 @@ int service_popconn(SERVICE *service, CONN *conn)
                     service->groups[id].conns_free[x] = 0;
                     --(service->groups[id].nconns_free);
                 }
-                --(service->groups[id].connected);
+                if(conn->status == CONN_STATUS_FREE)
+                {
+                    --(service->groups[id].connected);
+                }
                 --(service->groups[id].total);
             }
             service->connections[conn->index] = NULL;
@@ -825,6 +827,23 @@ int service_popconn(SERVICE *service, CONN *conn)
     return ret;
 }
 
+/* set connection status ok */
+int service_okconn(SERVICE *service, CONN *conn)
+{
+    int id = -1;
+
+    if(service && conn)
+    {
+        if((id = conn->groupid) >= 0 && id < service->ngroups)
+        {
+            service->groups[id].connected++;
+        }
+        conn->status = CONN_STATUS_FREE;
+        return 0;
+    }
+    return -1;
+}
+
 /* get connection with free state */
 CONN *service_getconn(SERVICE *service, int groupid)
 {
@@ -837,7 +856,7 @@ CONN *service_getconn(SERVICE *service, int groupid)
         if(groupid >= 0 && groupid < service->ngroups)
         {
             x = 0;
-            while(x < SB_CONN_MAX)
+            while(x < SB_CONN_MAX && service->groups[groupid].nconns_free > 0)
             {
                 if((i = service->groups[groupid].conns_free[x]) > 0 
                         && (conn = service->connections[i]))
@@ -1178,12 +1197,12 @@ int service_stategroup(SERVICE *service)
         //DEBUG_LOGGER(service->logger, "start stategroup()");
         for(i = 0; i < service->ngroups; i++)
         {
+            if(service->groups[i].total > 0 && service->groups[i].connected <= 0) continue;
             while(service->groups[i].limit > 0  
                     && service->groups[i].total < service->groups[i].limit
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
                             service->groups[i].port, &(service->groups[i].session))))
             {
-                if(service->groups[i].connected == 0) break;
                 conn->groupid = i;
                 service->groups[i].total++;
             }
@@ -1522,6 +1541,7 @@ SERVICE *service_init()
         service->stop               = service_stop;
         service->newproxy           = service_newproxy;
         service->newconn            = service_newconn;
+        service->okconn             = service_okconn;
         service->addconn            = service_addconn;
         service->pushconn           = service_pushconn;
         service->popconn            = service_popconn;
