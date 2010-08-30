@@ -23,6 +23,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd,
         SESSION *session, int status);
 /* push connection to connections pool */
 int service_pushconn(SERVICE *service, CONN *conn);
+/* set connection status ok */
+int service_okconn(SERVICE *service, CONN *conn);
 /* pop connection from connections pool */
 int service_popconn(SERVICE *service, CONN *conn);
 /* get free connection */

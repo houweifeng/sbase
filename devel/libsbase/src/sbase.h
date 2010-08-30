@@ -249,6 +249,7 @@ typedef struct _SERVICE
     struct _CONN *(*getconn)(struct _SERVICE *service, int groupid);
     int     (*freeconn)(struct _SERVICE *service, struct _CONN *);
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
+    int     (*okconn)(struct _SERVICE *service, struct _CONN *conn);
     int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
     struct _CONN *(*findconn)(struct _SERVICE *service, int index);
 
