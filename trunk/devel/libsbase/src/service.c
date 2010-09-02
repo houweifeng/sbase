@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "sbase.h"
@@ -99,6 +100,20 @@ int service_set(SERVICE *service)
     return ret;
 }
 
+/* ignore SIGPIPE */
+void sigpipe_ignore()
+{
+#ifndef WIN32
+    sigset_t signal_mask;
+    sigemptyset(&signal_mask);
+    sigaddset(&signal_mask, SIGPIPE);
+#ifdef HAVE_PTHREAD
+    pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
+#endif
+#endif
+    return ;
+}
+
 #ifdef HAVE_PTHREAD
 #define NEW_PROCTHREAD(ns, id, pthid, pth, logger)                                          \
 {                                                                                           \
@@ -195,6 +210,7 @@ running_proc:
         return ret;
 running_threads:
 #ifdef HAVE_PTHREAD
+        sigpipe_ignore();
         //daemon 
         if((service->daemon = procthread_init(0)))
         {
