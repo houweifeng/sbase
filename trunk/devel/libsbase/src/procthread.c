@@ -21,9 +21,9 @@ void procthread_run(void *arg)
     if(pth)
     {
         //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
-#ifdef HAVE_PTHREAD
-        pthread_detach((pthread_t)(pth->threadid));
-#endif
+//#ifdef HAVE_PTHREAD
+//        pthread_detach((pthread_t)(pth->threadid));
+//#endif
         //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
