@@ -1002,8 +1002,12 @@ int service_pushtoq(SERVICE *service, CONN *conn)
     {
         DEBUG_LOGGER(service->logger, "starting pushq()");
         MUTEX_LOCK(service->mutex);
-        x = service->nqconns++;
-        service->qconns[x] = conn;
+        if(service->nqconns < SB_INIT_CONNS)
+        {
+            x = service->nqconns++;
+            service->qconns[x] = conn;
+        }
+        else conn->clean(&conn);
         MUTEX_UNLOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "over pushq()");
     }
@@ -1213,7 +1217,7 @@ int service_stategroup(SERVICE *service)
         //DEBUG_LOGGER(service->logger, "start stategroup()");
         for(i = 0; i < service->ngroups; i++)
         {
-            if(service->groups[i].total > 0 && service->groups[i].connected <= 0) continue;
+            //if(service->groups[i].total > 0 && service->groups[i].connected <= 0) continue;
             while(service->groups[i].limit > 0  
                     && service->groups[i].total < service->groups[i].limit
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
