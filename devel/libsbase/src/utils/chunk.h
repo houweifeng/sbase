@@ -11,6 +11,7 @@
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 1024 
+#define CHUNK_BLOCK_MAX         262144
 #ifndef MMAP_CHUNK_SIZE
 #define MMAP_CHUNK_SIZE         1048576
 //#define MMAP_CHUNK_SIZE       2097152
@@ -263,7 +264,13 @@ int ck_mmap(void *);
     if(ptr)                                                                                 \
     {                                                                                       \
         if(CK_MDATA(ptr)){munmap(CK_MDATA(ptr), MMAP_CHUNK_SIZE); CK_MDATA(ptr) = NULL;}    \
-        if(CK_FD(ptr) > 0){close(CK_FD(ptr)); CK_FD(ptr) = -1;}                            \
+        if(CK_FD(ptr) > 0){close(CK_FD(ptr)); CK_FD(ptr) = -1;}                             \
+        if(CK_BSIZE(ptr) > CHUNK_BLOCK_MAX)                                                 \
+        {                                                                                   \
+            if(CK_DATA(ptr)) free(CK_DATA(ptr));                                            \
+            CK_DATA(ptr) = NULL;                                                            \
+            CK_BSIZE(ptr) = 0;                                                              \
+        }                                                                                   \
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_NMDATA(ptr) = 0;                                                                 \
 		CK_OFFMDATA(ptr) = 0;                                                               \
