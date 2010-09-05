@@ -1000,12 +1000,12 @@ int service_pushtoq(SERVICE *service, CONN *conn)
 
     if(service && conn)
     {
-        ACCESS_LOGGER(service->logger, "starting pushq(%d)", service->nqconns);
+        DEBUG_LOGGER(service->logger, "starting pushq(%d)", service->nqconns);
         MUTEX_LOCK(service->mutex);
         x = service->nqconns++;
         service->qconns[x] = conn;
         MUTEX_UNLOCK(service->mutex);
-        ACCESS_LOGGER(service->logger, "over pushq(%d)", service->nqconns);
+        DEBUG_LOGGER(service->logger, "over pushq(%d)", service->nqconns);
     }
     return x;
 }
