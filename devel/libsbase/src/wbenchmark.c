@@ -147,8 +147,8 @@ int http_show_state(int n)
                     (PT_USEC_U(timer)/ncompleted));
         }
     }
-    if(is_wait_sleep){while(running_status)sleep(1);}
-    if(is_daemon == 0)_exit(0);
+    //if(is_wait_sleep){while(running_status)sleep(1);}
+    //if(is_daemon == 0)_exit(0);
     return 0;
 }
 
