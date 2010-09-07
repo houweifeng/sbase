@@ -16,7 +16,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0};
-    int i = 0, ret = 0;
+    int i = 0, k = 0, ret = 0;
 
     if(pth)
     {
@@ -36,7 +36,7 @@ void procthread_run(void *arg)
             {
                 i = 0;
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
-                if(pth->evbase->loop(pth->evbase, 0, NULL) > 0) ++i;
+                if(pth->evbase->loop(pth->evbase, 0, &tv) > 0) ++i;
                 //DEBUG_LOGGER(pth->logger, "over evbase->loop()");
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
@@ -46,7 +46,8 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     ++i;
                 }
-                if(i == 0){usleep(pth->usec_sleep);}
+                if(i != 0)++k;
+                if(i == 0 || k > 1000000){usleep(pth->usec_sleep); k = 0;}
                 //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
