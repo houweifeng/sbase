@@ -95,11 +95,9 @@ typedef struct _CHUNK * PCHUNK;
         {                                                                                   \
             CKN(ptr) = (len/CHUNK_BLOCK_SIZE);                                              \
             if((len % CHUNK_BLOCK_SIZE)) ++CKN(ptr);                                        \
-            CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                                   \
-            if((CK_DATA(ptr)   = (char *)realloc(CK_DATA(ptr), CK_BSIZE(ptr))))             \
-            {                                                                               \
-                memset(CK_DATA(ptr), 0, CK_BSIZE(ptr));                                     \
-            }                                                                               \
+            if(CK_DATA(ptr)){free(CK_DATA(ptr));CK_DATA(ptr) = NULL;CK_BSIZE(ptr) = 0;}     \
+            if((CK_DATA(ptr)   = (char *)calloc(1, CK_BSIZE(ptr))))                         \
+                CK_BSIZE(ptr)  = CKN(ptr) * CHUNK_BLOCK_SIZE;                               \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
@@ -308,7 +306,7 @@ int ck_mmap(void *);
     if((ptr = calloc(1, sizeof(CHUNK))))                                                    \
     {                                                                                       \
         CK_FD(ptr) = -1;                                                                    \
-        CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);                                                \
     }                                                                                       \
 }
+        //CK_SET_BSIZE(ptr, CHUNK_BLOCK_SIZE);                                                
 #endif

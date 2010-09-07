@@ -149,7 +149,7 @@ do                                                                              
 #define PUSH_IOQMESSAGE(conn, msgid)                                                        \
 do                                                                                          \
 {                                                                                           \
-    if(conn && conn->ioqmessage)                                                            \
+    if(conn && conn->d_state == 0 && conn->ioqmessage)                                      \
     {                                                                                       \
         qmessage_push(conn->ioqmessage, msgid,                                              \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
@@ -1117,7 +1117,7 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
                 " from %s:%d on %s:%d via %d", filename, LL(offset), LL(size), conn->remote_ip, 
                 conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         CK_FILE(conn->chunk, filename, offset, size);
-        CK_SET_BSIZE(conn->chunk, conn->session.buffer_size);
+        //CK_SET_BSIZE(conn->chunk, conn->session.buffer_size);
         conn->s_state = S_STATE_READ_CHUNK;
         if(conn->d_state & D_STATE_CLOSE)
             conn->chunk_reader(conn);
