@@ -148,7 +148,7 @@ int http_show_state(int n)
         }
     }
     //if(is_wait_sleep){while(running_status)sleep(1);}
-    //if(is_daemon == 0)_exit(0);
+    if(is_daemon == 0){running_status = 0;sbase->stop(sbase);}
     return 0;
 }
 

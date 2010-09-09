@@ -65,9 +65,9 @@ void procthread_run(void *arg)
                     }
                     else
                     {
-                        //ACCESS_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
+                        DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                         ret = MUTEX_WAIT(pth->mutex);
-                        //ACCESS_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
+                        DEBUG_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                     }
                 }while(pth->running_status);
             }
@@ -88,6 +88,8 @@ void procthread_run(void *arg)
                 }while(pth->running_status);
             }
         }
+        if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                qmessage_handler(pth->message_queue, pth->logger);
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);

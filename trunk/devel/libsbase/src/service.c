@@ -675,7 +675,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         {
             conn->reset(conn);
         }
-        else 
+        else
         {
             conn = conn_init();
             //fprintf(stdout, "newconn:%p\n", conn);
@@ -1004,6 +1004,7 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         MUTEX_LOCK(service->mutex);
         x = service->nqconns++;
         service->qconns[x] = conn;
+        //conn->reset(conn);
         MUTEX_UNLOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "over pushq(%d)", service->nqconns);
     }
@@ -1295,14 +1296,16 @@ void service_stop(SERVICE *service)
     if(service)
     {
         //DEBUG_LOGGER(service->logger, "ready for stop service:%s\n", service->service_name);
+        service->lock = 1;
         //stop all connections 
-        if(service->connections && service->running_connections > 0 && service->index_max >= 0)
+        if(service->connections && service->index_max >= 0)
         {
             //DEBUG_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
             for(i = 0; i <= service->index_max; i++)
             {
                 if((conn = service->connections[i]))
                 {
+                    DEBUG_LOGGER(service->logger, "Ready for close connections[%d] dstate:%d remote[%s:%d] via %d", i, conn->d_state, conn->remote_ip, conn->remote_port, conn->fd); 
                     conn->close(conn);
                 }
             }
@@ -1357,7 +1360,6 @@ void service_stop(SERVICE *service)
         EVTIMER_DEL(service->evtimer, service->evid);
         //remove event
         if(service->event)service->event->destroy(service->event);
-        service->lock = 1;
         close(service->fd);
     }
     return ;
