@@ -71,9 +71,9 @@ int conn_read_buffer(CONN *conn)
         conn->over_timeout(conn);                                                           \
         if(!(conn->d_state & (_state_)))                                                    \
         {                                                                                   \
-            DEBUG_LOGGER(conn->logger, "Ready for close remote[%s:%d] local[%s:%d] via %d", \
-                    conn->remote_ip, conn->remote_port, conn->local_ip,                     \
-                    conn->local_port, conn->fd);                                            \
+            DEBUG_LOGGER(conn->logger, "Ready for close pconn[%p] remote[%s:%d] "           \
+                    "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
+                    conn->local_ip, conn->local_port, conn->fd);                            \
             conn->push_message(conn, MESSAGE_QUIT);                                         \
             conn->d_state |= _state_;                                                       \
             if(conn->event && conn->event->destroy)                                         \
@@ -309,6 +309,8 @@ int conn_close(CONN *conn)
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
     if(conn)
     {
+        DEBUG_LOGGER(conn->logger, "Ready for close conn[%p] remote[%s:%d] local[%s:%d] via %d",
+        conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         CONN_TERMINATE(conn, D_STATE_CLOSE);
         return 0;
     }

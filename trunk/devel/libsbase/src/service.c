@@ -671,11 +671,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
     if(service && service->lock == 0 && fd > 0 && session)
     {
         //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
-        if((conn = service_popfromq(service)))
-        {
-            conn->reset(conn);
-        }
-        else
+        if((conn = service_popfromq(service)) == NULL)
         {
             conn = conn_init();
             //fprintf(stdout, "newconn:%p\n", conn);
@@ -772,8 +768,8 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 if(i >= service->index_max) service->index_max = i;
                 ret = 0;
                 DEBUG_LOGGER(service->logger, "Added new connection[%s:%d] on %s:%d via %d "
-                        "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
-                        conn->local_ip, conn->local_port, conn->fd, 
+                        "d_state:%d index[%d] of total %d", conn->remote_ip, conn->remote_port, 
+                        conn->local_ip, conn->local_port, conn->fd, conn->d_state,
                         conn->index, service->running_connections);
                 break;
             }
@@ -1003,8 +999,8 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         DEBUG_LOGGER(service->logger, "starting pushq(%d)", service->nqconns);
         MUTEX_LOCK(service->mutex);
         x = service->nqconns++;
+        conn->reset(conn);
         service->qconns[x] = conn;
-        //conn->reset(conn);
         MUTEX_UNLOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "over pushq(%d)", service->nqconns);
     }
@@ -1305,7 +1301,7 @@ void service_stop(SERVICE *service)
             {
                 if((conn = service->connections[i]))
                 {
-                    DEBUG_LOGGER(service->logger, "Ready for close connections[%d] dstate:%d remote[%s:%d] via %d", i, conn->d_state, conn->remote_ip, conn->remote_port, conn->fd); 
+                    DEBUG_LOGGER(service->logger, "Ready for close connections[%d] pconn[%p] dstate:%d remote[%s:%d] via %d", i, conn, conn->d_state, conn->remote_ip, conn->remote_port, conn->fd); 
                     conn->close(conn);
                 }
             }
