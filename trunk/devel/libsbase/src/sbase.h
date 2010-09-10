@@ -339,18 +339,18 @@ typedef struct _PROCTHREAD
 }PROCTHREAD;
 /* Initialize procthread */
 PROCTHREAD *procthread_init(int have_evbase);
-
+/* CONN */
 typedef struct _CONN
 {
     /* global */
     int index;
     int groupid;
     int gindex;
+    /* die state */
+    int d_state;
     void *parent;
     /* mutex */
     void *mutex;
-    /* die state */
-    int d_state;
         
     /* conenction */
     int sock_type;

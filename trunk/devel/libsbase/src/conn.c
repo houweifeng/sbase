@@ -181,9 +181,8 @@ void conn_event_handler(int event_fd, short event, void *arg)
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 //set conn->status
-                //PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
-                //conn->status = CONN_STATUS_FREE;
-                if(QMTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
+                PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
+                if(QTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
                 return ;
             }
             int flag = fcntl(conn->fd, F_GETFL, 0);
@@ -212,7 +211,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
             if(event & E_WRITE)
             {
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d START", E_WRITE, event_fd);
-                //if(conn->write_handler(conn) < 0) return ;
+                if(conn->write_handler(conn) < 0) return ;
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on %d OVER", E_WRITE, event_fd);
             } 
             /*
@@ -293,7 +292,7 @@ int conn_over(CONN *conn)
     if(conn)
     {
         ACCESS_LOGGER(conn->logger, "Ready for close-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        if(QMTOTAL(conn->send_queue) <= 0)
+        if(QTOTAL(conn->send_queue) <= 0)
         {
             CONN_TERMINATE(conn, D_STATE_CLOSE);
         }
@@ -316,7 +315,7 @@ int conn_terminate(CONN *conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for closeing conn[%p] remote[%s:%d] local[%s:%d] via %d "
                 "qtotal:%d d_state:%d i_state:%d ", conn, conn->remote_ip, conn->remote_port,
-                conn->local_ip, conn->local_port, conn->fd, QMTOTAL(conn->send_queue),
+                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
                 conn->d_state, conn->i_state);
         //continue incompleted data handling 
         if(conn->s_state == S_STATE_DATA_HANDLING)
@@ -543,7 +542,7 @@ int conn_push_message(CONN *conn, int message_id)
                     "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
                     MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
-                    conn->fd, QMTOTAL(conn->message_queue),
+                    conn->fd, QTOTAL(conn->message_queue),
                     PPL(conn), parent);
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                     -1, parent, conn, NULL);
@@ -631,9 +630,9 @@ int conn_write_handler(CONN *conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d on %s:%d via %d "
                 "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
-                conn->local_ip, conn->local_port, conn->fd, QMTOTAL(conn->send_queue),
+                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
                 conn->d_state, conn->i_state);
-        if(QMTOTAL(conn->send_queue) > 0 && (cp = (CHUNK *)queue_head(conn->send_queue)))
+        if(QTOTAL(conn->send_queue) > 0 && (cp = (CHUNK *)queue_head(conn->send_queue)))
         {
             if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
             {
@@ -668,7 +667,7 @@ int conn_write_handler(CONN *conn)
                     DEBUG_LOGGER(conn->logger, "Completed chunk[%p] to %s:%d "
                             "on %s:%d via %d clean it leave %d", PPL(cp), 
                             conn->remote_ip, conn->remote_port, conn->local_ip,
-                            conn->local_port, conn->fd, QMTOTAL(conn->send_queue));
+                            conn->local_port, conn->fd, QTOTAL(conn->send_queue));
                     if(cp && PPARENT(conn) && PPARENT(conn)->service)
                     {
                         PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
@@ -676,7 +675,7 @@ int conn_write_handler(CONN *conn)
                     cp  = NULL;
                 }
             }
-            if(QMTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
+            if(QTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
             if(chunk_over)
             {
                 CONN_TERMINATE(conn, D_STATE_CLOSE);
@@ -1065,10 +1064,10 @@ int conn_push_chunk(CONN *conn, void *data, int size)
             CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
             queue_push(conn->send_queue, cp);
-            if(QMTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
+            if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
             DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d][%d] to %s:%d send_queue "
                     "total %d on %s:%d via %d", size, CK_BSIZE(cp),conn->remote_ip, 
-                    conn->remote_port, QMTOTAL(conn->send_queue), conn->local_ip, 
+                    conn->remote_port, QTOTAL(conn->send_queue), conn->local_ip, 
                     conn->local_port, conn->fd);
             ret = 0;
         }
@@ -1117,10 +1116,10 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
         {
             CK_FILE(cp, filename, offset, size);
             queue_push(conn->send_queue, cp);
-            if((QMTOTAL(conn->send_queue)) > 0 ) conn->event->add(conn->event, E_WRITE);
+            if((QTOTAL(conn->send_queue)) > 0 ) conn->event->add(conn->event, E_WRITE);
             DEBUG_LOGGER(conn->logger, "Pushed file[%s] [%lld][%lld] to %s:%d "
                     "send_queue total %d on %s:%d via %d ", filename, LL(offset), LL(size), 
-                    conn->remote_ip, conn->remote_port, QMTOTAL(conn->send_queue), 
+                    conn->remote_ip, conn->remote_port, QTOTAL(conn->send_queue), 
                     conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
         }else return ret;
@@ -1139,10 +1138,10 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
     {
         CK_LEFT(cp) = len;
         queue_push(conn->send_queue, cp);
-        if(QMTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
+        if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
         DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d send_queue "
                 "total %d on %s:%d via %d", len, CK_BSIZE(cp),conn->remote_ip,conn->remote_port, 
-                QMTOTAL(conn->send_queue), conn->local_ip, conn->local_port, conn->fd);
+                QTOTAL(conn->send_queue), conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
     return ret;
