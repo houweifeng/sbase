@@ -18,15 +18,16 @@ extern "C" {
 #define MESSAGE_PACKET          0x10
 #define MESSAGE_CHUNK           0x20
 #define MESSAGE_DATA            0x40
-#define MESSAGE_QUIT            0x80
-#define MESSAGE_TRANSACTION     0x100
-#define MESSAGE_TASK            0x200
-#define MESSAGE_HEARTBEAT       0x400
-#define MESSAGE_STATE           0x800
-#define MESSAGE_TIMEOUT         0x1000
-#define MESSAGE_STOP            0x2000
-#define MESSAGE_PROXY           0x4000
-#define MESSAGE_ALL		        0x7fff
+#define MESSAGE_OVER            0x80
+#define MESSAGE_QUIT            0x100
+#define MESSAGE_TRANSACTION     0x200
+#define MESSAGE_TASK            0x400
+#define MESSAGE_HEARTBEAT       0x800
+#define MESSAGE_STATE           0x1000
+#define MESSAGE_TIMEOUT         0x2000
+#define MESSAGE_STOP            0x4000
+#define MESSAGE_PROXY           0x8000
+#define MESSAGE_ALL		        0xffff
 static char *messagelist[] = 
 {
 	"MESSAGE_NEW_SESSION",
@@ -36,6 +37,7 @@ static char *messagelist[] =
 	"MESSAGE_PACKET",
 	"MESSAGE_CHUNK",
 	"MESSAGE_DATA",
+	"MESSAGE_OVER",
 	"MESSAGE_QUIT",
 	"MESSAGE_TRANSACTION",
 	"MESSAGE_TASK",
@@ -70,7 +72,7 @@ void qmessage_handler(void *q, void *logger);
 void qmessage_push(void *q, int id, int index, int fd, int tid, void *parent, void *handler, void *arg);
 void qmessage_clean(void *q);
 /* Initialize message */
-#define QMTOTAL(q) (((QMESSAGE *)q)->total)
+#define QMTOTAL(q) ((q)?(((QMESSAGE *)q)->total):0)
 #define MESSAGE_INIT() ((MESSAGE *)calloc(1, sizeof(MESSAGE)))
 #define MESSAGE_CLEAN(ptr) {if(ptr){free(ptr);ptr = NULL;}}
 #define MESSAGE_SIZE    sizeof(MESSAGE)

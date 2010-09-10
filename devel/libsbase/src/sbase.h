@@ -21,6 +21,7 @@ extern "C" {
 #define SB_GROUPS_MAX       256
 #define SB_THREADS_MAX      1024
 #define SB_INIT_CONNS       128
+#define SB_QCONN_MAX        256
 #define SB_CHUNKS_MAX       65536
 #define SB_BUF_SIZE         65536
 #define SB_USEC_SLEEP       1000
@@ -252,6 +253,7 @@ typedef struct _SERVICE
     int     (*okconn)(struct _SERVICE *service, struct _CONN *conn);
     int     (*popconn)(struct _SERVICE *service, struct _CONN *conn);
     struct _CONN *(*findconn)(struct _SERVICE *service, int index);
+    void    (*overconn)(struct _SERVICE *service, struct _CONN *conn);
 
     /* CAST */
     int (*add_multicast)(struct _SERVICE *service, char *multicast_ip);
@@ -315,6 +317,7 @@ typedef struct _PROCTHREAD
     struct _CONN **connections;
     int (*addconn)(struct _PROCTHREAD *procthread, struct _CONN *conn);
     int (*add_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
+    int (*over_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
     int (*terminate_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
 
     /* logger */
@@ -343,28 +346,26 @@ typedef struct _CONN
     int index;
     int groupid;
     int gindex;
-
-    /* xid */
-    int xids[SB_XIDS_MAX];
-
-    /* die state */
-    int d_state;
     void *parent;
-
     /* mutex */
     void *mutex;
-
+    /* die state */
+    int d_state;
+        
     /* conenction */
     int sock_type;
     int fd;
-    char remote_ip[SB_IP_MAX];
     int remote_port;
-    char local_ip[SB_IP_MAX];
     int  local_port;
+    char remote_ip[SB_IP_MAX];
+    char local_ip[SB_IP_MAX];
     int (*set)(struct _CONN *);
     int (*close)(struct _CONN *);
     int (*over)(struct _CONN *);
     int (*terminate)(struct _CONN *);
+
+    /* xid */
+    int xids[SB_XIDS_MAX];
 
     /* connection bytes stats */
     long long   recv_oob_total;
@@ -460,6 +461,7 @@ typedef struct _CONN
 
     /* normal */
     void (*reset_xids)(struct _CONN *);
+    void (*reset_state)(struct _CONN *);
     void (*reset)(struct _CONN *);
     void (*clean)(struct _CONN **pconn);
 }CONN, *PCONN;

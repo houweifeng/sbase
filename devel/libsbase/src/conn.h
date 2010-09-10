@@ -119,6 +119,9 @@ void conn_evtimer_handler(void *arg);
 /* reset xids */
 void conn_reset_xids(CONN *conn);
 
+/* reset state */
+void conn_reset_state(CONN *conn);
+
 /* reset conn */
 void conn_reset(CONN *conn);
 

@@ -31,6 +31,8 @@ int service_popconn(SERVICE *service, CONN *conn);
 CONN *service_getconn(SERVICE *service, int groupid);
 /* find connection as index */
 CONN *service_findconn(SERVICE *service, int index);
+/* service over conn */
+void service_overconn(SERVICE *service, CONN *conn);
 /* pop chunk from service  */
 CHUNK *service_popchunk(SERVICE *service);
 /* push to qconns */

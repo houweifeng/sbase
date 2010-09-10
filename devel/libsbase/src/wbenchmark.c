@@ -54,7 +54,7 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
             conn->c_id = id;
             conn->start_cstate(conn);
             service->newtransaction(service, conn, id);
-            usleep(10);
+            //usleep(10);
         }
         else
         {
@@ -348,7 +348,7 @@ void benchmark_heartbeat_handler(void *arg)
         }
         else
         {
-            usleep(10);
+            //usleep(10);
             ++ncurrent;
         }
     }
@@ -568,7 +568,7 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 8;
+        service->nprocthreads = 4;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
         service->use_cond_wait = 1;

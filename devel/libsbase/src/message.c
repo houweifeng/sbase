@@ -173,14 +173,18 @@ void qmessage_handler(void *qmsg, void *logger)
             }
             if(index >= 0 && pth->service->connections[index] != conn) goto next;
             DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%p] "
-                    "connection[%s:%d] local[%s:%d] via %d", MESSAGE_DESC(msg->msg_id), 
-                    pth->service->service_name, pth, conn->remote_ip, conn->remote_port, 
+                    "connection[%p][%s:%d] d_state:%d local[%s:%d] via %d", 
+                    MESSAGE_DESC(msg->msg_id), pth->service->service_name, pth, 
+                    conn, conn->remote_ip, conn->remote_port, conn->d_state,
                     conn->local_ip, conn->local_port, conn->fd);
             //message  on connection 
             switch(msg->msg_id)
             {
                 case MESSAGE_NEW_SESSION :
                     pth->add_connection(pth, conn);
+                    break;
+                case MESSAGE_OVER :
+                    pth->over_connection(pth, conn);
                     break;
                 case MESSAGE_QUIT :
                     pth->terminate_connection(pth, conn);

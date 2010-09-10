@@ -36,7 +36,7 @@ void procthread_run(void *arg)
             {
                 i = 0;
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
-                if(pth->evbase->loop(pth->evbase, 0, &tv) > 0) ++i;
+                if(pth->evbase->loop(pth->evbase, 0, NULL) > 0) ++i;
                 //DEBUG_LOGGER(pth->logger, "over evbase->loop()");
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
@@ -88,6 +88,7 @@ void procthread_run(void *arg)
                 }while(pth->running_status);
             }
         }
+        DEBUG_LOGGER(pth->logger, "over threads[%p]", (void *)(pth->threadid));
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 qmessage_handler(pth->message_queue, pth->logger);
     }
@@ -133,9 +134,9 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
     if(pth && pth->message_queue && conn)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_NEW_SESSION, -1, conn->fd, -1, conn, NULL);
-        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%p][%s:%d] on "
-                "%s:%d via %d total %d", MESSAGE_DESC(MESSAGE_NEW_SESSION), conn,
-                conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port,
+        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%p][%s:%d] d_state:%d "
+                "on %s:%d via %d total %d", MESSAGE_DESC(MESSAGE_NEW_SESSION), conn,
+                conn->remote_ip, conn->remote_port, conn->d_state, conn->local_ip, conn->local_port,
                 conn->fd, QMTOTAL(pth->message_queue));
         ret = 0;
     }
@@ -149,18 +150,33 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && conn)
     {
-        DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] on %s:%d via %d to pool",
-        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(pth->logger, "Ready for add connection[%p][%s:%d] d_state:%d "
+                " on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port,
+                conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         conn->message_queue = pth->message_queue;
         conn->ioqmessage    = pth->ioqmessage;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
         if(conn->set(conn) == 0)
         {
-            DEBUG_LOGGER(pth->logger, "Ready for add connection[%s:%d] on %s:%d via %d to pool",
-                conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+            DEBUG_LOGGER(pth->logger, "Ready for add conn[%p][%s:%d] d_state:%d "
+                " on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port, 
+                conn->d_state, conn->local_ip, conn->local_port, conn->fd);
             ret = pth->service->pushconn(pth->service, conn);
         }
+    }
+    return ret;
+}
+
+/* procthread over connection */
+int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
+{
+    int ret = -1;
+
+    if(pth && pth->service)
+    {
+        service_overconn(pth->service, conn);
+        ret = 0;
     }
     return ret;
 }
@@ -274,6 +290,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         pth->add_connection         = procthread_add_connection;
         pth->newtask                = procthread_newtask;
         pth->newtransaction         = procthread_newtransaction;
+        pth->over_connection        = procthread_over_connection;
         pth->terminate_connection   = procthread_terminate_connection;
         pth->stop                   = procthread_stop;
         pth->terminate              = procthread_terminate;

@@ -336,6 +336,7 @@ int service_set_log(SERVICE *service, char *logfile)
     return -1;
 }
 
+
 /* event handler */
 void service_event_handler(int event_fd, short flag, void *arg)
 {
@@ -380,8 +381,7 @@ new_conn:
 #ifdef HAVE_SSL
                             conn->ssl = ssl;
 #endif
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d",
-                                    ip, port, fd);
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%p][%s:%d] dstate:%d via %d", conn, ip, port, conn->d_state, fd);
                             return ;
                         }else goto err_conn;
 err_conn:               
@@ -671,7 +671,9 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
     if(service && service->lock == 0 && fd > 0 && session)
     {
         //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
-        if((conn = service_popfromq(service)) == NULL)
+        if((conn = service_popfromq(service)))
+            conn->reset(conn);
+        else
         {
             conn = conn_init();
             //fprintf(stdout, "newconn:%p\n", conn);
@@ -717,7 +719,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->ioqmessage = procthread->ioqmessage;
                     //conn->message_queue = procthread->message_queue;
                     procthread->addconn(procthread, conn);   
-                    DEBUG_LOGGER(service->logger, "adding connection[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->fd);
+                    DEBUG_LOGGER(service->logger, "adding connection[%p][%s:%d] dstate:%d via %d", 
+                            conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
                 }
                 else
                 {
@@ -767,10 +770,10 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 }
                 if(i >= service->index_max) service->index_max = i;
                 ret = 0;
-                DEBUG_LOGGER(service->logger, "Added new connection[%s:%d] on %s:%d via %d "
-                        "d_state:%d index[%d] of total %d", conn->remote_ip, conn->remote_port, 
-                        conn->local_ip, conn->local_port, conn->fd, conn->d_state,
-                        conn->index, service->running_connections);
+                DEBUG_LOGGER(service->logger, "Added new conn[%p][%s:%d] on %s:%d via %d "
+                    "d_state:%d index[%d] of total %d", conn, conn->remote_ip, conn->remote_port, 
+                    conn->local_ip, conn->local_port, conn->fd, conn->d_state,
+                    conn->index, service->running_connections);
                 break;
             }
         }
@@ -964,6 +967,22 @@ CONN *service_findconn(SERVICE *service, int index)
     return conn;
 }
 
+/* service over conn */
+void service_overconn(SERVICE *service, CONN *conn)
+{
+    PROCTHREAD *daemon = NULL;
+    void *mutex = NULL;
+
+    if(service && conn && (daemon = service->daemon))
+    {
+        qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
+                -1, daemon, conn, NULL);
+        if((mutex = daemon->mutex)){MUTEX_SIGNAL(mutex);}
+    }
+    return ;
+}
+
+
 /* pop chunk from service  */
 CHUNK *service_popchunk(SERVICE *service)
 {
@@ -998,11 +1017,18 @@ int service_pushtoq(SERVICE *service, CONN *conn)
     {
         DEBUG_LOGGER(service->logger, "starting pushq(%d)", service->nqconns);
         MUTEX_LOCK(service->mutex);
-        x = service->nqconns++;
-        conn->reset(conn);
-        service->qconns[x] = conn;
+        if(service->nqconns > SB_QCONN_MAX)
+        {
+            conn->clean(&conn);
+        }
+        else
+        {
+            x = service->nqconns++;
+            conn->reset_state(conn);
+            service->qconns[x] = conn;
+        }
         MUTEX_UNLOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "over pushq(%d)", service->nqconns);
+        DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p]", service->nqconns, conn);
     }
     return x;
 }
@@ -1015,6 +1041,7 @@ CONN *service_popfromq(SERVICE *service)
 
     if(service)
     {
+        DEBUG_LOGGER(service->logger, "starting popfromq(%d)", service->nqconns);
         MUTEX_LOCK(service->mutex);
         if(service->nqconns > 0)
         {
@@ -1024,6 +1051,7 @@ CONN *service_popfromq(SERVICE *service)
         }
         //fprintf(stdout, "nqconns:%d\n", service->nqconns);
         MUTEX_UNLOCK(service->mutex);
+        DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p]", service->nqconns, conn);
     }
     return conn;
 }
@@ -1291,8 +1319,8 @@ void service_stop(SERVICE *service)
 
     if(service)
     {
-        //DEBUG_LOGGER(service->logger, "ready for stop service:%s\n", service->service_name);
         service->lock = 1;
+        //DEBUG_LOGGER(service->logger, "ready for stop service:%s\n", service->service_name);
         //stop all connections 
         if(service->connections && service->index_max >= 0)
         {
@@ -1307,16 +1335,6 @@ void service_stop(SERVICE *service)
             }
         }
         //stop all procthreads
-        //daemon
-        if(service->daemon)
-        {
-            //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
-            service->daemon->stop(service->daemon);
-            //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
-            PROCTHREAD_EXIT(service->daemon->threadid, NULL);
-            //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
-            //DEBUG_LOGGER(service->logger, "over for stop daemon");
-        }
         //iodaemon
         if(service->iodaemon)
         {
@@ -1352,6 +1370,16 @@ void service_stop(SERVICE *service)
                     PROCTHREAD_EXIT(service->daemons[i]->threadid, NULL);
                 }
             }
+        }
+        //daemon
+        if(service->daemon)
+        {
+            //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
+            service->daemon->stop(service->daemon);
+            //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
+            PROCTHREAD_EXIT(service->daemon->threadid, NULL);
+            //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
+            //DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
         EVTIMER_DEL(service->evtimer, service->evid);
         //remove event
@@ -1562,6 +1590,7 @@ SERVICE *service_init()
         service->getconn            = service_getconn;
         service->freeconn           = service_freeconn;
         service->findconn           = service_findconn;
+        service->overconn           = service_overconn;
         service->popchunk           = service_popchunk;
         service->pushchunk          = service_pushchunk;
         service->newchunk           = service_newchunk;
