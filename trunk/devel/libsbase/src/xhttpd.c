@@ -1080,9 +1080,9 @@ int main(int argc, char **argv)
         }
 
     }
-    //sbase->running(sbase, 0);
+    sbase->running(sbase, 0);
     //sbase->running(sbase, 300);
-    sbase->running(sbase, 120000000);sbase->stop(sbase);
+    //sbase->running(sbase, 120000000);sbase->stop(sbase);
     sbase->clean(&sbase);
     if(namemap) TRIETAB_CLEAN(namemap);
     if(hostmap) TRIETAB_CLEAN(hostmap);
