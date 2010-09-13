@@ -118,9 +118,12 @@ do{                                                                             
     {                                                                               \
         if(MB_SIZE(ptr) > MB_BSIZE(ptr) && MB_BSIZE(ptr) > 0)                       \
         {                                                                           \
-            if(MB_DATA(ptr)) free(MB_DATA(ptr));                                    \
-            MB_DATA(ptr) = NULL;                                                    \
-            MB_LEFT(ptr) = MB_SIZE(ptr) = 0;                                        \
+            MB_LEFT(ptr) = MB_SIZE(ptr) = MB_BSIZE(ptr);                            \
+            if(MB_DATA(ptr) && (MB_DATA(ptr) = (char *)realloc(MB_DATA(ptr),        \
+                            MB_SIZE(ptr))))                                         \
+            {                                                                       \
+                memset(MB_DATA(ptr), 0, MB_SIZE(ptr));                              \
+            }                                                                       \
         }                                                                           \
         MB_END(ptr)  = MB_DATA(ptr);                                                \
         MB_NDATA(ptr)  = 0;                                                         \
