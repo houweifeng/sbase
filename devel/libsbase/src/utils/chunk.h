@@ -267,9 +267,15 @@ int ck_mmap(void *);
         if(CK_FD(ptr) > 0){close(CK_FD(ptr)); CK_FD(ptr) = -1;}                             \
         if(CK_BSIZE(ptr) > CHUNK_BLOCK_MAX)                                                 \
         {                                                                                   \
-            if(CK_DATA(ptr)) free(CK_DATA(ptr));                                            \
-            CK_DATA(ptr) = NULL;                                                            \
-            CK_BSIZE(ptr) = 0;                                                              \
+            if((CK_END(ptr)=CK_DATA(ptr)=(char*)realloc(CK_DATA(ptr), CHUNK_BLOCK_SIZE)))   \
+            {                                                                               \
+                memset(CK_DATA(ptr), 0, CHUNK_BLOCK_SIZE);                                  \
+                CK_BSIZE(ptr)  = CHUNK_BLOCK_SIZE;                                          \
+            }                                                                               \
+            else                                                                            \
+            {                                                                               \
+                CK_BSIZE(ptr) = 0;                                                          \
+            }                                                                               \
         }                                                                                   \
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_NMDATA(ptr) = 0;                                                                 \
