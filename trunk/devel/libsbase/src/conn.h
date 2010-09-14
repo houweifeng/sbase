@@ -126,7 +126,7 @@ void conn_reset_state(CONN *conn);
 void conn_reset(CONN *conn);
 
 /* clean connection */
-void conn_clean(CONN **pconn);
+void conn_clean(CONN *conn);
 
 /* event handler */
 void conn_event_handler(int event_fd, short event, void *arg);

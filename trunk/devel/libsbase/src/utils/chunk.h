@@ -271,6 +271,8 @@ int ck_mmap(void *);
             if(CK_DATA(ptr)) free(CK_DATA(ptr));                                            \
             CK_DATA(ptr) = NULL;                                                            \
             CK_BSIZE(ptr) = 0;                                                              \
+            if((CK_DATA(ptr)   = (char *)calloc(1, CHUNK_BLOCK_SIZE)))                      \
+                CK_BSIZE(ptr)  = CHUNK_BLOCK_SIZE;                                          \
         }                                                                                   \
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_NMDATA(ptr) = 0;                                                                 \

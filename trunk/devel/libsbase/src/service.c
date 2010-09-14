@@ -703,7 +703,6 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 }
                 else
                 {
-                    //conn->clean(&conn);
                     FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d "
                             "via %d  to service[%s]", remote_ip, remote_port, 
                             local_ip, local_port, fd, service->service_name);
@@ -724,7 +723,6 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 }
                 else
                 {
-                    //conn->clean(&conn);
                     FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d "
                             "via %d  to service[%s]", remote_ip, remote_port, 
                             local_ip, local_port, fd, service->service_name);
@@ -1023,7 +1021,11 @@ int service_pushtoq(SERVICE *service, CONN *conn)
             conn->reset_state(conn);
             service->qconns[x] = conn;
         }
-        else conn->clean(&conn);
+        else 
+        {
+            DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]", conn);
+            conn->clean(conn);
+        }
         MUTEX_UNLOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p]", service->nqconns, conn);
     }
@@ -1062,11 +1064,18 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
     {
         MUTEX_LOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "chunk_total:%d", service->nqchunks);
-        CK_RESET(cp);
-        x = service->nqchunks++;
-        service->qchunks[x] = cp;
-        DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d total:%d", 
-                cp, CK_BSIZE(cp), service->nqchunks);
+        if(service->nqchunks < SB_CHUNKS_MAX)
+        {
+            CK_RESET(cp);
+            x = service->nqchunks++;
+            service->qchunks[x] = cp;
+            DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d total:%d", 
+                    cp, CK_BSIZE(cp), service->nqchunks);
+        }
+        else 
+        {
+            CK_CLEAN(cp);
+        }
         MUTEX_UNLOCK(service->mutex);
         ret = 0;
     }
@@ -1524,19 +1533,10 @@ void service_clean(SERVICE **pservice)
                 if((conn = ((*pservice)->qconns[i]))) 
                 {
                     DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", conn);
-                    conn->clean(&conn);
+                    conn->clean(conn);
                 }
             }
         }
-        //clean connections
-        /*
-        for(i = 0; i < SB_CONN_MAX; i++)
-        {
-            if((conn = (*pservice)->connections[i]))
-            {
-                conn->clean(&conn);
-            }
-        }*/
         //clean chunks queue
         //DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue");
         if((*pservice)->nqchunks > 0)

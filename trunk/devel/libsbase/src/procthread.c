@@ -193,13 +193,13 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
         ret = pth->service->popconn(pth->service, conn);
         if(pth->lock)
         {
-            conn->clean(&conn);
+            DEBUG_LOGGER(pth->logger, "Ready for clean conn[%p]", conn);
+            conn->clean(conn);
         }
         else
         {
             service_pushtoq(pth->service, conn);
         }
-        //conn->reset(conn);
     }
     return ret;
 }
