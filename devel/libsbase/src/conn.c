@@ -334,7 +334,7 @@ int conn_terminate(CONN *conn)
                         conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
             }
         }
-        //conn->d_state = D_STATE_CLOSE;
+        conn->d_state = D_STATE_CLOSE;
         if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY) 
                 && conn->session.error_handler)
         {
@@ -1331,45 +1331,49 @@ void conn_reset(CONN *conn)
     return ;
 }
 /* clean connection */
-void conn_clean(CONN **pconn)
+void conn_clean(CONN *conn)
 {
     CHUNK *cp = NULL;
 
-    if(pconn && *pconn)
+    if(conn)
     {
-        MUTEX_DESTROY((*pconn)->mutex);
-        if((*pconn)->event) (*pconn)->event->clean(&((*pconn)->event));
-        (*pconn)->event = NULL;
-        DEBUG_LOGGER((*pconn)->logger, "Ready for clean conn[%p]", PPL(*pconn));
+        MUTEX_DESTROY(conn->mutex);
+        if(conn->event) conn->event->clean(&(conn->event));
+        conn->event = NULL;
         /* Clean BUFFER */
-        MB_CLEAN((*pconn)->buffer);
+        MB_CLEAN(conn->buffer);
         /* Clean OOB */
-        MB_CLEAN((*pconn)->oob);
+        MB_CLEAN(conn->oob);
         /* Clean cache */
-        MB_CLEAN((*pconn)->cache);
+        MB_CLEAN(conn->cache);
         /* Clean packet */
-        MB_CLEAN((*pconn)->packet);
+        MB_CLEAN(conn->packet);
         /* Clean exchange */
-        MB_CLEAN((*pconn)->exchange);
+        MB_CLEAN(conn->exchange);
         /* Clean chunk */
-        CK_CLEAN((*pconn)->chunk);
+        CK_CLEAN(conn->chunk);
         /* Clean send queue */
-        if((*pconn)->send_queue)
+        if(conn->send_queue)
         {
-            while((cp = (CHUNK *)queue_pop((*pconn)->send_queue))){CK_CLEAN(cp);cp = NULL;}
-            queue_clean((*pconn)->send_queue);
+            while(QTOTAL(conn->send_queue) > 0)
+            {
+                if((cp = (CHUNK *)queue_pop(conn->send_queue)))
+                {
+                    CK_CLEAN(cp);
+                    cp = NULL;
+                }
+            }
+            queue_clean(conn->send_queue);
         }
-        DEBUG_LOGGER((*pconn)->logger, "Over for clean conn[%p]", PPL(*pconn));
 #ifdef HAVE_SSL
-        if((*pconn)->ssl)
+        if(conn->ssl)
         {
-            SSL_shutdown(XSSL((*pconn)->ssl));
-            SSL_free(XSSL((*pconn)->ssl));
-            (*pconn)->ssl = NULL;
+            SSL_shutdown(XSSL(conn->ssl));
+            SSL_free(XSSL(conn->ssl));
+            conn->ssl = NULL;
         }
 #endif
-        free(*pconn);
-        //(*pconn) = NULL;
+        free(conn);
     }
     return ;
 }

@@ -21,7 +21,7 @@ extern "C" {
 #define SB_GROUPS_MAX       256
 #define SB_THREADS_MAX      1024
 #define SB_INIT_CONNS       128
-#define SB_QCONN_MAX        256
+#define SB_QCONN_MAX        1024
 #define SB_CHUNKS_MAX       65536
 #define SB_BUF_SIZE         65536
 #define SB_USEC_SLEEP       1000
@@ -346,16 +346,45 @@ typedef struct _CONN
     int index;
     int groupid;
     int gindex;
-    /* die state */
+    int s_id;
+    int s_state;
+    int timeout;
+    int evstate;
+    int status;
+    int i_state;
+    int c_state;
+    int c_id;
     int d_state;
     void *parent;
-    /* mutex */
     void *mutex;
-        
+    /* evbase */
+    EVBASE *evbase;
+    EVENT *event;
+    /* SSL */
+    void *ssl;
+    /* evtimer */
+    int evid;
+    void *evtimer;
+    /* buffer */
+    void *buffer;
+    void *packet;
+    void *cache;
+    void *chunk;
+    void *oob;
+    void *exchange;
+    /* logger and timer */
+    void *logger;
+    /* queue */
+    void *send_queue;
+    /* message queue */
+    void *ioqmessage;
+    void *message_queue;
+    /* xid */
+    int xids[SB_XIDS_MAX];
     /* conenction */
-    int sock_type;
-    int fd;
-    int remote_port;
+    int  sock_type;
+    int  fd;
+    int  remote_port;
     int  local_port;
     char remote_ip[SB_IP_MAX];
     char local_ip[SB_IP_MAX];
@@ -364,65 +393,18 @@ typedef struct _CONN
     int (*over)(struct _CONN *);
     int (*terminate)(struct _CONN *);
 
-    /* xid */
-    int xids[SB_XIDS_MAX];
-
-    /* connection bytes stats */
-    long long   recv_oob_total;
-    long long   sent_oob_total;
-    long long   recv_data_total;
-    long long   sent_data_total;
-
-    /* evbase */
-    EVBASE *evbase;
-    EVENT *event;
-
-    /* SSL */
-    void *ssl;
-
-    /* evtimer */
-    void *evtimer;
-    int evid;
-
-    /* buffer */
-    void *buffer;
-    void *packet;
-    void *cache;
-    void *chunk;
-    void *oob;
-    void *exchange;
-
-    /* logger and timer */
-    void *logger;
-
-    /* queue */
-    void *send_queue;
-
-    /* message queue */
-    void *ioqmessage;
-    void *message_queue;
-
-    /* client transaction state */
-    int status;
-    int i_state;
-    int c_state;
-    int c_id;
+        /* client transaction state */
     int (*start_cstate)(struct _CONN *);
     int (*over_cstate)(struct _CONN *);
 
-    /* transaction/session */
-    int s_id;
-    int s_state;
-
+    
     /* event state */
-    int evstate;
 #define EVSTATE_INIT   0
 #define EVSTATE_WAIT   1 
     int (*wait_evstate)(struct _CONN *);
     int (*over_evstate)(struct _CONN *);
 
     /* timeout */
-    int timeout;
     int (*set_timeout)(struct _CONN *, int timeout_usec);
     int (*timeout_handler)(struct _CONN *);
     int (*over_timeout)(struct _CONN *);
@@ -452,18 +434,22 @@ typedef struct _CONN
     int (*push_file)(struct _CONN *, char *file, long long offset, long long size);
     int (*send_chunk)(struct _CONN *, CB_DATA *chunk, int len);
     int (*over_chunk)(struct _CONN *);
-
-    /* session option and callback  */
-    SESSION session;
-    int (*set_session)(struct _CONN *, SESSION *session);
-    int (*over_session)(struct _CONN *);
-    int (*newtask)(struct _CONN *, CALLBACK *);
-
+    
     /* normal */
     void (*reset_xids)(struct _CONN *);
     void (*reset_state)(struct _CONN *);
     void (*reset)(struct _CONN *);
-    void (*clean)(struct _CONN **pconn);
+    void (*clean)(struct _CONN *conn);
+    /* session option and callback  */
+    int (*set_session)(struct _CONN *, SESSION *session);
+    int (*over_session)(struct _CONN *);
+    int (*newtask)(struct _CONN *, CALLBACK *);
+    SESSION session;
+    /* connection bytes stats */
+    long long   recv_oob_total;
+    long long   sent_oob_total;
+    long long   recv_data_total;
+    long long   sent_data_total;
 }CONN, *PCONN;
 CONN *conn_init();
 #ifdef __cplusplus
