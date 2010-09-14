@@ -34,8 +34,8 @@ do                                                                          \
 {															                \
 	if(ptr)													                \
 	{														                \
-		pthread_mutex_destroy(&(MT(ptr)->mutex)); 						    \
-		pthread_cond_destroy(&(MT(ptr)->cond)); 							\
+        pthread_mutex_destroy(&(MT(ptr)->mutex));                           \
+        pthread_cond_destroy(&(MT(ptr)->cond));                             \
 		free(ptr);											                \
 		ptr = NULL;												            \
 	}														                \

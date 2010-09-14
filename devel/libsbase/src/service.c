@@ -1017,16 +1017,13 @@ int service_pushtoq(SERVICE *service, CONN *conn)
     {
         DEBUG_LOGGER(service->logger, "starting pushq(%d) conn[%p]", service->nqconns,conn);
         MUTEX_LOCK(service->mutex);
-        if(service->nqconns > SB_QCONN_MAX)
-        {
-            conn->clean(&conn);
-        }
-        else
+        if(service->nqconns < SB_QCONN_MAX)
         {
             x = service->nqconns++;
             conn->reset_state(conn);
             service->qconns[x] = conn;
         }
+        else conn->clean(&conn);
         MUTEX_UNLOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p]", service->nqconns, conn);
     }

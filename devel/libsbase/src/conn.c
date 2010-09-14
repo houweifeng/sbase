@@ -1337,9 +1337,10 @@ void conn_clean(CONN **pconn)
 
     if(pconn && *pconn)
     {
-        DEBUG_LOGGER((*pconn)->logger, "Ready for clean conn[%p]", PPL(*pconn));
         MUTEX_DESTROY((*pconn)->mutex);
         if((*pconn)->event) (*pconn)->event->clean(&((*pconn)->event));
+        (*pconn)->event = NULL;
+        DEBUG_LOGGER((*pconn)->logger, "Ready for clean conn[%p]", PPL(*pconn));
         /* Clean BUFFER */
         MB_CLEAN((*pconn)->buffer);
         /* Clean OOB */
@@ -1355,7 +1356,7 @@ void conn_clean(CONN **pconn)
         /* Clean send queue */
         if((*pconn)->send_queue)
         {
-            while((cp = (CHUNK *)queue_pop((*pconn)->send_queue))){CK_CLEAN(cp);}
+            while((cp = (CHUNK *)queue_pop((*pconn)->send_queue))){CK_CLEAN(cp);cp = NULL;}
             queue_clean((*pconn)->send_queue);
         }
         DEBUG_LOGGER((*pconn)->logger, "Over for clean conn[%p]", PPL(*pconn));
@@ -1368,7 +1369,7 @@ void conn_clean(CONN **pconn)
         }
 #endif
         free(*pconn);
-        (*pconn) = NULL;
+        //(*pconn) = NULL;
     }
     return ;
 }
