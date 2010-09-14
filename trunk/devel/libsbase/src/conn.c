@@ -58,10 +58,10 @@ int conn_read_buffer(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for close pconn[%p] remote[%s:%d] "           \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
                     conn->local_ip, conn->local_port, conn->fd);                            \
-            conn->push_message(conn, MESSAGE_OVER);                                         \
-            conn->d_state |= _state_;                                                       \
             if(conn->event && conn->event->destroy)                                         \
                 conn->event->destroy(conn->event);                                          \
+            conn->d_state |= _state_;                                                       \
+            conn->push_message(conn, MESSAGE_OVER);                                         \
         }                                                                                   \
     }                                                                                       \
 }
@@ -91,11 +91,11 @@ int conn_read_buffer(CONN *conn)
                 conn->local_port, conn->fd);                                                \
         if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )                                 \
         {                                                                                   \
-            conn->s_state = S_STATE_DATA_HANDLING;                                          \
-            conn->push_message(conn, MESSAGE_DATA);                                         \
             DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d "             \
                     "on %s:%d via %d", LL(CK_SIZE(conn->chunk)), conn->remote_ip,           \
                     conn->remote_port, conn->local_ip, conn->local_port, conn->fd);         \
+            conn->s_state = S_STATE_DATA_HANDLING;                                          \
+            conn->push_message(conn, MESSAGE_DATA);                                         \
         }                                                                                   \
         return 0;                                                                           \
     }                                                                                       \
@@ -848,9 +848,9 @@ int conn_bind_proxy(CONN *conn, CONN *child)
         conn->session.packet_type |= PACKET_PROXY;
         conn->session.childid = child->index;
         conn->session.child = child;
-        ret = conn->push_message(conn, MESSAGE_PROXY);
         DEBUG_LOGGER(conn->logger, "Bind proxy connection[%s:%d] to connection[%s:%d]",
                 conn->remote_ip, conn->remote_port, child->remote_ip, child->remote_port);
+        ret = conn->push_message(conn, MESSAGE_PROXY);
     }
     return ret;
 }
@@ -992,11 +992,11 @@ int conn__read__chunk(CONN *conn)
             }
             if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )
             {
-                conn->s_state = S_STATE_DATA_HANDLING;
-                conn->push_message(conn, MESSAGE_DATA);
                 DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d on %s:%d via %d",
                         LL(CK_SIZE(conn->chunk)), conn->remote_ip, conn->remote_port, 
                         conn->local_ip, conn->local_port, conn->fd);
+                conn->s_state = S_STATE_DATA_HANDLING;
+                conn->push_message(conn, MESSAGE_DATA);
             }
             if(n > 0)
             {

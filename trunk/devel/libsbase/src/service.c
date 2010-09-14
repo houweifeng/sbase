@@ -1015,7 +1015,7 @@ int service_pushtoq(SERVICE *service, CONN *conn)
 
     if(service && conn)
     {
-        DEBUG_LOGGER(service->logger, "starting pushq(%d)", service->nqconns);
+        DEBUG_LOGGER(service->logger, "starting pushq(%d) conn[%p]", service->nqconns,conn);
         MUTEX_LOCK(service->mutex);
         if(service->nqconns > SB_QCONN_MAX)
         {
