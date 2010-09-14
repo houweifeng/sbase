@@ -89,7 +89,7 @@ void procthread_run(void *arg)
                 }while(pth->running_status);
             }
         }
-        DEBUG_LOGGER(pth->logger, "over threads[%p]", (void *)(pth->threadid));
+        DEBUG_LOGGER(pth->logger, "terminate threads[%p] qtotal:%d", (void *)(pth->threadid), QMTOTAL(pth->message_queue));
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 qmessage_handler(pth->message_queue, pth->logger);
     }

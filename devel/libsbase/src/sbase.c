@@ -202,7 +202,7 @@ running:
 
 void sbase_stop(SBASE *sbase)
 {
-    if(sbase)
+    if(sbase && sbase->running_status)
     {
         sbase->running_status = 0;
         return ;
