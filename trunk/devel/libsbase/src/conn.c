@@ -60,8 +60,8 @@ int conn_read_buffer(CONN *conn)
                     conn->local_ip, conn->local_port, conn->fd);                            \
             if(conn->event && conn->event->destroy)                                         \
                 conn->event->destroy(conn->event);                                          \
-            conn->d_state |= _state_;                                                       \
             conn->push_message(conn, MESSAGE_OVER);                                         \
+            conn->d_state |= _state_;                                                       \
         }                                                                                   \
     }                                                                                       \
 }
