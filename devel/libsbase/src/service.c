@@ -813,7 +813,7 @@ int service_popconn(SERVICE *service, CONN *conn)
                 }
                 if(conn->status == CONN_STATUS_FREE)
                 {
-                    --(service->groups[id].connected);
+                    --(service->groups[id].nconnected);
                 }
                 --(service->groups[id].total);
             }
@@ -849,7 +849,7 @@ int service_okconn(SERVICE *service, CONN *conn)
     {
         if((id = conn->groupid) >= 0 && id < service->ngroups)
         {
-            service->groups[id].connected++;
+            service->groups[id].nconnected++;
         }
         conn->status = CONN_STATUS_FREE;
         return 0;
@@ -1244,7 +1244,7 @@ int service_stategroup(SERVICE *service)
         //DEBUG_LOGGER(service->logger, "start stategroup()");
         for(i = 0; i < service->ngroups; i++)
         {
-            //if(service->groups[i].total > 0 && service->groups[i].connected <= 0) continue;
+            if(service->groups[i].total > 0 && service->groups[i].nconnected <= 0) continue;
             while(service->groups[i].limit > 0  
                     && service->groups[i].total < service->groups[i].limit
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
