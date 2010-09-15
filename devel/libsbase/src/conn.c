@@ -52,17 +52,19 @@ int conn_read_buffer(CONN *conn)
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
+        MUTEX_LOCK(conn->mutex);                                                            \
         conn->over_timeout(conn);                                                           \
         if(!(conn->d_state & (_state_)))                                                    \
         {                                                                                   \
             DEBUG_LOGGER(conn->logger, "Ready for close pconn[%p] remote[%s:%d] "           \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
                     conn->local_ip, conn->local_port, conn->fd);                            \
-            if(conn->event && conn->event->destroy)                                         \
+            if(conn->event && conn->event->destroy && conn->event->ev_base)                 \
                 conn->event->destroy(conn->event);                                          \
             conn->push_message(conn, MESSAGE_OVER);                                         \
             conn->d_state |= _state_;                                                       \
         }                                                                                   \
+        MUTEX_UNLOCK(conn->mutex);                                                          \
     }                                                                                       \
 }
 #define CONN_STATE_RESET(conn)                                                              \
@@ -180,7 +182,8 @@ void conn_event_handler(int event_fd, short event, void *arg)
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 //set conn->status
-                PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
+                if(PPARENT(conn) && PPARENT(conn)->service)
+                    PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
                 if(QTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
                 return ;
             }
@@ -272,6 +275,7 @@ int conn_set(CONN *conn)
 int conn_close(CONN *conn)
 {
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
     if(conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for close conn[%p] remote[%s:%d] local[%s:%d] via %d",

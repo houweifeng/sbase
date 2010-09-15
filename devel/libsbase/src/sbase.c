@@ -170,7 +170,7 @@ running:
         {
             i = 0;
             //running evbase 
-            if(sbase->evbase->loop(sbase->evbase, 0, NULL) > 0)++i;
+            if(sbase->evbase->loop(sbase->evbase, 0, &tv) > 0)++i;
             //sbase->evbase->loop(sbase->evbase, 0, &tv);
             //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
