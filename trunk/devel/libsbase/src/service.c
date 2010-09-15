@@ -1241,7 +1241,6 @@ int service_stategroup(SERVICE *service)
 
     if(service && service->ngroups > 0)
     {
-        //DEBUG_LOGGER(service->logger, "start stategroup()");
         for(i = 0; i < service->ngroups; i++)
         {
             if(service->groups[i].total > 0 && service->groups[i].nconnected <= 0) continue;
@@ -1252,6 +1251,8 @@ int service_stategroup(SERVICE *service)
             {
                 conn->groupid = i;
                 service->groups[i].total++;
+                if(service->groups[i].nconnected <= 0) break;
+                ACCESS_LOGGER(service->logger, "stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
             }
         }
         //DEBUG_LOGGER(service->logger, "over stategroup()");
