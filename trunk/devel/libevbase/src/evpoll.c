@@ -115,6 +115,7 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
 int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
     struct pollfd *ev = NULL;
+    EVENT *event = NULL;
     short ev_flags = 0;
     int n = 0, i = 0;
     int sec = 0;
@@ -134,7 +135,7 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
         for(i = 0; i <= evbase->maxfd; i++)
         {
             ev = &(((struct pollfd *)evbase->ev_fds)[i]);
-            if(evbase->evlist[i] && ev->fd > 0)
+            if((event = evbase->evlist[i]) && ev->fd > 0)
             {
                 ev_flags = 0;
                 if(ev->revents & POLLIN)
@@ -152,7 +153,7 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                 if(ev_flags == 0) continue;
                 if((ev_flags  &= evbase->evlist[i]->ev_flags))
                 {
-                    evbase->evlist[i]->active(evbase->evlist[i], ev_flags);
+                    event->active(evbase->evlist[i], ev_flags);
                 }
             }
         }

@@ -64,6 +64,7 @@ typedef struct _EVENT
 	short old_ev_flags;
 	int ev_fd;
 	void *ev_arg;
+    void *mutex;
 	struct _EVBASE *ev_base;
 	void (*ev_handler)(int fd, short flags, void *arg);	
 	void (*set)(struct _EVENT *, int fd, short event, void *arg, void *);
