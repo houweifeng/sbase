@@ -138,6 +138,7 @@ int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
     int i = 0, n = 0;
     short ev_flags = 0;
     fd_set rd_fd_set, wr_fd_set ;
+    EVENT *ev = NULL;
 
     //if(evbase  && evbase->nfd > 0)
     if(evbase)
@@ -151,7 +152,7 @@ int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
         DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->maxfd + 1);
         for(i = 0; i <= evbase->maxfd; ++i)
         {
-            if(evbase->evlist[i])
+            if((ev = evbase->evlist[i]))
             {
                 ev_flags = 0;
                 if(FD_ISSET(i, &rd_fd_set))	
@@ -163,9 +164,9 @@ int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
                     ev_flags |= E_WRITE;
                 }
                 if(ev_flags == 0) continue;
-                if((ev_flags  &= evbase->evlist[i]->ev_flags))	
+                if((ev_flags  &= ev->ev_flags))	
                 {
-                    evbase->evlist[i]->active(evbase->evlist[i], ev_flags);
+                    ev->active(evbase->evlist[i], ev_flags);
                 }
             }			
         }

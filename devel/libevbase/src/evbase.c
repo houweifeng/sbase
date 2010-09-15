@@ -206,6 +206,7 @@ EVENT *ev_init()
 	EVENT *event = (EVENT *)calloc(1, sizeof(EVENT));
 	if(event)
 	{
+        MUTEX_INIT(event->mutex);
 		event->set 	= event_set;
 		event->add	= event_add;
 		event->del	= event_del;
@@ -237,15 +238,17 @@ void event_add(EVENT *event, short flags)
 {
 	if(event)
 	{
+        MUTEX_LOCK(event->mutex);
         event->old_ev_flags = event->ev_flags;
 		event->ev_flags |= flags;
 		if(event->ev_base && event->ev_base->update)
 		{
-			event->ev_base->update(event->ev_base, event);
 			DEBUG_LOGGER(event->ev_base->logger, 
                     "Added event[%p] flags[%d] on fd[%d]",
 				event, event->ev_flags, event->ev_fd);
+			event->ev_base->update(event->ev_base, event);
 		}
+        MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -255,18 +258,19 @@ void event_del(EVENT *event, short flags)
 {
 	if(event)
 	{
+        MUTEX_LOCK(event->mutex);
 		if(event->ev_flags & flags)
 		{
             event->old_ev_flags = event->ev_flags;
 			event->ev_flags ^= flags;
 			if(event->ev_base && event->ev_base->update)
 			{
-				event->ev_base->update(event->ev_base, event);
 				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
 					event, event->ev_flags, event->ev_fd);
+				event->ev_base->update(event->ev_base, event);
 			}
-
 		}
+        MUTEX_UNLOCK(event->mutex);
 	}	
     return ;
 }
@@ -276,13 +280,15 @@ void event_destroy(EVENT *event)
 {
     if(event)
     {
+        MUTEX_LOCK(event->mutex);
         event->ev_flags = 0;
         if(event->ev_base && event->ev_base->del)
         {
-            event->ev_base->del(event->ev_base, event);
             DEBUG_LOGGER(event->ev_base->logger, "Destroy event[%p] on fd[%d]",event, event->ev_fd);
+            event->ev_base->del(event->ev_base, event);
             event->ev_base = NULL;
         }
+        MUTEX_UNLOCK(event->mutex);
     }
     return ;
 }
@@ -309,6 +315,7 @@ void event_clean(EVENT **event)
 {
 	if(*event)
 	{
+        MUTEX_DESTROY((*event)->mutex);
 		free((*event));
 		(*event) = NULL;	
 	}

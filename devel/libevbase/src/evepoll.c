@@ -195,11 +195,11 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                 if(flags & EPOLLOUT) ev_flags |= E_WRITE;
                 if(ev_flags == 0) continue;
                 DEBUG_LOGGER(evbase->logger, "Activing i:%d evp:%p ev:%p fd:%d ev_flags:%d", i, evp, ev, fd, ev_flags);
-                if((ev_flags &= evbase->evlist[fd]->ev_flags))
+                if((ev = evbase->evlist[fd]) && (ev_flags &= ev->ev_flags))
                 {
                     DEBUG_LOGGER(evbase->logger, "Activing EV[%d] on %d", 
                             ev_flags, fd);
-                    evbase->evlist[fd]->active(evbase->evlist[fd], ev_flags);	
+                    ev->active(evbase->evlist[fd], ev_flags);	
                     DEBUG_LOGGER(evbase->logger, "Actived EV[%d] on %d", 
                             ev_flags, fd);
                 }
