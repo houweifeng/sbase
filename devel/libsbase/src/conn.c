@@ -172,7 +172,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 {
                     ERROR_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
                     "connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
-                    conn->remote_port,conn->local_ip, conn->local_port, error, strerror(errno));
+                    conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
                     CONN_TERMINATE(conn, D_STATE_CLOSE);          
                     return ;
                 }
