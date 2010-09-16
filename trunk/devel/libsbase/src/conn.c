@@ -59,8 +59,8 @@ int conn_read_buffer(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for close pconn[%p] remote[%s:%d] "           \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
                     conn->local_ip, conn->local_port, conn->fd);                            \
-            if(conn->event && conn->event->destroy && conn->event->ev_base)                 \
-                conn->event->destroy(conn->event);                                          \
+            if(conn->event && conn->event->del && conn->event->ev_base)                     \
+                conn->event->del(conn->event, E_READ|E_WRITE);                              \
             conn->push_message(conn, MESSAGE_OVER);                                         \
             conn->d_state |= _state_;                                                       \
         }                                                                                   \
@@ -226,7 +226,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
         else
         {
             FATAL_LOGGER(conn->logger, "Invalid fd[%d:%d] event:%d", event_fd, conn->fd, event);
-            CONN_TERMINATE(conn, D_STATE_CLOSE);          
+            //CONN_TERMINATE(conn, D_STATE_CLOSE);          
         }
     }
     return ;
@@ -294,7 +294,7 @@ int conn_over(CONN *conn)
 
     if(conn)
     {
-        ACCESS_LOGGER(conn->logger, "Ready for close-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "Ready for close-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(QTOTAL(conn->send_queue) <= 0)
         {
             CONN_TERMINATE(conn, D_STATE_CLOSE);
@@ -350,7 +350,7 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        //conn->event->destroy(conn->event);
+        conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing conn[%p] session[%s:%d] local[%s:%d] via %d",
                 conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
@@ -1067,11 +1067,11 @@ int conn_push_chunk(CONN *conn, void *data, int size)
             CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
             queue_push(conn->send_queue, cp);
-            if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
             DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d][%d] to %s:%d send_queue "
                     "total %d on %s:%d via %d", size, CK_BSIZE(cp),conn->remote_ip, 
                     conn->remote_port, QTOTAL(conn->send_queue), conn->local_ip, 
                     conn->local_port, conn->fd);
+            if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
             ret = 0;
         }
     }
@@ -1159,6 +1159,7 @@ int conn_over_chunk(CONN *conn)
 
     if(conn && conn->status == CONN_STATUS_FREE && conn->send_queue)
     {
+        DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(PPARENT(conn) && PPARENT(conn)->service 
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {

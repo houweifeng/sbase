@@ -671,9 +671,9 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
     if(service && service->lock == 0 && fd > 0 && session)
     {
         //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
-        if((conn = service_popfromq(service)))
-            conn->reset(conn);
-        else
+        if((conn = service_popfromq(service)) == NULL)
+            //conn->reset(conn);
+        //else
         {
             conn = conn_init();
             //fprintf(stdout, "newconn:%p\n", conn);
@@ -1013,12 +1013,12 @@ int service_pushtoq(SERVICE *service, CONN *conn)
 
     if(service && conn)
     {
+        conn->reset(conn);
         DEBUG_LOGGER(service->logger, "starting pushq(%d) conn[%p]", service->nqconns,conn);
         MUTEX_LOCK(service->mutex);
         if(service->nqconns < SB_QCONN_MAX)
         {
             x = service->nqconns++;
-            conn->reset_state(conn);
             service->qconns[x] = conn;
         }
         else 
@@ -1063,7 +1063,7 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
     if(service && service->qchunks && cp)
     {
         MUTEX_LOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "chunk_total:%d", service->nqchunks);
+        DEBUG_LOGGER(service->logger, "chunk_total:%d sizeof(CHUNK):%lu", service->nqchunks, sizeof(CHUNK)+CK_BSIZE(cp));
         if(service->nqchunks < SB_CHUNKS_MAX)
         {
             CK_RESET(cp);
@@ -1252,7 +1252,7 @@ int service_stategroup(SERVICE *service)
                 conn->groupid = i;
                 service->groups[i].total++;
                 if(service->groups[i].nconnected <= 0) break;
-                ACCESS_LOGGER(service->logger, "stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
+                //ACCESS_LOGGER(service->logger, "stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
             }
         }
         //DEBUG_LOGGER(service->logger, "over stategroup()");
