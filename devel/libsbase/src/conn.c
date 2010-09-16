@@ -54,13 +54,12 @@ int conn_read_buffer(CONN *conn)
     {                                                                                       \
         MUTEX_LOCK(conn->mutex);                                                            \
         conn->over_timeout(conn);                                                           \
-        if(!(conn->d_state & (_state_)))                                                    \
+        if(conn->d_state == D_STATE_FREE)                                                   \
         {                                                                                   \
             DEBUG_LOGGER(conn->logger, "Ready for close pconn[%p] remote[%s:%d] "           \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
                     conn->local_ip, conn->local_port, conn->fd);                            \
-            if(conn->event && conn->event->del && conn->event->ev_base)                     \
-                conn->event->del(conn->event, E_READ|E_WRITE);                              \
+            if(conn->event) conn->event->destroy(conn->event);                              \
             conn->push_message(conn, MESSAGE_OVER);                                         \
             conn->d_state |= _state_;                                                       \
         }                                                                                   \
@@ -184,7 +183,8 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 //set conn->status
                 if(PPARENT(conn) && PPARENT(conn)->service)
                     PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
-                if(QTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
+                if(QTOTAL(conn->send_queue) <= 0 && conn->d_state == D_STATE_FREE) 
+                    conn->event->del(conn->event, E_WRITE);
                 return ;
             }
             int flag = fcntl(conn->fd, F_GETFL, 0);
@@ -337,7 +337,7 @@ int conn_terminate(CONN *conn)
                         conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
             }
         }
-        conn->d_state = D_STATE_CLOSE;
+        //conn->d_state = D_STATE_CLOSE;
         if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY) 
                 && conn->session.error_handler)
         {
@@ -350,7 +350,7 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        conn->event->destroy(conn->event);
+        //conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing conn[%p] session[%s:%d] local[%s:%d] via %d",
                 conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
@@ -678,12 +678,17 @@ int conn_write_handler(CONN *conn)
                     cp  = NULL;
                 }
             }
-            if(QTOTAL(conn->send_queue) <= 0) conn->event->del(conn->event, E_WRITE);
             if(chunk_over)
             {
                 CONN_TERMINATE(conn, D_STATE_CLOSE);
+                ret = -1;
             }
-            ret = 0;
+            else
+            {
+                if(QTOTAL(conn->send_queue) <= 0 && conn->d_state == D_STATE_FREE) 
+                conn->event->del(conn->event, E_WRITE);
+                ret = 0;
+            }
         }
     }
     return ret;
@@ -1071,7 +1076,8 @@ int conn_push_chunk(CONN *conn, void *data, int size)
                     "total %d on %s:%d via %d", size, CK_BSIZE(cp),conn->remote_ip, 
                     conn->remote_port, QTOTAL(conn->send_queue), conn->local_ip, 
                     conn->local_port, conn->fd);
-            if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
+            if(QTOTAL(conn->send_queue) > 0 && conn->d_state == D_STATE_FREE) 
+                conn->event->add(conn->event, E_WRITE);
             ret = 0;
         }
     }
@@ -1119,7 +1125,8 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
         {
             CK_FILE(cp, filename, offset, size);
             queue_push(conn->send_queue, cp);
-            if((QTOTAL(conn->send_queue)) > 0 ) conn->event->add(conn->event, E_WRITE);
+            if((QTOTAL(conn->send_queue)) > 0 && conn->d_state == D_STATE_FREE) 
+                conn->event->add(conn->event, E_WRITE);
             DEBUG_LOGGER(conn->logger, "Pushed file[%s] [%lld][%lld] to %s:%d "
                     "send_queue total %d on %s:%d via %d ", filename, LL(offset), LL(size), 
                     conn->remote_ip, conn->remote_port, QTOTAL(conn->send_queue), 
@@ -1141,7 +1148,8 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
     {
         CK_LEFT(cp) = len;
         queue_push(conn->send_queue, cp);
-        if(QTOTAL(conn->send_queue) > 0 ) conn->event->add(conn->event, E_WRITE);
+        if(QTOTAL(conn->send_queue) > 0 && conn->d_state == D_STATE_FREE) 
+            conn->event->add(conn->event, E_WRITE);
         DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d send_queue "
                 "total %d on %s:%d via %d", len, CK_BSIZE(cp),conn->remote_ip,conn->remote_port, 
                 QTOTAL(conn->send_queue), conn->local_ip, conn->local_port, conn->fd);

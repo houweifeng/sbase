@@ -542,7 +542,11 @@ new_conn:
                 conn->ssl = ssl;
 #endif
                 return conn;
-            }else goto err_conn;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "connect to remote[%s:%d] via local[%s:%d] fd[%d] session[%p] failed, %s", remote_ip, remote_port, local_ip, local_port, fd, sess, strerror(errno));
+            }
 err_conn:
 #ifdef HAVE_SSL
             if(ssl)
