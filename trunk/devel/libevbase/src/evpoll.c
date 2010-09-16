@@ -153,7 +153,7 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                 if(ev_flags == 0) continue;
                 if((ev_flags  &= evbase->evlist[i]->ev_flags))
                 {
-                    event->active(evbase->evlist[i], ev_flags);
+                    event->active(event, ev_flags);
                 }
             }
         }

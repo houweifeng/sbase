@@ -75,6 +75,13 @@ typedef struct _EVENT
 	void (*clean)(struct _EVENT **);
 }EVENT;
 EVENT *ev_init();
+/*
+void event_add(EVENT *, short);
+void event_del(EVENT *, short);
+void event_active(EVENT *, short);
+void event_destroy(EVENT *);
+void event_clean(EVENT **);
+*/
 #endif 
 
 #ifdef __cplusplus
