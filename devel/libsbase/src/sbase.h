@@ -166,9 +166,10 @@ typedef struct _SERVICE
     /* global */
     int lock;
     int usec_sleep;
-    SBASE *sbase;
     int use_cond_wait;
+    int nconn;
     void *mutex;
+    SBASE *sbase;
 
     /* heartbeat */
     /* running heartbeat_handler when looped hearbeat_interval times*/

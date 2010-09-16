@@ -176,6 +176,7 @@ int service_run(SERVICE *service)
             {
                 x = service->nqconns++;
                 service->qconns[x] = conn;
+                service->nconn++;
             }
             else break;
         }
@@ -670,15 +671,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
-        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
-        if((conn = service_popfromq(service)) == NULL)
-            //conn->reset(conn);
-        //else
-        {
-            conn = conn_init();
-            //fprintf(stdout, "newconn:%p\n", conn);
-        }
-        if(conn)
+        if((conn = service_popfromq(service)))
         {
             //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
             conn->fd = fd;
@@ -1025,9 +1018,10 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         {
             DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]", conn);
             conn->clean(conn);
+            service->nconn--;
         }
         MUTEX_UNLOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p]", service->nqconns, conn);
+        DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
     }
     return x;
 }
@@ -1048,9 +1042,16 @@ CONN *service_popfromq(SERVICE *service)
             conn = service->qconns[x];
             service->qconns[x] = NULL;
         }
+        else
+        {
+            if((conn = conn_init()))
+            {
+                service->nconn++;
+            }
+        }
         //fprintf(stdout, "nqconns:%d\n", service->nqconns);
         MUTEX_UNLOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p]", service->nqconns, conn);
+        DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
     }
     return conn;
 }
@@ -1535,6 +1536,7 @@ void service_clean(SERVICE **pservice)
                 {
                     DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", conn);
                     conn->clean(conn);
+                    (*pservice)->nconn--;
                 }
             }
         }
