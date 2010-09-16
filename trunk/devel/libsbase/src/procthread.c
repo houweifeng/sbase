@@ -35,7 +35,7 @@ void procthread_run(void *arg)
             do
             {
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
-                i = pth->evbase->loop(pth->evbase, &tv, NULL);
+                i = pth->evbase->loop(pth->evbase, 0, &tv);
                 //DEBUG_LOGGER(pth->logger, "over evbase->loop(%d)", i);
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
