@@ -384,7 +384,11 @@ new_conn:
 #endif
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%p][%s:%d] dstate:%d via %d", conn, ip, port, conn->d_state, fd);
                             return ;
-                        }else goto err_conn;
+                        }
+                        else 
+                        {
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%p][%s:%d] dstate:%d via %d failed, %s", conn, ip, port, conn->d_state, fd, strerror(errno));
+                        }
 err_conn:               
 #ifdef HAVE_SSL
                         if(ssl)
@@ -675,6 +679,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
+        DEBUG_LOGGER(service->logger, "Ready for add-conn remote[%s:%d] local[%s:%d] via %d", remote_ip, remote_port, local_ip, local_port, fd);
         if((conn = service_popfromq(service)))
         {
             //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
@@ -715,8 +720,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->ioqmessage = procthread->ioqmessage;
                     //conn->message_queue = procthread->message_queue;
                     procthread->addconn(procthread, conn);   
-                    DEBUG_LOGGER(service->logger, "adding connection[%p][%s:%d] dstate:%d via %d", 
-                            conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
+                    DEBUG_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 }
                 else
                 {
