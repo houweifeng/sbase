@@ -297,16 +297,21 @@ void event_destroy(EVENT *event)
 void event_active(EVENT *event, short ev_flags)
 {
 	short e_flags = ev_flags;
-	if(event && event->ev_handler)
-	{
-		DEBUG_LOGGER(event->ev_base->logger, 
-			"Activing event[%p] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
-		event->ev_handler(event->ev_fd, e_flags, event->ev_arg);	
-		if(!(event->ev_flags & E_PERSIST))
-		{
-			event->destroy(event);
-		}
-	}
+	if(event)
+    {
+        //MUTEX_LOCK(event->mutex);
+        if(event->ev_handler && event->ev_base && event->ev_flags)
+        {
+            DEBUG_LOGGER(event->ev_base->logger, 
+                    "Activing event[%p] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
+            event->ev_handler(event->ev_fd, e_flags, event->ev_arg);	
+        }
+        //MUTEX_LOCK(event->mutex);
+        if(!(event->ev_flags & E_PERSIST) && event->ev_base)
+        {
+        	event->destroy(event);
+        }
+    }
     return ;
 }
 

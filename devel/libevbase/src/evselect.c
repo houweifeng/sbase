@@ -166,7 +166,7 @@ int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
                 if(ev_flags == 0) continue;
                 if((ev_flags  &= ev->ev_flags))	
                 {
-                    ev->active(evbase->evlist[i], ev_flags);
+                    ev->active(ev, ev_flags);
                 }
             }			
         }
