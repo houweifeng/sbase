@@ -61,6 +61,10 @@ extern "C" {
 #define D_STATE_RCLOSE          0x02
 #define D_STATE_WCLOSE          0x04
 #define D_STATE_CLOSE           0x08
+#define D_STATE_XCLOSE          0x18
+#define D_STATE_ZCLOSE          0x28
+#define D_STATE_KLOSE           0x48
+#define D_STATE_ZLOSE           0x88
 #define D_STATES                0x0e
 #endif
 /* packet type list*/

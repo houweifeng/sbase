@@ -1019,9 +1019,8 @@ int service_pushtoq(SERVICE *service, CONN *conn)
 
     if(service && conn)
     {
-        conn->reset(conn);
-        DEBUG_LOGGER(service->logger, "starting pushq(%d) running_conns:%d conn[%p]", service->nqconns, service->running_connections, conn);
         MUTEX_LOCK(service->mutex);
+        DEBUG_LOGGER(service->logger, "starting pushq(%d) running_conns:%d conn[%p]->d_state:%d", service->nqconns, service->running_connections, conn, conn->d_state);
         if(service->nqconns < SB_QCONN_MAX)
         {
             x = service->nqconns++;
@@ -1029,12 +1028,12 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         }
         else 
         {
-            DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]", conn);
+            DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d", conn,conn->d_state);
             conn->clean(conn);
             service->nconn--;
         }
-        MUTEX_UNLOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
+        MUTEX_UNLOCK(service->mutex);
     }
     return x;
 }
@@ -1047,8 +1046,8 @@ CONN *service_popfromq(SERVICE *service)
 
     if(service)
     {
-        DEBUG_LOGGER(service->logger, "starting popfromq(%d)", service->nqconns);
         MUTEX_LOCK(service->mutex);
+        DEBUG_LOGGER(service->logger, "starting popfromq(%d)", service->nqconns);
         if(service->nqconns > 0)
         {
             x = --(service->nqconns);
@@ -1063,8 +1062,8 @@ CONN *service_popfromq(SERVICE *service)
             }
         }
         //fprintf(stdout, "nqconns:%d\n", service->nqconns);
+        DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p]->d_state:%d nconn:%d", service->nqconns, conn, conn->d_state, service->nconn);
         MUTEX_UNLOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
     }
     return conn;
 }
