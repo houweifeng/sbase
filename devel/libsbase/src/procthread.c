@@ -1,4 +1,5 @@
 #include "sbase.h"
+#include "service.h"
 #include "procthread.h"
 #include "queue.h"
 #include "logger.h"
@@ -158,7 +159,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->ioqmessage    = pth->ioqmessage;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
-        conn->reset_state(conn);
+        //conn->reset_state(conn);
         if(conn->set(conn) == 0)
         {
             DEBUG_LOGGER(pth->logger, "Ready for add conn[%p][%s:%d] d_state:%d "
@@ -190,8 +191,8 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && conn)
     {
-        ret = conn->terminate(conn);
         ret = pth->service->popconn(pth->service, conn);
+        ret = conn->terminate(conn);
         if(pth->lock)
         {
             DEBUG_LOGGER(pth->logger, "Ready for clean conn[%p]", conn);
@@ -199,6 +200,7 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
         }
         else
         {
+            conn->reset(conn);
             service_pushtoq(pth->service, conn);
         }
     }
