@@ -11,7 +11,8 @@
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 1024 
-#define CHUNK_BLOCK_MAX         1048576
+#define CHUNK_BLOCK_MAX         65536
+//#define CHUNK_BLOCK_MAX         1048576
 #ifndef MMAP_CHUNK_SIZE
 #define MMAP_CHUNK_SIZE         1048576
 //#define MMAP_CHUNK_SIZE       2097152
@@ -277,7 +278,7 @@ int ck_mmap(void *);
 		CK_OFFMDATA(ptr) = 0;                                                               \
 		CK_END(ptr) = NULL;                                                                 \
 		CK_TYPE(ptr) = 0;                                                                   \
-		memset(CK_FILENAME(ptr), 0, CHUNK_FILE_NAME_MAX);                                   \
+        *(CK_FILENAME(ptr)) = '\0';                                                         \
 		CK_SIZE(ptr) = 0;                                                                   \
 		CK_OFFSET(ptr) = 0;                                                                 \
 		CK_STATUS(ptr) = 0;                                                                 \
@@ -287,13 +288,6 @@ int ck_mmap(void *);
     }                                                                                       \
 }
 #endif
-//        if(CK_DATA(ptr) && (CK_END(ptr) = CK_DATA(ptr)  = (char *)realloc(CK_DATA(ptr),     
-//                        CHUNK_BLOCK_SIZE)))                                                 
-//        {                                                                                   
-//            memset(CK_DATA(ptr), 0, CHUNK_BLOCK_SIZE);                                      
-//            CK_BSIZE(ptr)  = CHUNK_BLOCK_SIZE;                                              
-//        }                                                                                   
-
 /* clean chunk */
 #define CK_CLEAN(ptr)                                                                       \
 {                                                                                           \

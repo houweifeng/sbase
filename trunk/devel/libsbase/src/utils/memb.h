@@ -107,8 +107,9 @@ do                                                                              
     {                                                                               \
         MB_LEFT(ptr) = MB_SIZE(ptr) = 0;                                            \
         if(MB_DATA(ptr)){free(MB_DATA(ptr));}                                       \
-        memset(ptr, 0, sizeof(MEMB));                                               \
+        MB_END(ptr) = MB_DATA(ptr) = NULL;                                          \
         MB_BSIZE(ptr) = MB_BLOCK_SIZE;                                              \
+        MB_NDATA(ptr)  = 0;                                                         \
     }                                                                               \
 }while(0)
 #else
@@ -116,7 +117,7 @@ do                                                                              
 do{                                                                                 \
     if(ptr)                                                                         \
     {                                                                               \
-        if(MB_SIZE(ptr) > MB_BSIZE(ptr) && MB_BSIZE(ptr) > 0)                       \
+        if(MB_SIZE(ptr) > MB_BLOCK_SIZE)                                            \
         {                                                                           \
             if(MB_DATA(ptr)) free(MB_DATA(ptr));                                    \
             MB_DATA(ptr) = NULL;                                                    \

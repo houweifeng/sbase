@@ -35,10 +35,12 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
         if((msg = q->left))
         {
             q->left = msg->next;
+            q->nleft--;
         }
         else
         {
             msg = (MESSAGE *)calloc(1, sizeof(MESSAGE));
+            q->qtotal++;
         }
         if(msg)
         {
@@ -120,8 +122,16 @@ void qmessage_left(void *qmsg, MESSAGE *msg)
     if(q && msg)
     {
         MUTEX_LOCK(q->mutex);
-        msg->next = q->left;
-        q->left = msg;
+        if(q->nleft < QLEFT_MAX)
+        {
+            msg->next = q->left;
+            q->left = msg;
+            q->nleft++;
+        }
+        else
+        {
+            free(msg);
+        }
         MUTEX_UNLOCK(q->mutex);
     }
     return ;
@@ -172,9 +182,9 @@ void qmessage_handler(void *qmsg, void *logger)
                 goto next;
             }
             if(index >= 0 && pth->service->connections[index] != conn) goto next;
-            DEBUG_LOGGER(logger, "Got message[%s] On service[%s] procthread[%p] "
+            DEBUG_LOGGER(logger, "Got message[%s] total[%d/%d] left:%d On service[%s] procthread[%p] "
                     "connection[%p][%s:%d] d_state:%d local[%s:%d] via %d", 
-                    MESSAGE_DESC(msg->msg_id), pth->service->service_name, pth, 
+                    MESSAGE_DESC(msg->msg_id), q->total, q->qtotal, q->nleft, pth->service->service_name, pth, 
                     conn, conn->remote_ip, conn->remote_port, conn->d_state,
                     conn->local_ip, conn->local_port, conn->fd);
             //message  on connection 
