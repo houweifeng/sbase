@@ -147,7 +147,7 @@ void sigpipe_ignore()
 int service_run(SERVICE *service)
 {
     int ret = -1, i = 0, x = 0;
-    //char logfile[1024];
+    char logfile[1024];
     CONN *conn = NULL;
 
     if(service)
@@ -232,9 +232,9 @@ running_threads:
             if((service->iodaemon = procthread_init(1)))
             {
                 PROCTHREAD_SET(service, service->iodaemon);
-                //sprintf(logfile, "/tmp/evbase_%s_io.log", service->service_name);
+                sprintf(logfile, "/tmp/evbase_%s_io.log", service->service_name);
                 //if(service->use_cond_wait)
-                //service->iodaemon->evbase->set_logfile(service->iodaemon->evbase, logfile);
+                service->iodaemon->evbase->set_logfile(service->iodaemon->evbase, logfile);
                 NEW_PROCTHREAD("iodaemon", 0, service->iodaemon->threadid, service->iodaemon, service->logger);
                 ret = 0;
             }
