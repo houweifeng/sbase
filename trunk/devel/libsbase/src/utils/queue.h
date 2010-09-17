@@ -14,6 +14,8 @@ typedef struct _QNODE
 }QNODE;
 typedef struct _QUEUE
 {
+    int nleft;
+    int qtotal;
     int total;
     void *mutex;
     QNODE *left;

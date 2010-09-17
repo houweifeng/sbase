@@ -164,7 +164,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
 
     if(conn)
     {
-        CONN_CHECK(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE);
+        //CONN_CHECK(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE);
         //fprintf(stdout, "%s::%d event[%d] on fd[%d]\n", __FILE__, __LINE__, event, event_fd);
         if(event_fd == conn->fd)
         {
@@ -1307,6 +1307,7 @@ void conn_reset(CONN *conn)
                 {
                     PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
                 }
+                else break;
                 cp  = NULL;
             }
         }
