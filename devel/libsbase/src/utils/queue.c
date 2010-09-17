@@ -1,5 +1,6 @@
 #include "mutex.h"
 #include "queue.h"
+#include <stdio.h>
 
 void *queue_init()
 {
@@ -23,8 +24,13 @@ void queue_push(void *queue, void *ptr)
         if((node = q->left))
         {
             q->left = node->next;
+            q->nleft--;
         }
-        else node = (QNODE *)calloc(1, sizeof(QNODE));
+        else 
+        {
+            node = (QNODE *)calloc(1, sizeof(QNODE));
+            q->qtotal++;
+        }
         if(node)
         {
             node->ptr = ptr;
@@ -79,6 +85,7 @@ void *queue_pop(void *queue)
             }
             node->next = q->left;
             q->left = node;
+            q->nleft++;
             --(q->total);
         }
         MUTEX_UNLOCK(q->mutex);
