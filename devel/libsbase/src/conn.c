@@ -63,7 +63,7 @@ int conn_read_buffer(CONN *conn)
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
                     conn->local_ip, conn->local_port, conn->fd);                            \
             if(conn->event) conn->event->destroy(conn->event);                              \
-            conn->push_message(conn, MESSAGE_QUIT);                                         \
+            conn->push_message(conn, MESSAGE_OVER);                                         \
             conn->d_state |= _state_;                                                       \
         }                                                                                   \
         MUTEX_UNLOCK(conn->mutex);                                                          \
