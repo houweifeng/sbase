@@ -158,6 +158,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->ioqmessage    = pth->ioqmessage;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
+        conn->reset_state(conn);
         if(conn->set(conn) == 0)
         {
             DEBUG_LOGGER(pth->logger, "Ready for add conn[%p][%s:%d] d_state:%d "

@@ -20,9 +20,9 @@ extern "C" {
 #define SB_XIDS_MAX         16
 #define SB_GROUPS_MAX       256
 #define SB_THREADS_MAX      1024
-#define SB_INIT_CONNS       128
-#define SB_QCONN_MAX        128
-#define SB_CHUNKS_MAX       256
+#define SB_INIT_CONNS       0
+#define SB_QCONN_MAX        32
+#define SB_CHUNKS_MAX       32
 #define SB_BUF_SIZE         65536
 #define SB_USEC_SLEEP       1000
 #define SB_PROXY_TIMEOUT    20000000
@@ -168,6 +168,7 @@ typedef struct _SERVICE
     int usec_sleep;
     int use_cond_wait;
     int nconn;
+    int nchunks;
     void *mutex;
     SBASE *sbase;
 

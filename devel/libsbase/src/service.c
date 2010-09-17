@@ -995,12 +995,17 @@ CHUNK *service_popchunk(SERVICE *service)
                 && (cp = service->qchunks[x]))
         {
             service->qchunks[x] = NULL;
-            DEBUG_LOGGER(service->logger, "chunk_pop(%p) bsize:%d total:%d", cp, CK_BSIZE(cp), service->nqchunks);
+            DEBUG_LOGGER(service->logger, "chunk_pop(%p) bsize:%d total:%d chunks:%d", cp, CK_BSIZE(cp), service->nqchunks, service->nchunks);
         }
         else
         {
             CK_INIT(cp);
-            if(cp){DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d", cp, CK_BSIZE(cp));}
+            if(cp)
+            {
+                service->nchunks++;
+                DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d chunks:%d", cp, CK_BSIZE(cp), service->nchunks);
+            }
+
         }
         MUTEX_UNLOCK(service->mutex);
     }
@@ -1015,7 +1020,7 @@ int service_pushtoq(SERVICE *service, CONN *conn)
     if(service && conn)
     {
         conn->reset(conn);
-        DEBUG_LOGGER(service->logger, "starting pushq(%d) conn[%p]", service->nqconns,conn);
+        DEBUG_LOGGER(service->logger, "starting pushq(%d) running_conns:%d conn[%p]", service->nqconns, service->running_connections, conn);
         MUTEX_LOCK(service->mutex);
         if(service->nqconns < SB_QCONN_MAX)
         {
@@ -1084,6 +1089,7 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
         else 
         {
             CK_CLEAN(cp);
+            service->nchunks--;
         }
         MUTEX_UNLOCK(service->mutex);
         ret = 0;
@@ -1336,7 +1342,7 @@ void service_stop(SERVICE *service)
     if(service)
     {
         service->lock = 1;
-        //DEBUG_LOGGER(service->logger, "ready for stop service:%s\n", service->service_name);
+        DEBUG_LOGGER(service->logger, "ready for stop service:%s running_connections:%d nconn:%d nqconns:%d nchunks:%d nqchunk:%d\n", service->service_name, service->running_connections, service->nconn, service->nqconns, service->nchunks, service->nqchunks);
         //stop all connections 
         if(service->connections && service->index_max >= 0)
         {
@@ -1542,14 +1548,14 @@ void service_clean(SERVICE **pservice)
             {
                 if((conn = ((*pservice)->qconns[i]))) 
                 {
-                    DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", conn);
+                    DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p] fd[%d]", conn, conn->fd);
                     conn->clean(conn);
                     (*pservice)->nconn--;
                 }
             }
         }
         //clean chunks queue
-        //DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue");
+        DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue:%d", (*pservice)->nqchunks);
         if((*pservice)->nqchunks > 0)
         {
             //DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
