@@ -11,8 +11,9 @@
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX 1024 
-#define CHUNK_BLOCK_MAX         65536
-//#define CHUNK_BLOCK_MAX         1048576
+#define CHUNK_BLOCK_MAX         262144
+//#define CHUNK_BLOCK_MAX         65536
+//#define CHUNK_BLOCK_MAX       1048576
 #ifndef MMAP_CHUNK_SIZE
 #define MMAP_CHUNK_SIZE         1048576
 //#define MMAP_CHUNK_SIZE       2097152

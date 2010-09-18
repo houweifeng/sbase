@@ -102,9 +102,9 @@ do                                                                              
 {                                                                                   \
     if(ptr)                                                                         \
     {                                                                               \
-        MB_LEFT(ptr) = MB_SIZE(ptr) = 0;                                            \
         if(MB_DATA(ptr)){free(MB_DATA(ptr));}                                       \
         MB_END(ptr) = MB_DATA(ptr) = NULL;                                          \
+        MB_LEFT(ptr) = MB_SIZE(ptr) = 0;                                            \
         MB_BSIZE(ptr) = MB_BLOCK_SIZE;                                              \
         MB_NDATA(ptr)  = 0;                                                         \
     }                                                                               \
