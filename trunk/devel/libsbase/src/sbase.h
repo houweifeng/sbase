@@ -15,24 +15,24 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define SB_CONN_MAX         65536
-#define SB_IP_MAX           16
-#define SB_XIDS_MAX         16
-#define SB_GROUPS_MAX       256
-#define SB_THREADS_MAX      1024
-#define SB_INIT_CONNS       256
-#define SB_QCONN_MAX        256
-#define SB_CHUNKS_MAX       256
-#define SB_BUF_SIZE         65536
-#define SB_USEC_SLEEP       1000
-#define SB_PROXY_TIMEOUT    20000000
-#define SB_HEARTBEAT_INTERVAL 1000
+#define SB_CONN_MAX             65536
+#define SB_IP_MAX               16
+#define SB_XIDS_MAX             16
+#define SB_GROUPS_MAX           256
+#define SB_THREADS_MAX          1024
+#define SB_INIT_CONNS           256
+#define SB_QCONN_MAX            256
+#define SB_CHUNKS_MAX           256
+#define SB_BUF_SIZE             65536
+#define SB_USEC_SLEEP           1000
+#define SB_PROXY_TIMEOUT        20000000
+#define SB_HEARTBEAT_INTERVAL   11000
 /* service type */
-#define S_SERVICE      0x00
-#define C_SERVICE      0x01
+#define S_SERVICE               0x00
+#define C_SERVICE               0x01
 /* working mode */
-#define WORKING_PROC    0x00
-#define WORKING_THREAD  0x01
+#define WORKING_PROC            0x00
+#define WORKING_THREAD          0x01
 /* connection status */
 #define CONN_STATUS_FREE        0x00
 #define CONN_STATUS_READY       0x01
@@ -61,10 +61,6 @@ extern "C" {
 #define D_STATE_RCLOSE          0x02
 #define D_STATE_WCLOSE          0x04
 #define D_STATE_CLOSE           0x08
-#define D_STATE_XCLOSE          0x18
-#define D_STATE_ZCLOSE          0x28
-#define D_STATE_KLOSE           0x48
-#define D_STATE_ZLOSE           0x88
 #define D_STATES                0x0e
 #endif
 /* packet type list*/

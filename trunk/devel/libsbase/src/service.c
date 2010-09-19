@@ -1541,7 +1541,7 @@ void service_clean(SERVICE **pservice)
             free((*pservice)->daemons);
         }
         //clean connection_queue
-        //DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk");
+        ACCESS_LOGGER((*pservice)->logger, "Ready for clean connection_chunk:%d", (*pservice)->nqconns);
         if((*pservice)->nqconns > 0)
         {
             //fprintf(stdout, "nqconns:%d\n", (*pservice)->nqconns);
@@ -1557,7 +1557,7 @@ void service_clean(SERVICE **pservice)
             }
         }
         //clean chunks queue
-        DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue:%d", (*pservice)->nqchunks);
+        ACCESS_LOGGER((*pservice)->logger, "Ready for clean chunks_queue:%d", (*pservice)->nqchunks);
         if((*pservice)->nqchunks > 0)
         {
             //DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
