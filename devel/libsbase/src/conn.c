@@ -317,6 +317,7 @@ int conn_terminate(CONN *conn)
                 conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
                 conn->d_state, conn->i_state);
         conn->d_state = D_STATE_CLOSE;
+        /*
         //continue incompleted data handling 
         if(conn->s_state == S_STATE_DATA_HANDLING && CK_NDATA(conn->chunk) > 0)
         {
@@ -334,6 +335,7 @@ int conn_terminate(CONN *conn)
                 conn->session.data_handler, conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
             }
         }
+        */
         if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY) 
                 && conn->session.error_handler)
         {
