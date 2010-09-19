@@ -11,26 +11,28 @@ extern "C" {
 #ifndef _TYPEDEF_MESSAGE
 #define _TYPEDEF_MESSAGE
 /* MESSAGE ACTION ID DEFINE */
-#define MESSAGE_NEW_SESSION     0x01
-#define MESSAGE_INPUT           0x02
-#define MESSAGE_OUTPUT          0x04
-#define MESSAGE_BUFFER          0x08
-#define MESSAGE_PACKET          0x10
-#define MESSAGE_CHUNK           0x20
-#define MESSAGE_DATA            0x40
-#define MESSAGE_OVER            0x80
-#define MESSAGE_QUIT            0x100
-#define MESSAGE_TRANSACTION     0x200
-#define MESSAGE_TASK            0x400
-#define MESSAGE_HEARTBEAT       0x800
-#define MESSAGE_STATE           0x1000
-#define MESSAGE_TIMEOUT         0x2000
-#define MESSAGE_STOP            0x4000
-#define MESSAGE_PROXY           0x8000
-#define MESSAGE_ALL		        0xffff
+#define MESSAGE_NEW_CONN        0x01
+#define MESSAGE_NEW_SESSION     0x02
+#define MESSAGE_INPUT           0x04
+#define MESSAGE_OUTPUT          0x08
+#define MESSAGE_BUFFER          0x10
+#define MESSAGE_PACKET          0x20
+#define MESSAGE_CHUNK           0x40
+#define MESSAGE_DATA            0x80
+#define MESSAGE_OVER            0x100
+#define MESSAGE_QUIT            0x200
+#define MESSAGE_TRANSACTION     0x400
+#define MESSAGE_TASK            0x800
+#define MESSAGE_HEARTBEAT       0x1000
+#define MESSAGE_STATE           0x2000
+#define MESSAGE_TIMEOUT         0x4000
+#define MESSAGE_STOP            0x8000
+#define MESSAGE_PROXY           0x10000
+#define MESSAGE_ALL		        0x1ffff
 #define QLEFT_MAX               256
 static char *messagelist[] = 
 {
+	"MESSAGE_NEW_CONN",
 	"MESSAGE_NEW_SESSION",
 	"MESSAGE_INPUT",
 	"MESSAGE_OUTPUT",

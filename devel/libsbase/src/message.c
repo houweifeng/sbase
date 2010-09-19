@@ -156,8 +156,14 @@ void qmessage_handler(void *qmsg, void *logger)
                         msg->parent, msg->fd);
                 goto next;
             }
-            conn = (CONN *)(msg->handler);
             pth = (PROCTHREAD *)(msg->parent);
+            if(msg->msg_id == MESSAGE_NEW_CONN)
+            {
+                DEBUG_LOGGER(logger, "Got message[%s] fd:%d total[%d/%d] left:%d On service[%s] procthread[%p] ", MESSAGE_DESC(msg->msg_id), msg->fd, q->total, q->qtotal, q->nleft, pth->service->service_name, pth); 
+                pth->newconn(pth, msg->fd, msg->handler);
+                goto next;
+            }
+            conn = (CONN *)(msg->handler);
             index = msg->index;
             if(msg->msg_id == MESSAGE_STOP && pth)
             {

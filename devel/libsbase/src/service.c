@@ -376,18 +376,21 @@ void service_event_handler(int event_fd, short flag, void *arg)
                         }
 #endif
 new_conn:
+                        /*
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
-                        {
 #ifdef HAVE_SSL
                             conn->ssl = ssl;
 #endif
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%p][%s:%d] dstate:%d via %d", conn, ip, port, conn->d_state, fd);
+                        */
+                        if(service->daemon && service->daemon->pushconn(service->daemon, fd, ssl) == 0)
+                        {
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
                             return ;
                         }
                         else 
                         {
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%p][%s:%d] dstate:%d via %d failed, %s", conn, ip, port, conn->d_state, fd, strerror(errno));
+                            DEBUG_LOGGER(service->logger, "Accepting new connection[%s:%d] via %d failed, %s",ip, port, fd, strerror(errno));
                         }
 err_conn:               
 #ifdef HAVE_SSL

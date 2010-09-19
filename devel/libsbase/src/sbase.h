@@ -321,6 +321,8 @@ typedef struct _PROCTHREAD
 
     /* connection */
     struct _CONN **connections;
+    int (*pushconn)(struct _PROCTHREAD *procthread, int fd, void *ssl);
+    int (*newconn)(struct _PROCTHREAD *procthread, int fd, void *ssl);
     int (*addconn)(struct _PROCTHREAD *procthread, struct _CONN *conn);
     int (*add_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
     int (*over_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
