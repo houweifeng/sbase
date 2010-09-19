@@ -627,8 +627,8 @@ int conn_read_handler(CONN *conn)
             return ret;
         }
         conn->recv_data_total += n;
-        DEBUG_LOGGER(conn->logger, "Received %d bytes nbuffer:%d data total %lld "
-                "from %s:%d on %s:%d via %d", n, PCB(conn->buffer)->ndata, 
+        DEBUG_LOGGER(conn->logger, "Received %d bytes nbuffer:%d/%d data total %lld "
+                "from %s:%d on %s:%d via %d", n, PCB(conn->buffer)->ndata, MB_SIZE(conn->buffer),
                 conn->recv_data_total, conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
         //for proxy
@@ -794,6 +794,7 @@ end:
             MB_RESET(conn->packet);
             MB_PUSH(conn->packet, MB_DATA(conn->buffer), len);
             MB_DEL(conn->buffer, len);
+            DEBUG_LOGGER(conn->logger, "Got packet length[%d/%d]", len, MB_SIZE(conn->packet));
             /* For packet handling */
             conn->s_state = S_STATE_PACKET_HANDLING;
             conn->push_message(conn, MESSAGE_PACKET);
@@ -1096,7 +1097,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
             CK_MEM(cp, size);
             CK_MEM_COPY(cp, data, size);
             queue_push(conn->send_queue, cp);
-            DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d][%d] to %s:%d send_queue "
+            DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d send_queue "
                     "total %d on %s:%d via %d", size, CK_BSIZE(cp),conn->remote_ip, 
                     conn->remote_port, QTOTAL(conn->send_queue), conn->local_ip, 
                     conn->local_port, conn->fd);
@@ -1429,10 +1430,8 @@ CONN *conn_init()
         conn->gindex = -1;
 
         MUTEX_INIT(conn->mutex);
-        MB_INIT(conn->buffer, MB_BLOCK_SIZE);
-        //MB_CHECK(conn->buffer);
-        MB_INIT(conn->packet, MB_BLOCK_SIZE);
-        //MB_CHECK(conn->packet);
+        MB_INIT(conn->buffer, MB_BLOCK_SIZE);MB_CHECK(conn->buffer);
+        MB_INIT(conn->packet, MB_BLOCK_SIZE);MB_CHECK(conn->packet);
         MB_INIT(conn->cache, MB_BLOCK_SIZE);
         MB_INIT(conn->oob, MB_BLOCK_SIZE);
         MB_INIT(conn->exchange, MB_BLOCK_SIZE);
