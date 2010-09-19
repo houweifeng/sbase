@@ -87,7 +87,7 @@ int conn_read_buffer(CONN *conn)
             FATAL_LOGGER(conn->logger, "Reading %d bytes data from conn[%p][%s:%d] ssl:%p " \
                 "on %s:%d via %d failed, %s", n, conn, conn->remote_ip, conn->remote_port,  \
                 conn->ssl, conn->local_ip, conn->local_port, conn->fd, strerror(errno));    \
-            CONN_TERMINATE(conn, D_STATE_ZLOSE);                                            \
+            CONN_TERMINATE(conn, D_STATE_CLOSE);                                            \
             return -1;                                                                      \
         }                                                                                   \
         DEBUG_LOGGER(conn->logger, "Read %d bytes ndata:%d left:%lld to chunk from %s:%d"   \
@@ -178,7 +178,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     ERROR_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
                     "connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
-                    CONN_TERMINATE(conn, D_STATE_ZLOSE);          
+                    CONN_TERMINATE(conn, D_STATE_CLOSE);          
                     return ;
                 }
                 DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
@@ -266,7 +266,7 @@ int conn_set(CONN *conn)
             FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or"
                     "initialize event failed, %s", conn, conn->fd, strerror(errno));	
             /* Terminate connection */
-            CONN_TERMINATE(conn, D_STATE_ZLOSE);
+            CONN_TERMINATE(conn, D_STATE_CLOSE);
         }
     }	
     return -1;	
@@ -281,7 +281,7 @@ int conn_close(CONN *conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for close conn[%p] remote[%s:%d] local[%s:%d] via %d",
         conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        CONN_TERMINATE(conn, D_STATE_ZCLOSE);
+        CONN_TERMINATE(conn, D_STATE_CLOSE);
         return 0;
     }
     return -1;
@@ -467,7 +467,7 @@ int conn_timeout_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "TIMEOUT[%d]-close connection[%p] on remote[%s:%d] "
                     "local[%s:%d] via %d", conn->timeout, conn, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
-            CONN_TERMINATE(conn, D_STATE_ZCLOSE);
+            CONN_TERMINATE(conn, D_STATE_CLOSE);
         }
     }
     return -1;
@@ -680,7 +680,7 @@ int conn_write_handler(CONN *conn)
 #endif
                     ERROR_LOGGER(conn->logger, "Sending chunk[%d-%lld] ndata:%d to %s:%d on conn[%p][%s:%d] via %d failed, %s", CKN(cp), (long long)(CK_LEFT(cp)), CK_NMDATA(cp), conn->remote_ip, conn->remote_port, conn, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
                     /* Terminate connection */
-                    CONN_TERMINATE(conn, D_STATE_KLOSE);
+                    CONN_TERMINATE(conn, D_STATE_CLOSE);
                     return ret;
                 }
             }
@@ -702,7 +702,7 @@ int conn_write_handler(CONN *conn)
             }
             if(chunk_over)
             {
-                CONN_TERMINATE(conn, D_STATE_XCLOSE);
+                CONN_TERMINATE(conn, D_STATE_CLOSE);
                 ret = -1;
             }
             else
@@ -741,7 +741,7 @@ int conn_packet_reader(CONN *conn)
                     packet_type, conn->remote_ip, conn->remote_port, conn, conn->local_ip,
                     conn->local_port, conn->fd);
             /* Terminate connection */
-            CONN_TERMINATE(conn, D_STATE_ZCLOSE);
+            CONN_TERMINATE(conn, D_STATE_CLOSE);
         }
         /* Read packet with customized function from user */
         else if(packet_type & PACKET_CUSTOMIZED && conn->session.packet_reader)

@@ -179,7 +179,7 @@ int http_over(CONN *conn, int respcode)
                 return http_request(conn);
             else
             {
-                conn->close(conn);
+                //conn->close(conn);
                 if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 {
@@ -192,6 +192,15 @@ int http_over(CONN *conn, int respcode)
             conn->close(conn);
             if(n == ntasks) return http_show_state(n);
         }
+    }
+    return -1;
+}
+
+int http_check_over(CONN *conn)
+{
+    if(conn)
+    {
+        if(is_keepalive) return http_over(conn, conn->s_id); 
     }
     return -1;
 }
@@ -220,11 +229,6 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             if(*s >= '0' && *s <= '9') respcode = atoi(s);
         }
         conn->s_id = respcode;
-        if(respcode < 200 || respcode > 300)
-        {
-            //fprintf(stdout, "HTTP:%s\n", p);
-            return http_over(conn, respcode);
-        }
         //check Content-Length
         if((s = strstr(p, "Content-Length")) || (s = strstr(p, "content-length")))
         {
@@ -235,11 +239,9 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
                 else++s;
             }
             if(*s >= '0' && *s <= '9' && (len = atoll(s)) > 0) 
-                conn->recv_chunk(conn, len);
-            else 
-                return http_over(conn, respcode);
-            
+                return conn->recv_chunk(conn, len);
         }
+        return http_check_over(conn);
     }
     return -1;
 }
@@ -248,7 +250,7 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
 {
     if(conn)
     {
-        return http_over(conn, conn->s_id);
+        return http_check_over(conn);
     }
     return 0;
 }
