@@ -100,6 +100,20 @@ void procthread_run(void *arg)
     return ;
 }
 
+/* push new connection  */
+int procthread_pushconn(PROCTHREAD *pth, int fd, void *ssl)
+{
+    int ret = -1;
+
+    if(pth && pth->message_queue && fd > 0)
+    {
+        PUSH_TASK_MESSAGE(pth,MESSAGE_NEW_CONN, -1, fd, -1, ssl, NULL);
+        DEBUG_LOGGER(pth->logger, "Added message[NEW_CONN] to procthreads[%d]", pth->index);
+        ret = 0;
+    }
+    return ret;
+}
+
 /* add new task */
 int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
 {
@@ -126,6 +140,46 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
         ret = 0;
     }
     return ret;
+}
+
+/* new connection */
+int procthread_newconn(PROCTHREAD *pth, int fd, void *ssl)
+{
+    socklen_t rsa_len = sizeof(struct sockaddr_in);
+    struct sockaddr_in rsa;
+    SERVICE *service = NULL;
+    int port = 0, ret = -1;
+    CONN *conn = NULL;
+    char *ip = NULL;
+
+    if(pth && fd > 0 && (service = pth->service))
+    {
+        if(getpeername(fd, (struct sockaddr *)&rsa, &rsa_len) == 0
+                && (ip = inet_ntoa(rsa.sin_addr)) && (port = ntohs(rsa.sin_port)) > 0 
+                && (conn = service_addconn(service, service->sock_type, fd, ip, port, 
+                    service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
+        {
+            conn->ssl = ssl;
+            DEBUG_LOGGER(pth->logger, "adding new-connection[%p][%s:%d] via %d", conn, ip, port, fd);
+            ret = 0;
+        }
+        else
+        {
+#ifdef HAVE_SSL
+            if(ssl)
+            {
+                SSL_shutdown((SSL *)ssl);
+                SSL_free((SSL *)ssl);
+                ssl = NULL;
+            }
+#endif
+            DEBUG_LOGGER(pth->logger, "adding new-connection[%d] failed,%s", fd, strerror(errno));
+            shutdown(fd, SHUT_RDWR);
+            close(fd);
+        }
+        return ret;
+    }
+    return -1;
 }
 
 /* Add connection message */
@@ -290,6 +344,8 @@ PROCTHREAD *procthread_init(int have_evbase)
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;
+        pth->pushconn               = procthread_pushconn;
+        pth->newconn                = procthread_newconn;
         pth->addconn                = procthread_addconn;
         pth->add_connection         = procthread_add_connection;
         pth->newtask                = procthread_newtask;

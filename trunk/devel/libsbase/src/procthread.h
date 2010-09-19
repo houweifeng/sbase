@@ -9,6 +9,12 @@ int procthread_newtask(PROCTHREAD *pth, CALLBACK *, void *arg);
 /* add new transaction */
 int procthread_newtransaction(PROCTHREAD *pth, CONN *, int tid);
 
+/* push new connection*/
+int procthread_pushconn(PROCTHREAD *, int fd, void *ssl);
+
+/* add new connection*/
+int procthread_newconn(PROCTHREAD *, int fd, void *ssl);
+
 /* Add connection message */
 int procthread_addconn(PROCTHREAD *, CONN *);
 
