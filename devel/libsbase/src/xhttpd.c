@@ -568,7 +568,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
     if(conn && packet)
     {
-        int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n", x);conn->push_chunk(conn, buf, n);conn->push_chunk(conn, s, x);conn->over(conn); return 0;
+        //int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n", x);conn->push_chunk(conn, buf, n);conn->push_chunk(conn, s, x);conn->over(conn); return 0;
         p = packet->data;
         end = packet->data + packet->ndata;
         //fprintf(stdout, "%s", p);
