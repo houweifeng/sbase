@@ -277,7 +277,6 @@ int ck_mmap(void *);
 		CK_NDATA(ptr) = 0;                                                                  \
 		CK_NMDATA(ptr) = 0;                                                                 \
 		CK_OFFMDATA(ptr) = 0;                                                               \
-		CK_END(ptr) = NULL;                                                                 \
 		CK_TYPE(ptr) = 0;                                                                   \
         *(CK_FILENAME(ptr)) = '\0';                                                         \
 		CK_SIZE(ptr) = 0;                                                                   \

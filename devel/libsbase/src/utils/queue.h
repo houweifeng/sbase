@@ -28,6 +28,7 @@ void *queue_pop(void *q);
 void *queue_head(void *q);
 void queue_clean(void *q);
 #define QTOTAL(q) (((QUEUE *)q)->total)
+#define QQTOTAL(q) (((QUEUE *)q)->qtotal)
 #ifdef __cplusplus
      }
 #endif

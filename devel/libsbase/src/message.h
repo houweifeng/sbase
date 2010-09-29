@@ -20,15 +20,16 @@ extern "C" {
 #define MESSAGE_CHUNK           0x40
 #define MESSAGE_DATA            0x80
 #define MESSAGE_OVER            0x100
-#define MESSAGE_QUIT            0x200
-#define MESSAGE_TRANSACTION     0x400
-#define MESSAGE_TASK            0x800
-#define MESSAGE_HEARTBEAT       0x1000
-#define MESSAGE_STATE           0x2000
-#define MESSAGE_TIMEOUT         0x4000
-#define MESSAGE_STOP            0x8000
-#define MESSAGE_PROXY           0x10000
-#define MESSAGE_ALL		        0x1ffff
+#define MESSAGE_SHUT            0x200
+#define MESSAGE_QUIT            0x400
+#define MESSAGE_TRANSACTION     0x800
+#define MESSAGE_TASK            0x1000
+#define MESSAGE_HEARTBEAT       0x2000
+#define MESSAGE_STATE           0x4000
+#define MESSAGE_TIMEOUT         0x8000
+#define MESSAGE_STOP            0x10000
+#define MESSAGE_PROXY           0x20000
+#define MESSAGE_ALL		        0x3ffff
 #define QLEFT_MAX               256
 static char *messagelist[] = 
 {
@@ -41,6 +42,7 @@ static char *messagelist[] =
 	"MESSAGE_CHUNK",
 	"MESSAGE_DATA",
 	"MESSAGE_OVER",
+    "MESSAGE_SHUT",
 	"MESSAGE_QUIT",
 	"MESSAGE_TRANSACTION",
 	"MESSAGE_TASK",

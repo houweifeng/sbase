@@ -191,7 +191,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
             free(pp);
             pp = NULL;
-            if(!keepalive) conn->over(conn);
+            //if(!keepalive) conn->over(conn);
         }
         closedir(dirp);
         return 0;
@@ -524,7 +524,7 @@ OVER:
             conn->push_file(conn, outfile, from, len);
         }
         if(zstream) free(zstream);
-        if(!keepalive)conn->over(conn);
+        //if(!keepalive)conn->over(conn);
         return 0;
     }
 err:
@@ -568,7 +568,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
     if(conn && packet)
     {
-        //int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n", x);conn->push_chunk(conn, buf, n);conn->push_chunk(conn, s, x);conn->over(conn); return 0;
+        //int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n", 0);conn->push_chunk(conn, buf, n);return 0;
         p = packet->data;
         end = packet->data + packet->ndata;
         //fprintf(stdout, "%s", p);
@@ -752,7 +752,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
                     conn->push_chunk(conn, buf, (p - buf));
                     conn->push_file(conn, outfile, from, len);
-                    if(!keepalive) conn->over(conn);
+                    //if(!keepalive) conn->over(conn);
                     return 0;
                 }
             }

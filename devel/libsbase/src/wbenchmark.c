@@ -179,7 +179,7 @@ int http_over(CONN *conn, int respcode)
                 return http_request(conn);
             else
             {
-                //conn->close(conn);
+                conn->close(conn);
                 if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 {
@@ -200,7 +200,8 @@ int http_check_over(CONN *conn)
 {
     if(conn)
     {
-        if(is_keepalive) return http_over(conn, conn->s_id); 
+        //if(is_keepalive) return http_over(conn, conn->s_id); 
+        return http_over(conn, conn->s_id);
     }
     return -1;
 }
@@ -274,7 +275,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
                 ACCESS_LOGGER(logger, "connecting timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
                 ntimeout++;
                 conn->over_cstate(conn);
-                return http_over(conn, 0);
+                return http_check_over(conn);
             }
             else
             {
@@ -293,7 +294,7 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
     if(conn)
     {
         //fprintf(stdout, "error on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
-        return http_over(conn, conn->s_id);
+        return http_check_over(conn);
     }
     return -1;
 }
@@ -320,7 +321,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
             }
             ntimeout++;
             conn->over_cstate(conn);
-            return http_over(conn, 0);
+            return http_check_over(conn);
         }
     }
     return -1;

@@ -238,6 +238,29 @@ int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
     return ret;
 }
 
+/* procthread shut connection */
+int procthread_shut_connection(PROCTHREAD *pth, CONN *conn)
+{
+    PROCTHREAD *iodaemon = NULL;
+    int ret = -1;
+
+    if(pth && pth->service)
+    {
+        if((iodaemon = pth->service->iodaemon) && iodaemon->message_queue)
+        {
+            qmessage_push(iodaemon->message_queue, MESSAGE_OVER, conn->index, conn->fd, 
+                -1, iodaemon, conn, NULL);
+        }
+        else
+        {
+            qmessage_push(pth->message_queue, MESSAGE_QUIT, conn->index, conn->fd,
+                    -1, pth, conn, NULL);
+        }
+        ret = 0;
+    }
+    return ret;
+}
+
 /* Terminate connection */
 int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 {
@@ -254,7 +277,7 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
         }
         else
         {
-            conn->reset(conn);
+            //conn->reset(conn);
             service_pushtoq(pth->service, conn);
         }
     }
@@ -340,6 +363,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         {
             pth->have_evbase        = have_evbase;
             pth->evbase             = evbase_init(1);
+            //pth->evbase->set_evops(pth->evbase, EOP_POLL);
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
@@ -350,6 +374,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         pth->add_connection         = procthread_add_connection;
         pth->newtask                = procthread_newtask;
         pth->newtransaction         = procthread_newtransaction;
+        pth->shut_connection        = procthread_shut_connection;
         pth->over_connection        = procthread_over_connection;
         pth->terminate_connection   = procthread_terminate_connection;
         pth->stop                   = procthread_stop;

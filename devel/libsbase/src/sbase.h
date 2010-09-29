@@ -21,8 +21,8 @@ extern "C" {
 #define SB_GROUPS_MAX           256
 #define SB_THREADS_MAX          1024
 #define SB_INIT_CONNS           256
-#define SB_QCONN_MAX            256
-#define SB_CHUNKS_MAX           256
+#define SB_QCONN_MAX            0
+#define SB_CHUNKS_MAX           0
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -321,6 +321,7 @@ typedef struct _PROCTHREAD
     int (*newconn)(struct _PROCTHREAD *procthread, int fd, void *ssl);
     int (*addconn)(struct _PROCTHREAD *procthread, struct _CONN *conn);
     int (*add_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
+    int (*shut_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
     int (*over_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
     int (*terminate_connection)(struct _PROCTHREAD *procthread, struct _CONN *conn);
 
