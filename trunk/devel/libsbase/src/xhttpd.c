@@ -86,7 +86,12 @@ int xhttpd_mkdir(char *path, int mode)
 /* xhttpd packet reader */
 int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 {
-    return buffer->ndata;
+    /*
+    char *s = NULL, buf[1024];
+    int x = 0, n = 0; 
+    s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n", 0);conn->push_chunk(conn, buf, n);return 0;
+    */
+    return 0;
 }
 
 /* xhttpd index view */
@@ -568,7 +573,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
     if(conn && packet)
     {
-        //int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n", 0);conn->push_chunk(conn, buf, n);return 0;
+        int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n", x);conn->push_chunk(conn, buf, n);conn->push_chunk(conn, s, x);return 0;
         p = packet->data;
         end = packet->data + packet->ndata;
         //fprintf(stdout, "%s", p);
@@ -1081,9 +1086,9 @@ int main(int argc, char **argv)
         }
 
     }
-    sbase->running(sbase, 0);
+    //sbase->running(sbase, 0);
     //sbase->running(sbase, 300);
-    //sbase->running(sbase, 120000000);sbase->stop(sbase);
+    sbase->running(sbase, 120000000);sbase->stop(sbase);
     sbase->clean(&sbase);
     if(namemap) TRIETAB_CLEAN(namemap);
     if(hostmap) TRIETAB_CLEAN(hostmap);

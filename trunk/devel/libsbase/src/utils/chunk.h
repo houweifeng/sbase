@@ -10,12 +10,13 @@
 #define CHUNK_MEM   0x02
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
-#define CHUNK_FILE_NAME_MAX 1024 
-#define CHUNK_BLOCK_MAX         262144
-//#define CHUNK_BLOCK_MAX         65536
+#define CHUNK_FILE_NAME_MAX     32
+//#define CHUNK_BLOCK_MAX         262144
+#define CHUNK_BLOCK_MAX         1024
 //#define CHUNK_BLOCK_MAX       1048576
 #ifndef MMAP_CHUNK_SIZE
-#define MMAP_CHUNK_SIZE         1048576
+#define MMAP_CHUNK_SIZE         4096
+//#define MMAP_CHUNK_SIZE       1048576
 //#define MMAP_CHUNK_SIZE       2097152
 //#define MMAP_CHUNK_SIZE       2097152
 //#define MMAP_CHUNK_SIZE       3145728
@@ -23,7 +24,7 @@
 //#define MMAP_CHUNK_SIZE       8388608 
 #endif
 #ifndef CHUNK_BLOCK_SIZE
-#define CHUNK_BLOCK_SIZE        8192 
+#define CHUNK_BLOCK_SIZE        1024 
 #endif
 #define CHUNK_STATUS_ON     0x01
 #define CHUNK_STATUS_OVER   0x02
@@ -278,7 +279,6 @@ int ck_mmap(void *);
 		CK_NMDATA(ptr) = 0;                                                                 \
 		CK_OFFMDATA(ptr) = 0;                                                               \
 		CK_TYPE(ptr) = 0;                                                                   \
-        *(CK_FILENAME(ptr)) = '\0';                                                         \
 		CK_SIZE(ptr) = 0;                                                                   \
 		CK_OFFSET(ptr) = 0;                                                                 \
 		CK_STATUS(ptr) = 0;                                                                 \
