@@ -19424,10 +19424,10 @@ if test $ac_cv_lib_ssl_SSL_read = yes; then
   havessl=yes
 fi
 
-if test "$havessl" = "yes" ; then
-    CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
-    LDFLAGS="${LDFLAGS} -lssl -lcrypto"
-fi
+#if test "$havessl" = "yes" ; then
+#    CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
+#    LDFLAGS="${LDFLAGS} -lssl -lcrypto"
+#fi
 #zlib
 havezlib=no
 echo "$as_me:$LINENO: checking for compress in -lz" >&5

@@ -348,9 +348,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
     PROCTHREAD *pth = NULL;
     struct sockaddr_in rsa;
     CONN *conn = NULL;
-#ifdef HAVE_SSL 
-    SSL *ssl = NULL;
-#endif
+    void *ssl = NULL;
 
     if(service)
     {
@@ -367,8 +365,8 @@ void service_event_handler(int event_fd, short flag, void *arg)
 #ifdef HAVE_SSL
                         if(service->is_use_SSL && service->s_ctx)
                         {
-                            if((ssl = SSL_new(XSSL_CTX(service->s_ctx))) && SSL_set_fd(ssl, fd) > 0 
-                                    && SSL_accept(ssl) > 0)                                                   
+                            if((ssl = SSL_new(XSSL_CTX(service->s_ctx))) && SSL_set_fd((SSL *)ssl, fd) > 0 
+                                    && SSL_accept((SSL *)ssl) > 0)                                                   
                             {
                                 goto new_conn;
                             }
@@ -396,8 +394,8 @@ err_conn:
 #ifdef HAVE_SSL
                         if(ssl)
                         {
-                            SSL_shutdown(ssl);
-                            SSL_free(ssl);
+                            SSL_shutdown((SSL *)ssl);
+                            SSL_free((SSL *)ssl);
                             ssl = NULL;
                         }
 #endif
@@ -481,9 +479,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
         local_port = -1, flag = 0, opt = 0, status = 0;
     char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
-#ifdef HAVE_SSL
-    SSL *ssl = NULL;
-#endif
+    void *ssl = NULL;
 
     if(service && service->lock == 0)
     {
@@ -503,7 +499,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             {
                 if((ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
                         && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
-                        && SSL_set_fd(ssl, fd) > 0 && SSL_connect(ssl) >= 0)
+                        && SSL_set_fd((SSL *)ssl, fd) > 0 && SSL_connect((SSL *)ssl) >= 0)
                 {
                     goto new_conn;
                 }
@@ -546,7 +542,7 @@ new_conn:
                     remote_port, local_ip, local_port, sess, status)))
             {
 #ifdef HAVE_SSL
-                conn->ssl = ssl;
+                conn->ssl = (SSL *)ssl;
 #endif
                 return conn;
             }
@@ -558,8 +554,8 @@ err_conn:
 #ifdef HAVE_SSL
             if(ssl)
             {
-                SSL_shutdown(ssl);
-                SSL_free(ssl);
+                SSL_shutdown((SSL *)ssl);
+                SSL_free((SSL *)ssl);
                 ssl = NULL;
             }
 #endif
@@ -591,9 +587,7 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
     int fd = -1, family = -1, sock_type = -1, remote_port = -1, local_port = -1;
     char *local_ip = NULL, *remote_ip = NULL;
     SESSION *sess = NULL;
-#ifdef HAVE_SSL
-    SSL *ssl = NULL;
-#endif
+    void *ssl = NULL;
 
     if(service && service->lock == 0 && parent)
     {
@@ -619,7 +613,7 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
             {
                 DEBUG_LOGGER(service->logger, "SSL_newproxy() to %s:%d",remote_ip, remote_port);
                 if((ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
-                        && SSL_set_fd(ssl, fd) > 0 && SSL_connect(ssl) >= 0)
+                        && SSL_set_fd((SSL *)ssl, fd) > 0 && SSL_connect((SSL *)ssl) >= 0)
                 {
                     goto new_conn;
                 }
@@ -642,7 +636,7 @@ new_conn:
                 conn->session.parent = parent;
                 conn->session.parentid = parent->index;
 #ifdef HAVE_SSL
-                conn->ssl = ssl;
+                conn->ssl = (SSL *)ssl;
 #endif
                 return conn;
             }
@@ -650,8 +644,8 @@ err_conn:
 #ifdef HAVE_SSL
             if(ssl)
             {
-                SSL_shutdown(ssl);
-                SSL_free(ssl);
+                SSL_shutdown((SSL *)ssl);
+                SSL_free((SSL *)ssl);
                 ssl = NULL;
             }
 #endif
@@ -998,7 +992,7 @@ CHUNK *service_popchunk(SERVICE *service)
                 && (cp = service->qchunks[x]))
         {
             service->qchunks[x] = NULL;
-            DEBUG_LOGGER(service->logger, "chunk_pop(%p) bsize:%d total:%d chunks:%d", cp, CK_BSIZE(cp), service->nqchunks, service->nchunks);
+            DEBUG_LOGGER(service->logger, "popchunk(%p) nchunks:%d", cp, service->nchunks);
         }
         else
         {
@@ -1006,7 +1000,7 @@ CHUNK *service_popchunk(SERVICE *service)
             if(cp)
             {
                 service->nchunks++;
-                DEBUG_LOGGER(service->logger, "chunk_new(%p) bsize:%d chunks:%d", cp, CK_BSIZE(cp), service->nchunks);
+                DEBUG_LOGGER(service->logger, "popchunk(%p) nchunks:%d", cp, service->nchunks);
             }
 
         }
@@ -1079,17 +1073,17 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
     if(service && service->qchunks && cp)
     {
         MUTEX_LOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "chunk_total:%d sizeof(CHUNK):%lu", service->nqchunks, sizeof(CHUNK)+CK_BSIZE(cp));
         if(service->nqchunks < SB_CHUNKS_MAX)
         {
             CK_RESET(cp);
             x = service->nqchunks++;
             service->qchunks[x] = cp;
-            DEBUG_LOGGER(service->logger, "chunk_push(%p) bsize:%d total:%d", 
-                    cp, CK_BSIZE(cp), service->nqchunks);
+            DEBUG_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
+            service->nchunks--;
         }
         else 
         {
+            DEBUG_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
             CK_CLEAN(cp);
             service->nchunks--;
         }

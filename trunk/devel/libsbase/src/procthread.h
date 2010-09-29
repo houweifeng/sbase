@@ -21,6 +21,10 @@ int procthread_addconn(PROCTHREAD *, CONN *);
 /* Add new connection */
 int procthread_add_connection(PROCTHREAD *, CONN *);
 
+
+/* Shut connection */
+int procthread_shut_connection(PROCTHREAD *, CONN *);
+
 /* Over connection */
 int procthread_over_connection(PROCTHREAD *, CONN *);
 

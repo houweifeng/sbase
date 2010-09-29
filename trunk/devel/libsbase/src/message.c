@@ -199,6 +199,9 @@ void qmessage_handler(void *qmsg, void *logger)
                 case MESSAGE_NEW_SESSION :
                     pth->add_connection(pth, conn);
                     break;
+                case MESSAGE_SHUT :
+                    pth->shut_connection(pth, conn);
+                    break;
                 case MESSAGE_OVER :
                     pth->over_connection(pth, conn);
                     break;
