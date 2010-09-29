@@ -15,9 +15,11 @@ typedef struct _MEMB
     int block_size;
     int size;
     int left;
+    int n;
+    int len;
     char *end;
     char *p;
-    int  n;
+    char *tmp;
 }MEMB;
 #define MB_BLOCK_SIZE  65536
 #define MB(ptr)        ((MEMB *)ptr)
@@ -27,11 +29,13 @@ typedef struct _MEMB
 #define MB_DATA(ptr)   (MB(ptr)->data)
 #define MB_NDATA(ptr)  (MB(ptr)->ndata)
 #define MB_END(ptr)    (MB(ptr)->end)
+#define MB_TMP(ptr)    (MB(ptr)->tmp)
+#define MB_LEN(ptr)    (MB(ptr)->len)
 #define MBP(ptr)       (MB(ptr)->p)
 #define MBN(ptr)       (MB(ptr)->n)
 #define MB_MALLOC(old,newlen) ((old)?realloc(old,newlen):calloc(1,newlen))
-#define MB_NEWLEN(newlen, base) ((((newlen%base) > 0)+(newlen/base))*base)
-#define MB_RESIZE(ptr, newlen) (((MBN(ptr) = (MB_SIZE(ptr)+newlen)) > 0 && (MBN(ptr) = MB_NEWLEN(MBN(ptr), MB_BSIZE(ptr))) > 0 && (MB_DATA(ptr) = MB_MALLOC(MB_DATA(ptr), MBN(ptr))) && (MB_END(ptr) = MB_DATA(ptr) + MB_NDATA(ptr)) && ((MB_LEFT(ptr) = MBN(ptr) - MB_SIZE(ptr)) > 0))?(MB_SIZE(ptr) = MBN(ptr)):0)
+#define MB_NEWLEN(xlen, base) ((((xlen%(base)) > 0)+(xlen/(base)))*base)
+#define MB_RESIZE(ptr, newlen) (((MBN(ptr) = (MB_SIZE(ptr)+newlen)) > 0 && MB_BSIZE(ptr) > 0 && (MB_LEN(ptr) = MB_NEWLEN(MBN(ptr), MB_BSIZE(ptr))) > 0 && (MB_TMP(ptr) = MB_MALLOC(MB_DATA(ptr), MB_LEN(ptr))) && (MB_DATA(ptr) = MB_TMP(ptr)) && (MB_END(ptr) = (MB_DATA(ptr) + MB_NDATA(ptr))) && (MB_LEFT(ptr) = (MB_LEN(ptr) - MB_NDATA(ptr))) > 0)?(MB_SIZE(ptr) = MB_LEN(ptr)):0)
 #define MB_CHECK(ptr) ((ptr)?((MB_LEFT(ptr) <= 0)?((MB_RESIZE(ptr, MB_BSIZE(ptr)) > 0)?0:-1):0):-1)
 #define MB_INIT(ptr, b_size)                                                        \
 do                                                                                  \
