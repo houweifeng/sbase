@@ -357,7 +357,7 @@ int chunk_write_from_file_SSL(void *chunk, void *ssl)
 /* chunk file fill */
 int chunk_file_fill(void *chunk, char *data, int ndata)
 {
-    int ret = -1, n = 0, left = 0;
+    int ret = -1, n = 0;
 
     if(chunk && data && ndata > 0 && CHK(chunk)->left > 0)
     {
