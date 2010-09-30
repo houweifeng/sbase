@@ -2,7 +2,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
+#include <fcntl.h>
 #include "chunk.h"
+/* initialize chunk */
+CHUNK *chunk_init()
+{
+    return (CHUNK *)calloc(1, sizeof(CHUNK));
+}
+
 /* set/initialize chunk mem */
 int chunk_set_bsize(void *chunk, int len)
 {
@@ -76,7 +84,7 @@ int chunk_file(void *chunk, char *file, off_t offset, off_t len )
         CHK(chunk)->size = CHK(chunk)->left = len;
         CHK(chunk)->offset = offset;
         CHK(chunk)->ndata = 0;
-        strcpy(CHK(chunk)->offset, file);
+        strcpy(CHK(chunk)->filename, file);
         return 0;
     }
     return -1;
@@ -104,7 +112,7 @@ int chunk_read_SSL(void *chunk, void *ssl)
 {
     int n = 1;
 #ifdef HAVE_SSL
-    if(chunk && fd > 0 && CHK(chunk)->left > 0 && CHK(chunk)->data && CHK(chunk)->end
+    if(chunk && ssl && CHK(chunk)->left > 0 && CHK(chunk)->data && CHK(chunk)->end
         && (n = SSL_read(XSSL(ssl), CHK(chunk)->end, CHK(chunk)->left)) > 0)
     {
         CHK(chunk)->left -= n;
@@ -137,7 +145,7 @@ int chunk_write_SSL(void *chunk, void *ssl)
     int n = -1;
 #ifdef HAVE_SSL
     if(chunk && ssl && CHK(chunk)->left > 0 && CHK(chunk)->data && CHK(chunk)->end
-            && (n = write_SSL(XSSL(ssl), CHK(chunk)->end, CHK(chunk)->left)) > 0)
+            && (n = SSL_write(XSSL(ssl), CHK(chunk)->end, CHK(chunk)->left)) > 0)
     {
         CHK(chunk)->left -= n;
         CHK(chunk)->end += n;
@@ -185,7 +193,7 @@ int chunk_file_check(void *chunk)
 
     if(chunk && CHK(chunk)->fd <= 0)
     {
-        fd = CHK(chunk)->fd = open(CHK(chunk)->file, O_RDWR);
+        fd = CHK(chunk)->fd = open(CHK(chunk)->filename, O_RDONLY);
     }
     return fd;
 }
@@ -261,45 +269,57 @@ int chunk_read_to_file_SSL(void *chunk, void *ssl)
     return ret;
 }
 
-/* mmap */
-char *chunk_mmap(void *chunk)
-{
-    char *data = NULL;
-
-    if(chunk)
-    {
-    }
-    return data;
-}
-
 /* munmap */
 void chunk_munmap(void *chunk)
 {
     if(chunk)
     {
+        if(CHK(chunk)->mmap)munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
+        CHK(chunk)->mmap = NULL;
     }
     return ;
+}
+
+/* mmap */
+char *chunk_mmap(void *chunk)
+{
+    off_t offset = 0, n = 0;
+    char *data = NULL;
+
+    if(chunk && CHK(chunk)->left > 0 && CHK(chunk)->offset >= 0)
+    {
+        if(CHK(chunk)->mmap) munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
+        offset = (CHK(chunk)->offset / MMAP_PAGE_SIZE) * MMAP_PAGE_SIZE;
+        if((CHK(chunk)->mmap = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_SHARED, 
+                        CHK(chunk)->fd, offset)) && CHK(chunk)->mmap != (void *)-1)
+        {
+            n = CHK(chunk)->offset - offset;
+            data = CHK(chunk)->mmap + n;
+            CHK(chunk)->mmleft = MMAP_CHUNK_SIZE - n;
+            if(CHK(chunk)->left < CHK(chunk)->mmleft) 
+                CHK(chunk)->mmleft = CHK(chunk)->left;
+        }
+    }
+    return data;
 }
 
 /* write from file */
 int chunk_write_from_file(void *chunk, int fd)
 {
-    int ret = -1, n = 0, left = 0;
+    int ret = -1, n = 0;
     char *data = NULL;
 
     if(chunk && fd > 0 && CHK(chunk)->left > 0 && CHK(chunk)->data)
     {
-        left = CHK(chunk)->bsize;    
-        if(CHK(chunk)->left < left) left = CHK(chunk)->left;
         if(chunk_file_check(chunk) > 0 && (data = chunk_mmap(chunk))
-                && (n = write(fd, data,  left)) > 0)
+                && (n = write(fd, data,  CHK(chunk)->mmleft)) > 0)
         {
             CHK(chunk)->offset += n;
             CHK(chunk)->left -= n; 
+            chunk_munmap(chunk);
             if(CHK(chunk)->left == 0)
             {
                 CHK(chunk)->status = CHUNK_STATUS_OVER;
-                chunk_munmap(chunk);
                 close(CHK(chunk)->fd);
             }
             ret = n;
@@ -311,22 +331,20 @@ int chunk_write_from_file(void *chunk, int fd)
 /* write from file with SSL */
 int chunk_write_from_file_SSL(void *chunk, void *ssl)
 {
-    int ret = -1, n = 0, left = 0;
+    int ret = -1, n = 0;
     char *data = NULL;
 #ifdef HAVE_SSL
     if(chunk && ssl && CHK(chunk)->left > 0 && CHK(chunk)->data)
     {
-        left = CHK(chunk)->bsize;    
-        if(CHK(chunk)->left < left) left = CHK(chunk)->left;
         if(chunk_file_check(chunk) > 0 && (data = chunk_mmap(chunk))
-                && (n = SSL_write(XSSL(ssl), data,  left)) > 0)
+                && (n = SSL_write(XSSL(ssl), data,  CHK(chunk)->mmleft)) > 0)
         {
             CHK(chunk)->offset += n;
             CHK(chunk)->left -= n; 
+            chunk_munmap(chunk);
             if(CHK(chunk)->left == 0)
             {
                 CHK(chunk)->status = CHUNK_STATUS_OVER;
-                chunk_munmap(chunk);
                 close(CHK(chunk)->fd);
             }
             ret = n;
@@ -368,6 +386,7 @@ void chunk_reset(void *chunk)
     {
         if(CHK(chunk)->mmap) munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
         CHK(chunk)->mmap = NULL;
+        CHK(chunk)->mmleft = 0;
         if(CHK(chunk)->fd > 0) close(CHK(chunk)->fd);
         CHK(chunk)->fd = 0;
         CHK(chunk)->status = 0;
