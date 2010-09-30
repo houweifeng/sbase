@@ -608,7 +608,7 @@ int conn_read_handler(CONN *conn)
 
     if(conn)
     {
-        DEBUG_LOGGER(conn->logger, "ready-reading conn[%p] buffer[%p][%d/%d] packet[%p][%d/%d] oob[%p][%d/%d] cache[%p][%d/%d] exchange[%p][%d/%d] chunk[%p][%lld/%lld] remote[%s:%d] local[%s:%d] via %d", conn, conn->buffer, MB_LEFT(conn->buffer), MB_SIZE(conn->buffer),  conn->packet, MB_LEFT(conn->packet), MB_SIZE(conn->packet), conn->oob, MB_LEFT(conn->oob), MB_SIZE(conn->oob), conn->cache, MB_LEFT(conn->cache), MB_SIZE(conn->cache), conn->exchange, MB_LEFT(conn->exchange), MB_SIZE(conn->exchange), conn->chunk, CHK_SIZE(conn->chunk), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "ready-reading conn[%p] buffer[%p][%d/%d] packet[%p][%d/%d] oob[%p][%d/%d] cache[%p][%d/%d] exchange[%p][%d/%d] chunk[%p][%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, conn->buffer, MB_LEFT(conn->buffer), MB_SIZE(conn->buffer),  conn->packet, MB_LEFT(conn->packet), MB_SIZE(conn->packet), conn->oob, MB_LEFT(conn->oob), MB_SIZE(conn->oob), conn->cache, MB_LEFT(conn->cache), MB_SIZE(conn->cache), conn->exchange, MB_LEFT(conn->exchange), MB_SIZE(conn->exchange), conn->chunk, LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* Receive OOB */
         if((n = mmb_recv(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
@@ -1396,7 +1396,7 @@ void conn_clean(CONN *conn)
         MUTEX_DESTROY(conn->mutex);
         if(conn->event) conn->event->clean(&(conn->event));
         conn->event = NULL;
-        DEBUG_LOGGER(conn->logger, "ready-clean conn[%p] buffer[%p][%d/%d] packet[%p][%d/%d] oob[%p][%d/%d] cache[%p][%d/%d] exchange[%p][%d/%d] chunk[%p][%d/%d]", conn, conn->buffer, MB_LEFT(conn->buffer), MB_SIZE(conn->buffer),  conn->packet, MB_LEFT(conn->packet), MB_SIZE(conn->packet), conn->oob, MB_LEFT(conn->oob), MB_SIZE(conn->oob), conn->cache, MB_LEFT(conn->cache), MB_SIZE(conn->cache), conn->exchange, MB_LEFT(conn->exchange), MB_SIZE(conn->exchange), conn->chunk, CHK_SIZE(conn->chunk), CHK_BSIZE(conn->chunk));
+        DEBUG_LOGGER(conn->logger, "ready-clean conn[%p] buffer[%p][%d/%d] packet[%p][%d/%d] oob[%p][%d/%d] cache[%p][%d/%d] exchange[%p][%d/%d] chunk[%p][%lld/%d]", conn, conn->buffer, MB_LEFT(conn->buffer), MB_SIZE(conn->buffer),  conn->packet, MB_LEFT(conn->packet), MB_SIZE(conn->packet), conn->oob, MB_LEFT(conn->oob), MB_SIZE(conn->oob), conn->cache, MB_LEFT(conn->cache), MB_SIZE(conn->cache), conn->exchange, MB_LEFT(conn->exchange), MB_SIZE(conn->exchange), conn->chunk, LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk));
         /* Clean BUFFER */
         mmb_clean(conn->buffer);
         /* Clean OOB */

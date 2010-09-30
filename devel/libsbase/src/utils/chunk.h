@@ -28,7 +28,7 @@ extern "C" {
 //#define MMAP_CHUNK_SIZE       8388608 
 #endif
 #ifndef CHUNK_BLOCK_SIZE
-#define CHUNK_BLOCK_SIZE        4096 
+#define CHUNK_BLOCK_SIZE        1024 
 #endif
 #define CHUNK_STATUS_ON         0x01
 #define CHUNK_STATUS_OVER       0x02
