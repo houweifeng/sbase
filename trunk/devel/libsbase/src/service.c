@@ -435,7 +435,7 @@ err_conn:
                                 &(service->session), CONN_STATUS_FREE)))
                         {
                             p = buf;
-                            MB_PUSH(conn->buffer, p, n);
+                            mmb_push(conn->buffer, p, n);
                             pth = (PROCTHREAD *)(conn->parent);
                             if(pth)
                             {

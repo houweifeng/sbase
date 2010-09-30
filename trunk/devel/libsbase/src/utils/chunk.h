@@ -10,7 +10,7 @@
 #define CHUNK_MEM   0x02
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
-#define CHUNK_FILE_NAME_MAX     32
+#define CHUNK_FILE_NAME_MAX     256
 //#define CHUNK_BLOCK_MAX         262144
 #define CHUNK_BLOCK_MAX         1024
 //#define CHUNK_BLOCK_MAX       1048576
@@ -26,25 +26,24 @@
 #ifndef CHUNK_BLOCK_SIZE
 #define CHUNK_BLOCK_SIZE        1024 
 #endif
-#define CHUNK_STATUS_ON     0x01
-#define CHUNK_STATUS_OVER   0x02
+#define CHUNK_STATUS_ON         0x01
+#define CHUNK_STATUS_OVER       0x02
 typedef struct _CHUNK
 {
     char *data;
     int ndata;
-    off_t left;
     int bsize;
-    char *end;
-    char *mdata;
-    int  offmdata;
+    int offmdata;
     int nmdata;
     int type;
     int fd;
-    char filename[CHUNK_FILE_NAME_MAX];
     off_t size;
     off_t offset;
-    int n ;
-    int status;
+    off_t left;
+    int  status;
+    char *mdata;
+    char *end;
+    char filename[CHUNK_FILE_NAME_MAX];
 }CHUNK;
 typedef struct _CHUNK * PCHUNK;
 #define CK(ptr) ((CHUNK *)ptr)
