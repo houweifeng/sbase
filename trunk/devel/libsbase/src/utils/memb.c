@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "memb.h"
@@ -223,3 +224,80 @@ void mmb_clean(void *mmb)
     }
     return ;
 }
+
+#ifdef _DEBUG_MEMB
+#include <fcntl.h>
+int main()
+{
+    int fd = 0, n = 0;
+    void *mmb = NULL;
+    char *s = NULL;
+
+    if((mmb = mmb_init(MB_BLOCK_SIZE)))
+    {
+        if((fd = open("/tmp/memb.text", O_CREAT|O_RDWR, 0644)) > 0)
+        {
+            s = "asmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "bsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "csmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "dsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "esmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "fsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "gsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "hsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "ismafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "jsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "ksmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "lsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "msmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "nsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "osmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "psmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "qsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "rsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "ssmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "tsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "usmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "vsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "wsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "xsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "ysmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            s = "zsmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+            n = strlen(s);write(fd, s, n);mmb_push(mmb, s, n);
+            fprintf(stdout, "----------1---------\n%s\n", MB_DATA(mmb));
+            mmb_reset(mmb);
+            fprintf(stdout, "----------2---------\n%s\n", MB_DATA(mmb));
+            lseek(fd, 0, SEEK_SET);
+            mmb_read(mmb, fd);
+            fprintf(stdout, "----------3---------\n%s\n", MB_DATA(mmb));
+        }
+        mmb_clean(mmb);
+    }
+    return ;
+}
+#endif
