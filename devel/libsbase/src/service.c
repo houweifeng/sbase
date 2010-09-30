@@ -996,8 +996,7 @@ CHUNK *service_popchunk(SERVICE *service)
         }
         else
         {
-            CK_INIT(cp);
-            if(cp)
+            if((cp = chunk_init()))
             {
                 service->nchunks++;
                 DEBUG_LOGGER(service->logger, "popchunk(%p) nchunks:%d", cp, service->nchunks);
@@ -1075,7 +1074,7 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
         MUTEX_LOCK(service->mutex);
         if(service->nqchunks < SB_CHUNKS_MAX)
         {
-            CK_RESET(cp);
+            chunk_reset(cp);
             x = service->nqchunks++;
             service->qchunks[x] = cp;
             DEBUG_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
@@ -1084,7 +1083,7 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
         else 
         {
             DEBUG_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
-            CK_CLEAN(cp);
+            chunk_clean(cp);
             service->nchunks--;
         }
         MUTEX_UNLOCK(service->mutex);
@@ -1103,7 +1102,7 @@ CB_DATA *service_newchunk(SERVICE *service, int len)
     {
         if((cp = service_popchunk(service)))
         {
-            CK_MEM(cp, len); 
+            chunk_mem(cp, len);
             chunk = (CB_DATA *)cp;
         }
     }
@@ -1560,7 +1559,7 @@ void service_clean(SERVICE **pservice)
                 if((cp = (*pservice)->qchunks[i]))
                 {
                     DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", cp);
-                    CK_CLEAN(cp);
+                    chunk_clean(cp);
                 }
             }
         }
