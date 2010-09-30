@@ -502,8 +502,10 @@ OVER:
         }
         else
             p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
-        p += sprintf(p, "Content-Type: %s; charset=%s\r\n",
-                http_mime_types[mimeid].s, http_default_charset);
+        if(mimeid > 0)
+            p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
+        else
+            p += sprintf(p, "Content-Type: Unkown; charset=%s\r\n",  http_default_charset);
         /*
         if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
         {
@@ -733,8 +735,10 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 LL(from), LL(to - 1), LL(st.st_size));
                     else
                         p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
-                    p += sprintf(p, "Content-Type: %s; charset=%s\r\n",
-                            http_mime_types[mimeid].s, http_default_charset);
+                    if(mimeid > 0)
+                        p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
+                    else
+                        p += sprintf(p, "Content-Type: Unkown; charset=%s\r\n",  http_default_charset);
                     //fprintf(stdout, "%s::%d outfile:%s\n", __FILE__, __LINE__, outfile);
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                     {
@@ -751,7 +755,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "%s", "\r\n");//date end
                     if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
                     if(name) 
-                        p += sprintf(p, "Content-Disposition: attachment, filename='%s'\r\n", name);
+                        p += sprintf(p, "Content-Disposition: attachment, filename=\"%s\"\r\n",name);
                     p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL),p);p += sprintf(p,"\r\n");
                     p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
@@ -1086,9 +1090,9 @@ int main(int argc, char **argv)
         }
 
     }
-    //sbase->running(sbase, 0);
+    sbase->running(sbase, 0);
     //sbase->running(sbase, 300);
-    sbase->running(sbase, 120000000);sbase->stop(sbase);
+    //sbase->running(sbase, 120000000);sbase->stop(sbase);
     sbase->clean(&sbase);
     if(namemap) TRIETAB_CLEAN(namemap);
     if(hostmap) TRIETAB_CLEAN(hostmap);
