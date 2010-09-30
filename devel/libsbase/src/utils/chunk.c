@@ -3,7 +3,46 @@
 #include <unistd.h>
 #include <errno.h>
 #include "chunk.h"
-int ck_mmap(void *ptr)
+/* set/initialize chunk mem */
+int chunk_init_mem(void *chunk, int len)
+{
+    int n = 0, size = 0;
+
+    if(chunk)
+    {
+        if(len > CHK(chunk)->base_size)
+        {
+            n = len/CHUNK_BLOCK_SIZE;
+            if(len % CHUNK_BLOCK_SIZE) ++n;
+            size = n * CHUNK_BLOCK_SIZE;
+            if(CHK(chunk)->data) free(CHK(chunk)->data);
+            CHK(chunk)->data = NULL;
+            if((CHK(chunk)->data = (char *)calloc(1, size)))
+            {
+                CHK(chunk)->left = CHK(chunk)->base_size = size;
+            }
+            else
+            {
+                CHK(chunk)->left = CHK(chunk)->base_size = 0;
+            }
+        }
+        CHK(chunk)->type = CHUNK_MEM;
+        CHK(chunk)->status = CHUNK_STATUS_ON;
+        CHK(chunk)->size = CHK(chunk)->left = len;
+        CHK(chunk)->end = CHK(chunk)->data;
+        CHK(chunk)->ndata = 0;
+        return 0;
+    }
+    return -1;
+}
+
+/* initialize chunk file */
+int chunk_init_file(void *chunk, char *file, off_t offset, off_t len )
+{
+
+}
+
+int chunk_mmap(void *chunk)
 {
     if(CK_NMDATA(ptr) <= 0)
     {

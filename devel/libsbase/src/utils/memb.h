@@ -1,8 +1,5 @@
 #include <stdlib.h>
 #include <unistd.h>
-#ifdef HAVE_SSL
-#include "xssl.h"
-#endif
 #ifndef _MEMB_H
 #define _MEMB_H
 #ifdef __cplusplus
@@ -15,11 +12,7 @@ typedef struct _MEMB
     int block_size;
     int size;
     int left;
-    int n;
-    int len;
     char *end;
-    char *p;
-    char *tmp;
 }MEMB;
 #define MB_BLOCK_SIZE  65536
 #define MB(ptr)        ((MEMB *)ptr)
@@ -29,121 +22,24 @@ typedef struct _MEMB
 #define MB_DATA(ptr)   (MB(ptr)->data)
 #define MB_NDATA(ptr)  (MB(ptr)->ndata)
 #define MB_END(ptr)    (MB(ptr)->end)
-#define MB_TMP(ptr)    (MB(ptr)->tmp)
-#define MB_LEN(ptr)    (MB(ptr)->len)
-#define MBP(ptr)       (MB(ptr)->p)
-#define MBN(ptr)       (MB(ptr)->n)
-#define MB_MALLOC(old,newlen) ((old)?realloc(old,newlen):calloc(1,newlen))
-#define MB_NEWLEN(xlen, base) ((((xlen%(base)) > 0)+(xlen/(base)))*base)
-#define MB_RESIZE(ptr, newlen) (((MBN(ptr) = (MB_SIZE(ptr)+newlen)) > 0 && MB_BSIZE(ptr) > 0 && (MB_LEN(ptr) = MB_NEWLEN(MBN(ptr), MB_BSIZE(ptr))) > 0 && (MB_TMP(ptr) = MB_MALLOC(MB_DATA(ptr), MB_LEN(ptr))) && (MB_DATA(ptr) = MB_TMP(ptr)) && (MB_END(ptr) = (MB_DATA(ptr) + MB_NDATA(ptr))) && (MB_LEFT(ptr) = (MB_LEN(ptr) - MB_NDATA(ptr))) > 0)?(MB_SIZE(ptr) = MB_LEN(ptr)):0)
-#define MB_CHECK(ptr) ((ptr)?((MB_LEFT(ptr) <= 0)?((MB_RESIZE(ptr, MB_BSIZE(ptr)) > 0)?0:-1):0):-1)
-#define MB_INIT(ptr, b_size)                                                        \
-do                                                                                  \
-{                                                                                   \
-    if((ptr = calloc(1, sizeof(MEMB))))                                             \
-    {                                                                               \
-        MB_BSIZE(ptr) = MB_BLOCK_SIZE;                                              \
-        if(b_size > MB_BLOCK_SIZE) MB_BSIZE(ptr) = b_size;                          \
-    }                                                                               \
-}while(0)
-#define MB_SET_BLOCK_SIZE(ptr, b_size) {MB_BSIZE(ptr) = b_size;}
-#ifdef HAVE_SSL
-#define MB_READ_SSL(ptr, ssl) ((MB_CHECK(ptr) == 0) ?                               \
-    (((MBN(ptr) = SSL_read(XSSL(ssl), MB_END(ptr), MB_LEFT(ptr))) > 0 )?            \
-         (((MB_END(ptr) += MBN(ptr)) && (MB_NDATA(ptr) += MBN(ptr)) >= 0            \
-           && (MB_LEFT(ptr) -= MBN(ptr)) >= 0) ? MBN(ptr): -1) : MBN(ptr)) : -1)
-#else 
-#define MB_READ_SSL(ptr, ssl) -1
-#endif
-#define MB_READ(ptr, fd) ((MB_CHECK(ptr) == 0) ?                                    \
-    (((MBN(ptr) = read(fd, MB_END(ptr), MB_LEFT(ptr))) > 0 )?                       \
-         (((MB_END(ptr) += MBN(ptr)) && (MB_NDATA(ptr) += MBN(ptr)) >= 0            \
-           && (MB_LEFT(ptr) -= MBN(ptr)) >= 0) ? MBN(ptr): -1) : MBN(ptr)) : -1)
-#define MB_RECV(ptr, fd, flag) ((MB_CHECK(ptr) == 0) ?                              \
-    (((MBN(ptr) = recv(fd, MB_END(ptr), MB_LEFT(ptr), flag)) > 0 )?                 \
-         (((MB_END(ptr) += MBN(ptr)) && (MB_NDATA(ptr) += MBN(ptr)) >= 0            \
-           && (MB_LEFT(ptr) -= MBN(ptr)) >= 0) ? MBN(ptr): -1) : MBN(ptr)) : -1)
-#define MB_PUSH(ptr, pdata, npdata)                                                 \
-do{                                                                                 \
-    if(ptr && pdata && npdata > 0)                                                  \
-    {                                                                               \
-        if(MB_LEFT(ptr) < npdata) {MB_RESIZE(ptr, npdata);}                         \
-        if(MB_DATA(ptr))                                                            \
-        {                                                                           \
-            MBN(ptr) = npdata;                                                      \
-            MBP(ptr) = pdata;                                                       \
-            while(MBN(ptr)-- > 0)                                                   \
-            {                                                                       \
-                MB_LEFT(ptr)--;                                                     \
-                MB_NDATA(ptr)++;                                                    \
-                *(MB_END(ptr))++ = *(MBP(ptr))++;                                   \
-            }                                                                       \
-        }                                                                           \
-        else {MB_LEFT(ptr) = 0; MB_SIZE(ptr) = 0; MB_END(ptr) = NULL;}              \
-    }                                                                               \
-}while(0)
-#define MB_DEL(ptr, npdata)                                                         \
-do{                                                                                 \
-    if(ptr && npdata > 0 && MB_DATA(ptr))                                           \
-    {                                                                               \
-        MBN(ptr)        = MB_NDATA(ptr) - npdata;                                   \
-        MBP(ptr)        = MB_DATA(ptr) + npdata;                                    \
-        MB_END(ptr)     = MB_DATA(ptr);                                             \
-        MB_LEFT(ptr)    = MB_SIZE(ptr);                                             \
-        MB_NDATA(ptr)   = 0;                                                        \
-        while(MBN(ptr)-- > 0)                                                       \
-        {                                                                           \
-            *(MB_END(ptr))++ = *(MBP(ptr))++;                                       \
-            MB_NDATA(ptr)++;                                                        \
-            MB_LEFT(ptr)--;                                                         \
-        }                                                                           \
-    }                                                                               \
-}while(0)
-#define MB_STREND(ptr) {MB_PUSH(ptr, "\0", 1);}
-#ifdef _SBASE_MIN_MM_
-#define MB_RESET(ptr)                                                               \
-do                                                                                  \
-{                                                                                   \
-    if(ptr)                                                                         \
-    {                                                                               \
-        if(MB_DATA(ptr)){free(MB_DATA(ptr));}                                       \
-        MB_END(ptr) = MB_DATA(ptr) = NULL;                                          \
-        MB_LEFT(ptr) = MB_SIZE(ptr) = 0;                                            \
-        MB_BSIZE(ptr) = MB_BLOCK_SIZE;                                              \
-        MB_NDATA(ptr)  = 0;                                                         \
-    }                                                                               \
-}while(0)
-#else
-#define MB_RESET(ptr)                                                               \
-do{                                                                                 \
-    if(ptr)                                                                         \
-    {                                                                               \
-        if(MB_SIZE(ptr) > MB_BLOCK_SIZE)                                            \
-        {                                                                           \
-            if(MB_DATA(ptr)) free(MB_DATA(ptr));                                    \
-            MB_DATA(ptr) = NULL;                                                    \
-            MB_LEFT(ptr) = MB_SIZE(ptr) = 0;                                        \
-        }                                                                           \
-        else                                                                        \
-        {                                                                           \
-            MB_LEFT(ptr) = MB_SIZE(ptr);                                            \
-        }                                                                           \
-        MB_END(ptr)  = MB_DATA(ptr);                                                \
-        MB_NDATA(ptr)  = 0;                                                         \
-    }                                                                               \
-}while(0)
-#endif
-#define MB_CLEAN(ptr)                                                               \
-do                                                                                  \
-{                                                                                   \
-    if(ptr)                                                                         \
-    {                                                                               \
-        if(MB_DATA(ptr)) free(MB_DATA(ptr));                                        \
-        free(ptr);                                                                  \
-        ptr = NULL;                                                                 \
-    }                                                                               \
-}while(0)
-
+/* mem buffer initialize */
+void *mmb_init(int block_size);
+/* mem buffer set block size */
+void mmb_set_block_size(void *mmb, int block_size);
+/* mem buffer receiving  */
+int mmb_recv(void *mmb, int fd, int flag);
+/* mem buffer reading  */
+int mmb_read(void *mmb, int fd);
+/* mem buffer reading with SSL */
+int mmb_read_SSL(void *mmb, void *ssl);
+/* push mem buffer */
+int mmb_push(void *mmb, char *data, int ndata);
+/* delete mem buffer */
+int mmb_del(void *mmb, int ndata);
+/* reset mem buffer */
+void mmb_reset(void *mmb);
+/* clean mem buffer */
+void mmb_clean(void *mmb);
 #ifdef __cplusplus
  }
 #endif
