@@ -374,9 +374,9 @@ typedef struct _CONN
     void *buffer;
     void *packet;
     void *cache;
-    void *chunk;
     void *oob;
     void *exchange;
+    void *chunk;
     /* logger and timer */
     void *logger;
     /* queue */
@@ -449,12 +449,12 @@ typedef struct _CONN
     int (*set_session)(struct _CONN *, SESSION *session);
     int (*over_session)(struct _CONN *);
     int (*newtask)(struct _CONN *, CALLBACK *);
-    SESSION session;
     /* connection bytes stats */
     long long   recv_oob_total;
     long long   sent_oob_total;
     long long   recv_data_total;
     long long   sent_data_total;
+    SESSION session;
 }CONN, *PCONN;
 CONN *conn_init();
 #ifdef __cplusplus
