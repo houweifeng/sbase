@@ -101,7 +101,7 @@ int chunk_read(void *chunk, int fd)
         CHK(chunk)->left -= n;
         CHK(chunk)->end += n;
         CHK(chunk)->ndata += n;
-        if(CHK(chunk)->left <= 0) 
+        if(CHK(chunk)->left == 0) 
             CHK(chunk)->status = CHUNK_STATUS_OVER;
     }
     return n;
@@ -118,7 +118,7 @@ int chunk_read_SSL(void *chunk, void *ssl)
         CHK(chunk)->left -= n;
         CHK(chunk)->end += n;
         CHK(chunk)->ndata += n;
-        if(CHK(chunk)->left <= 0) 
+        if(CHK(chunk)->left == 0) 
             CHK(chunk)->status = CHUNK_STATUS_OVER;
     }
 #endif
@@ -167,7 +167,7 @@ int chunk_mem_fill(void *chunk, void *data, int ndata)
         CHK(chunk)->end += n;
         CHK(chunk)->left -= n;
         CHK(chunk)->ndata += n;
-        if(CHK(chunk)->left <= 0) CHK(chunk)->status = CHUNK_STATUS_OVER;
+        if(CHK(chunk)->left == 0) CHK(chunk)->status = CHUNK_STATUS_OVER;
     }
     return n;
 }
@@ -191,9 +191,11 @@ int chunk_file_check(void *chunk)
 {
     int fd = -1;
 
-    if(chunk && CHK(chunk)->fd <= 0)
+    if(chunk)
     {
-        fd = CHK(chunk)->fd = open(CHK(chunk)->filename, O_RDONLY);
+        if(CHK(chunk)->fd <= 0)
+            CHK(chunk)->fd = open(CHK(chunk)->filename, O_RDONLY);
+        fd = CHK(chunk)->fd;
     }
     return fd;
 }
@@ -285,23 +287,25 @@ void chunk_munmap(void *chunk)
 /* mmap */
 char *chunk_mmap(void *chunk)
 {
-    off_t offset = 0, n = 0;
     char *data = NULL;
+    off_t offset = 0;
 
     if(chunk && CHK(chunk)->left > 0 && CHK(chunk)->offset >= 0 && CHK(chunk)->fd > 0)
     {
-        if(CHK(chunk)->mmap) munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
-        CHK(chunk)->mmap = NULL;
-        offset = (CHK(chunk)->offset / MMAP_PAGE_SIZE) * MMAP_PAGE_SIZE;
-        if((CHK(chunk)->mmap = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_SHARED, 
-                        CHK(chunk)->fd, offset)) && CHK(chunk)->mmap != (void *)-1)
+        if(CHK(chunk)->mmleft == 0)
         {
-            n = CHK(chunk)->offset - offset;
-            data = CHK(chunk)->mmap + n;
-            CHK(chunk)->mmleft = MMAP_CHUNK_SIZE - n;
-            if(CHK(chunk)->left < CHK(chunk)->mmleft) 
-                CHK(chunk)->mmleft = CHK(chunk)->left;
+            if(CHK(chunk)->mmap) munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
+            offset = (CHK(chunk)->offset / MMAP_PAGE_SIZE) * MMAP_PAGE_SIZE;
+            if((CHK(chunk)->mmap = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_SHARED, 
+                            CHK(chunk)->fd, offset)) && CHK(chunk)->mmap != (void *)-1)
+            {
+                CHK(chunk)->mmoff = CHK(chunk)->offset - offset;
+                CHK(chunk)->mmleft = MMAP_CHUNK_SIZE - CHK(chunk)->mmoff;
+                if(CHK(chunk)->left < CHK(chunk)->mmleft) 
+                    CHK(chunk)->mmleft = CHK(chunk)->left;
+            }
         }
+        if(CHK(chunk)->mmap) data = CHK(chunk)->mmap + CHK(chunk)->mmoff;
     }
     return data;
 }
@@ -317,10 +321,12 @@ int chunk_write_from_file(void *chunk, int fd)
         if(chunk_file_check(chunk) > 0 && (data = chunk_mmap(chunk))
                 && (n = write(fd, data,  CHK(chunk)->mmleft)) > 0)
         {
+            CHK(chunk)->mmoff += n;
+            CHK(chunk)->mmleft -= n;
+            if(CHK(chunk)->mmleft == 0) chunk_munmap(chunk);
             CHK(chunk)->offset += n;
             CHK(chunk)->left -= n; 
-            chunk_munmap(chunk);
-            if(CHK(chunk)->left <= 0)
+            if(CHK(chunk)->left == 0)
             {
                 CHK(chunk)->status = CHUNK_STATUS_OVER;
                 if(CHK(chunk)->fd  > 0)close(CHK(chunk)->fd);
@@ -343,10 +349,12 @@ int chunk_write_from_file_SSL(void *chunk, void *ssl)
         if(chunk_file_check(chunk) > 0 && (data = chunk_mmap(chunk))
                 && (n = SSL_write(XSSL(ssl), data,  CHK(chunk)->mmleft)) > 0)
         {
+            CHK(chunk)->mmoff += n;
+            CHK(chunk)->mmleft -= n;
+            if(CHK(chunk)->mmleft == 0) chunk_munmap(chunk);
             CHK(chunk)->offset += n;
             CHK(chunk)->left -= n; 
-            chunk_munmap(chunk);
-            if(CHK(chunk)->left <= 0)
+            if(CHK(chunk)->left == 0)
             {
                 CHK(chunk)->status = CHUNK_STATUS_OVER;
                 if(CHK(chunk)->fd > 0)close(CHK(chunk)->fd);
@@ -373,7 +381,7 @@ int chunk_file_fill(void *chunk, char *data, int ndata)
         {
             CHK(chunk)->offset += n;
             CHK(chunk)->left -= n; 
-            if(CHK(chunk)->left <= 0)
+            if(CHK(chunk)->left == 0)
             {
                 CHK(chunk)->status = CHUNK_STATUS_OVER;
                 if(CHK(chunk)->fd > 0)close(CHK(chunk)->fd);
