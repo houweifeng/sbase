@@ -44,6 +44,7 @@ typedef struct _CHUNK
     off_t offset;
     off_t left;
     off_t mmleft;
+    off_t mmoff;
     char *mmap;
     char *end;
     char filename[CHUNK_FILE_NAME_MAX];
@@ -95,7 +96,7 @@ void chunk_reset(void *chunk);
 void chunk_clean(void *chunk);
 /* initialize chunk file */
 int chunk_file(void *chunk, char *file, off_t offset, off_t len);
-#define CHUNK_STATUS(ptr) ((CHK(ptr)->left <= 0)?CHUNK_STATUS_OVER:CHUNK_STATUS_ON)
+#define CHUNK_STATUS(ptr) ((CHK(ptr)->left == 0)?CHUNK_STATUS_OVER:CHUNK_STATUS_ON)
 #define CHUNK_READ(ptr, fd) ((CHK(ptr)->type == CHUNK_MEM)?chunk_read(ptr, fd):chunk_read_to_file(ptr, fd))
 #define CHUNK_READ_SSL(ptr, ssl) ((CHK(ptr)->type == CHUNK_MEM)?chunk_read_SSL(ptr, ssl):chunk_read_to_file_SSL(ptr, ssl))
 #define CHUNK_WRITE(ptr, fd) ((CHK(ptr)->type == CHUNK_MEM)?chunk_write(ptr, fd):chunk_write_from_file(ptr, fd))
