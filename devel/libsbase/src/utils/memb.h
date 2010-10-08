@@ -1,7 +1,9 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#ifndef _MEMB_H
-#define _MEMB_H
+#ifndef _MEMB_H_
+#define _MEMB_H_
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,6 +15,7 @@ typedef struct _MEMB
     int size;
     int left;
     char *end;
+    void *logger;
 }MEMB;
 #define MB_BLOCK_SIZE  65536
 #define MB(ptr)        ((MEMB *)ptr)
@@ -24,6 +27,8 @@ typedef struct _MEMB
 #define MB_END(ptr)    (MB(ptr)->end)
 /* mem buffer initialize */
 void *mmb_init(int block_size);
+/* set logger */
+void mmb_set_logger(void *mmb, void *logger);
 /* mem buffer set block size */
 void mmb_set_block_size(void *mmb, int block_size);
 /* mem buffer receiving  */

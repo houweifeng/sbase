@@ -25,7 +25,7 @@ int chunk_set_bsize(void *chunk, int len)
             size = n * CHUNK_BLOCK_SIZE;
             if(CHK(chunk)->data) free(CHK(chunk)->data);
             CHK(chunk)->data = NULL;
-            if((CHK(chunk)->data = (char *)calloc(1, size)))
+            if((CHK(chunk)->data = (char *)calloc(size, 1)))
             {
                 CHK(chunk)->bsize = size;
             }
@@ -55,7 +55,7 @@ int chunk_mem(void *chunk, int len)
             size = n * CHUNK_BLOCK_SIZE;
             if(CHK(chunk)->data) free(CHK(chunk)->data);
             CHK(chunk)->data = NULL;
-            if((CHK(chunk)->data = (char *)calloc(1, size)))
+            if((CHK(chunk)->data = (char *)calloc(size, 1)))
             {
                 CHK(chunk)->bsize = size;
             }
@@ -431,3 +431,33 @@ void chunk_clean(void *chunk)
     }
     return ;
 }
+
+#ifdef _DEBUG_CHUNK
+int main()
+{
+    char *s = "jsdhfkajsdhfksdhfksahfkhsadkfhkasdfklasdfjldsff";
+    int i = 0, n = strlen(s);
+    CHUNK *chunks[20480];
+
+
+    for(i = 0; i < 20480; i++)
+    {
+        if((chunks[i] = chunk_init()))
+        {
+            chunk_mem(chunks[i], 65536);
+            chunk_mem_fill(chunks[i], s, n);
+        }
+    }
+
+    for(i = 0; i < 20480; i++)
+    {
+        if(chunks[i])
+        {
+            chunk_clean(chunks[i]);
+        }
+    }
+    while(1)sleep(1);
+    return 0;
+}
+//gcc -o chk chunk.c -D_DEBUG_CHUNK && ./chk
+#endif
