@@ -1,24 +1,31 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
+#include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <errno.h>
 #include "memb.h"
-#ifdef HAVE_SSL
-#include "xssl.h"
-#endif
+#include "logger.h"
 /* mem buffer initialize */
-void *mmb_init(int block_size)
+MEMB *mmb_init(int block_size)
 {
-    void *mmb = NULL;
-    if((mmb = calloc(1, sizeof(MEMB))))
+    MEMB *mmb = NULL;
+    if((mmb = (MEMB *)calloc(1, sizeof(MEMB))))
     {
-        MB(mmb)->block_size = MB_BLOCK_SIZE;
+        mmb->block_size = MB_BLOCK_SIZE;
         if(block_size > MB_BLOCK_SIZE) 
-            MB(mmb)->block_size = block_size;
+            mmb->block_size = block_size;
     }
     return mmb;
+}
+
+/* set logger */
+void mmb_set_logger(void *mmb, void *logger)
+{
+    if(mmb)
+    {
+        MB(mmb)->logger = logger;
+    }
+    return ;
 }
 
 /* mem buffer set block size */
@@ -38,23 +45,39 @@ int mmb_incre(void *mmb, int incre_size)
         size = MB(mmb)->ndata + incre_size;
         if(size > MB(mmb)->size) 
         {
+            if(MB(mmb)->data)
+            {
+                n = size - MB(mmb)->size;
+                MB(mmb)->size = size;
+                MB(mmb)->left += n;
+                MB(mmb)->end = MB(mmb)->data + MB(mmb)->ndata;
+
+            }
             n = (size/MB(mmb)->block_size); 
             if(size % MB(mmb)->block_size) ++n;
             size = n * MB(mmb)->block_size;
-            if(MB(mmb)->data) MB(mmb)->data = (char *)realloc(MB(mmb)->data, size);
-            else MB(mmb)->data = (char *)calloc(1, size);
+            if(MB(mmb)->size > 0 && MB(mmb)->data == NULL)
+            {
+                ERROR_LOGGER(MB(mmb)->logger, "Invalid memory buffer[%p]->size:%d", mmb, MB(mmb)->size);
+                _exit(-1);
+            }
+            //if(MB(mmb)->data) MB(mmb)->data = realloc(MB(mmb)->data, size);
+            //else MB(mmb)->data = (char *)calloc(1, size);
+            MB(mmb)->data = (char *)realloc(MB(mmb)->data, size);
             if(MB(mmb)->data)
             {
+                n = size - MB(mmb)->size;
                 MB(mmb)->size = size;
-                MB(mmb)->left = size - MB(mmb)->ndata;
+                MB(mmb)->left += n;
                 MB(mmb)->end = MB(mmb)->data + MB(mmb)->ndata;
             }
             else
             {
-                MB(mmb)->size = 0;
-                MB(mmb)->left = 0;
-                MB(mmb)->end = NULL;
+                MB(mmb)->size = MB(mmb)->ndata = MB(mmb)->left = 0;
+                MB(mmb)->data = MB(mmb)->end = NULL;
+                n = 0;
             }
+            ACCESS_LOGGER(MB(mmb)->logger, "mmb-incre buffer[%p]->data:%p/size:%d end:%p", mmb, MB(mmb)->data, MB(mmb)->size, MB(mmb)->end);
         }
     }
     return n;
@@ -160,13 +183,14 @@ int mmb_del(void *mmb, int ndata)
     {
         if(ndata >= MB(mmb)->ndata)
         {
+            if(ndata > MB(mmb)->ndata) fprintf(stderr, "%s::%d Invalid buffer[%p]->ndata:%d need:%d size:%d\n", __FILE__, __LINE__, mmb, MB(mmb)->ndata, ndata, MB(mmb)->size);
             MB(mmb)->end = MB(mmb)->data;
             MB(mmb)->ndata = 0;
             MB(mmb)->left = MB(mmb)->size;
         }
         else
         {
-            s =  MB(mmb)->data + MB(mmb)->ndata;
+            s =  MB(mmb)->data + ndata;
             while(s < end)
             {
                 *p++ = *s++;
@@ -195,10 +219,11 @@ void mmb_reset(void *mmb)
 #else
 void mmb_reset(void *mmb)
 {
-    if(mmb)
+    if(mmb && MB(mmb)->size > 0)
     {
         if(MB(mmb)->size > MB_BLOCK_SIZE)
         {
+            //fprintf(stderr, "reset buffer[%p]->size:%d ndata:%d\n", mmb, MB(mmb)->size, MB(mmb)->ndata);
             if(MB(mmb)->data) free(MB(mmb)->data);
             MB(mmb)->size = MB(mmb)->left = MB(mmb)->ndata = 0;
             MB(mmb)->end = MB(mmb)->data = NULL;
@@ -219,7 +244,13 @@ void mmb_clean(void *mmb)
 {
     if(mmb)
     {
-        if(MB(mmb)->data) free(MB(mmb)->data);
+        if(MB(mmb)->data) 
+        {
+            ACCESS_LOGGER(MB(mmb)->logger, "mmb-clean buffer[%p]->data:%p/size:%d end:%p", mmb, MB(mmb)->data, MB(mmb)->size, MB(mmb)->end);
+            MB(mmb)->ndata = MB(mmb)->size = MB(mmb)->left = 0;
+            free(MB(mmb)->data);
+            MB(mmb)->data = NULL;
+        }
         free(mmb);
     }
     return ;
@@ -229,10 +260,48 @@ void mmb_clean(void *mmb)
 #include <fcntl.h>
 int main()
 {
-    int fd = 0, n = 0;
-    void *mmb = NULL;
-    char *s = NULL;
+    int fd = 0, i = 0, n = 0;
+    void *mmb = NULL, *logger = NULL;
+    char *s = NULL, *logfile = "/tmp/log.txt";
+    MEMB *list[20480];
 
+    if((fd = open("/tmp/memb.text", O_CREAT|O_RDWR, 0644)) > 0)
+    {
+        LOGGER_INIT(logger, logfile);
+        s = "asmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
+        n = strlen(s);
+        write(fd, s, n);
+        write(fd, s, n);
+        write(fd, s, n);
+        write(fd, s, n);
+        fprintf(stdout, "Ready for initialize list sizeof(MEMB):%d\n", sizeof(MEMB));
+        for(i = 0; i < 20480; i++)
+        {
+            if((list[i] = (MEMB *)mmb_init(MB_BLOCK_SIZE)))
+            {
+                mmb_set_logger(list[i], logger);
+                lseek(fd, 0, SEEK_SET);
+                n = mmb_read(list[i], fd);
+                ACCESS_LOGGER(logger, "read %d  to list[%d][%p]\n", n, i, list[i]);
+                //mmb_push(list[i], s, n);
+                //mmb_del(list[i], n);
+            }
+        }
+        fprintf(stdout, "Ready for clean list\n");
+        for(i = 0; i < 20480; i++)
+        {
+            if(list[i])
+            {
+                mmb_clean(list[i]);
+                ACCESS_LOGGER(logger, "clean list[%d][%p]\n", i, list[i]);
+            }
+        }
+        fprintf(stdout, "over-clean list\n");
+        close(fd);
+        LOGGER_CLEAN(logger);
+    }
+    while(1) sleep(1);
+    return 0;
     if((mmb = mmb_init(MB_BLOCK_SIZE)))
     {
         if((fd = open("/tmp/memb.text", O_CREAT|O_RDWR, 0644)) > 0)
@@ -300,4 +369,5 @@ int main()
     }
     return ;
 }
+//gcc -o mb memb.c -D_DEBUG_MEMB && ./mb
 #endif
