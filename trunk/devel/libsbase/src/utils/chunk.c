@@ -5,6 +5,9 @@
 #include <string.h>
 #include <fcntl.h>
 #include "chunk.h"
+#ifdef HAVE_MMAP
+#include <sys/mman.h>
+#endif
 /* initialize chunk */
 CHUNK *chunk_init()
 {
@@ -23,16 +26,24 @@ int chunk_set_bsize(void *chunk, int len)
             n = len / CHUNK_BLOCK_SIZE;
             if(len % CHUNK_BLOCK_SIZE) ++n;
             size = n * CHUNK_BLOCK_SIZE;
-            if(CHK(chunk)->data) free(CHK(chunk)->data);
+            if(CHK(chunk)->data) 
+            {
+#ifdef HAVE_MMAP
+                munmap(CHK(chunk)->data, CHK(chunk)->bsize);
+#else
+                free(CHK(chunk)->data);
+#endif
+            }
             CHK(chunk)->data = NULL;
-            if((CHK(chunk)->data = (char *)calloc(size, 1)))
-            {
-                CHK(chunk)->bsize = size;
-            }
-            else
-            {
-                CHK(chunk)->bsize = 0;
-            }
+#ifdef HAVE_MMAP
+            if((CHK(chunk)->data = mmap(NULL, size, PROT_READ|PROT_WRITE, 
+                            MAP_PRIVATE|MAP_ANON, -1, 0)) == (void *)-1)
+                CHK(chunk)->data = NULL;
+#else
+            CHK(chunk)->data = (char *)calloc(size, 1);
+#endif
+            if(CHK(chunk)->data) CHK(chunk)->bsize = size;
+            else CHK(chunk)->bsize = 0;
         }
         CHK(chunk)->end = CHK(chunk)->data;
         CHK(chunk)->ndata = 0;
@@ -53,16 +64,24 @@ int chunk_mem(void *chunk, int len)
             n = len/CHUNK_BLOCK_SIZE;
             if(len % CHUNK_BLOCK_SIZE) ++n;
             size = n * CHUNK_BLOCK_SIZE;
-            if(CHK(chunk)->data) free(CHK(chunk)->data);
+            if(CHK(chunk)->data) 
+            {
+#ifdef HAVE_MMAP
+                munmap(CHK(chunk)->data, CHK(chunk)->bsize);
+#else
+                free(CHK(chunk)->data);
+#endif
+            }
             CHK(chunk)->data = NULL;
-            if((CHK(chunk)->data = (char *)calloc(size, 1)))
-            {
-                CHK(chunk)->bsize = size;
-            }
-            else
-            {
-                CHK(chunk)->bsize = 0;
-            }
+#ifdef HAVE_MMAP
+            if((CHK(chunk)->data = mmap(NULL, size, PROT_READ|PROT_WRITE, 
+                            MAP_PRIVATE|MAP_ANON, -1, 0)) == (void *)-1)
+                CHK(chunk)->data = NULL;
+#else
+            CHK(chunk)->data = (char *)calloc(size, 1);
+#endif
+            if(CHK(chunk)->data) CHK(chunk)->bsize = size;
+            else CHK(chunk)->bsize = 0;
         }
         CHK(chunk)->type = CHUNK_MEM;
         CHK(chunk)->status = CHUNK_STATUS_ON;
@@ -410,7 +429,14 @@ void chunk_reset(void *chunk)
         CHK(chunk)->offset = 0;
         if(CHK(chunk)->bsize > CHUNK_BLOCK_MAX)
         {
-            if(CHK(chunk)->data) free(CHK(chunk)->data);
+            if(CHK(chunk)->data) 
+            {
+#ifdef HAVE_MMAP
+                munmap(CHK(chunk)->data, CHK(chunk)->bsize);
+#else
+                free(CHK(chunk)->data);
+#endif
+            }
             CHK(chunk)->data = NULL;
             CHK(chunk)->bsize = 0;
         }
@@ -425,7 +451,14 @@ void chunk_clean(void *chunk)
     if(chunk)
     {
         if(CHK(chunk)->mmap) munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
-        if(CHK(chunk)->data) free(CHK(chunk)->data);
+        if(CHK(chunk)->data) 
+        {
+#ifdef HAVE_MMAP
+            munmap(CHK(chunk)->data, CHK(chunk)->bsize);
+#else
+            free(CHK(chunk)->data);
+#endif
+        }
         if(CHK(chunk)->fd > 0) close(CHK(chunk)->fd);
         free(chunk);
     }

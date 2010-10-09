@@ -65,7 +65,7 @@ libsbase_la_LIBADD =
 am_libsbase_la_OBJECTS = libsbase_la-conn.lo libsbase_la-message.lo \
 	libsbase_la-procthread.lo libsbase_la-sbase.lo \
 	libsbase_la-service.lo libsbase_la-chunk.lo \
-	libsbase_la-memb.lo libsbase_la-queue.lo
+	libsbase_la-mmblock.lo libsbase_la-queue.lo
 libsbase_la_OBJECTS = $(am_libsbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
@@ -213,8 +213,8 @@ utils/xssl.h 	\
 utils/chunk.h \
 utils/chunk.c \
 utils/logger.h \
-utils/memb.h \
-utils/memb.c \
+utils/mmblock.h \
+utils/mmblock.c \
 utils/mutex.h \
 utils/queue.h \
 utils/queue.c \
@@ -375,8 +375,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod-lechod.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-chunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-memb.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-message.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-mmblock.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-procthread.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-queue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-sbase.Plo@am__quote@
@@ -452,12 +452,12 @@ libsbase_la-chunk.lo: utils/chunk.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-chunk.lo `test -f 'utils/chunk.c' || echo '$(srcdir)/'`utils/chunk.c
 
-libsbase_la-memb.lo: utils/memb.c
-@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-memb.lo -MD -MP -MF "$(DEPDIR)/libsbase_la-memb.Tpo" -c -o libsbase_la-memb.lo `test -f 'utils/memb.c' || echo '$(srcdir)/'`utils/memb.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbase_la-memb.Tpo" "$(DEPDIR)/libsbase_la-memb.Plo"; else rm -f "$(DEPDIR)/libsbase_la-memb.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/memb.c' object='libsbase_la-memb.lo' libtool=yes @AMDEPBACKSLASH@
+libsbase_la-mmblock.lo: utils/mmblock.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-mmblock.lo -MD -MP -MF "$(DEPDIR)/libsbase_la-mmblock.Tpo" -c -o libsbase_la-mmblock.lo `test -f 'utils/mmblock.c' || echo '$(srcdir)/'`utils/mmblock.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbase_la-mmblock.Tpo" "$(DEPDIR)/libsbase_la-mmblock.Plo"; else rm -f "$(DEPDIR)/libsbase_la-mmblock.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/mmblock.c' object='libsbase_la-mmblock.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-memb.lo `test -f 'utils/memb.c' || echo '$(srcdir)/'`utils/memb.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-mmblock.lo `test -f 'utils/mmblock.c' || echo '$(srcdir)/'`utils/mmblock.c
 
 libsbase_la-queue.lo: utils/queue.c
 @am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-queue.lo -MD -MP -MF "$(DEPDIR)/libsbase_la-queue.Tpo" -c -o libsbase_la-queue.lo `test -f 'utils/queue.c' || echo '$(srcdir)/'`utils/queue.c; \

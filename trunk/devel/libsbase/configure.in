@@ -57,10 +57,16 @@ if test "$havebz2lib" = "yes" ; then
 fi
 
 #semaphore
-havesemaphore=no
-AC_CHECK_LIB(c, sem_wait, havesemaphore=yes)
-if test "$havesemaphore" = "yes" ; then
-    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+#havesemaphore=no
+#AC_CHECK_LIB(c, sem_wait, havesemaphore=yes)
+#if test "$havesemaphore" = "yes" ; then
+#    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+#fi
+
+havemmap=no
+AC_CHECK_LIB(c, munmap, havemmap=yes)
+if test "$havemmap" = "yes" ; then
+    CPPFLAGS="${CPPFLAGS} -DHAVE_MMAP"
 fi
 
 AC_CHECK_EXTRA_OPTIONS

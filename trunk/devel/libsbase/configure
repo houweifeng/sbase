@@ -19579,10 +19579,16 @@ if test "$havebz2lib" = "yes" ; then
 fi
 
 #semaphore
-havesemaphore=no
-echo "$as_me:$LINENO: checking for sem_wait in -lc" >&5
-echo $ECHO_N "checking for sem_wait in -lc... $ECHO_C" >&6
-if test "${ac_cv_lib_c_sem_wait+set}" = set; then
+#havesemaphore=no
+#AC_CHECK_LIB(c, sem_wait, havesemaphore=yes)
+#if test "$havesemaphore" = "yes" ; then
+#    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+#fi
+
+havemmap=no
+echo "$as_me:$LINENO: checking for munmap in -lc" >&5
+echo $ECHO_N "checking for munmap in -lc... $ECHO_C" >&6
+if test "${ac_cv_lib_c_munmap+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -19600,11 +19606,11 @@ extern "C"
 #endif
 /* We use char because int might match the return type of a gcc2
    builtin and then its argument prototype would still apply.  */
-char sem_wait ();
+char munmap ();
 int
 main ()
 {
-sem_wait ();
+munmap ();
   ;
   return 0;
 }
@@ -19631,25 +19637,25 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_lib_c_sem_wait=yes
+  ac_cv_lib_c_munmap=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_cv_lib_c_sem_wait=no
+ac_cv_lib_c_munmap=no
 fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_c_sem_wait" >&5
-echo "${ECHO_T}$ac_cv_lib_c_sem_wait" >&6
-if test $ac_cv_lib_c_sem_wait = yes; then
-  havesemaphore=yes
+echo "$as_me:$LINENO: result: $ac_cv_lib_c_munmap" >&5
+echo "${ECHO_T}$ac_cv_lib_c_munmap" >&6
+if test $ac_cv_lib_c_munmap = yes; then
+  havemmap=yes
 fi
 
-if test "$havesemaphore" = "yes" ; then
-    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+if test "$havemmap" = "yes" ; then
+    CPPFLAGS="${CPPFLAGS} -DHAVE_MMAP"
 fi
 
 

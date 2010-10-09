@@ -1,7 +1,7 @@
 #include "sbase.h"
 #include "xssl.h"
 #include "conn.h"
-#include "memb.h"
+#include "mmblock.h"
 #include "chunk.h"
 #include "logger.h"
 #include "queue.h"
@@ -35,8 +35,8 @@ int conn_write_chunk(CONN *conn, CHUNK *cp)
 }
 int conn_read_buffer(CONN *conn)
 {
-	if(conn->ssl) return mmb_read_SSL(conn->buffer, conn->ssl);
-	else return mmb_read(conn->buffer, conn->fd);
+	if(conn->ssl) return MMB_READ_SSL(conn->buffer, conn->ssl);
+	else return MMB_READ(conn->buffer, conn->fd);
 }
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
@@ -148,10 +148,10 @@ do                                                                              
 do                                                                                          \
 {                                                                                           \
         CONN_STATE_RESET(conn);                                                             \
-        mmb_reset(conn->packet);                                                             \
-        mmb_reset(conn->cache);                                                              \
-        chunk_reset(conn->chunk);                                                              \
-        if(MB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}              \
+        MMB_RESET(conn->packet);                                                            \
+        MMB_RESET(conn->cache);                                                             \
+        chunk_reset(conn->chunk);                                                           \
+        if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}             \
 }while(0)
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
@@ -346,10 +346,10 @@ int conn_terminate(CONN *conn)
         {
             ERROR_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, PCB(conn->packet)->ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
-            mmb_reset(conn->buffer); 
-            mmb_reset(conn->packet); 
-            mmb_reset(conn->cache); 
-            mmb_reset(conn->oob); 
+            MMB_RESET(conn->buffer); 
+            MMB_RESET(conn->packet); 
+            MMB_RESET(conn->cache); 
+            MMB_RESET(conn->oob); 
             chunk_reset(conn->chunk); 
         }
         conn->close_proxy(conn);
@@ -518,11 +518,11 @@ int conn_start_cstate(CONN *conn)
                 }
                 cp  = NULL;
             }
-            mmb_reset(conn->packet);
-            mmb_reset(conn->cache);
-            mmb_reset(conn->buffer);
-            mmb_reset(conn->oob);
-            mmb_reset(conn->exchange);
+            MMB_RESET(conn->packet);
+            MMB_RESET(conn->cache);
+            MMB_RESET(conn->buffer);
+            MMB_RESET(conn->oob);
+            MMB_RESET(conn->exchange);
             chunk_reset(conn->chunk);
             ret = 0;
         }
@@ -608,9 +608,9 @@ int conn_read_handler(CONN *conn)
 
     if(conn)
     {
-        DEBUG_LOGGER(conn->logger, "ready-reading conn[%p] buffer[%p][%d/%d] packet[%p][%d/%d] oob[%p][%d/%d] cache[%p][%d/%d] exchange[%p][%d/%d] chunk[%p][%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, conn->buffer, MB_LEFT(conn->buffer), MB_SIZE(conn->buffer),  conn->packet, MB_LEFT(conn->packet), MB_SIZE(conn->packet), conn->oob, MB_LEFT(conn->oob), MB_SIZE(conn->oob), conn->cache, MB_LEFT(conn->cache), MB_SIZE(conn->cache), conn->exchange, MB_LEFT(conn->exchange), MB_SIZE(conn->exchange), conn->chunk, LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "ready-reading conn[%p] buffer[%p][%d/%d] packet[%p][%d/%d] oob[%p][%d/%d] cache[%p][%d/%d] exchange[%p][%d/%d] chunk[%p][%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, conn->buffer, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer),  conn->packet, MMB_LEFT(conn->packet), MMB_SIZE(conn->packet), conn->oob, MMB_LEFT(conn->oob), MMB_SIZE(conn->oob), conn->cache, MMB_LEFT(conn->cache), MMB_SIZE(conn->cache), conn->exchange, MMB_LEFT(conn->exchange), MMB_SIZE(conn->exchange), conn->chunk, LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* Receive OOB */
-        if((n = mmb_recv(conn->oob, conn->fd, MSG_OOB)) > 0)
+        if((n = MMB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
             conn->recv_oob_total += n;
             DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld "
@@ -619,7 +619,7 @@ int conn_read_handler(CONN *conn)
                     conn->local_port, conn->fd);
             if((n = conn->oob_handler(conn)) > 0)
             {
-                mmb_del(conn->oob, n);
+                MMB_DELETE(conn->oob, n);
             }
             // CONN TIMER sample 
             return ret = 0;
@@ -639,7 +639,7 @@ int conn_read_handler(CONN *conn)
         {
             ERROR_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
                     "from %s:%d on %s:%d via %d failed, %s",
-                    n, MB_END(conn->buffer), MB_LEFT(conn->buffer), conn->remote_ip, 
+                    n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
             /* Terminate connection */
@@ -648,8 +648,8 @@ int conn_read_handler(CONN *conn)
         }
         conn->recv_data_total += n;
         DEBUG_LOGGER(conn->logger, "Received %d bytes nbuffer:%d/%d  left:%d data total %lld "
-                "from %s:%d on %s:%d via %d", n, PCB(conn->buffer)->ndata, MB_SIZE(conn->buffer),
-                MB_LEFT(conn->buffer), conn->recv_data_total, conn->remote_ip, conn->remote_port, 
+                "from %s:%d on %s:%d via %d", n, PCB(conn->buffer)->ndata, MMB_SIZE(conn->buffer),
+                MMB_LEFT(conn->buffer), conn->recv_data_total, conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
         //for proxy
         if(conn->session.packet_type & PACKET_PROXY)
@@ -752,7 +752,7 @@ int conn_packet_reader(CONN *conn)
         data = PCB(conn->buffer);
         packet_type = conn->session.packet_type;
         DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%p][%d]", 
-                packet_type, conn->buffer, MB_NDATA(conn->buffer));
+                packet_type, conn->buffer, MMB_NDATA(conn->buffer));
         /* Remove invalid packet type */
         if(!(packet_type & PACKET_ALL))
         {
@@ -775,7 +775,7 @@ int conn_packet_reader(CONN *conn)
         }
         /* Read packet with certain length */
         else if(packet_type & PACKET_CERTAIN_LENGTH
-                && MB_NDATA(conn->buffer) >= conn->session.packet_length)
+                && MMB_NDATA(conn->buffer) >= conn->session.packet_length)
         {
             len = conn->session.packet_length;
             DEBUG_LOGGER(conn->logger, "Reading packet with certain length[%d] "
@@ -787,15 +787,15 @@ int conn_packet_reader(CONN *conn)
         else if(packet_type & PACKET_DELIMITER && conn->session.packet_delimiter
                 && conn->session.packet_delimiter_length > 0)
         {
-            p = MB_DATA(conn->buffer);
-            e = MB_END(conn->buffer);
+            p = MMB_DATA(conn->buffer);
+            e = MMB_END(conn->buffer);
             i = 0;
             while(p < e && i < conn->session.packet_delimiter_length )
             {
                 if(((char *)conn->session.packet_delimiter)[i++] != *p++) i = 0;
                 if(i == conn->session.packet_delimiter_length)
                 {
-                    len = p - MB_DATA(conn->buffer);
+                    len = p - MMB_DATA(conn->buffer);
                     DEBUG_LOGGER(conn->logger, "Reading packet with delimiter[%d] "
                     "length[%d] from %s:%d on %s:%d via %d", conn->session.packet_delimiter_length, 
                     len, conn->remote_ip, conn->remote_port, conn->local_ip, 
@@ -810,10 +810,10 @@ end:
         /* Copy data to packet from buffer */
         if(len > 0)
         {
-            mmb_reset(conn->packet);
-            mmb_push(conn->packet, MB_DATA(conn->buffer), len);
-            mmb_del(conn->buffer, len);
-            DEBUG_LOGGER(conn->logger, "Got packet length[%d/%d]", len, MB_SIZE(conn->packet));
+            MMB_RESET(conn->packet);
+            MMB_PUSH(conn->packet, MMB_DATA(conn->buffer), len);
+            MMB_DELETE(conn->buffer, len);
+            DEBUG_LOGGER(conn->logger, "Got packet length[%d/%d]", len, MMB_SIZE(conn->packet));
             /* For packet handling */
             conn->s_state = S_STATE_PACKET_HANDLING;
             conn->push_message(conn, MESSAGE_PACKET);
@@ -836,7 +836,7 @@ int conn_packet_handler(CONN *conn)
         DEBUG_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->s_state == S_STATE_PACKET_HANDLING)
         {
-            DEBUG_LOGGER(conn->logger, "Reset packet_handler(%p) buffer:[%d/%d] on %s:%d via %d", conn->session.packet_handler, MB_LEFT(conn->buffer), MB_SIZE(conn->buffer), conn->remote_ip, conn->remote_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "Reset packet_handler(%p) buffer:[%d/%d] on %s:%d via %d", conn->session.packet_handler, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer), conn->remote_ip, conn->remote_port, conn->fd);
             SESSION_RESET(conn);
         }
     }
@@ -938,7 +938,7 @@ int conn_proxy_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready exchange packet[%d] to conn[%s:%d]", 
                     exchange->ndata, oconn->remote_ip, oconn->remote_port);
             oconn->push_chunk(oconn, exchange->data, exchange->ndata);
-            mmb_reset(conn->exchange);
+            MMB_RESET(conn->exchange);
         }
         if(conn->chunk && (chunk = PCB(conn->chunk)) && chunk->ndata > 0)
         {
@@ -953,7 +953,7 @@ int conn_proxy_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready exchange buffer[%d] to conn[%s:%d]", 
                     buffer->ndata, oconn->remote_ip, oconn->remote_port);
             oconn->push_chunk(oconn, buffer->data, buffer->ndata);
-            mmb_del(conn->buffer, buffer->ndata);
+            MMB_DELETE(conn->buffer, buffer->ndata);
         }
         return 0;
     }
@@ -998,9 +998,9 @@ int conn_push_exchange(CONN *conn, void *data, int size)
 
     if(conn)
     {
-        mmb_push(conn->exchange, data, size);
+        MMB_PUSH(conn->exchange, data, size);
         DEBUG_LOGGER(conn->logger, "Push exchange size[%d] remote[%s:%d] local[%s:%d] via %d",
-                MB_NDATA(conn->exchange), conn->remote_ip, conn->remote_port, 
+                MMB_NDATA(conn->exchange), conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
@@ -1015,10 +1015,10 @@ int conn_save_cache(CONN *conn, void *data, int size)
 
     if(conn)
     {
-        mmb_reset(conn->cache);
-        mmb_push(conn->cache, data, size);
+        MMB_RESET(conn->cache);
+        MMB_PUSH(conn->cache, data, size);
         DEBUG_LOGGER(conn->logger, "Saved cache size[%d] remote[%s:%d] local[%s:%d] via %d",
-                MB_NDATA(conn->cache), conn->remote_ip, conn->remote_port, 
+                MMB_NDATA(conn->cache), conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
@@ -1036,11 +1036,11 @@ int conn__read__chunk(CONN *conn)
         if(conn->s_state == S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
                 && CHK_LEFT(conn->chunk) > 0
-                && MB_NDATA(conn->buffer) > 0)
+                && MMB_NDATA(conn->buffer) > 0)
         {
-            if((n = CHUNK_FILL(conn->chunk, MB_DATA(conn->buffer), MB_NDATA(conn->buffer))) > 0)
+            if((n = CHUNK_FILL(conn->chunk, MMB_DATA(conn->buffer), MMB_NDATA(conn->buffer))) > 0)
             {
-                mmb_del(conn->buffer, n);
+                MMB_DELETE(conn->buffer, n);
             }
             if(CHUNK_STATUS(conn->chunk) == CHUNK_STATUS_OVER )
             {
@@ -1340,11 +1340,11 @@ void conn_reset(CONN *conn)
         conn->evid = 0;
         conn->evtimer = NULL;
         /* buffer and chunk */
-        mmb_reset(conn->buffer);
-        mmb_reset(conn->packet);
-        mmb_reset(conn->oob);
-        mmb_reset(conn->cache);
-        mmb_reset(conn->exchange);
+        MMB_RESET(conn->buffer);
+        MMB_RESET(conn->packet);
+        MMB_RESET(conn->oob);
+        MMB_RESET(conn->cache);
+        MMB_RESET(conn->exchange);
         chunk_reset(conn->chunk);
         /* timer, logger, message_queue and send_queue */
         conn->message_queue = NULL;
@@ -1396,17 +1396,17 @@ void conn_clean(CONN *conn)
         MUTEX_DESTROY(conn->mutex);
         if(conn->event) conn->event->clean(&(conn->event));
         conn->event = NULL;
-        DEBUG_LOGGER(conn->logger, "ready-clean conn[%p] buffer[%p][%d/%d] packet[%p][%d/%d] oob[%p][%d/%d] cache[%p][%d/%d] exchange[%p][%d/%d] chunk[%p][%lld/%d]", conn, conn->buffer, MB_LEFT(conn->buffer), MB_SIZE(conn->buffer),  conn->packet, MB_LEFT(conn->packet), MB_SIZE(conn->packet), conn->oob, MB_LEFT(conn->oob), MB_SIZE(conn->oob), conn->cache, MB_LEFT(conn->cache), MB_SIZE(conn->cache), conn->exchange, MB_LEFT(conn->exchange), MB_SIZE(conn->exchange), conn->chunk, LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk));
+        DEBUG_LOGGER(conn->logger, "ready-clean conn[%p] buffer[%p][%d/%d] packet[%p][%d/%d] oob[%p][%d/%d] cache[%p][%d/%d] exchange[%p][%d/%d] chunk[%p][%lld/%d]", conn, conn->buffer, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer),  conn->packet, MMB_LEFT(conn->packet), MMB_SIZE(conn->packet), conn->oob, MMB_LEFT(conn->oob), MMB_SIZE(conn->oob), conn->cache, MMB_LEFT(conn->cache), MMB_SIZE(conn->cache), conn->exchange, MMB_LEFT(conn->exchange), MMB_SIZE(conn->exchange), conn->chunk, LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk));
         /* Clean BUFFER */
-        mmb_clean(conn->buffer);
+        MMB_CLEAN(conn->buffer);
         /* Clean OOB */
-        mmb_clean(conn->oob);
+        MMB_CLEAN(conn->oob);
         /* Clean cache */
-        mmb_clean(conn->cache);
+        MMB_CLEAN(conn->cache);
         /* Clean packet */
-        mmb_clean(conn->packet);
+        MMB_CLEAN(conn->packet);
         /* Clean exchange */
-        mmb_clean(conn->exchange);
+        MMB_CLEAN(conn->exchange);
         /* Clean chunk */
         chunk_clean(conn->chunk);
         /* Clean send queue */
@@ -1437,11 +1437,11 @@ CONN *conn_init()
         conn->gindex = -1;
 
         MUTEX_INIT(conn->mutex);
-        conn->buffer = mmb_init(MB_BLOCK_SIZE);
-        conn->packet = mmb_init(MB_BLOCK_SIZE);
-        conn->cache = mmb_init(MB_BLOCK_SIZE);
-        conn->oob = mmb_init(MB_BLOCK_SIZE);
-        conn->exchange = mmb_init(MB_BLOCK_SIZE);
+        conn->buffer = mmblock_init();
+        conn->packet = mmblock_init();
+        conn->cache = mmblock_init();
+        conn->oob = mmblock_init();
+        conn->exchange = mmblock_init();
         conn->chunk = chunk_init();
         conn->send_queue            = queue_init();
         conn->event                 = ev_init();

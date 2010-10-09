@@ -7,7 +7,7 @@
 #include "logger.h"
 #include "service.h"
 #include "mutex.h"
-#include "memb.h"
+#include "mmblock.h"
 #include "message.h"
 #include "evtimer.h"
 #ifndef UI
@@ -435,7 +435,7 @@ err_conn:
                                 &(service->session), CONN_STATUS_FREE)))
                         {
                             p = buf;
-                            mmb_push(conn->buffer, p, n);
+                            MMB_PUSH(conn->buffer, p, n);
                             pth = (PROCTHREAD *)(conn->parent);
                             if(pth)
                             {

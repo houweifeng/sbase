@@ -502,7 +502,7 @@ OVER:
         }
         else
             p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
-        if(mimeid > 0)
+        if(mimeid >= 0)
             p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
         else
             p += sprintf(p, "Content-Type: Unkown; charset=%s\r\n",  http_default_charset);
@@ -689,7 +689,6 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     }
                     if(to == 0) to = st.st_size;
                     len = to - from;
-                    //fprintf(stdout, "%s::%d mime:%s[%d] len:%lld [%lld-%lld]\n", __FILE__, __LINE__, mime, nmime, LL(len), LL(from), LL(to));
                     //mime 
                     if(mime && nmime > 0)
                     {
@@ -727,7 +726,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     {
                         return 0;
                     }
-                    else outfile = file;
+                    else 
+                        outfile = file;
                     p = buf;
                     if(from > 0)
                         p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
@@ -735,7 +735,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 LL(from), LL(to - 1), LL(st.st_size));
                     else
                         p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
-                    if(mimeid > 0)
+                    if(mimeid >= 0)
                         p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
                     else
                         p += sprintf(p, "Content-Type: Unkown; charset=%s\r\n",  http_default_charset);
