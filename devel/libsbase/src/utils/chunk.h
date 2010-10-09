@@ -14,7 +14,7 @@ extern "C" {
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
 #define CHUNK_FILE_NAME_MAX     256
-#define CHUNK_BLOCK_MAX         262144
+#define CHUNK_BLOCK_MAX         524288
 //#define CHUNK_BLOCK_MAX       1024
 #define MMAP_PAGE_SIZE          4096
 //#define CHUNK_BLOCK_MAX       1048576
@@ -28,7 +28,7 @@ extern "C" {
 //#define MMAP_CHUNK_SIZE       8388608 
 #endif
 #ifndef CHUNK_BLOCK_SIZE
-#define CHUNK_BLOCK_SIZE        1024 
+#define CHUNK_BLOCK_SIZE        4096
 #endif
 #define CHUNK_STATUS_ON         0x01
 #define CHUNK_STATUS_OVER       0x02

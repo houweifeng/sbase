@@ -65,9 +65,9 @@ int mmb_incre(void *mmb, int incre_size)
                 _exit(-1);
             }
             */
-            if(MB(mmb)->data) MB(mmb)->data = realloc(MB(mmb)->data, size);
-            else MB(mmb)->data = (char *)calloc(1, size);
-            //MB(mmb)->data = (char *)realloc(MB(mmb)->data, size);
+            //if(MB(mmb)->data) MB(mmb)->data = realloc(MB(mmb)->data, size);
+            //else MB(mmb)->data = (char *)calloc(1, size);
+            MB(mmb)->data = (char *)realloc(MB(mmb)->data, size);
             if(MB(mmb)->data)
             {
                 MB(mmb)->size = size;
@@ -123,7 +123,6 @@ int mmb_read(void *mmb, int fd)
     if(mmb && fd > 0)
     {
         mmb_check(mmb);
-        return 0;
         if(MB(mmb)->left > 0 && MB(mmb)->end && MB(mmb)->data 
                 && (n = read(fd, MB(mmb)->end, MB(mmb)->left)) > 0)
         {

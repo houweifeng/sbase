@@ -13,8 +13,8 @@ utils/xssl.h 	\
 utils/chunk.h \
 utils/chunk.c \
 utils/logger.h \
-utils/memb.h \
-utils/memb.c \
+utils/mmblock.h \
+utils/mmblock.c \
 utils/mutex.h \
 utils/queue.h \
 utils/queue.c \
