@@ -17,7 +17,7 @@ typedef struct _MEMB
     char *end;
     void *logger;
 }MEMB;
-#define MB_BLOCK_SIZE  65536
+#define MB_BLOCK_SIZE  131072
 #define MB(ptr)        ((MEMB *)ptr)
 #define MB_SIZE(ptr)   (MB(ptr)->size)
 #define MB_BSIZE(ptr)  (MB(ptr)->block_size)
