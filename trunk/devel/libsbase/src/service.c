@@ -358,7 +358,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
             {
                 if(service->sock_type == SOCK_STREAM)
                 {
-                    if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                    while((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
                     {
                         ip = inet_ntoa(rsa.sin_addr);
                         port = ntohs(rsa.sin_port);
@@ -444,7 +444,7 @@ err_conn:
                                 if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
                             }
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
-                                    " buffer:%d", ip, port, fd, MB_NDATA(conn->buffer));
+                                    " buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
                         }
                         else
                         {

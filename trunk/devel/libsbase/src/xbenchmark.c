@@ -196,6 +196,16 @@ int http_over(CONN *conn, int respcode)
     return -1;
 }
 
+int http_check_over(CONN *conn)
+{
+    if(conn)
+    {
+        //if(is_keepalive) return http_over(conn, conn->s_id); 
+        return http_over(conn, conn->s_id);
+    }
+    return -1;
+}
+
 int benchmark_packet_reader(CONN *conn, CB_DATA *buffer)
 {
     return 0;
@@ -220,11 +230,6 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             if(*s >= '0' && *s <= '9') respcode = atoi(s);
         }
         conn->s_id = respcode;
-        if(respcode < 200 || respcode > 300)
-        {
-            //fprintf(stdout, "HTTP:%s\n", p);
-            return http_over(conn, respcode);
-        }
         //check Content-Length
         if((s = strstr(p, "Content-Length")) || (s = strstr(p, "content-length")))
         {
@@ -235,11 +240,9 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
                 else++s;
             }
             if(*s >= '0' && *s <= '9' && (len = atoll(s)) > 0) 
-                conn->recv_chunk(conn, len);
-            else 
-                return http_over(conn, respcode);
-            
+                return conn->recv_chunk(conn, len);
         }
+        return http_check_over(conn);
     }
     return -1;
 }
@@ -248,7 +251,7 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
 {
     if(conn)
     {
-        return http_over(conn, conn->s_id);
+        return http_check_over(conn);
     }
     return 0;
 }
@@ -272,7 +275,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
                 ACCESS_LOGGER(logger, "connecting timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
                 ntimeout++;
                 conn->over_cstate(conn);
-                return http_over(conn, 0);
+                return http_check_over(conn);
             }
             else
             {
@@ -291,7 +294,7 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
     if(conn)
     {
         //fprintf(stdout, "error on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
-        return http_over(conn, conn->s_id);
+        return http_check_over(conn);
     }
     return -1;
 }
@@ -318,7 +321,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
             }
             ntimeout++;
             conn->over_cstate(conn);
-            return http_over(conn, 0);
+            return http_check_over(conn);
         }
     }
     return -1;

@@ -38,8 +38,13 @@ lechod_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
 
-bin_PROGRAMS = wbenchmark
-
+bin_PROGRAMS = wbenchmark xbenchmark
+wbenchmark_SOURCES = wbenchmark.c http.c http.h
 wbenchmark_CPPFLAGS = -I utils/ -Wall 
 wbenchmark_LDADD = libsbase.la
 wbenchmark_LDFLAGS = -static
+
+xbenchmark_SOURCES = xbenchmark.c http.c http.h
+xbenchmark_CPPFLAGS = -I utils/ -Wall 
+xbenchmark_LDADD = libsbase.la
+xbenchmark_LDFLAGS = -static

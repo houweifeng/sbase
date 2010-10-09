@@ -196,7 +196,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
             free(pp);
             pp = NULL;
-            //if(!keepalive) conn->over(conn);
+            if(!keepalive) conn->over(conn);
         }
         closedir(dirp);
         return 0;
@@ -531,7 +531,7 @@ OVER:
             conn->push_file(conn, outfile, from, len);
         }
         if(zstream) free(zstream);
-        //if(!keepalive)conn->over(conn);
+        if(!keepalive)conn->over(conn);
         return 0;
     }
 err:
@@ -761,7 +761,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
                     conn->push_chunk(conn, buf, (p - buf));
                     conn->push_file(conn, outfile, from, len);
-                    //if(!keepalive) conn->over(conn);
+                    if(!keepalive) conn->over(conn);
                     return 0;
                 }
             }

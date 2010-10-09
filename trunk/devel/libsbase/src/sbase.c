@@ -113,7 +113,7 @@ int sbase_running(SBASE *sbase, int useconds)
 {
     struct timeval tv = {0};
     SERVICE *service = NULL;
-    int ret = -1, i = -1;
+    int ret = -1, i = -1, k = 0;
     pid_t pid = 0;
 
     if(sbase)
@@ -168,9 +168,8 @@ running:
         if(sbase->usec_sleep > 0) tv.tv_usec = sbase->usec_sleep;
         do
         {
-            i = 0;
             //running evbase 
-            if(sbase->evbase->loop(sbase->evbase, 0, &tv) > 0)++i;
+            i = sbase->evbase->loop(sbase->evbase, 0, NULL);
             //sbase->evbase->loop(sbase->evbase, 0, &tv);
             //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
@@ -180,9 +179,10 @@ running:
             if(QMTOTAL(sbase->message_queue) > 0)
             {
                 qmessage_handler(sbase->message_queue, sbase->logger);
-                ++i;
+                i = 0;
             }
-            if(i == 0)usleep(sbase->usec_sleep);
+            if(i > 0)++k;
+            if(i == 0 || k > 1000000){usleep(sbase->usec_sleep); k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)

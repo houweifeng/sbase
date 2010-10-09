@@ -30,7 +30,7 @@ extern "C" {
 #define MESSAGE_STOP            0x10000
 #define MESSAGE_PROXY           0x20000
 #define MESSAGE_ALL		        0x3ffff
-#define QLEFT_MAX               256
+#define QLEFT_MAX               2048
 static char *messagelist[] = 
 {
 	"MESSAGE_NEW_CONN",
