@@ -1,5 +1,6 @@
 #ifndef _MMBLOCK_H_
 #define _MMBLOCK_H_
+#define MMBLOCK_BITS    1024
 typedef struct _MMBLOCK
 {
    	char *data;
@@ -7,6 +8,7 @@ typedef struct _MMBLOCK
   	int  size;
 	int  left;
 	char *end;
+    char block[MMBLOCK_BITS];
 }MMBLOCK;
 #define  MMBLOCK_BASE 	    4096
 //#define  MMBLOCK_BASE 	32768

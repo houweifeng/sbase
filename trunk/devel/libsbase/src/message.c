@@ -122,16 +122,9 @@ void qmessage_left(void *qmsg, MESSAGE *msg)
     if(q && msg)
     {
         MUTEX_LOCK(q->mutex);
-        if(q->nleft < QLEFT_MAX)
-        {
-            msg->next = q->left;
-            q->left = msg;
-            q->nleft++;
-        }
-        else
-        {
-            free(msg);
-        }
+        msg->next = q->left;
+        q->left = msg;
+        q->nleft++;
         MUTEX_UNLOCK(q->mutex);
     }
     return ;
