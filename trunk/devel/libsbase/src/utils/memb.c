@@ -4,16 +4,18 @@
 #include <string.h>
 #include <errno.h>
 #include "memb.h"
-#include "logger.h"
+#ifdef  HAVE_SSL
+#include "xssl.h"
+#endif
 /* mem buffer initialize */
-MEMB *mmb_init(int block_size)
+void *mmb_init(int block_size)
 {
-    MEMB *mmb = NULL;
-    if((mmb = (MEMB *)calloc(1, sizeof(MEMB))))
+    void *mmb = NULL;
+    if((mmb = calloc(1, sizeof(MEMB))))
     {
-        mmb->block_size = MB_BLOCK_SIZE;
+        MB(mmb)->block_size = MB_BLOCK_SIZE;
         if(block_size > MB_BLOCK_SIZE) 
-            mmb->block_size = block_size;
+            MB(mmb)->block_size = block_size;
     }
     return mmb;
 }
@@ -56,28 +58,29 @@ int mmb_incre(void *mmb, int incre_size)
             n = (size/MB(mmb)->block_size); 
             if(size % MB(mmb)->block_size) ++n;
             size = n * MB(mmb)->block_size;
+            /*
             if(MB(mmb)->size > 0 && MB(mmb)->data == NULL)
             {
-                ERROR_LOGGER(MB(mmb)->logger, "Invalid memory buffer[%p]->size:%d", mmb, MB(mmb)->size);
+                //ERROR_LOGGER(MB(mmb)->logger, "Invalid memory buffer[%p]->size:%d", mmb, MB(mmb)->size);
                 _exit(-1);
             }
-            //if(MB(mmb)->data) MB(mmb)->data = realloc(MB(mmb)->data, size);
-            //else MB(mmb)->data = (char *)calloc(1, size);
-            MB(mmb)->data = (char *)realloc(MB(mmb)->data, size);
+            */
+            if(MB(mmb)->data) MB(mmb)->data = realloc(MB(mmb)->data, size);
+            else MB(mmb)->data = (char *)calloc(1, size);
+            //MB(mmb)->data = (char *)realloc(MB(mmb)->data, size);
             if(MB(mmb)->data)
             {
-                n = size - MB(mmb)->size;
                 MB(mmb)->size = size;
-                MB(mmb)->left += n;
+                MB(mmb)->left = size - MB(mmb)->ndata;
                 MB(mmb)->end = MB(mmb)->data + MB(mmb)->ndata;
+                n = 0;
             }
             else
             {
                 MB(mmb)->size = MB(mmb)->ndata = MB(mmb)->left = 0;
                 MB(mmb)->data = MB(mmb)->end = NULL;
-                n = 0;
             }
-            ACCESS_LOGGER(MB(mmb)->logger, "mmb-incre buffer[%p]->data:%p/size:%d end:%p", mmb, MB(mmb)->data, MB(mmb)->size, MB(mmb)->end);
+            //ACCESS_LOGGER(MB(mmb)->logger, "mmb-incre buffer[%p]->data:%p/size:%d end:%p", mmb, MB(mmb)->data, MB(mmb)->size, MB(mmb)->end);
         }
     }
     return n;
@@ -120,6 +123,7 @@ int mmb_read(void *mmb, int fd)
     if(mmb && fd > 0)
     {
         mmb_check(mmb);
+        return 0;
         if(MB(mmb)->left > 0 && MB(mmb)->end && MB(mmb)->data 
                 && (n = read(fd, MB(mmb)->end, MB(mmb)->left)) > 0)
         {
@@ -176,14 +180,14 @@ int mmb_push(void *mmb, char *data, int ndata)
 /* delete mem buffer */
 int mmb_del(void *mmb, int ndata)
 {
-    char *p = NULL, *s = NULL, *end = NULL;
+    char *p = NULL, *s = NULL;
 
     if(mmb && ndata > 0 &&  MB(mmb)->ndata > 0
-            && (end = MB(mmb)->end) && (p = MB(mmb)->data))
+            && MB(mmb)->end && (p = MB(mmb)->data))
     {
         if(ndata >= MB(mmb)->ndata)
         {
-            if(ndata > MB(mmb)->ndata) fprintf(stderr, "%s::%d Invalid buffer[%p]->ndata:%d need:%d size:%d\n", __FILE__, __LINE__, mmb, MB(mmb)->ndata, ndata, MB(mmb)->size);
+            //if(ndata > MB(mmb)->ndata) fprintf(stderr, "%s::%d Invalid buffer[%p]->ndata:%d need:%d size:%d\n", __FILE__, __LINE__, mmb, MB(mmb)->ndata, ndata, MB(mmb)->size);
             MB(mmb)->end = MB(mmb)->data;
             MB(mmb)->ndata = 0;
             MB(mmb)->left = MB(mmb)->size;
@@ -191,7 +195,7 @@ int mmb_del(void *mmb, int ndata)
         else
         {
             s =  MB(mmb)->data + ndata;
-            while(s < end)
+            while(s < MB(mmb)->end)
             {
                 *p++ = *s++;
             }
@@ -246,7 +250,7 @@ void mmb_clean(void *mmb)
     {
         if(MB(mmb)->data) 
         {
-            ACCESS_LOGGER(MB(mmb)->logger, "mmb-clean buffer[%p]->data:%p/size:%d end:%p", mmb, MB(mmb)->data, MB(mmb)->size, MB(mmb)->end);
+            //ACCESS_LOGGER(MB(mmb)->logger, "mmb-clean buffer[%p]->data:%p/size:%d end:%p", mmb, MB(mmb)->data, MB(mmb)->size, MB(mmb)->end);
             MB(mmb)->ndata = MB(mmb)->size = MB(mmb)->left = 0;
             free(MB(mmb)->data);
             MB(mmb)->data = NULL;
@@ -267,7 +271,7 @@ int main()
 
     if((fd = open("/tmp/memb.text", O_CREAT|O_RDWR, 0644)) > 0)
     {
-        LOGGER_INIT(logger, logfile);
+        //LOGGER_INIT(logger, logfile);
         s = "asmafjkldsfjkdsfjklsdfjklasdfjlkadsjflkdklfafr\n";
         n = strlen(s);
         write(fd, s, n);
@@ -279,10 +283,10 @@ int main()
         {
             if((list[i] = (MEMB *)mmb_init(MB_BLOCK_SIZE)))
             {
-                mmb_set_logger(list[i], logger);
+                //mmb_set_logger(list[i], logger);
                 lseek(fd, 0, SEEK_SET);
                 n = mmb_read(list[i], fd);
-                ACCESS_LOGGER(logger, "read %d  to list[%d][%p]\n", n, i, list[i]);
+                //ACCESS_LOGGER(logger, "read %d  to list[%d][%p]\n", n, i, list[i]);
                 //mmb_push(list[i], s, n);
                 //mmb_del(list[i], n);
             }
@@ -293,12 +297,12 @@ int main()
             if(list[i])
             {
                 mmb_clean(list[i]);
-                ACCESS_LOGGER(logger, "clean list[%d][%p]\n", i, list[i]);
+                //ACCESS_LOGGER(logger, "clean list[%d][%p]\n", i, list[i]);
             }
         }
         fprintf(stdout, "over-clean list\n");
         close(fd);
-        LOGGER_CLEAN(logger);
+        //LOGGER_CLEAN(logger);
     }
     while(1) sleep(1);
     return 0;
