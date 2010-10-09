@@ -39,7 +39,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 sbin_PROGRAMS = xhttpd$(EXEEXT) lechod$(EXEEXT)
-bin_PROGRAMS = wbenchmark$(EXEEXT)
+bin_PROGRAMS = wbenchmark$(EXEEXT) xbenchmark$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -73,9 +73,14 @@ PROGRAMS = $(bin_PROGRAMS) $(sbin_PROGRAMS)
 am_lechod_OBJECTS = lechod-lechod.$(OBJEXT) lechod-iniparser.$(OBJEXT)
 lechod_OBJECTS = $(am_lechod_OBJECTS)
 lechod_DEPENDENCIES = libsbase.la
-wbenchmark_SOURCES = wbenchmark.c
-wbenchmark_OBJECTS = wbenchmark-wbenchmark.$(OBJEXT)
+am_wbenchmark_OBJECTS = wbenchmark-wbenchmark.$(OBJEXT) \
+	wbenchmark-http.$(OBJEXT)
+wbenchmark_OBJECTS = $(am_wbenchmark_OBJECTS)
 wbenchmark_DEPENDENCIES = libsbase.la
+am_xbenchmark_OBJECTS = xbenchmark-xbenchmark.$(OBJEXT) \
+	xbenchmark-http.$(OBJEXT)
+xbenchmark_OBJECTS = $(am_xbenchmark_OBJECTS)
+xbenchmark_DEPENDENCIES = libsbase.la
 am_xhttpd_OBJECTS = xhttpd-xhttpd.$(OBJEXT) xhttpd-mime.$(OBJEXT) \
 	xhttpd-http.$(OBJEXT) xhttpd-iniparser.$(OBJEXT) \
 	xhttpd-trie.$(OBJEXT) xhttpd-stime.$(OBJEXT)
@@ -92,10 +97,10 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) wbenchmark.c \
-	$(xhttpd_SOURCES)
-DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) wbenchmark.c \
-	$(xhttpd_SOURCES)
+SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
+	$(wbenchmark_SOURCES) $(xbenchmark_SOURCES) $(xhttpd_SOURCES)
+DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
+	$(wbenchmark_SOURCES) $(xbenchmark_SOURCES) $(xhttpd_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -234,9 +239,14 @@ lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
+wbenchmark_SOURCES = wbenchmark.c http.c http.h
 wbenchmark_CPPFLAGS = -I utils/ -Wall 
 wbenchmark_LDADD = libsbase.la
 wbenchmark_LDFLAGS = -static
+xbenchmark_SOURCES = xbenchmark.c http.c http.h
+xbenchmark_CPPFLAGS = -I utils/ -Wall 
+xbenchmark_LDADD = libsbase.la
+xbenchmark_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -361,6 +371,9 @@ lechod$(EXEEXT): $(lechod_OBJECTS) $(lechod_DEPENDENCIES)
 wbenchmark$(EXEEXT): $(wbenchmark_OBJECTS) $(wbenchmark_DEPENDENCIES) 
 	@rm -f wbenchmark$(EXEEXT)
 	$(LINK) $(wbenchmark_LDFLAGS) $(wbenchmark_OBJECTS) $(wbenchmark_LDADD) $(LIBS)
+xbenchmark$(EXEEXT): $(xbenchmark_OBJECTS) $(xbenchmark_DEPENDENCIES) 
+	@rm -f xbenchmark$(EXEEXT)
+	$(LINK) $(xbenchmark_LDFLAGS) $(xbenchmark_OBJECTS) $(xbenchmark_LDADD) $(LIBS)
 xhttpd$(EXEEXT): $(xhttpd_OBJECTS) $(xhttpd_DEPENDENCIES) 
 	@rm -f xhttpd$(EXEEXT)
 	$(LINK) $(xhttpd_LDFLAGS) $(xhttpd_OBJECTS) $(xhttpd_LDADD) $(LIBS)
@@ -381,7 +394,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-queue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-sbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-service.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-http.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-wbenchmark.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xbenchmark-http.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xbenchmark-xbenchmark.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-http.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-iniparser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-mime.Po@am__quote@
@@ -507,6 +523,48 @@ wbenchmark-wbenchmark.obj: wbenchmark.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='wbenchmark.c' object='wbenchmark-wbenchmark.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-wbenchmark.obj `if test -f 'wbenchmark.c'; then $(CYGPATH_W) 'wbenchmark.c'; else $(CYGPATH_W) '$(srcdir)/wbenchmark.c'; fi`
+
+wbenchmark-http.o: http.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-http.o -MD -MP -MF "$(DEPDIR)/wbenchmark-http.Tpo" -c -o wbenchmark-http.o `test -f 'http.c' || echo '$(srcdir)/'`http.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/wbenchmark-http.Tpo" "$(DEPDIR)/wbenchmark-http.Po"; else rm -f "$(DEPDIR)/wbenchmark-http.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='http.c' object='wbenchmark-http.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-http.o `test -f 'http.c' || echo '$(srcdir)/'`http.c
+
+wbenchmark-http.obj: http.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-http.obj -MD -MP -MF "$(DEPDIR)/wbenchmark-http.Tpo" -c -o wbenchmark-http.obj `if test -f 'http.c'; then $(CYGPATH_W) 'http.c'; else $(CYGPATH_W) '$(srcdir)/http.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/wbenchmark-http.Tpo" "$(DEPDIR)/wbenchmark-http.Po"; else rm -f "$(DEPDIR)/wbenchmark-http.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='http.c' object='wbenchmark-http.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-http.obj `if test -f 'http.c'; then $(CYGPATH_W) 'http.c'; else $(CYGPATH_W) '$(srcdir)/http.c'; fi`
+
+xbenchmark-xbenchmark.o: xbenchmark.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xbenchmark-xbenchmark.o -MD -MP -MF "$(DEPDIR)/xbenchmark-xbenchmark.Tpo" -c -o xbenchmark-xbenchmark.o `test -f 'xbenchmark.c' || echo '$(srcdir)/'`xbenchmark.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xbenchmark-xbenchmark.Tpo" "$(DEPDIR)/xbenchmark-xbenchmark.Po"; else rm -f "$(DEPDIR)/xbenchmark-xbenchmark.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='xbenchmark.c' object='xbenchmark-xbenchmark.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xbenchmark-xbenchmark.o `test -f 'xbenchmark.c' || echo '$(srcdir)/'`xbenchmark.c
+
+xbenchmark-xbenchmark.obj: xbenchmark.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xbenchmark-xbenchmark.obj -MD -MP -MF "$(DEPDIR)/xbenchmark-xbenchmark.Tpo" -c -o xbenchmark-xbenchmark.obj `if test -f 'xbenchmark.c'; then $(CYGPATH_W) 'xbenchmark.c'; else $(CYGPATH_W) '$(srcdir)/xbenchmark.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xbenchmark-xbenchmark.Tpo" "$(DEPDIR)/xbenchmark-xbenchmark.Po"; else rm -f "$(DEPDIR)/xbenchmark-xbenchmark.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='xbenchmark.c' object='xbenchmark-xbenchmark.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xbenchmark-xbenchmark.obj `if test -f 'xbenchmark.c'; then $(CYGPATH_W) 'xbenchmark.c'; else $(CYGPATH_W) '$(srcdir)/xbenchmark.c'; fi`
+
+xbenchmark-http.o: http.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xbenchmark-http.o -MD -MP -MF "$(DEPDIR)/xbenchmark-http.Tpo" -c -o xbenchmark-http.o `test -f 'http.c' || echo '$(srcdir)/'`http.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xbenchmark-http.Tpo" "$(DEPDIR)/xbenchmark-http.Po"; else rm -f "$(DEPDIR)/xbenchmark-http.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='http.c' object='xbenchmark-http.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xbenchmark-http.o `test -f 'http.c' || echo '$(srcdir)/'`http.c
+
+xbenchmark-http.obj: http.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xbenchmark-http.obj -MD -MP -MF "$(DEPDIR)/xbenchmark-http.Tpo" -c -o xbenchmark-http.obj `if test -f 'http.c'; then $(CYGPATH_W) 'http.c'; else $(CYGPATH_W) '$(srcdir)/http.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xbenchmark-http.Tpo" "$(DEPDIR)/xbenchmark-http.Po"; else rm -f "$(DEPDIR)/xbenchmark-http.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='http.c' object='xbenchmark-http.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xbenchmark-http.obj `if test -f 'http.c'; then $(CYGPATH_W) 'http.c'; else $(CYGPATH_W) '$(srcdir)/http.c'; fi`
 
 xhttpd-xhttpd.o: xhttpd.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-xhttpd.o -MD -MP -MF "$(DEPDIR)/xhttpd-xhttpd.Tpo" -c -o xhttpd-xhttpd.o `test -f 'xhttpd.c' || echo '$(srcdir)/'`xhttpd.c; \

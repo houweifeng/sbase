@@ -36,7 +36,7 @@ void procthread_run(void *arg)
             do
             {
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
-                i = pth->evbase->loop(pth->evbase, 0, &tv);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 //DEBUG_LOGGER(pth->logger, "over evbase->loop(%d)", i);
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
@@ -277,7 +277,7 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
         }
         else
         {
-            //conn->reset(conn);
+            conn->reset(conn);
             service_pushtoq(pth->service, conn);
         }
     }

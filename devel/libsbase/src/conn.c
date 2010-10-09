@@ -49,11 +49,11 @@ int conn_read_buffer(CONN *conn)
     if(conn->d_state & (_state_)) return ;                                                  \
 }
         //ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        //MUTEX_LOCK(conn->mutex);                                                            
 #define CONN_TERMINATE(conn, _state_)                                                       \
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        MUTEX_LOCK(conn->mutex);                                                            \
         conn->over_timeout(conn);                                                           \
         DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "     \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
@@ -67,7 +67,6 @@ int conn_read_buffer(CONN *conn)
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);             \
             conn__push__message(conn, MESSAGE_SHUT);                                        \
         }                                                                                   \
-        MUTEX_UNLOCK(conn->mutex);                                                          \
     }                                                                                       \
 }
 #define CONN_STATE_RESET(conn)                                                              \
@@ -212,16 +211,16 @@ void conn_event_handler(int event_fd, short event, void *arg)
             CONN_UPDATE_EVTIMER(conn, evtimer, evid);
             if(event & E_READ)
             {
-                DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d START", E_READ, conn, conn->d_state, event_fd);
+                //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d START", E_READ, conn, conn->d_state, event_fd);
                 ret = conn->read_handler(conn);
-                DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d END", E_READ, conn, conn->d_state, event_fd);
+                //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d END", E_READ, conn, conn->d_state, event_fd);
                 if(ret < 0)return ;
             }
             if(event & E_WRITE)
             {
-                DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d START", E_WRITE, conn, conn->d_state, event_fd);
+                //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d START", E_WRITE, conn, conn->d_state, event_fd);
                 ret = conn->write_handler(conn);
-                DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
+                //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
                 if(ret < 0)return ;
             } 
             /*
@@ -297,10 +296,10 @@ int conn_over(CONN *conn)
 
     if(conn)
     {
-        MUTEX_LOCK(conn->mutex);
+        //MUTEX_LOCK(conn->mutex);
         DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn_over_chunk(conn);
-        MUTEX_UNLOCK(conn->mutex);
+        //MUTEX_UNLOCK(conn->mutex);
         return 0;
     }
     return -1;
@@ -321,7 +320,6 @@ int conn_terminate(CONN *conn)
                 "qtotal:%d d_state:%d i_state:%d ", conn, conn->remote_ip, conn->remote_port,
                 conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
                 conn->d_state, conn->i_state);
-        /*
         conn->d_state = D_STATE_CLOSE;
         //continue incompleted data handling 
         if(conn->s_state == S_STATE_DATA_HANDLING && CHK_NDATA(conn->chunk) > 0)
@@ -340,7 +338,6 @@ int conn_terminate(CONN *conn)
                 conn->session.data_handler, conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
             }
         }
-        */
         if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY)
                 && conn->session.error_handler)
         {
