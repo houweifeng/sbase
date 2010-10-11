@@ -10,7 +10,7 @@ typedef struct _MMBLOCK
 	char *end;
     char block[MMBLOCK_BITS];
 }MMBLOCK;
-#define  MMBLOCK_BASE 	    4096
+#define  MMBLOCK_BASE 	    32768
 //#define  MMBLOCK_BASE 	32768
 //#define  MMBLOCK_BASE 	131072
 //#define  MMBLOCK_BASE 	524288
