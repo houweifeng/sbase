@@ -45,6 +45,10 @@ int chunk_set_bsize(void *chunk, int len)
             if(CHK(chunk)->data) CHK(chunk)->bsize = size;
             else CHK(chunk)->bsize = 0;
         }
+        else
+        {
+            memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
+        }
         CHK(chunk)->end = CHK(chunk)->data;
         CHK(chunk)->ndata = 0;
         return 0;
@@ -82,6 +86,10 @@ int chunk_mem(void *chunk, int len)
 #endif
             if(CHK(chunk)->data) CHK(chunk)->bsize = size;
             else CHK(chunk)->bsize = 0;
+        }
+        else
+        {
+            memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
         }
         CHK(chunk)->type = CHUNK_MEM;
         CHK(chunk)->status = CHUNK_STATUS_ON;

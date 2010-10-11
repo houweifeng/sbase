@@ -10,7 +10,7 @@ typedef struct _MMBLOCK
 	char *end;
     char block[MMBLOCK_BITS];
 }MMBLOCK;
-#define  MMBLOCK_BASE 	    32768
+#define  MMBLOCK_BASE 	    8192
 //#define  MMBLOCK_BASE 	32768
 //#define  MMBLOCK_BASE 	131072
 //#define  MMBLOCK_BASE 	524288
@@ -42,7 +42,7 @@ void mmblock_clean(MMBLOCK *mmblock);
 #define MMB_RECV(x, fd, flag) mmblock_recv(MMB(x), fd, flag)
 #define MMB_READ(x, fd) mmblock_read(MMB(x), fd)
 #define MMB_READ_SSL(x, ssl) mmblock_read_SSL(MMB(x), ssl)
-#define MMB_PUSH(x, data, ndata) mmblock_push(MMB(x), data, ndata)
+#define MMB_PUSH(x, pdata, ndata) mmblock_push(MMB(x), pdata, ndata)
 #define MMB_DELETE(x, ndata) mmblock_del(MMB(x), ndata)
 #define MMB_RESET(x) mmblock_reset(MMB(x))
 #define MMB_CLEAN(x) mmblock_clean(MMB(x))

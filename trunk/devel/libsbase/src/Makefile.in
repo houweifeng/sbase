@@ -214,16 +214,16 @@ message.c \
 procthread.c \
 sbase.c \
 service.c \
-utils/xssl.h 	\
 utils/chunk.h \
 utils/chunk.c \
-utils/logger.h \
 utils/mmblock.h \
 utils/mmblock.c \
-utils/mutex.h \
 utils/queue.h \
 utils/queue.c \
+utils/mutex.h \
+utils/logger.h \
 utils/evtimer.h \
+utils/xssl.h 	\
 utils/timer.h
 
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
