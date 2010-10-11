@@ -24,17 +24,20 @@ int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 
 	if(mmblock && incre_size > 0)
 	{
-		size = mmblock->ndata + incre_size;
+		size = mmblock->size + incre_size;
 		n = size / MMBLOCK_BASE;
 		if(size % MMBLOCK_BASE) ++n;
 		size = n * MMBLOCK_BASE;
 		//fprintf(stdout, "%s::%d data:%p size:%d\n", __FILE__, __LINE__, mmblock->data, size);
+        /*
+        */
 #ifdef 	HAVE_MMAP
 		if((old = mmblock->data))
 		{
 			if((mmblock->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE,-1,0)) == (void *)-1)
                 mmblock->data = NULL;
-            if(mmblock->data && mmblock->ndata > 0) memcpy(mmblock->data, old, mmblock->ndata);
+            if(mmblock->data && mmblock->ndata > 0 && mmblock->ndata <= mmblock->size) 
+                memcpy(mmblock->data, old, mmblock->ndata);
             munmap(old, mmblock->size);
 		}
 		else 
@@ -48,6 +51,7 @@ int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 
 		mmblock->data = (char *)realloc(mmblock->data, size);
 #endif
+		//mmblock->data = (char *)realloc(mmblock->data, size);
 		if(mmblock->data)
 		{
 			mmblock->end = mmblock->data + mmblock->ndata;
