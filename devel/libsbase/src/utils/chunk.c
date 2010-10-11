@@ -199,7 +199,7 @@ int chunk_mem_copy(void *chunk, void *data, int ndata)
     if(chunk && data && ndata > 0 && CHK(chunk)->left > 0 && CHK(chunk)->data && CHK(chunk)->end)
     {
         n = ndata;
-        if(CHK(chunk)->size > n) n = CHK(chunk)->size;
+        if(CHK(chunk)->size < n) n = CHK(chunk)->size;
         memcpy(CHK(chunk)->end, data, n);
     }
     return n;
