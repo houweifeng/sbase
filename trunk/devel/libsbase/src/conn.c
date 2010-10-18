@@ -53,7 +53,6 @@ int conn_read_buffer(CONN *conn)
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        MUTEX_LOCK(conn->mutex);                                                            \
         conn->over_timeout(conn);                                                           \
         DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "     \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
@@ -67,9 +66,10 @@ int conn_read_buffer(CONN *conn)
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);             \
             conn__push__message(conn, MESSAGE_SHUT);                                        \
         }                                                                                   \
-        MUTEX_UNLOCK(conn->mutex);                                                          \
     }                                                                                       \
 }
+        //MUTEX_LOCK(conn->mutex);                                                            \
+        //MUTEX_UNLOCK(conn->mutex);                                                          
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
     if(conn && (conn->d_state == 0))                                                        \
@@ -297,10 +297,10 @@ int conn_over(CONN *conn)
 
     if(conn)
     {
-        MUTEX_LOCK(conn->mutex);
+        //MUTEX_LOCK(conn->mutex);
         DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn_over_chunk(conn);
-        MUTEX_UNLOCK(conn->mutex);
+        //MUTEX_UNLOCK(conn->mutex);
         return 0;
     }
     return -1;

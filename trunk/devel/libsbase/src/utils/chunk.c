@@ -11,7 +11,11 @@
 /* initialize chunk */
 CHUNK *chunk_init()
 {
+#ifdef HAVE_MMAP
+	return (CHUNK *)mmap(NULL, sizeof(CHUNK), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE,-1,0);
+#else
     return (CHUNK *)calloc(1, sizeof(CHUNK));
+#endif
 }
 
 /* set/initialize chunk mem */
@@ -468,7 +472,11 @@ void chunk_clean(void *chunk)
 #endif
         }
         if(CHK(chunk)->fd > 0) close(CHK(chunk)->fd);
+#ifdef HAVE_MMAP
+        munmap(chunk, sizeof(CHUNK));
+#else
         free(chunk);
+#endif
     }
     return ;
 }
