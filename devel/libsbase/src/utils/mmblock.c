@@ -13,7 +13,11 @@
 MMBLOCK *mmblock_init()
 {
 	MMBLOCK *mmblock = NULL;
-	return mmblock = (MMBLOCK *)calloc(1, sizeof(MMBLOCK));
+#ifdef HAVE_MMAP
+	return (mmblock = (MMBLOCK *)mmap(NULL, sizeof(MMBLOCK), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE,-1,0));
+#else
+	return (mmblock = (MMBLOCK *)calloc(1, sizeof(MMBLOCK)));
+#endif
 }
 
 /* incre() */
@@ -224,7 +228,11 @@ void mmblock_clean(MMBLOCK *mmblock)
             free(mmblock->data);
 #endif
         }
+#ifdef HAVE_MMAP
+        munmap(mmblock, sizeof(MMBLOCK));
+#else
 		free(mmblock);
+#endif
 	}
 	return ;
 }

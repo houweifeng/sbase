@@ -1024,7 +1024,7 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         }
         else 
         {
-            DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d", conn,conn->d_state);
+            ACCESS_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d total:%d nconns:%d", conn,conn->d_state, service->nqconns, service->nconn);
             conn->clean(conn);
             service->nconn--;
         }
