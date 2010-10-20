@@ -19,10 +19,10 @@ extern "C" {
 #define SB_IP_MAX               16
 #define SB_XIDS_MAX             16
 #define SB_GROUPS_MAX           256
-#define SB_THREADS_MAX          1024
+#define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
-#define SB_QCONN_MAX            2048
-#define SB_CHUNKS_MAX           1024
+#define SB_QCONN_MAX            256
+#define SB_CHUNKS_MAX           256
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
