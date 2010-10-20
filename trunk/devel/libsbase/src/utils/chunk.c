@@ -11,11 +11,14 @@
 /* initialize chunk */
 CHUNK *chunk_init()
 {
+    CHUNK *chunk = NULL;
 #ifdef HAVE_MMAP
-	return (CHUNK *)mmap(NULL, sizeof(CHUNK), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE,-1,0);
+	chunk = (CHUNK *)mmap(NULL, sizeof(CHUNK), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED,-1,0);
+    memset(chunk, 0, sizeof(CHUNK));
 #else
-    return (CHUNK *)calloc(1, sizeof(CHUNK));
+    chunk = (CHUNK *)calloc(1, sizeof(CHUNK));
 #endif
+    return chunk;
 }
 
 /* set/initialize chunk mem */
@@ -40,8 +43,8 @@ int chunk_set_bsize(void *chunk, int len)
             }
             CHK(chunk)->data = NULL;
 #ifdef HAVE_MMAP
-            if((CHK(chunk)->data = mmap(NULL, size, PROT_READ|PROT_WRITE, 
-                            MAP_PRIVATE|MAP_ANON, -1, 0)) == (void *)-1)
+            if((CHK(chunk)->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, 
+                            MAP_SHARED|MAP_ANON, -1, 0)) == (void *)-1)
                 CHK(chunk)->data = NULL;
 #else
             CHK(chunk)->data = (char *)calloc(size, 1);
@@ -82,8 +85,8 @@ int chunk_mem(void *chunk, int len)
             }
             CHK(chunk)->data = NULL;
 #ifdef HAVE_MMAP
-            if((CHK(chunk)->data = mmap(NULL, size, PROT_READ|PROT_WRITE, 
-                            MAP_PRIVATE|MAP_ANON, -1, 0)) == (void *)-1)
+            if((CHK(chunk)->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, 
+                            MAP_SHARED|MAP_ANON, -1, 0)) == (void *)-1)
                 CHK(chunk)->data = NULL;
 #else
             CHK(chunk)->data = (char *)calloc(size, 1);
