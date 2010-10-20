@@ -13,8 +13,10 @@ CHUNK *chunk_init()
 {
     CHUNK *chunk = NULL;
 #ifdef HAVE_MMAP
-	chunk = (CHUNK *)mmap(NULL, sizeof(CHUNK), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED,-1,0);
-    memset(chunk, 0, sizeof(CHUNK));
+	if((chunk = (CHUNK *)mmap(NULL, sizeof(CHUNK), PROT_READ|PROT_WRITE, 
+                    MAP_ANON|MAP_PRIVATE,-1,0)) == (void *)-1)
+        chunk = NULL;
+    if(chunk) memset(chunk, 0, sizeof(CHUNK));
 #else
     chunk = (CHUNK *)calloc(1, sizeof(CHUNK));
 #endif
@@ -44,7 +46,7 @@ int chunk_set_bsize(void *chunk, int len)
             CHK(chunk)->data = NULL;
 #ifdef HAVE_MMAP
             if((CHK(chunk)->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, 
-                            MAP_SHARED|MAP_ANON, -1, 0)) == (void *)-1)
+                            MAP_PRIVATE|MAP_ANON, -1, 0)) == (void *)-1)
                 CHK(chunk)->data = NULL;
 #else
             CHK(chunk)->data = (char *)calloc(size, 1);
@@ -86,7 +88,7 @@ int chunk_mem(void *chunk, int len)
             CHK(chunk)->data = NULL;
 #ifdef HAVE_MMAP
             if((CHK(chunk)->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, 
-                            MAP_SHARED|MAP_ANON, -1, 0)) == (void *)-1)
+                            MAP_PRIVATE|MAP_ANON, -1, 0)) == (void *)-1)
                 CHK(chunk)->data = NULL;
 #else
             CHK(chunk)->data = (char *)calloc(size, 1);
@@ -330,7 +332,7 @@ char *chunk_mmap(void *chunk)
         {
             if(CHK(chunk)->mmap) munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
             offset = (CHK(chunk)->offset / MMAP_PAGE_SIZE) * MMAP_PAGE_SIZE;
-            if((CHK(chunk)->mmap = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_SHARED, 
+            if((CHK(chunk)->mmap = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_PRIVATE, 
                             CHK(chunk)->fd, offset)) && CHK(chunk)->mmap != (void *)-1)
             {
                 CHK(chunk)->mmoff = CHK(chunk)->offset - offset;
