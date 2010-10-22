@@ -1534,7 +1534,7 @@ void service_clean(SERVICE **pservice)
             free((*pservice)->daemons);
         }
         //clean connection_queue
-        ACCESS_LOGGER((*pservice)->logger, "Ready for clean connection_chunk:%d", (*pservice)->nqconns);
+        DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk:%d", (*pservice)->nqconns);
         if((*pservice)->nqconns > 0)
         {
             //fprintf(stdout, "nqconns:%d\n", (*pservice)->nqconns);
