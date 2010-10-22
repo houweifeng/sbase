@@ -15,11 +15,11 @@ MMBLOCK *mmblock_init()
 	MMBLOCK *mmblock = NULL;
 #ifdef HAVE_MMAP
 	if((mmblock = (MMBLOCK *)mmap(NULL, sizeof(MMBLOCK), PROT_READ|PROT_WRITE, 
-                    MAP_ANON|MAP_SHARED, -1,0)) == (void *)-1)
+                    MAP_ANON|MAP_PRIVATE, -1,0)) == (void *)-1)
         mmblock = NULL;
     if(mmblock) memset(mmblock, 0, sizeof(MMBLOCK));
 #else
-	(mmblock = (MMBLOCK *)calloc(1, sizeof(MMBLOCK)));
+	mmblock = (MMBLOCK *)calloc(1, sizeof(MMBLOCK));
 #endif
     return mmblock;
 }
@@ -42,7 +42,7 @@ int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 #ifdef 	HAVE_MMAP
 		if((old = mmblock->data))
 		{
-			if((mmblock->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED,-1,0)) == (void *)-1)
+			if((mmblock->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE,-1,0)) == (void *)-1)
                 mmblock->data = NULL;
             if(mmblock->data && mmblock->ndata > 0 && mmblock->ndata <= mmblock->size) 
                 memcpy(mmblock->data, old, mmblock->ndata);
@@ -50,7 +50,7 @@ int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 		}
 		else 
 		{
-			if((mmblock->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED,-1,0)) == (void *)-1)
+			if((mmblock->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE,-1,0)) == (void *)-1)
             {
                 mmblock->data = NULL;
             }
