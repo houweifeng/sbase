@@ -47,7 +47,7 @@ void procthread_run(void *arg)
                     i = 1;
                 }
                 if(i > 0)++k;
-                if(i == 0 || k > 1000000){usleep(pth->usec_sleep); k = 0;}
+                if(i == 0 || k > 1000){usleep(pth->usec_sleep); k = 0;}
                 //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
