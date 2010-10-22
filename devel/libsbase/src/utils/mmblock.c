@@ -211,6 +211,7 @@ void mmblock_reset(MMBLOCK *mmblock)
 		}
 		else
 		{
+            if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
 			mmblock->end = mmblock->data;
 			mmblock->left = mmblock->size;
 			mmblock->ndata = 0;

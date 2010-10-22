@@ -54,10 +54,7 @@ int chunk_set_bsize(void *chunk, int len)
             if(CHK(chunk)->data) CHK(chunk)->bsize = size;
             else CHK(chunk)->bsize = 0;
         }
-        else
-        {
-            memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
-        }
+        if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
         CHK(chunk)->end = CHK(chunk)->data;
         CHK(chunk)->ndata = 0;
         return 0;
@@ -96,10 +93,7 @@ int chunk_mem(void *chunk, int len)
             if(CHK(chunk)->data) CHK(chunk)->bsize = size;
             else CHK(chunk)->bsize = 0;
         }
-        else
-        {
-            memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
-        }
+        if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
         CHK(chunk)->type = CHUNK_MEM;
         CHK(chunk)->status = CHUNK_STATUS_ON;
         CHK(chunk)->size = CHK(chunk)->left = len;
@@ -442,8 +436,10 @@ void chunk_reset(void *chunk)
         CHK(chunk)->status = 0;
         CHK(chunk)->type = 0;
         CHK(chunk)->ndata = 0;
-        CHK(chunk)->left = 0;
         CHK(chunk)->offset = 0;
+        CHK(chunk)->left = 0;
+        CHK(chunk)->mmoff = 0;
+        CHK(chunk)->mmleft = 0;
         if(CHK(chunk)->bsize > CHUNK_BLOCK_MAX)
         {
             if(CHK(chunk)->data) 
@@ -457,6 +453,7 @@ void chunk_reset(void *chunk)
             CHK(chunk)->data = NULL;
             CHK(chunk)->bsize = 0;
         }
+        if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
         CHK(chunk)->end = CHK(chunk)->data;
     }
     return ;
