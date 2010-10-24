@@ -10,7 +10,7 @@
 do                                                                                          \
 {                                                                                           \
     qmessage_push(pth->message_queue, msgid, index, fd, tid, pth, handler, arg);            \
-    if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}                                               \
+    if(pth->mutex && pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}                         \
 }while(0)
 /* run procthread */
 void procthread_run(void *arg)
@@ -293,7 +293,7 @@ void procthread_stop(PROCTHREAD *pth)
         PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
         DEBUG_LOGGER(pth->logger, "Pushd MESSAGE_QUIT to procthreads[%d]", pth->index);
         pth->lock       = 1;
-        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
+        if(pth->mutex && pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
@@ -305,7 +305,7 @@ void procthread_terminate(PROCTHREAD *pth)
     {
         DEBUG_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
         pth->running_status = 0;
-        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
+        if(pth->mutex && pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
@@ -362,7 +362,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase        = have_evbase;
-            pth->evbase             = evbase_init(1);
+            pth->evbase             = evbase_init(0);
             //pth->evbase->set_evops(pth->evbase, EOP_POLL);
         }
         MUTEX_INIT(pth->mutex);
