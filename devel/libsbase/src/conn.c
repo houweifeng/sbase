@@ -15,7 +15,7 @@
 #ifndef LL
 #define LL(_x_) ((long long int)(_x_))
 #endif
-int conn__push__message(CONN *conn, int message_id);
+int conn__push__iomessage(CONN *conn, int message_id);
 int conn_read_chunk(CONN *conn)
 {
 	if(conn->ssl) return CHUNK_READ_SSL(conn->chunk, conn->ssl);
@@ -53,7 +53,6 @@ int conn_read_buffer(CONN *conn)
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        MUTEX_LOCK(conn->mutex);                                                            \
         conn->over_timeout(conn);                                                           \
         DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "     \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
@@ -61,15 +60,16 @@ int conn_read_buffer(CONN *conn)
         if(conn->d_state == D_STATE_FREE)                                                   \
         {                                                                                   \
             conn->d_state |= _state_;                                                       \
-            if(conn->event) conn->event->destroy(conn->event);                              \
+            if(conn->event) conn->event->del(conn->event, E_READ|E_WRITE);                  \
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "          \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);             \
-            conn__push__message(conn, MESSAGE_SHUT);                                        \
+            conn__push__iomessage(conn, MESSAGE_OVER);                                      \
         }                                                                                   \
-        MUTEX_UNLOCK(conn->mutex);                                                          \
     }                                                                                       \
 }
+        //MUTEX_LOCK(conn->mutex);                                                            \
+        MUTEX_UNLOCK(conn->mutex);                                                          
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
     if(conn && (conn->d_state == 0))                                                        \
@@ -297,10 +297,10 @@ int conn_over(CONN *conn)
 
     if(conn)
     {
-        MUTEX_LOCK(conn->mutex);
+        //MUTEX_LOCK(conn->mutex);
         DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn_over_chunk(conn);
-        MUTEX_UNLOCK(conn->mutex);
+        //MUTEX_UNLOCK(conn->mutex);
         return 0;
     }
     return -1;
@@ -329,6 +329,7 @@ int conn_terminate(CONN *conn)
             {
                 conn->proxy_handler(conn);
             }
+            /*
             else if(conn->session.data_handler)
             {
                 DEBUG_LOGGER(conn->logger, "last_data_handler(%p) on conn[%p][%s:%d] d_state:%d via %d",
@@ -338,6 +339,7 @@ int conn_terminate(CONN *conn)
                 DEBUG_LOGGER(conn->logger, "over last_data_handler(%p) on conn[%p][%s:%d] d_state:%d via %d",
                 conn->session.data_handler, conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
             }
+            */
         }
         if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY)
                 && conn->session.error_handler)
@@ -544,7 +546,7 @@ int conn_over_cstate(CONN *conn)
 }
 
 /* push message to message queue */
-int conn__push__message(CONN *conn, int message_id)
+int conn__push__iomessage(CONN *conn, int message_id)
 {
     PROCTHREAD *parent = NULL;
     void *mutex = NULL;
@@ -560,9 +562,15 @@ int conn__push__message(CONN *conn, int message_id)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, QMTOTAL(conn->message_queue),
                     PPL(conn), parent);
-            qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
-                    -1, parent, conn, NULL);
-            if((mutex = parent->mutex)){MUTEX_SIGNAL(mutex);}
+            if(conn->ioqmessage)
+            {
+                qmessage_push(conn->ioqmessage, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
+            }
+            else
+            {
+                qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
+            }
+            if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
     }
