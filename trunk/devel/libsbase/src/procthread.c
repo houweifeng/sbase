@@ -362,7 +362,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase        = have_evbase;
-            pth->evbase             = evbase_init(0);
+            pth->evbase             = evbase_init(1);
             //pth->evbase->set_evops(pth->evbase, EOP_POLL);
         }
         MUTEX_INIT(pth->mutex);
