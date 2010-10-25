@@ -54,6 +54,7 @@ int conn_read_buffer(CONN *conn)
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
+        MUTEX_LOCK(conn->mutex);                                                            \
         conn->over_timeout(conn);                                                           \
         DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "     \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
@@ -68,10 +69,9 @@ int conn_read_buffer(CONN *conn)
             conn__shut(conn);                                                               \
             conn__push__message(conn, MESSAGE_SHUT);                                        \
         }                                                                                   \
+        MUTEX_UNLOCK(conn->mutex);                                                          \
     }                                                                                       \
 }
-        //MUTEX_LOCK(conn->mutex);                                                            
-        //MUTEX_UNLOCK(conn->mutex);                                                          
 
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
@@ -300,10 +300,10 @@ int conn_over(CONN *conn)
 
     if(conn)
     {
-        //MUTEX_LOCK(conn->mutex);
+        MUTEX_LOCK(conn->mutex);
         DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn_over_chunk(conn);
-        //MUTEX_UNLOCK(conn->mutex);
+        MUTEX_UNLOCK(conn->mutex);
         return 0;
     }
     return -1;
@@ -609,7 +609,7 @@ int conn_push_message(CONN *conn, int message_id)
                     PPL(conn), parent);
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                     -1, parent, conn, NULL);
-            if((mutex = parent->mutex)){MUTEX_SIGNAL(mutex);}
+            if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
     }
