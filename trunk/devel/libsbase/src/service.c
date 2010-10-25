@@ -1253,7 +1253,11 @@ int service_stategroup(SERVICE *service)
     {
         for(i = 0; i < service->ngroups; i++)
         {
-            if(service->groups[i].total > 0 && service->groups[i].nconnected <= 0) continue;
+            if(service->groups[i].total >= service->groups[i].limit && service->groups[i].nconnected <= 0) 
+            {
+                ACCESS_LOGGER(service->logger, "ignore stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
+                continue;
+            }
             while(service->groups[i].limit > 0  
                     && service->groups[i].total < service->groups[i].limit
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
@@ -1262,7 +1266,6 @@ int service_stategroup(SERVICE *service)
                 conn->groupid = i;
                 service->groups[i].total++;
                 if(service->groups[i].nconnected <= 0) break;
-                //ACCESS_LOGGER(service->logger, "stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
             }
         }
         //DEBUG_LOGGER(service->logger, "over stategroup()");
