@@ -15,7 +15,8 @@
 #ifndef LL
 #define LL(_x_) ((long long int)(_x_))
 #endif
-int conn__push__iomessage(CONN *conn, int message_id);
+int conn__push__message(CONN *conn, int message_id);
+int conn__shut(CONN *conn);
 int conn_read_chunk(CONN *conn)
 {
 	if(conn->ssl) return CHUNK_READ_SSL(conn->chunk, conn->ssl);
@@ -64,12 +65,14 @@ int conn_read_buffer(CONN *conn)
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "          \
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,        \
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);             \
-            conn__push__iomessage(conn, MESSAGE_OVER);                                      \
+            conn__shut(conn);                                                               \
+            conn__push__message(conn, MESSAGE_SHUT);                                        \
         }                                                                                   \
     }                                                                                       \
 }
-        //MUTEX_LOCK(conn->mutex);                                                            \
-        MUTEX_UNLOCK(conn->mutex);                                                          
+        //MUTEX_LOCK(conn->mutex);                                                            
+        //MUTEX_UNLOCK(conn->mutex);                                                          
+
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
     if(conn && (conn->d_state == 0))                                                        \
@@ -306,6 +309,22 @@ int conn_over(CONN *conn)
     return -1;
 }
 
+/* shutdown connection */
+int conn__shut(CONN *conn)
+{
+    /* SSL */
+#ifdef HAVE_SSL
+    if(conn->ssl)
+    {
+        SSL_shutdown(XSSL(conn->ssl));
+        SSL_free(XSSL(conn->ssl));
+        conn->ssl = NULL;
+    }
+#endif
+    shutdown(conn->fd, SHUT_RDWR);
+    close(conn->fd);
+    return 0;
+}
 
 /* terminate connection */
 int conn_terminate(CONN *conn)
@@ -370,18 +389,7 @@ int conn_terminate(CONN *conn)
             }
         }
         DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d send_queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, QTOTAL(conn->send_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        /* SSL */
-#ifdef HAVE_SSL
-        if(conn->ssl)
-        {
-            SSL_shutdown(XSSL(conn->ssl));
-            SSL_free(XSSL(conn->ssl));
-            conn->ssl = NULL;
-        }
-#endif
-        shutdown(conn->fd, SHUT_RDWR);
-        close(conn->fd);
-        conn->fd = -1;
+       conn->fd = -1;
         ret = 0;
     }
     return ret;
@@ -546,7 +554,7 @@ int conn_over_cstate(CONN *conn)
 }
 
 /* push message to message queue */
-int conn__push__iomessage(CONN *conn, int message_id)
+int conn__push__message(CONN *conn, int message_id)
 {
     PROCTHREAD *parent = NULL;
     void *mutex = NULL;
@@ -562,6 +570,7 @@ int conn__push__iomessage(CONN *conn, int message_id)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, QMTOTAL(conn->message_queue),
                     PPL(conn), parent);
+            /*
             if(conn->ioqmessage)
             {
                 qmessage_push(conn->ioqmessage, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
@@ -570,6 +579,8 @@ int conn__push__iomessage(CONN *conn, int message_id)
             {
                 qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
             }
+            */
+            qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
             if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
