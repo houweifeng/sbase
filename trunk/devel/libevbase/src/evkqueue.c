@@ -11,6 +11,7 @@
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
 #endif
+#include "xmm.h"
 
 /* Initialize evkqueue  */
 int evkqueue_init(EVBASE *evbase)
@@ -291,11 +292,7 @@ void evkqueue_clean(EVBASE **evbase)
         if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
         if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
         close((*evbase)->efd);
-#ifdef HAVE_MMAP
-        munmap(*evbase, sizeof(EVBASE));
-#else
-        free(*evbase);
-#endif
+        xmm_free(*evbase, sizeof(EVBASE));
         (*evbase) = NULL;
     }	
     return ;

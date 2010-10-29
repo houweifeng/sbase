@@ -31,7 +31,7 @@
 #ifdef WIN32
 #include "evwin32.h"
 #endif
-
+#include "xmm.h"
 typedef struct _EVOPS
 {
     char    *name ;
@@ -95,15 +95,9 @@ int evbase_set_evops(EVBASE *evbase, int evopid)
 /* Initialize evbase */
 EVBASE *evbase_init(int use_mutex)
 {
-#ifdef HAVE_MMAP
-    EVBASE *evbase = (EVBASE *)mmap(NULL, sizeof(EVBASE), PROT_READ|PROT_WRITE, 
-            MAP_ANON|MAP_PRIVATE, -1, 0);
-    if(evbase && evbase != (void *)-1) memset(evbase, 0, sizeof(EVBASE));
-    else evbase = NULL;
-#else
-    EVBASE *evbase = (EVBASE *)calloc(1, sizeof(EVBASE));
-#endif
-    if(evbase)
+    EVBASE *evbase = NULL;
+
+    if((evbase = (EVBASE *)xmm_new(sizeof(EVBASE))))
     {
         if(use_mutex){MUTEX_INIT(evbase->mutex);}
 #ifdef HAVE_EVPORT
@@ -211,15 +205,9 @@ EVBASE *evbase_init(int use_mutex)
 /* Initialize event */
 EVENT *ev_init()
 {
-#ifdef HAVE_MMAP
-    EVENT *event = (EVENT *)mmap(NULL, sizeof(EVENT), PROT_READ|PROT_WRITE, 
-            MAP_ANON|MAP_PRIVATE, -1, 0);
-    if(event && event != (void *)-1) memset(event, 0, sizeof(EVENT));
-    else event = NULL;
-#else
-	EVENT *event = (EVENT *)calloc(1, sizeof(EVENT));
-#endif
-	if(event)
+	EVENT *event =  NULL;
+
+	if((event = (EVENT *)xmm_new(sizeof(EVENT))))
 	{
         MUTEX_INIT(event->mutex);
 		event->set 	= event_set;

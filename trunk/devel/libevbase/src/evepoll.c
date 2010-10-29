@@ -9,6 +9,7 @@
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
 #endif
+#include "xmm.h"
 /* Initialize evepoll  */
 int evepoll_init(EVBASE *evbase)
 {
@@ -245,11 +246,7 @@ void evepoll_clean(EVBASE **evbase)
         if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
         if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
         if((*evbase)->efd > 0 )close((*evbase)->efd);
-#ifdef HAVE_MMAP
-        munmap(*evbase, sizeof(EVBASE));
-#else
-        free(*evbase);
-#endif
+        xmm_free(*evbase, sizeof(EVBASE));
         (*evbase) = NULL;
     }	
     return ;
