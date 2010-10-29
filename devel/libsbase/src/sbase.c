@@ -100,13 +100,13 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
 /* sbase evtimer  handler */
 void sbase_evtimer_handler(void *arg)
 {
-	SBASE *sbase = NULL;
-	if((sbase = (SBASE *)arg))
-	{
-                fprintf(stdout, "%s::%d::Ready for stop sbase\n", __FILE__, __LINE__);
-		sbase->running_status = 0;
-	}
-	return ;
+    SBASE *sbase = NULL;
+    if((sbase = (SBASE *)arg))
+    {
+        fprintf(stdout, "%s::%d::Ready for stop sbase\n", __FILE__, __LINE__);
+        sbase->running_status = 0;
+    }
+    return ;
 }
 
 /* running all service */
@@ -162,7 +162,6 @@ running:
                     service->run(service);
                 }
             }
-            xmm_free(sbase->services, sbase->running_services * sizeof(SERVICE*));
         }
         //running sbase 
         sbase->running_status = 1;
@@ -225,6 +224,7 @@ void sbase_clean(SBASE **psbase)
                 if((*psbase)->services[i])
                     (*psbase)->services[i]->clean(&((*psbase)->services[i]));
             }
+            xmm_free((*psbase)->services, (*psbase)->running_services * sizeof(SERVICE*));
         }
         if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
         if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}

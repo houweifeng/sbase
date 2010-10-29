@@ -1024,10 +1024,10 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         }
         else 
         {
+            ACCESS_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d total:%d nconns:%d", conn,conn->d_state, service->nqconns, service->nconn);
             conn->clean(conn);
             service->nconn--;
         }
-        ACCESS_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d total:%d nconns:%d", conn,conn->d_state, service->nqconns, service->nconn);
         DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
         MUTEX_UNLOCK(service->mutex);
     }
