@@ -26,8 +26,9 @@ void *qmessage_init()
 void qmessage_push(void *qmsg, int id, int index, int fd, int tid, 
         void *parent, void *handler, void *arg)
 {
+    MESSAGE *msg = NULL, *tmp = NULL;
     QMESSAGE *q = (QMESSAGE *)qmsg;
-    MESSAGE *msg = NULL;
+    int i = 0;
 
     if(q)
     {
@@ -39,8 +40,21 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
         }
         else
         {
-            msg = (MESSAGE *)calloc(1, sizeof(MESSAGE));
-            q->qtotal++;
+            if((i = q->nlist) < QMSG_LINE_MAX && (msg = q->list[i] 
+                        = (MESSAGE *)calloc(QMSG_LINE_NUM, sizeof(MESSAGE))))
+            {
+                q->nlist++;
+                i = 1;
+                while(i < QMSG_LINE_NUM)
+                {
+                    tmp = &(msg[i]);
+                    tmp->next = q->left;
+                    q->left = tmp;
+                    ++i;
+                    q->nleft++;
+                }
+                q->qtotal += QMSG_LINE_NUM;
+            }
         }
         if(msg)
         {
@@ -94,19 +108,13 @@ MESSAGE *qmessage_pop(void *qmsg)
 void qmessage_clean(void *qmsg)
 {
     QMESSAGE *q = (QMESSAGE *)qmsg;
-    MESSAGE *msg = NULL;
+    int i = 0;
 
     if(q)
     {
-        while((msg = q->first))
+        for(i = 0; i < q->nlist; i++)
         {
-            q->first = q->first->next;
-            free(msg);
-        }
-        while((msg = q->left))
-        {
-            q->left = q->left->next;
-            free(msg);
+            if(q->list[i]) free(q->list[i]);
         }
         MUTEX_DESTROY(q->mutex);
         free(q);
