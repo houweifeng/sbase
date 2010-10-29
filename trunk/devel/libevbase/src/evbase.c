@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/mman.h>
 #include <errno.h>
 #include "logger.h"
 #include "evbase.h"
@@ -94,8 +95,15 @@ int evbase_set_evops(EVBASE *evbase, int evopid)
 /* Initialize evbase */
 EVBASE *evbase_init(int use_mutex)
 {
-	EVBASE *evbase = (EVBASE *)calloc(1, sizeof(EVBASE));	
-	if(evbase)
+#ifdef HAVE_MMAP
+    EVBASE *evbase = (EVBASE *)mmap(NULL, sizeof(EVBASE), PROT_READ|PROT_WRITE, 
+            MAP_ANON|MAP_PRIVATE, -1, 0);
+    if(evbase && evbase != (void *)-1) memset(evbase, 0, sizeof(EVBASE));
+    else evbase = NULL;
+#else
+    EVBASE *evbase = (EVBASE *)calloc(1, sizeof(EVBASE));
+#endif
+    if(evbase)
     {
         if(use_mutex){MUTEX_INIT(evbase->mutex);}
 #ifdef HAVE_EVPORT
@@ -197,13 +205,20 @@ EVBASE *evbase_init(int use_mutex)
             evbase = NULL;
         }
     }
-	return evbase;
+    return evbase;
 }
 
 /* Initialize event */
 EVENT *ev_init()
 {
+#ifdef HAVE_MMAP
+    EVENT *event = (EVENT *)mmap(NULL, sizeof(EVENT), PROT_READ|PROT_WRITE, 
+            MAP_ANON|MAP_PRIVATE, -1, 0);
+    if(event && event != (void *)-1) memset(event, 0, sizeof(EVENT));
+    else event = NULL;
+#else
 	EVENT *event = (EVENT *)calloc(1, sizeof(EVENT));
+#endif
 	if(event)
 	{
         MUTEX_INIT(event->mutex);
@@ -321,7 +336,11 @@ void event_clean(EVENT **event)
 	if(*event)
 	{
         MUTEX_DESTROY((*event)->mutex);
+#ifdef HAVE_MMAP
+        munmap((*event), sizeof(EVENT));
+#else
 		free((*event));
+#endif
 		(*event) = NULL;	
 	}
     return ;
