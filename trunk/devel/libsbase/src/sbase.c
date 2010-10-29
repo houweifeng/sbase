@@ -9,7 +9,7 @@
 #include "message.h"
 #include "evtimer.h"
 #include "xssl.h"
-
+#include "xmm.h"
 /* set rlimit */
 int setrlimiter(char *name, int rlimit, int nset)
 {
@@ -223,7 +223,7 @@ void sbase_clean(SBASE **psbase)
                 if((*psbase)->services[i])
                     (*psbase)->services[i]->clean(&((*psbase)->services[i]));
             }
-            free((*psbase)->services);
+            xmm_free((*psbase)->services, sizeof(SERVICE));
         }
         if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
         if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
@@ -232,7 +232,7 @@ void sbase_clean(SBASE **psbase)
 #ifdef HAVE_SSL
         ERR_free_strings();
 #endif
-        free(*psbase);
+        xmm_free(*psbase, sizeof(SBASE));
         *psbase = NULL;
     }
 }
@@ -241,7 +241,7 @@ void sbase_clean(SBASE **psbase)
 SBASE *sbase_init()
 {
     SBASE *sbase = NULL;
-    if((sbase = (SBASE *)calloc(1, sizeof(SBASE))))
+    if((sbase = (SBASE *)xmm_new(sizeof(SBASE))))
     {
         EVTIMER_INIT(sbase->evtimer);
         sbase->message_queue    = qmessage_init();

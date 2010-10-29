@@ -2,25 +2,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
-#ifdef   HAVE_MMAP
-#include <sys/mman.h>
-#endif
+#include "mmblock.h"
 #ifdef  HAVE_SSL
 #include "xssl.h"
 #endif
-#include "mmblock.h"
+#include "xmm.h"
 /* initialize() */
 MMBLOCK *mmblock_init()
 {
 	MMBLOCK *mmblock = NULL;
-#ifdef HAVE_MMAP
-	if((mmblock = (MMBLOCK *)mmap(NULL, sizeof(MMBLOCK), PROT_READ|PROT_WRITE, 
-                    MAP_ANON|MAP_PRIVATE, -1,0)) == (void *)-1)
-        mmblock = NULL;
-    if(mmblock) memset(mmblock, 0, sizeof(MMBLOCK));
-#else
-	mmblock = (MMBLOCK *)calloc(1, sizeof(MMBLOCK));
-#endif
+	mmblock = (MMBLOCK *)xmm_new(sizeof(MMBLOCK));
     return mmblock;
 }
 
@@ -28,7 +19,6 @@ MMBLOCK *mmblock_init()
 int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 {
 	int size = 0, n = 0;
-    char *old = NULL;
 
 	if(mmblock && incre_size > 0)
 	{
@@ -36,31 +26,8 @@ int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 		n = size / MMBLOCK_BASE;
 		if(size % MMBLOCK_BASE) ++n;
 		size = n * MMBLOCK_BASE;
-		//fprintf(stdout, "%s::%d data:%p size:%d\n", __FILE__, __LINE__, mmblock->data, size);
-        /*
-        */
-#ifdef 	HAVE_MMAP
-		if((old = mmblock->data))
-		{
-			if((mmblock->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE,-1,0)) == (void *)-1)
-                mmblock->data = NULL;
-            if(mmblock->data && mmblock->ndata > 0 && mmblock->ndata <= mmblock->size) 
-                memcpy(mmblock->data, old, mmblock->ndata);
-            munmap(old, mmblock->size);
-		}
-		else 
-		{
-			if((mmblock->data = (char *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE,-1,0)) == (void *)-1)
-            {
-                mmblock->data = NULL;
-            }
-		}
-#else
-
-		mmblock->data = (char *)realloc(mmblock->data, size);
-#endif
 		//mmblock->data = (char *)realloc(mmblock->data, size);
-		if(mmblock->data)
+		if((mmblock->data = (char *)xmm_renew(mmblock->data, mmblock->size, size)))
 		{
 			mmblock->end = mmblock->data + mmblock->ndata;
 			mmblock->left = size - mmblock->ndata;
@@ -196,19 +163,12 @@ void mmblock_reset(MMBLOCK *mmblock)
 	if(mmblock)
 	{
 		if(mmblock->size > MMBLOCK_MAX)
-		{
-			if(mmblock->data) 
-            {
+        {
 
-#ifdef HAVE_MMAP
-                munmap(mmblock->data, mmblock->size);
-#else
-                free(mmblock->data);
-#endif
-            }
-			mmblock->size = mmblock->ndata = mmblock->left = 0;
-			mmblock->end = mmblock->data  = NULL;
-		}
+            xmm_free(mmblock->data, mmblock->size);
+            mmblock->size = mmblock->ndata = mmblock->left = 0;
+            mmblock->end = mmblock->data  = NULL;
+        }
 		else
 		{
             if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
@@ -224,21 +184,10 @@ void mmblock_reset(MMBLOCK *mmblock)
 void mmblock_clean(MMBLOCK *mmblock)
 {
 	if(mmblock)
-	{
-		if(mmblock->data) 
-        {
-#ifdef HAVE_MMAP
-            munmap(mmblock->data, mmblock->size);
-#else
-            free(mmblock->data);
-#endif
-        }
-#ifdef HAVE_MMAP
-        munmap(mmblock, sizeof(MMBLOCK));
-#else
-		free(mmblock);
-#endif
-	}
+    {
+        xmm_free(mmblock->data, mmblock->size);
+        xmm_free(mmblock, sizeof(MMBLOCK));
+    }
 	return ;
 }
 

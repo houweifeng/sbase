@@ -1,12 +1,13 @@
+#include <stdio.h>
 #include "mutex.h"
 #include "queue.h"
-#include <stdio.h>
+#include "xmm.h"
 
 void *queue_init()
 {
     QUEUE *q = NULL;
 
-    if((q = (QUEUE *)calloc(1, sizeof(QUEUE))))
+    if((q = (QUEUE *)xmm_new(sizeof(QUEUE)))) 
     {
         MUTEX_INIT(q->mutex);
     }
@@ -29,9 +30,10 @@ void queue_push(void *queue, void *ptr)
         }
         else 
         {
-            if((i = q->nlist) < QNODE_LINE_MAX && (node = q->list[i] 
-                        = (QNODE *)calloc(QNODE_LINE_NUM, sizeof(QNODE))))
+            if((i = q->nlist) < QNODE_LINE_MAX 
+                    && (node = (QNODE *)xmm_new(QNODE_LINE_NUM * sizeof(QNODE))))
             {
+                q->list[i] = node;
                 q->nlist++;
                 i = 1;
                 while(i  < QNODE_LINE_NUM)
@@ -110,17 +112,16 @@ void *queue_pop(void *queue)
 void queue_clean(void *queue)
 {
     QUEUE *q = (QUEUE *)queue;
-    QNODE *node = NULL;
     int i = 0;
 
     if(q)
     {
         for(i = 0; i < q->nlist; i++);
         {
-            if(q->list[i])free(q->list[i]);
+            xmm_free(q->list[i], QNODE_LINE_NUM * sizeof(QNODE));
         }
         MUTEX_DESTROY(q->mutex);
-        free(q);
+        xmm_free(q, sizeof(QUEUE));
     }
     return ;
 }

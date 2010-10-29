@@ -6,6 +6,7 @@
 #include "message.h"
 #include "evtimer.h"
 #include "chunk.h"
+#include "xmm.h"
 #define PUSH_TASK_MESSAGE(pth, msgid, index, fd, tid, handler, arg)                         \
 do                                                                                          \
 {                                                                                           \
@@ -347,7 +348,7 @@ void procthread_clean(PROCTHREAD **ppth)
             qmessage_clean((*ppth)->message_queue);
         }
         MUTEX_DESTROY((*ppth)->mutex);
-        free((*ppth));
+        xmm_free((*ppth), sizeof(PROCTHREAD));
         (*ppth) = NULL;
     }
 }
@@ -357,7 +358,7 @@ PROCTHREAD *procthread_init(int have_evbase)
 {
     PROCTHREAD *pth = NULL;
 
-    if((pth = (PROCTHREAD *)calloc(1, sizeof(PROCTHREAD))))
+    if((pth = (PROCTHREAD *)xmm_new(sizeof(PROCTHREAD))))
     {
         if(have_evbase)
         {

@@ -19,6 +19,8 @@ utils/mutex.h \
 utils/logger.h \
 utils/evtimer.h \
 utils/xssl.h 	\
+utils/xmm.h 	\
+utils/xmm.c 	\
 utils/timer.h
 
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
