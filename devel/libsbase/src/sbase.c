@@ -85,7 +85,8 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
                 fprintf(stdout, "replace %s logger with sbase\n", service->service_name);
                 service->logger = sbase->logger;
             }
-            if((sbase->services = (SERVICE **)realloc(sbase->services, 
+            if((sbase->services = (SERVICE **)xmm_renew(sbase->services, 
+                            sbase->running_services * sizeof(SERVICE *) ,
                             (sbase->running_services + 1) * sizeof(SERVICE *))))
             {
                 sbase->services[sbase->running_services++] = service;
@@ -161,6 +162,7 @@ running:
                     service->run(service);
                 }
             }
+            xmm_free(sbase->services, sbase->running_services * sizeof(SERVICE*));
         }
         //running sbase 
         sbase->running_status = 1;
@@ -223,7 +225,6 @@ void sbase_clean(SBASE **psbase)
                 if((*psbase)->services[i])
                     (*psbase)->services[i]->clean(&((*psbase)->services[i]));
             }
-            xmm_free((*psbase)->services, sizeof(SERVICE));
         }
         if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
         if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
@@ -245,7 +246,6 @@ SBASE *sbase_init()
     {
         EVTIMER_INIT(sbase->evtimer);
         sbase->message_queue    = qmessage_init();
-        //QUEUE_INIT(sbase->message_queue);
         sbase->set_log		    = sbase_set_log;
         sbase->set_evlog	    = sbase_set_evlog;
         sbase->add_service	    = sbase_add_service;
