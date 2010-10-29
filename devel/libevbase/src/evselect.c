@@ -6,6 +6,9 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/resource.h>
+#ifdef HAVE_MMAP
+#include <sys/mman.h>
+#endif
 /* Initialize evselect  */
 int evselect_init(EVBASE *evbase)
 {
@@ -201,7 +204,11 @@ void evselect_clean(EVBASE **evbase)
         if((*evbase)->ev_fds)free((*evbase)->ev_fds);
         if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
         if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
+#ifdef HAVE_MMAP
+        munmap(*evbase, sizeof(EVBASE));
+#else
         free(*evbase);
+#endif
         (*evbase) = NULL;
     }
     return ;

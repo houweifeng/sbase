@@ -8,6 +8,9 @@
 #include <sys/event.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifdef HAVE_MMAP
+#include <sys/mman.h>
+#endif
 
 /* Initialize evkqueue  */
 int evkqueue_init(EVBASE *evbase)
@@ -288,7 +291,11 @@ void evkqueue_clean(EVBASE **evbase)
         if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
         if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
         close((*evbase)->efd);
+#ifdef HAVE_MMAP
+        munmap(*evbase, sizeof(EVBASE));
+#else
         free(*evbase);
+#endif
         (*evbase) = NULL;
     }	
     return ;

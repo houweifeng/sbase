@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(libevbase, [0.1.1], [SounOS@gmail.com])
+AC_INIT(libevbase, [0.1.2], [SounOS@gmail.com])
 AC_CONFIG_SRCDIR([src/evbase.h])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -93,11 +93,11 @@ if test "$havessl" = "yes" ; then
         LDFLAGS="${LDFLAGS} -lssl -lcrypto"
 fi
 
-#semaphore
-havesemaphore=no
-AC_CHECK_LIB(c, sem_wait, havesemaphore=yes)
-if test "$havesemaphore" = "yes" ; then
-        CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+#check mmap
+havemmap=no
+AC_CHECK_LIB(c, munmap, havemmap=yes)
+if test "$havemmap" = "yes" ; then
+        CPPFLAGS="${CPPFLAGS} -DHAVE_MMAP"
 fi
 
 AC_CHECK_EXTRA_OPTIONS
