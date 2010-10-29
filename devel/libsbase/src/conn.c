@@ -9,6 +9,7 @@
 #include "service.h"
 #include "timer.h"
 #include "evtimer.h"
+#include "xmm.h"
 #ifndef PPL
 #define PPL(_x_) ((void *)(_x_))
 #endif
@@ -1433,7 +1434,7 @@ void conn_clean(CONN *conn)
         }
 #endif
         DEBUG_LOGGER(conn->logger, "over-clean conn[%p]", conn);
-        free(conn);
+        xmm_free(conn, sizeof(CONN));
     }
     return ;
 }
@@ -1443,7 +1444,7 @@ CONN *conn_init()
 {
     CONN *conn = NULL;
 
-    if((conn = calloc(1, sizeof(CONN))))
+    if((conn = (CONN *)xmm_new(sizeof(CONN))))
     {
         conn->groupid = -1;
         conn->index = -1;

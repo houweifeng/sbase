@@ -10,6 +10,7 @@
 #include "mmblock.h"
 #include "message.h"
 #include "evtimer.h"
+#include "xmm.h"
 #ifndef UI
 #define UI(_x_) ((unsigned int)(_x_))
 #endif
@@ -42,7 +43,6 @@ int service_set(SERVICE *service)
         service->sa.sin_family = service->family;
         service->sa.sin_addr.s_addr = (p)? inet_addr(p):INADDR_ANY;
         service->sa.sin_port = htons(service->port);
-        //service->connections = (CONN **)calloc(service->connections_limit, sizeof(CONN *));
         if(service->backlog <= 0) service->backlog = SB_CONN_MAX;
         SERVICE_CHECK_SSL_CLIENT(service);
         if(service->service_type == S_SERVICE)
@@ -247,8 +247,8 @@ running_threads:
             }
         }
         if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
-        if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)calloc(
-                        service->nprocthreads, sizeof(PROCTHREAD *))))
+        if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)xmm_new(
+                        service->nprocthreads * sizeof(PROCTHREAD *))))
         {
             for(i = 0; i < service->nprocthreads; i++)
             {
@@ -293,8 +293,8 @@ running_threads:
             }
         }
         if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
-        if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)calloc(
-                        service->ndaemons, sizeof(PROCTHREAD *))))
+        if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)xmm_new(
+                        service->ndaemons * sizeof(PROCTHREAD *))))
         {
             for(i = 0; i < service->ndaemons; i++)
             {
@@ -1024,10 +1024,10 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         }
         else 
         {
-            ACCESS_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d total:%d nconns:%d", conn,conn->d_state, service->nqconns, service->nconn);
             conn->clean(conn);
             service->nconn--;
         }
+        ACCESS_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d total:%d nconns:%d", conn,conn->d_state, service->nqconns, service->nconn);
         DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
         MUTEX_UNLOCK(service->mutex);
     }
@@ -1508,7 +1508,6 @@ void service_clean(SERVICE **pservice)
     if(pservice && *pservice)
     {
         
-        //if((*pservice)->connections) free((*pservice)->connections);
         if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
         if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
         if((*pservice)->iodaemon) (*pservice)->iodaemon->clean(&((*pservice)->iodaemon));
@@ -1522,7 +1521,7 @@ void service_clean(SERVICE **pservice)
                     (*pservice)->procthreads[i]->clean(&((*pservice)->procthreads[i]));
                 }
             }
-            free((*pservice)->procthreads);
+            xmm_free((*pservice)->procthreads, sizeof(PROCTHREAD));
         }
         //clean daemons
         if((*pservice)->daemons && (*pservice)->ndaemons)
@@ -1534,7 +1533,7 @@ void service_clean(SERVICE **pservice)
                     (*pservice)->daemons[i]->clean(&((*pservice)->daemons[i]));
                 }
             }
-            free((*pservice)->daemons);
+            xmm_free((*pservice)->daemons, sizeof(PROCTHREAD));
         }
         //clean connection_queue
         DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk:%d", (*pservice)->nqconns);
@@ -1576,7 +1575,7 @@ void service_clean(SERVICE **pservice)
         {
             LOGGER_CLEAN((*pservice)->logger);
         }
-        free(*pservice);
+        xmm_free(*pservice, sizeof(SERVICE));
         *pservice = NULL;
     }
     return ;
@@ -1586,7 +1585,7 @@ void service_clean(SERVICE **pservice)
 SERVICE *service_init()
 {
     SERVICE *service = NULL;
-    if((service = (SERVICE *)calloc(1, sizeof(SERVICE))))
+    if((service = (SERVICE *)xmm_new(sizeof(SERVICE))))
     {
         MUTEX_INIT(service->mutex);
         service->set                = service_set;

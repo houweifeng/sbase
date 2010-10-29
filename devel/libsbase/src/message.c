@@ -2,6 +2,7 @@
 #include "sbase.h"
 #include "logger.h"
 #include "mutex.h"
+#include "xmm.h"
 int get_msg_no(int message_id)
 {
     int msg_no = 0;
@@ -15,7 +16,7 @@ void *qmessage_init()
 {
     QMESSAGE *q = NULL;
 
-    if((q = (QMESSAGE *)calloc(1, sizeof(QMESSAGE))))
+    if((q = (QMESSAGE *)xmm_new(sizeof(QMESSAGE))))
     {
         MUTEX_INIT(q->mutex);
     }
@@ -40,20 +41,23 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
         }
         else
         {
-            if((i = q->nlist) < QMSG_LINE_MAX && (msg = q->list[i] 
-                        = (MESSAGE *)calloc(QMSG_LINE_NUM, sizeof(MESSAGE))))
+            if((i = q->nlist) < QMSG_LINE_MAX)
             {
-                q->nlist++;
-                i = 1;
-                while(i < QMSG_LINE_NUM)
+                if((msg = (MESSAGE *)xmm_new(QMSG_LINE_NUM * sizeof(MESSAGE))))
                 {
-                    tmp = &(msg[i]);
-                    tmp->next = q->left;
-                    q->left = tmp;
-                    ++i;
-                    q->nleft++;
+                    q->list[i] = msg;
+                    q->nlist++;
+                    i = 1;
+                    while(i < QMSG_LINE_NUM)
+                    {
+                        tmp = &(msg[i]);
+                        tmp->next = q->left;
+                        q->left = tmp;
+                        ++i;
+                        q->nleft++;
+                    }
+                    q->qtotal += QMSG_LINE_NUM;
                 }
-                q->qtotal += QMSG_LINE_NUM;
             }
         }
         if(msg)
@@ -114,10 +118,10 @@ void qmessage_clean(void *qmsg)
     {
         for(i = 0; i < q->nlist; i++)
         {
-            if(q->list[i]) free(q->list[i]);
+            xmm_free(q->list[i], QMSG_LINE_NUM * sizeof(MESSAGE));
         }
         MUTEX_DESTROY(q->mutex);
-        free(q);
+        xmm_free(q, sizeof(QMESSAGE));
     }
     return ;
 }
