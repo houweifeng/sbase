@@ -12,15 +12,19 @@ typedef struct _QNODE
     void *ptr;
     struct _QNODE *next;
 }QNODE;
+#define QNODE_LINE_MAX   1024
+#define QNODE_LINE_NUM   1024
 typedef struct _QUEUE
 {
     int nleft;
     int qtotal;
     int total;
-    void *mutex;
+    int nlist;
+    QNODE *list[QNODE_LINE_MAX];
     QNODE *left;
     QNODE *first;
     QNODE *last;
+    void *mutex;
 }QUEUE;
 void *queue_init();
 void queue_push(void *q, void *ptr);

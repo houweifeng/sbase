@@ -15,8 +15,9 @@ void *queue_init()
 
 void queue_push(void *queue, void *ptr)
 {
+    QNODE *node = NULL, *tmp = NULL;
     QUEUE *q = (QUEUE *)queue;
-    QNODE *node = NULL;
+    int i = 0;
 
     if(q)
     {
@@ -28,8 +29,21 @@ void queue_push(void *queue, void *ptr)
         }
         else 
         {
-            node = (QNODE *)calloc(1, sizeof(QNODE));
-            q->qtotal++;
+            if((i = q->nlist) < QNODE_LINE_MAX && (node = q->list[i] 
+                        = (QNODE *)calloc(QNODE_LINE_NUM, sizeof(QNODE))))
+            {
+                q->nlist++;
+                i = 1;
+                while(i  < QNODE_LINE_NUM)
+                {
+                    tmp = &(node[i]);
+                    tmp->next = q->left;
+                    q->left = tmp;
+                    q->nleft++;
+                    ++i;
+                }
+                q->qtotal += QNODE_LINE_NUM;
+            }
         }
         if(node)
         {
@@ -97,18 +111,13 @@ void queue_clean(void *queue)
 {
     QUEUE *q = (QUEUE *)queue;
     QNODE *node = NULL;
+    int i = 0;
 
     if(q)
     {
-        while((node = q->first))
+        for(i = 0; i < q->nlist; i++);
         {
-            q->first = node->next;
-            free(node);
-        }
-        while((node = q->left))
-        {
-            q->left = node->next;
-            free(node);
+            if(q->list[i])free(q->list[i]);
         }
         MUTEX_DESTROY(q->mutex);
         free(q);
