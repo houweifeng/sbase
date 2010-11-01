@@ -506,7 +506,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 else goto err_conn;
             }
 #endif
-            //opt=1;setsockopt(fd, SOL_SOCKET, SO_LINGER, &opt, sizeof(opt));
+            opt=0;setsockopt(fd, SOL_SOCKET, SO_LINGER, &opt, sizeof(opt));
+            //opt=1;setsockopt(fd, SOL_SOCKET, SO_DONTLINGER, &opt, sizeof(opt));
             opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
@@ -1044,10 +1045,9 @@ CONN *service_popfromq(SERVICE *service)
     {
         MUTEX_LOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "starting popfromq(%d)", service->nqconns);
-        if(service->nqconns > 0)
+        if(service->nqconns > 0 && (x = --(service->nqconns)) >= 0 
+                && (conn = service->qconns[x]))
         {
-            x = --(service->nqconns);
-            conn = service->qconns[x];
             service->qconns[x] = NULL;
         }
         else
@@ -1055,6 +1055,7 @@ CONN *service_popfromq(SERVICE *service)
             if((conn = conn_init()))
             {
                 service->nconn++;
+                ACCESS_LOGGER(service->logger, "conn_init(%d) conn[%p]->d_state:%d nconn:%d ", service->nqconns, conn, conn->d_state, service->nconn);
             }
         }
         //fprintf(stdout, "nqconns:%d\n", service->nqconns);
@@ -1085,11 +1086,10 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
             x = service->nqchunks++;
             service->qchunks[x] = cp;
             DEBUG_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
-            service->nchunks--;
         }
         else 
         {
-            DEBUG_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
+            ACCESS_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
             chunk_clean(cp);
             service->nchunks--;
         }
