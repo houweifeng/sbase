@@ -1028,7 +1028,7 @@ int service_pushtoq(SERVICE *service, CONN *conn)
             conn->clean(conn);
             service->nconn--;
         }
-        DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
+        ACCESS_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
         MUTEX_UNLOCK(service->mutex);
     }
     return x;
@@ -1058,7 +1058,14 @@ CONN *service_popfromq(SERVICE *service)
             }
         }
         //fprintf(stdout, "nqconns:%d\n", service->nqconns);
-        DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p]->d_state:%d nconn:%d", service->nqconns, conn, conn->d_state, service->nconn);
+        if(conn)
+        {
+            DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p]->d_state:%d nconn:%d", service->nqconns, conn, conn->d_state, service->nconn);
+            if(service->nconn > SB_QCONN_MAX)
+            {
+                ACCESS_LOGGER(service->logger, "over popfromq(%d) conn[%p]->d_state:%d nconn:%d ", service->nqconns, conn, conn->d_state, service->nconn);
+            }
+        }
         MUTEX_UNLOCK(service->mutex);
     }
     return conn;
