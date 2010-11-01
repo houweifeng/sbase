@@ -314,9 +314,13 @@ int conn_shut(CONN *conn, int state)
                 conn->ssl = NULL;
             }
 #endif
-            shutdown(conn->fd, SHUT_RDWR);
-            close(conn->fd);
-            conn__push__message(conn, MESSAGE_SHUT);
+            if(conn->fd > 0)
+            {
+                close(conn->fd);
+                shutdown(conn->fd, SHUT_RDWR);
+            }
+            PPARENT(conn)->shut_connection(PPARENT(conn), conn);
+            //conn__push__message(conn, MESSAGE_OVER);
         }
         MUTEX_UNLOCK(conn->mutex);
     }
@@ -567,7 +571,6 @@ int conn__push__message(CONN *conn, int message_id)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, QMTOTAL(conn->message_queue),
                     PPL(conn), parent);
-            /*
             if(conn->ioqmessage)
             {
                 qmessage_push(conn->ioqmessage, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
@@ -575,10 +578,11 @@ int conn__push__message(CONN *conn, int message_id)
             else
             {
                 qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
+                if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
             }
-            */
+            /*
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
-            if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
+            */
         }
         ret = 0;
     }

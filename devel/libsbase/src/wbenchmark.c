@@ -175,7 +175,7 @@ int http_over(CONN *conn, int respcode)
         }
         if(ncompleted < ntasks)
         {
-            if(is_keepalive && respcode != 0) 
+            if(conn->d_state  == 0 && is_keepalive && respcode != 0) 
                 return http_request(conn);
             else
             {
