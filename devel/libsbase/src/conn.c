@@ -307,8 +307,8 @@ int conn_shut(CONN *conn, int state)
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);
-            PPARENT(conn)->shut_connection(PPARENT(conn), conn);
-            //conn__push__message(conn, MESSAGE_SHUT);
+            //PPARENT(conn)->shut_connection(PPARENT(conn), conn);
+            conn__push__message(conn, MESSAGE_SHUT);
         }
         MUTEX_UNLOCK(conn->mutex);
     }
