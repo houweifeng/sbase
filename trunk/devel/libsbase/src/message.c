@@ -188,7 +188,7 @@ void qmessage_handler(void *qmsg, void *logger)
             if(conn) fd = conn->fd;
             if(conn == NULL || pth == NULL || msg->fd != conn->fd || pth->service == NULL)
             {
-                ERROR_LOGGER(logger, "Invalid MESSAGE[%d] fd[%d] conn->fd[%d] handler[%p] "
+                ERROR_LOGGER(logger, "Invalid MESSAGE[%d] msg->fd[%d] conn->fd[%d] handler[%p] "
                         "parent[%p] service[%p]", msg->msg_id, msg->fd, fd, conn, pth, pth->service);
                 goto next;
             }

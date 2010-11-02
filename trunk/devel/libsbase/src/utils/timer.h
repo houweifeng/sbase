@@ -5,7 +5,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "mutex.h"
-#include "timer.h"
 #ifndef _TIMER_H
 #define _TIMER_H
 #ifdef __cplusplus

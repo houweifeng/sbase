@@ -155,8 +155,8 @@ int service_run(SERVICE *service)
         //added to evtimer 
         if(service->heartbeat_interval > 0)
         {
-            EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
-                    &service_evtimer_handler, (void *)service, service->evid);
+            service->evid = EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
+                    &service_evtimer_handler, (void *)service);
             DEBUG_LOGGER(service->logger, "Added service[%s] to evtimer[%p][%d] interval:%d",
                     service->service_name, service->evtimer, service->evid, 
                     service->heartbeat_interval);
@@ -1461,8 +1461,8 @@ void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, vo
         service->heartbeat_arg = arg;
         if(service->evtimer)
         {
-            EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
-                    &service_evtimer_handler, (void *)service, service->evid);
+            service->evid = EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
+                    &service_evtimer_handler, (void *)service);
         }
     }
     return ;
