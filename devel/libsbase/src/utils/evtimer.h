@@ -1,31 +1,28 @@
 #include <unistd.h>
 #include "mutex.h"
+#include "xmm.h"
 #ifndef _EVTIMER_H
 #define _EVTIMER_H
 typedef void (EVTCALLBACK)(void *);
 typedef struct _EVTNODE
 {
     int id;
-    EVTCALLBACK *handler;
-    void *arg;
-    long long evusec;
     int ison;
+    off_t evusec;
+    void *arg;
+    EVTCALLBACK *handler;
     struct _EVTNODE *prev;
     struct _EVTNODE *next;
 }EVTNODE;
+#define  EVTNODE_LINE_NUM   1024
+#define  EVTNODE_LINE_MAX   102400
 typedef struct _EVTIMER
 {
-   struct timeval tv;
-   EVTNODE **evlist;
-   int nlist;
+   int nevlist;
+   EVTNODE *evlist[EVTNODE_LINE_MAX];
+   EVTNODE *left;
    EVTNODE *head;
    EVTNODE *tail;
-   EVTNODE *node;
-   EVTNODE vnode;
-   int nq;
-   int left;
-   long long now;
-   int n ;
    void *mutex;
 }EVTIMER;
 #define PEVT(ptr) ((EVTIMER *)ptr)
@@ -46,7 +43,7 @@ typedef struct _EVTIMER
 /* evtimer initialize */
 #define EVTIMER_INIT(ptr)                                                               \
 do{                                                                                     \
-    if((ptr = calloc(1, sizeof(EVTIMER))))                                              \
+    if((ptr = xmm_new(sizeof(EVTIMER))))                                                \
     {                                                                                   \
         MUTEX_INIT(PEVT(ptr)->mutex);                                                   \
     }                                                                                   \
@@ -265,7 +262,7 @@ do{                                                                             
             free(PEVT_EVLIST(ptr));                                                     \
         }                                                                               \
         MUTEX_DESTROY(PEVT(ptr)->mutex);                                                \
-        free(ptr);                                                                      \
+        xmm_free(ptr, sizeof(EVTIMER));                                                 \
         ptr = NULL;                                                                     \
     }                                                                                   \
 }

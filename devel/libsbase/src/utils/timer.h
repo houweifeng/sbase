@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "mutex.h"
-
+#include "timer.h"
 #ifndef _TIMER_H
 #define _TIMER_H
 #ifdef __cplusplus
@@ -40,7 +40,7 @@ typedef struct _TIMER
         (PT_NOW(ptr) = PT(ptr)->tv.tv_sec * 1000000ll + PT(ptr)->tv.tv_usec * 1ll) : -1)
 #define TIMER_INIT(ptr)                                                         \
 do{                                                                             \
-    if((ptr = (calloc(1, sizeof(TIMER)))))                                      \
+    if((ptr = xmm_new(sizeof(TIMER))))                                          \
     {                                                                           \
         gettimeofday(&(PT(ptr)->tv), NULL);                                     \
         PT(ptr)->start_sec    = PT(ptr)->tv.tv_sec;                             \
@@ -94,7 +94,7 @@ do{                                                                             
     if(ptr)                                                                     \
     {                                                                           \
         MUTEX_DESTROY(PT(ptr)->mutex);                                          \
-        free(ptr);                                                              \
+        xmm_free(ptr, sizeof(TIMER));                                           \
         ptr = NULL;                                                             \
     }                                                                           \
 }while(0)

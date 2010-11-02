@@ -11,7 +11,7 @@
 MMBLOCK *mmblock_init()
 {
 	MMBLOCK *mmblock = NULL;
-	mmblock = (MMBLOCK *)xmm_new(sizeof(MMBLOCK));
+	mmblock = (MMBLOCK *)xmms_new(sizeof(MMBLOCK));
     return mmblock;
 }
 
@@ -27,7 +27,7 @@ int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 		if(size % MMBLOCK_BASE) ++n;
 		size = n * MMBLOCK_BASE;
 		//mmblock->data = (char *)realloc(mmblock->data, size);
-		if((mmblock->data = (char *)xmm_renew(mmblock->data, mmblock->size, size)))
+		if((mmblock->data = (char *)xmms_renew(mmblock->data, mmblock->size, size)))
 		{
 			mmblock->end = mmblock->data + mmblock->ndata;
 			mmblock->left = size - mmblock->ndata;
