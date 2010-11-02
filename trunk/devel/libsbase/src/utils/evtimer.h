@@ -42,9 +42,9 @@ void evtimer_clean(EVTIMER *evtimer);
 #define PEVTIMER(ptr) ((EVTIMER *)ptr)
 #define EVTIMER_INIT() evtimer_init()
 #define EVTIMER_ADD(ptr, timeout, evhandler, evarg) \
-    evtimer_add(PEVTIMER(ptr), timeout, evhandler, evarg)
+    evtimer_add(PEVTIMER(ptr), (off_t)timeout, evhandler, evarg)
 #define EVTIMER_UPDATE(ptr, evid, timeout, evhandler, evarg) \
-    evtimer_update(PEVTIMER(ptr), evid, timeout, evhandler, evarg)
+    evtimer_update(PEVTIMER(ptr), evid, (off_t)timeout, evhandler, evarg)
 #define EVTIMER_DEL(ptr, evid) evtimer_delete(PEVTIMER(ptr), evid)
 #define EVTIMER_CHECK(ptr) evtimer_check(PEVTIMER(ptr))
 #define EVTIMER_RESET(ptr) evtimer_reset(PEVTIMER(ptr))
