@@ -175,20 +175,20 @@ void evtimer_check(EVTIMER *evtimer)
         while(evtimer->ntimeout < EVTNODE_LINE_MAX 
                 && (node = evtimer->head) && node->evusec < now)
         {
-            if(node->handler) node->handler(node->arg);
+            //if(node->handler) node->handler(node->arg);
             if((evtimer->head = node->next))
                 evtimer->head->prev = NULL;
             else
                 evtimer->tail = NULL;
-            //evtimer->timeouts[evtimer->ntimeout++] = node;
+            evtimer->timeouts[evtimer->ntimeout++] = node;
         }
         MUTEX_UNLOCK(evtimer->mutex);
-        /*
         for(i = 0; i < evtimer->ntimeout; i++)
         {
             if((node = evtimer->timeouts[i]) && node->ison && (handler = node->handler))
                 handler(node->arg);
         }
+        /*
         */
     }
     return ;
