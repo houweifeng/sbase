@@ -271,6 +271,7 @@ typedef struct _SERVICE
     int (*stategroup)(struct _SERVICE *service);
     
     /* evtimer */
+    void *etimer;
     void *evtimer;
     int evid;
 
@@ -306,6 +307,7 @@ typedef struct _PROCTHREAD
     long threadid;
     int  use_cond_wait;
     void *mutex;
+    void *evtimer;
 
     /* message queue */
     void *ioqmessage;
