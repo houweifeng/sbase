@@ -56,9 +56,11 @@ int conn_read_buffer(CONN *conn)
 {                                                                                           \
     if(conn && (conn->d_state == 0))                                                        \
     {                                                                                       \
+        conn->c_state = 0;                                                                  \
         conn->s_state = 0;                                                                  \
     }                                                                                       \
 }
+
 #define CONN_CHUNK_READ(conn, n)                                                            \
 {                                                                                           \
     /* read to chunk */                                                                     \
@@ -92,15 +94,15 @@ int conn_read_buffer(CONN *conn)
 do{                                                                                         \
     if(conn && conn->evtimer && conn->timeout > 0)                                          \
     {                                                                                       \
-        if(conn->evid >= 0 )                                                                \
+        if(conn->evid >= 0)                                                                 \
         {                                                                                   \
             EVTIMER_UPDATE(conn->evtimer, conn->evid, conn->timeout,                        \
                     &conn_evtimer_handler, (void *)conn);                                   \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
-            EVTIMER_ADD(conn->evtimer, conn->timeout,                                       \
-                    &conn_evtimer_handler, (void *)conn, conn->evid);                       \
+            conn->evid = EVTIMER_ADD(conn->evtimer, conn->timeout,                          \
+                    &conn_evtimer_handler, (void *)conn);                                   \
         }                                                                                   \
     }                                                                                       \
 }while(0)
@@ -228,9 +230,9 @@ int conn_set(CONN *conn)
     if(conn && conn->fd > 0 )
     {
         //timeout
+        conn->evid = -1;
         if(conn->parent && conn->session.timeout > 0) 
             conn->set_timeout(conn, conn->session.timeout);
-        conn->evid = -1;
         if(conn->evbase && conn->event)
         {
             flag = E_READ|E_PERSIST;
@@ -298,29 +300,15 @@ int conn_shut(CONN *conn, int state)
         DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "
                 "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
                 conn->d_state, conn->local_ip, conn->local_port, conn->fd);
-        if(conn->d_state == D_STATE_FREE)
+        if(conn->d_state == D_STATE_FREE && conn->fd > 0)
         {
             conn->d_state |= state;
             if(conn->event) conn->event->destroy(conn->event);
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);
-            /* SSL */
-#ifdef HAVE_SSL
-            if(conn->ssl)
-            {
-                SSL_shutdown(XSSL(conn->ssl));
-                SSL_free(XSSL(conn->ssl));
-                conn->ssl = NULL;
-            }
-#endif
-            if(conn->fd > 0)
-            {
-                close(conn->fd);
-                shutdown(conn->fd, SHUT_RDWR);
-            }
-            PPARENT(conn)->shut_connection(PPARENT(conn), conn);
-            //conn__push__message(conn, MESSAGE_OVER);
+            //PPARENT(conn)->shut_connection(PPARENT(conn), conn);
+            conn__push__message(conn, MESSAGE_SHUT);
         }
         MUTEX_UNLOCK(conn->mutex);
     }
@@ -350,16 +338,16 @@ int conn_terminate(CONN *conn)
                 conn->proxy_handler(conn);
             }
             /*
-            else if(conn->session.data_handler)
-            {
-                DEBUG_LOGGER(conn->logger, "last_data_handler(%p) on conn[%p][%s:%d] d_state:%d via %d",
-                conn->session.data_handler, conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
-                ret = conn->session.data_handler(conn, PCB(conn->packet),
-                        PCB(conn->cache), PCB(conn->chunk));
-                DEBUG_LOGGER(conn->logger, "over last_data_handler(%p) on conn[%p][%s:%d] d_state:%d via %d",
-                conn->session.data_handler, conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
-            }
-            */
+               else if(conn->session.data_handler)
+               {
+               DEBUG_LOGGER(conn->logger, "last_data_handler(%p) on conn[%p][%s:%d] d_state:%d via %d",
+               conn->session.data_handler, conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
+               ret = conn->session.data_handler(conn, PCB(conn->packet),
+               PCB(conn->cache), PCB(conn->chunk));
+               DEBUG_LOGGER(conn->logger, "over last_data_handler(%p) on conn[%p][%s:%d] d_state:%d via %d",
+               conn->session.data_handler, conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->fd);
+               }
+               */
         }
         if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY)
                 && conn->session.error_handler)
@@ -390,7 +378,21 @@ int conn_terminate(CONN *conn)
             }
         }
         DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d send_queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, QTOTAL(conn->send_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-       conn->fd = -1;
+        /* SSL */
+#ifdef HAVE_SSL
+        if(conn->ssl)
+        {
+            SSL_shutdown(XSSL(conn->ssl));
+            SSL_free(XSSL(conn->ssl));
+            conn->ssl = NULL;
+        }
+#endif
+        if(conn->fd > 0)
+        {
+            shutdown(conn->fd, SHUT_RDWR);
+            close(conn->fd);
+        }
+        conn->fd = -1;
         ret = 0;
     }
     return ret;
@@ -439,8 +441,12 @@ int conn_over_timeout(CONN *conn)
 
     if(conn)
     {
-        if(conn->evtimer && conn->timeout > 0){EVTIMER_DEL(conn->evtimer, conn->evid);}
+        if(conn->evtimer && conn->timeout > 0 && conn->evid >= 0)
+        {
+            EVTIMER_DEL(conn->evtimer, conn->evid);
+        }
         conn->timeout = 0;
+        conn->evid = -1;
         ret = 0;
     }
     return ret;
@@ -571,18 +577,19 @@ int conn__push__message(CONN *conn, int message_id)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, QMTOTAL(conn->message_queue),
                     PPL(conn), parent);
-            if(conn->ioqmessage)
-            {
-                qmessage_push(conn->ioqmessage, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
-            }
-            else
-            {
-                qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
-                if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
-            }
             /*
+               if(conn->ioqmessage)
+               {
+               qmessage_push(conn->ioqmessage, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
+               }
+               else
+               {
+               qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
+               if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
+               }
+               */
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
-            */
+            if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
         }
         ret = 0;
     }
@@ -1355,7 +1362,7 @@ void conn_reset(CONN *conn)
         conn->evbase = NULL;
 
         /* event timer */
-        conn->evid = 0;
+        conn->evid = -1;
         conn->evtimer = NULL;
         /* buffer and chunk */
         MMB_RESET(conn->buffer);

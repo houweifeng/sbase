@@ -121,8 +121,8 @@ int sbase_running(SBASE *sbase, int useconds)
     {
         if(useconds > 0 )
         {
-            EVTIMER_ADD(sbase->evtimer, useconds,
-                    &sbase_evtimer_handler, (void *)sbase, sbase->evid);
+            sbase->evid = EVTIMER_ADD(sbase->evtimer, useconds,
+                    &sbase_evtimer_handler, (void *)sbase);
         }
         if(sbase->nchilds > SB_THREADS_MAX) sbase->nchilds = SB_THREADS_MAX;
         //nproc
@@ -244,7 +244,7 @@ SBASE *sbase_init()
     SBASE *sbase = NULL;
     if((sbase = (SBASE *)xmm_new(sizeof(SBASE))))
     {
-        EVTIMER_INIT(sbase->evtimer);
+        sbase->evtimer          = EVTIMER_INIT();
         sbase->message_queue    = qmessage_init();
         sbase->set_log		    = sbase_set_log;
         sbase->set_evlog	    = sbase_set_evlog;
