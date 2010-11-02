@@ -1026,11 +1026,11 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         }
         else 
         {
-            ACCESS_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d total:%d nconns:%d", conn,conn->d_state, service->nqconns, service->nconn);
+            //ACCESS_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d total:%d nconns:%d", conn,conn->d_state, service->nqconns, service->nconn);
             conn->clean(conn);
             service->nconn--;
         }
-        ACCESS_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
+        DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
         MUTEX_UNLOCK(service->mutex);
     }
     return x;
@@ -1056,17 +1056,13 @@ CONN *service_popfromq(SERVICE *service)
             if((conn = conn_init()))
             {
                 service->nconn++;
-                ACCESS_LOGGER(service->logger, "conn_init(%d) conn[%p]->d_state:%d nconn:%d ", service->nqconns, conn, conn->d_state, service->nconn);
+                DEBUG_LOGGER(service->logger, "conn_init(%d) conn[%p]->d_state:%d nconn:%d ", service->nqconns, conn, conn->d_state, service->nconn);
             }
         }
         //fprintf(stdout, "nqconns:%d\n", service->nqconns);
         if(conn)
         {
             DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p]->d_state:%d nconn:%d", service->nqconns, conn, conn->d_state, service->nconn);
-            if(service->nconn > SB_QCONN_MAX)
-            {
-                ACCESS_LOGGER(service->logger, "over popfromq(%d) conn[%p]->d_state:%d nconn:%d ", service->nqconns, conn, conn->d_state, service->nconn);
-            }
         }
         MUTEX_UNLOCK(service->mutex);
     }
@@ -1561,7 +1557,7 @@ void service_clean(SERVICE **pservice)
             }
         }
         //clean chunks queue
-        ACCESS_LOGGER((*pservice)->logger, "Ready for clean chunks_queue:%d", (*pservice)->nqchunks);
+        DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue:%d", (*pservice)->nqchunks);
         if((*pservice)->nqchunks > 0)
         {
             //DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
