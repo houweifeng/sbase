@@ -75,7 +75,10 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
         if(service)
         {
             service->evbase = sbase->evbase;
-            service->evtimer = sbase->evtimer;
+            if(service->working_mode == WORKING_PROC) 
+                service->evtimer = sbase->evtimer;
+            else 
+                service->evtimer = service->etimer;
             service->sbase  = sbase;
             service->message_queue = sbase->message_queue;
             service->usec_sleep = sbase->usec_sleep;

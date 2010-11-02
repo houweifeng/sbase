@@ -215,6 +215,7 @@ running_threads:
         //daemon 
         if((service->daemon = procthread_init(0)))
         {
+            service->daemon->evtimer = service->etimer;
             PROCTHREAD_SET(service, service->daemon);
             NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
             ret = 0;
@@ -1517,6 +1518,7 @@ void service_clean(SERVICE **pservice)
         
         if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
         if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
+        if((*pservice)->etimer) {EVTIMER_CLEAN((*pservice)->etimer);}
         if((*pservice)->iodaemon) (*pservice)->iodaemon->clean(&((*pservice)->iodaemon));
         //clean procthreads
         if((*pservice)->procthreads && (*pservice)->nprocthreads)
@@ -1595,6 +1597,7 @@ SERVICE *service_init()
     if((service = (SERVICE *)xmm_new(sizeof(SERVICE))))
     {
         MUTEX_INIT(service->mutex);
+        service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;
         service->set_log            = service_set_log;
