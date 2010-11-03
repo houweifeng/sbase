@@ -181,15 +181,15 @@ void evtimer_check(EVTIMER *evtimer)
             else
                 evtimer->tail = NULL;
             evtimer->timeouts[evtimer->ntimeout++] = node;
+            node->next = node->prev = NULL;
         }
         MUTEX_UNLOCK(evtimer->mutex);
         for(i = 0; i < evtimer->ntimeout; i++)
         {
-            if((node = evtimer->timeouts[i]) && node->ison && (handler = node->handler))
+            if((node = evtimer->timeouts[i]) && node->next == NULL && node->prev == NULL
+                    && node->ison && (handler = node->handler))
                 handler(node->arg);
         }
-        /*
-        */
     }
     return ;
 }
