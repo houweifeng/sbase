@@ -11,8 +11,8 @@ typedef struct _EVTNODE
     struct _EVTNODE *prev;
     struct _EVTNODE *next;
 }EVTNODE;
-#define  EVTNODE_LINE_NUM   1024
 #define  EVTNODE_LINE_MAX   102400
+#define  EVTNODE_LINE_NUM   1024
 typedef struct _EVTIMER
 {
    int nevlist;
