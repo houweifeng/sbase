@@ -200,7 +200,6 @@ int http_check_over(CONN *conn)
 {
     if(conn)
     {
-        //if(is_keepalive) return http_over(conn, conn->s_id); 
         return http_over(conn, conn->s_id);
     }
     return -1;
@@ -242,6 +241,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             if(*s >= '0' && *s <= '9' && (len = atoll(s)) > 0) 
                 return conn->recv_chunk(conn, len);
         }
+        conn->over_cstate(conn);
         return http_check_over(conn);
     }
     return -1;
@@ -251,6 +251,8 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
 {
     if(conn)
     {
+        //fprintf(stdout, "%s::%d over on conn[%s:%d] c_state:%d s_state:%d via %d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->c_state, conn->s_state, conn->fd);
+        conn->over_cstate(conn);
         return http_check_over(conn);
     }
     return 0;
@@ -293,7 +295,7 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
 {
     if(conn)
     {
-        //fprintf(stdout, "error on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
+        //fprintf(stdout, "%s::%d error on conn[%s:%d] c_state:%d s_state:%d via %d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->c_state, conn->s_state, conn->fd);
         return http_check_over(conn);
     }
     return -1;

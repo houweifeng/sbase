@@ -54,9 +54,8 @@ int conn_read_buffer(CONN *conn)
 
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
-    if(conn && (conn->d_state == 0))                                                        \
+    if(conn)                                                                                \
     {                                                                                       \
-        conn->c_state = 0;                                                                  \
         conn->s_state = 0;                                                                  \
     }                                                                                       \
 }
@@ -349,8 +348,7 @@ int conn_terminate(CONN *conn)
                }
                */
         }
-        if((conn->c_state != C_STATE_FREE || conn->s_state != S_STATE_READY)
-                && conn->session.error_handler)
+        if((conn->c_state != 0 || conn->s_state != 0) && conn->session.error_handler)
         {
             ERROR_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, PCB(conn->packet)->ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
