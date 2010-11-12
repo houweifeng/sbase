@@ -72,7 +72,7 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
 {
     if(sbase)
     {
-        if(service)
+        if(service && sbase->running_services < SB_SERVICE_MAX)
         {
             service->evbase = sbase->evbase;
             if(service->working_mode == WORKING_PROC) 
@@ -88,13 +88,8 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
                 fprintf(stdout, "replace %s logger with sbase\n", service->service_name);
                 service->logger = sbase->logger;
             }
-            if((sbase->services = (SERVICE **)xmm_renew(sbase->services, 
-                            sbase->running_services * sizeof(SERVICE *) ,
-                            (sbase->running_services + 1) * sizeof(SERVICE *))))
-            {
-                sbase->services[sbase->running_services++] = service;
-                return service->set(service);
-            }
+            sbase->services[sbase->running_services++] = service;
+            return service->set(service);
         }
     }
     return -1;
@@ -220,14 +215,10 @@ void sbase_clean(SBASE **psbase)
 
     if(psbase && *psbase)
     {
-        if((*psbase)->services) 
+        for(i = 0; i < (*psbase)->running_services; i++)
         {
-            for(i = 0; i < (*psbase)->running_services; i++)
-            {
-                if((*psbase)->services[i])
-                    (*psbase)->services[i]->clean(&((*psbase)->services[i]));
-            }
-            xmm_free((*psbase)->services, (*psbase)->running_services * sizeof(SERVICE*));
+            if((*psbase)->services[i])
+                (*psbase)->services[i]->clean(&((*psbase)->services[i]));
         }
         if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
         if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
