@@ -19,6 +19,7 @@ extern "C" {
 #define SB_IP_MAX               16
 #define SB_XIDS_MAX             16
 #define SB_GROUPS_MAX           256
+#define SB_SERVICE_MAX          1024
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
 #define SB_QCONN_MAX            256
@@ -119,7 +120,7 @@ typedef struct _SBASE
 	int usec_sleep;
     int running_status;
 	EVBASE *evbase;
-    struct _SERVICE **services;
+    struct _SERVICE *services[SB_SERVICE_MAX];
     int running_services;
     long long nheartbeat;
 
