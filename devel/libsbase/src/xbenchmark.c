@@ -12,7 +12,7 @@
 #define HTTP_BUF_SIZE       65536
 #define HTTP_PATH_MAX       8192
 #define HTTP_IP_MAX         16
-#define HTTP_WAIT_TIMEOUT   500
+#define HTTP_WAIT_TIMEOUT   200
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static int concurrency = 1;
@@ -349,11 +349,12 @@ void benchmark_heartbeat_handler(void *arg)
         id = ncurrent;
         if((conn = http_newconn(id, server_ip, server_port, server_is_ssl)) == NULL)
         {
+            //ACCESS_LOGGER(logger, "ncurrent:%d", ncurrent);
             break;
         }
         else
         {
-            //usleep(10);
+            //ACCESS_LOGGER(logger, "ncurrent:%d", ncurrent);
             ++ncurrent;
         }
     }
@@ -573,10 +574,10 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 4;
+        service->nprocthreads = 8;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
-        service->use_cond_wait = 0;
+        service->use_cond_wait = 1;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;
