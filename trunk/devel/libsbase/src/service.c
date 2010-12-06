@@ -190,6 +190,7 @@ running_proc:
         if((service->daemon = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->daemon);
+            service->daemon->use_cond_wait = 0;
             if(service->daemon->message_queue)
             {
                 if(service->daemon->message_queue) qmessage_clean(service->daemon->message_queue);
@@ -217,6 +218,7 @@ running_threads:
         {
             service->daemon->evtimer = service->etimer;
             PROCTHREAD_SET(service, service->daemon);
+            service->daemon->use_cond_wait = 0;
             NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
             ret = 0;
         }
