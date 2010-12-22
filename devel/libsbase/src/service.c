@@ -849,7 +849,7 @@ int service_okconn(SERVICE *service, CONN *conn)
 
     if(service && conn)
     {
-        if((id = conn->groupid) >= 0 && id < service->ngroups)
+        if((id = conn->groupid) > 0 && id <= service->ngroups)
         {
             service->groups[id].nconnected++;
         }
@@ -868,7 +868,7 @@ CONN *service_getconn(SERVICE *service, int groupid)
     if(service)
     {
         MUTEX_LOCK(service->mutex);
-        if(groupid >= 0 && groupid < service->ngroups)
+        if(groupid > 0 && groupid <= service->ngroups)
         {
             x = 0;
             while(x < SB_CONN_MAX && service->groups[groupid].nconns_free > 0)
@@ -1193,7 +1193,7 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
     if(service && service->ngroups < SB_GROUPS_MAX)
     {
         MUTEX_LOCK(service->mutex);
-        id = service->ngroups++;
+        id = ++service->ngroups;
         strcpy(service->groups[id].ip, ip);
         service->groups[id].port = port;
         service->groups[id].limit = limit;
@@ -1235,7 +1235,7 @@ int service_castgroup(SERVICE *service, char *data, int len)
 
     if(service && data && len > 0 && service->ngroups > 0)
     {
-        for(i = 0; i < service->ngroups; i++)
+        for(i = 1; i <= service->ngroups; i++)
         {
             if((conn = service_getconn(service, i)))
             {
@@ -1257,7 +1257,7 @@ int service_stategroup(SERVICE *service)
 
     if(service && service->ngroups > 0)
     {
-        for(i = 0; i < service->ngroups; i++)
+        for(i = 1; i <= service->ngroups; i++)
         {
             if(service->groups[i].total >= service->groups[i].limit && service->groups[i].nconnected <= 0) 
             {
