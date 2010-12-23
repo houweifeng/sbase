@@ -159,6 +159,7 @@ int http_over(CONN *conn, int respcode)
 
     if(conn)
     {
+        conn->over_cstate(conn);
         id = conn->c_id;
         if(ncompleted < ntasks) 
             ++ncompleted;
@@ -241,7 +242,6 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             if(*s >= '0' && *s <= '9' && (len = atoll(s)) > 0) 
                 return conn->recv_chunk(conn, len);
         }
-        conn->over_cstate(conn);
         return http_check_over(conn);
     }
     return -1;
@@ -252,7 +252,6 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
     if(conn)
     {
         //fprintf(stdout, "%s::%d over on conn[%s:%d] c_state:%d s_state:%d via %d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->c_state, conn->s_state, conn->fd);
-        conn->over_cstate(conn);
         return http_check_over(conn);
     }
     return 0;
@@ -276,7 +275,6 @@ int benchmark_trans_handler(CONN *conn, int tid)
             {
                 ACCESS_LOGGER(logger, "connecting timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
                 ntimeout++;
-                conn->over_cstate(conn);
                 return http_check_over(conn);
             }
             else
@@ -322,7 +320,6 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
                 ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
             }
             ntimeout++;
-            conn->over_cstate(conn);
             return http_check_over(conn);
         }
     }

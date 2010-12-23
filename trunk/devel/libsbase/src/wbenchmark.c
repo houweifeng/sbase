@@ -159,6 +159,7 @@ int http_over(CONN *conn, int respcode)
 
     if(conn)
     {
+        conn->over_cstate(conn);
         id = conn->c_id;
         if(ncompleted < ntasks) 
             ++ncompleted;
