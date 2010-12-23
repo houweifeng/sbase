@@ -37,9 +37,9 @@ void procthread_run(void *arg)
             do
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
-                //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
+                DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
                 i = pth->evbase->loop(pth->evbase, 0, NULL);
-                //DEBUG_LOGGER(pth->logger, "over evbase->loop(%d)", i);
+                DEBUG_LOGGER(pth->logger, "over evbase->loop(%d)", i);
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
@@ -50,7 +50,7 @@ void procthread_run(void *arg)
                 }
                 if(i > 0)++k;
                 if(i == 0 || k > 1000){usleep(pth->usec_sleep); k = 0;}
-                //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
+                DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
         else
