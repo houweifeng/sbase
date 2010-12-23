@@ -83,7 +83,7 @@ int http_request(CONN *conn)
         }
         ++nrequests;
         conn->start_cstate(conn);
-        conn->set_timeout(conn, req_timeout);
+        conn->set_timeout(conn, req_timeout - conn->timeout);
         if(fp && fgets(path, HTTP_PATH_MAX, fp))
         {
             //fprintf(stdout, "%s::%d conn[%s:%d][%d]->status:%d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->fd, conn->status);
@@ -268,7 +268,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
         }
         else
         {
-            if(conn->timeout > req_timeout)
+            if(conn->timeout >= req_timeout)
             {
                 ACCESS_LOGGER(logger, "connecting timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
                 ntimeout++;
@@ -278,7 +278,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
             else
             {
                 conn->wait_evstate(conn);
-                return conn->set_timeout(conn, conn->timeout+HTTP_WAIT_TIMEOUT);
+                return conn->set_timeout(conn, req_timeout - conn->timeout);
             }
             //return service->newtransaction(service, conn, tid);
         }
