@@ -37,9 +37,9 @@ void procthread_run(void *arg)
             do
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
-                DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
+                //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
                 i = pth->evbase->loop(pth->evbase, 0, NULL);
-                DEBUG_LOGGER(pth->logger, "over evbase->loop(%d)", i);
+                if(i > 0){DEBUG_LOGGER(pth->logger, "over evbase->loop(%d)", i);}
                 //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
@@ -218,12 +218,11 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
         //conn->reset_state(conn);
-        if(conn->set(conn) == 0)
+        if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
         {
             DEBUG_LOGGER(pth->logger, "Ready for add conn[%p][%s:%d] d_state:%d "
                 " on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port, 
                 conn->d_state, conn->local_ip, conn->local_port, conn->fd);
-            ret = pth->service->pushconn(pth->service, conn);
         }
     }
     return ret;
