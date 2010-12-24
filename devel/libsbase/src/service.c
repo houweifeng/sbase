@@ -384,14 +384,14 @@ new_conn:
                             conn->ssl = ssl;
 #endif
                         */
-                        if(service->daemon && service->daemon->newconn(service->daemon, fd, ssl) == 0)
+                        DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
+                        if(service->daemon && service->daemon->newconn(service->daemon,fd,ssl)==0)
                         {
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
                             return ;
                         }
                         else 
                         {
-                            DEBUG_LOGGER(service->logger, "Accepting new connection[%s:%d] via %d failed, %s",ip, port, fd, strerror(errno));
+                            DEBUG_LOGGER(service->logger, "adding new connection[%s:%d] via %d failed, %s",ip, port, fd, strerror(errno));
                         }
 err_conn:               
 #ifdef HAVE_SSL
@@ -703,7 +703,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->parent    = service->daemon;
                     //conn->ioqmessage = service->daemon->message_queue;
                     //conn->message_queue = service->daemon->message_queue;
-                    service->daemon->addconn(service->daemon, conn);
+                    service->daemon->add_connection(service->daemon, conn);
                 }
                 else
                 {
@@ -721,7 +721,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->parent = procthread;
                     //conn->ioqmessage = procthread->ioqmessage;
                     //conn->message_queue = procthread->message_queue;
-                    procthread->addconn(procthread, conn);   
+                    procthread->add_connection(procthread, conn);   
                     DEBUG_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 }
                 else

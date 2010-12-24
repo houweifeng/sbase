@@ -158,11 +158,8 @@ int http_over(CONN *conn, int respcode)
     if(conn)
     {
         conn->over_cstate(conn);
+        n = ++ncompleted;
         id = conn->c_id;
-        if(ncompleted < ntasks) 
-            n = ++ncompleted;
-        else 
-            return conn->over(conn);
         if(n > 0 && n <= ntasks && (n%1000) == 0)
         {
             if(is_quiet)
@@ -171,7 +168,7 @@ int http_over(CONN *conn, int respcode)
             }
             else fprintf(stdout, "completed %d current:%d\n", n, ncurrent);
         }
-        if(n < ntasks)
+        if(nrequests < ntasks)
         {
             if(conn->d_state  == 0 && is_keepalive && respcode != 0) 
                 return http_request(conn);
@@ -188,8 +185,8 @@ int http_over(CONN *conn, int respcode)
         else 
         {
             conn->close(conn);
-            return http_show_state(n);
         }
+        if(n == ntasks )return http_show_state(n);
     }
     return -1;
 }
