@@ -53,7 +53,7 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
         {
             conn->c_id = id;
             conn->start_cstate(conn);
-            service->newtransaction(service, conn, id);
+            //service->newtransaction(service, conn, id);
             //usleep(10);
         }
         else
@@ -83,7 +83,7 @@ int http_request(CONN *conn)
         }
         ++nrequests;
         conn->start_cstate(conn);
-        conn->set_timeout(conn, req_timeout - conn->timeout);
+        conn->set_timeout(conn, req_timeout);
         if(fp && fgets(path, HTTP_PATH_MAX, fp))
         {
             //fprintf(stdout, "%s::%d conn[%s:%d][%d]->status:%d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->fd, conn->status);
@@ -262,8 +262,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
 {
     if(conn)
     {
-        //fprintf(stdout, "trans on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
-        //fprintf(stdout, "conn[%d]->status:%d\n", conn->fd, conn->status);
+        /*
         if(conn->status == 0)
         {
             //conn->over_evstate(conn);
@@ -284,6 +283,7 @@ int benchmark_trans_handler(CONN *conn, int tid)
             }
             //return service->newtransaction(service, conn, tid);
         }
+        */
     }
     return 0;
 }
@@ -304,28 +304,31 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
 {
     if(conn)
     {
-        if(conn->evstate == EVSTATE_WAIT)
+        if(cache && cache->data)
         {
-            conn->over_evstate(conn);
-            return benchmark_trans_handler(conn, conn->c_id);
+            ACCESS_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
         }
         else
         {
-            if(cache && cache->data)
-            {
-                ACCESS_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
-            }
-            else
-            {
-                ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
-            }
-            ntimeout++;
-            return http_check_over(conn);
+            ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
         }
+        ntimeout++;
+        return http_check_over(conn);
     }
     return -1;
 }
 
+/* ok handler */
+int benchmark_ok_handler(CONN *conn)
+{
+    if(conn)
+    {
+        return http_request(conn);
+    }
+    return -1;
+}
+
+/* OOB data handler */
 int benchmark_oob_handler(CONN *conn, CB_DATA *oob)
 {
     if(conn)
@@ -588,6 +591,7 @@ invalid_url:
         service->session.transaction_handler = &benchmark_trans_handler;
         service->session.error_handler = &benchmark_error_handler;
         service->session.timeout_handler = &benchmark_timeout_handler;
+        service->session.ok_handler = &benchmark_ok_handler;
         service->session.buffer_size = 65536;
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);

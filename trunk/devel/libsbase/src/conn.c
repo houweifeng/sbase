@@ -172,6 +172,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
                 if(QTOTAL(conn->send_queue) <= 0) 
                     conn->event->del(conn->event, E_WRITE);
+                if(conn->session.ok_handler) conn->session.ok_handler(conn);
                 return ;
             }
             int flag = fcntl(conn->fd, F_GETFL, 0);
@@ -1140,7 +1141,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
             chunk_mem_copy(cp, data, size);
             queue_push(conn->send_queue, cp);
             DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d send_queue "
-                    "total %d on %s:%d via %d", size, CHK_BSIZE(cp),conn->remote_ip, 
+                    "total %d on %s:%d via %d", size, cp->bsize,conn->remote_ip, 
                     conn->remote_port, QTOTAL(conn->send_queue), conn->local_ip, 
                     conn->local_port, conn->fd);
             if(QTOTAL(conn->send_queue) > 0) 

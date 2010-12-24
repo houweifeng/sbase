@@ -109,6 +109,7 @@ typedef struct _SESSION
     int (*oob_handler)(struct _CONN *, CB_DATA *oob);
     int (*timeout_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*transaction_handler)(struct _CONN *, int tid);
+    int (*ok_handler)(struct _CONN *);
 }SESSION;
 
 typedef void (CALLBACK)(void *);
