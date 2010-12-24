@@ -184,9 +184,13 @@ int http_over(CONN *conn, int respcode)
         }
         else 
         {
+            --ncurrent;
             conn->close(conn);
         }
-        if(n == ntasks )return http_show_state(n);
+        if(running_status)
+        {
+            if(n >= ntasks || (nrequests >= ntasks && ncurrent == 0))return http_show_state(n);
+        }
     }
     return -1;
 }
@@ -312,7 +316,7 @@ void benchmark_heartbeat_handler(void *arg)
     CONN *conn = NULL;
     int id = 0;
 
-    while(ncurrent < concurrency)
+    while(nrequests < ntasks && ncurrent < concurrency)
     {
         id = ncurrent;
         if((conn = http_newconn(id, server_ip, server_port, server_is_ssl)) == NULL)
