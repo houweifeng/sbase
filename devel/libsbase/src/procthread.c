@@ -112,7 +112,7 @@ int procthread_pushconn(PROCTHREAD *pth, int fd, void *ssl)
     if(pth && pth->message_queue && fd > 0)
     {
         PUSH_TASK_MESSAGE(pth,MESSAGE_NEW_CONN, -1, fd, -1, ssl, NULL);
-        DEBUG_LOGGER(pth->logger, "Added message[NEW_CONN] to procthreads[%d]", pth->index);
+        DEBUG_LOGGER(pth->logger, "Added message[NEW_CONN][%d] to procthreads[%d] qtotal:%d", fd, pth->index, QTOTAL(pth->message_queue));
         ret = 0;
     }
     return ret;

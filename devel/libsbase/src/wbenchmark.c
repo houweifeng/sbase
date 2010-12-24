@@ -53,8 +53,6 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
         {
             conn->c_id = id;
             conn->start_cstate(conn);
-            service->newtransaction(service, conn, id);
-            //usleep(10);
         }
         else
         {
@@ -83,7 +81,7 @@ int http_request(CONN *conn)
         }
         ++nrequests;
         conn->start_cstate(conn);
-        conn->set_timeout(conn, req_timeout - conn->timeout);
+        conn->set_timeout(conn, req_timeout);
         if(fp && fgets(path, HTTP_PATH_MAX, fp))
         {
             //fprintf(stdout, "%s::%d conn[%s:%d][%d]->status:%d\n", __FILE__, __LINE__, conn->local_ip, conn->local_port, conn->fd, conn->status);
@@ -128,23 +126,23 @@ int http_request(CONN *conn)
 int http_show_state(int n)
 {
     TIMER_SAMPLE(timer);
-    if(PT_USEC_U(timer) > 0 && ncompleted > 0)
+    if(PT_USEC_U(timer) > 0 && n > 0)
     {
         if(is_quiet)
         {
             REALLOG(logger, "timeout:%d error:%d total:%d "
                     "time used:%lld request per sec:%lld avg_time:%lld", 
-                    ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
-                    ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
-                    (PT_USEC_U(timer)/ncompleted));
+                    ntimeout, nerrors, n, PT_USEC_U(timer), 
+                    ((long long int)n * 1000000ll/PT_USEC_U(timer)),
+                    (PT_USEC_U(timer)/n));
         }
         else
         {
             fprintf(stdout, "timeout:%d error:%d total:%d\n"
                     "time used:%lld request per sec:%lld avg_time:%lld\n", 
-                    ntimeout, nerrors, ncompleted, PT_USEC_U(timer), 
-                    ((long long int)ncompleted * 1000000ll/PT_USEC_U(timer)),
-                    (PT_USEC_U(timer)/ncompleted));
+                    ntimeout, nerrors, n, PT_USEC_U(timer), 
+                    ((long long int)n * 1000000ll/PT_USEC_U(timer)),
+                    (PT_USEC_U(timer)/n));
         }
     }
     //if(is_wait_sleep){while(running_status)sleep(1);}
@@ -162,10 +160,9 @@ int http_over(CONN *conn, int respcode)
         conn->over_cstate(conn);
         id = conn->c_id;
         if(ncompleted < ntasks) 
-            ++ncompleted;
+            n = ++ncompleted;
         else 
             return conn->over(conn);
-        n = ncompleted;
         if(n > 0 && n <= ntasks && (n%1000) == 0)
         {
             if(is_quiet)
@@ -174,7 +171,7 @@ int http_over(CONN *conn, int respcode)
             }
             else fprintf(stdout, "completed %d current:%d\n", n, ncurrent);
         }
-        if(ncompleted < ntasks)
+        if(n < ntasks)
         {
             if(conn->d_state  == 0 && is_keepalive && respcode != 0) 
                 return http_request(conn);
@@ -191,7 +188,7 @@ int http_over(CONN *conn, int respcode)
         else 
         {
             conn->close(conn);
-            if(n == ntasks) return http_show_state(n);
+            return http_show_state(n);
         }
     }
     return -1;
@@ -259,29 +256,6 @@ int benchmark_trans_handler(CONN *conn, int tid)
 {
     if(conn)
     {
-        //fprintf(stdout, "trans on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
-        //fprintf(stdout, "conn[%d]->status:%d\n", conn->fd, conn->status);
-        if(conn->status == 0)
-        {
-            //conn->over_evstate(conn);
-            return http_request(conn);
-        }
-        else
-        {
-            if(conn->timeout >= req_timeout)
-            {
-                ACCESS_LOGGER(logger, "connecting timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
-                ntimeout++;
-                conn->over_cstate(conn);
-                return http_over(conn, 0);
-            }
-            else
-            {
-                conn->wait_evstate(conn);
-                return conn->set_timeout(conn, req_timeout - conn->timeout);
-            }
-            //return service->newtransaction(service, conn, tid);
-        }
     }
     return 0;
 }
@@ -291,8 +265,17 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
 {
     if(conn)
     {
-        //fprintf(stdout, "error on conn[%s:%d] via %d\n", conn->local_ip, conn->local_port, conn->fd);
         return http_over(conn, conn->s_id);
+    }
+    return -1;
+}
+
+/* ok handler */
+int benchmark_ok_handler(CONN *conn)
+{
+    if(conn)
+    {
+        return http_request(conn);
     }
     return -1;
 }
@@ -302,25 +285,17 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
 {
     if(conn)
     {
-        if(conn->evstate == EVSTATE_WAIT)
+        if(cache && cache->data)
         {
-            conn->over_evstate(conn);
-            return benchmark_trans_handler(conn, conn->c_id);
+            ACCESS_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
         }
         else
         {
-            if(cache && cache->data)
-            {
-                ACCESS_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
-            }
-            else
-            {
-                ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
-            }
-            ntimeout++;
-            conn->over_cstate(conn);
-            return http_over(conn, 0);
+            ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
         }
+        ntimeout++;
+        conn->over_cstate(conn);
+        return http_over(conn, 0);
     }
     return -1;
 }
@@ -586,6 +561,7 @@ invalid_url:
         service->session.transaction_handler = &benchmark_trans_handler;
         service->session.error_handler = &benchmark_error_handler;
         service->session.timeout_handler = &benchmark_timeout_handler;
+        service->session.ok_handler = &benchmark_ok_handler;
         service->session.buffer_size = 65536;
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
