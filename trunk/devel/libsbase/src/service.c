@@ -703,7 +703,10 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->parent    = service->daemon;
                     //conn->ioqmessage = service->daemon->message_queue;
                     //conn->message_queue = service->daemon->message_queue;
-                    service->daemon->add_connection(service->daemon, conn);
+                    if(status == CONN_STATUS_FREE)
+                        service->daemon->add_connection(service->daemon, conn);
+                    else
+                        service->daemon->addconn(service->daemon, conn);
                 }
                 else
                 {
@@ -721,7 +724,10 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->parent = procthread;
                     //conn->ioqmessage = procthread->ioqmessage;
                     //conn->message_queue = procthread->message_queue;
-                    procthread->add_connection(procthread, conn);   
+                    if(status == CONN_STATUS_FREE)
+                        procthread->add_connection(procthread, conn);   
+                    else
+                        service->daemon->addconn(service->daemon, conn);
                     DEBUG_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 }
                 else
