@@ -703,10 +703,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->parent    = service->daemon;
                     //conn->ioqmessage = service->daemon->message_queue;
                     //conn->message_queue = service->daemon->message_queue;
-                    if(status == CONN_STATUS_FREE)
-                        service->daemon->add_connection(service->daemon, conn);
-                    else
-                        service->daemon->addconn(service->daemon, conn);
+                    service->daemon->add_connection(service->daemon, conn);
                 }
                 else
                 {
@@ -727,7 +724,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     if(status == CONN_STATUS_FREE)
                         procthread->add_connection(procthread, conn);   
                     else
-                        service->daemon->addconn(service->daemon, conn);
+                        procthread->addconn(procthread, conn);
                     DEBUG_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 }
                 else
@@ -760,7 +757,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 service->connections[i] = conn;
                 conn->index = i;
                 service->running_connections++;
-                if((id = conn->groupid) >= 0 && id < SB_GROUPS_MAX)
+                if((id = conn->groupid) > 0 && id < SB_GROUPS_MAX)
                 {
                     x = 0;
                     while(x < SB_CONN_MAX)
@@ -811,7 +808,7 @@ int service_popconn(SERVICE *service, CONN *conn)
         if(conn->index > 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
-            if((id = conn->groupid) >= 0 && id < SB_GROUPS_MAX)
+            if((id = conn->groupid) > 0 && id < SB_GROUPS_MAX)
             {
                 if((x = conn->gindex) >= 0 && x < SB_CONN_MAX 
                         && service->groups[id].conns_free[x] > 0
@@ -928,7 +925,7 @@ int service_freeconn(SERVICE *service, CONN *conn)
     if(service && conn)
     {
         MUTEX_LOCK(service->mutex);
-        if((id = conn->groupid) >= 0 && id < SB_GROUPS_MAX)
+        if((id = conn->groupid) > 0 && id < SB_GROUPS_MAX)
         {
             if(service->groups[id].limit <= 0)
             {
