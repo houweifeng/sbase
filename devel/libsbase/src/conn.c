@@ -247,8 +247,8 @@ int conn_set(CONN *conn)
         }
         else
         {
-            FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or"
-                    "initialize event failed, %s", conn, conn->fd, strerror(errno));	
+            FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or "
+                    " initialize event failed, %s", conn, conn->fd, strerror(errno));	
             /* Terminate connection */
             conn_shut(conn, D_STATE_CLOSE);
         }
