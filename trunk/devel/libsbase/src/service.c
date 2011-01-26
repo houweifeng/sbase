@@ -1444,7 +1444,6 @@ void service_state(void *arg)
                                     service->ip, service->port, strerror(errno));
                             break;
                         }
-                        usleep(100);
                         n--;
                     }
                 }
