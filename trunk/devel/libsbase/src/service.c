@@ -444,7 +444,7 @@ err_conn:
                             {
                                 qmessage_push(pth->message_queue, 
                                     MESSAGE_INPUT, -1, conn->fd, -1, conn, pth, NULL);
-                                if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
+                                if(pth->mutex && pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
                             }
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
                                     " buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
@@ -981,7 +981,7 @@ void service_overconn(SERVICE *service, CONN *conn)
     {
         qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
                 -1, daemon, conn, NULL);
-        if((mutex = daemon->mutex)){MUTEX_SIGNAL(mutex);}
+        if((mutex = daemon->mutex) && daemon->use_cond_wait){MUTEX_SIGNAL(mutex);}
     }
     return ;
 }
