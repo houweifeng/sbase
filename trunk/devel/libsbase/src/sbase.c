@@ -181,7 +181,7 @@ running:
                 i = 0;
             }
             if(i > 0)++k;
-            if(i == 0 || k > 1000){usleep(sbase->usec_sleep); k = 0;}
+            if(i == 0 || k > 10000){usleep(sbase->usec_sleep); k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)
