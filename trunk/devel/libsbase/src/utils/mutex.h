@@ -33,11 +33,7 @@ do                                                                              
     if(ptr)                                                                             \
     {                                                                                   \
         pthread_mutex_lock(&(MT(ptr)->mutex));                                          \
-        if(MT(ptr)->nowait == 0)                                                        \
-        {                                                                               \
-            pthread_cond_wait(&(MT(ptr)->cond), &(MT(ptr)->mutex));                     \
-            MT(ptr)->nowait = 0;                                                        \
-        }                                                                               \
+        pthread_cond_wait(&(MT(ptr)->cond), &(MT(ptr)->mutex));                         \
         pthread_mutex_unlock(&(MT(ptr)->mutex));                                        \
     }                                                                                   \
 }while(0)
