@@ -13,6 +13,7 @@ typedef struct _MUTEX
 {
     pthread_mutex_t mutex;
     pthread_cond_t  cond;
+    int nowait;
 }MUTEX;
 #define MT(ptr) ((MUTEX *)ptr)
 #define MUTEX_INIT(ptr)                                                     \
@@ -26,18 +27,41 @@ do                                                                          \
 }while(0)
 #define MUTEX_LOCK(ptr) ((ptr) ? pthread_mutex_lock(&(MT(ptr)->mutex)): -1)
 #define MUTEX_UNLOCK(ptr) ((ptr) ? pthread_mutex_unlock(&(MT(ptr)->mutex)): -1)
-#define MUTEX_WAIT(ptr) ((ptr && pthread_mutex_lock(&(MT(ptr)->mutex)) == 0 && pthread_cond_wait(&(MT(ptr)->cond), &(MT(ptr)->mutex)) == 0 && pthread_mutex_unlock(&(MT(ptr)->mutex)) == 0)? 0 : -1)
-#define MUTEX_SIGNAL(ptr) ((ptr)?pthread_cond_signal(&(MT(ptr)->cond)): -1)
-#define MUTEX_DESTROY(ptr)                                                  \
-do                                                                          \
-{															                \
-	if(ptr)													                \
-	{														                \
-		pthread_mutex_destroy(&(MT(ptr)->mutex)); 						    \
-		pthread_cond_destroy(&(MT(ptr)->cond)); 							\
-		xmm_free(ptr, sizeof(MUTEX));										\
-		ptr = NULL;												            \
-	}														                \
+#define MUTEX_WAIT(ptr)                                                                 \
+do                                                                                      \
+{                                                                                       \
+    if(ptr)                                                                             \
+    {                                                                                   \
+        pthread_mutex_lock(&(MT(ptr)->mutex));                                          \
+        if(MT(ptr)->nowait == 0)                                                        \
+        {                                                                               \
+            pthread_cond_wait(&(MT(ptr)->cond), &(MT(ptr)->mutex));                     \
+            MT(ptr)->nowait = 0;                                                        \
+        }                                                                               \
+        pthread_mutex_unlock(&(MT(ptr)->mutex));                                        \
+    }                                                                                   \
+}while(0)
+#define MUTEX_SIGNAL(ptr)                                                               \
+do                                                                                      \
+{                                                                                       \
+    if(ptr)                                                                             \
+    {                                                                                   \
+        pthread_mutex_lock(&(MT(ptr)->mutex));                                          \
+        MT(ptr)->nowait = 1;                                                            \
+        pthread_cond_signal(&(MT(ptr)->cond));                                          \
+        pthread_mutex_unlock(&(MT(ptr)->mutex));                                        \
+    }                                                                                   \
+}while(0)
+#define MUTEX_DESTROY(ptr)                                                              \
+do                                                                                      \
+{															                            \
+	if(ptr)													                            \
+	{														                            \
+		pthread_mutex_destroy(&(MT(ptr)->mutex)); 						                \
+		pthread_cond_destroy(&(MT(ptr)->cond)); 							            \
+		xmm_free(ptr, sizeof(MUTEX));										            \
+		ptr = NULL;												                        \
+	}														                            \
 }while(0)
 #else
 #ifdef HAVE_SEMAPHORE
