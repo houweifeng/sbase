@@ -68,13 +68,15 @@ void procthread_run(void *arg)
                     }
                     else
                     {
-                        if(QMTOTAL(pth->message_queue) <= 0)
+                        if(QMTOTAL(pth->message_queue) <= 0 && k > 10)
                         {
+                            k = 0;
                             DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
 
                             ret = MUTEX_WAIT(pth->mutex);
                             DEBUG_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                         }
+                        else ++k;
                     }
                 }while(pth->running_status);
             }
