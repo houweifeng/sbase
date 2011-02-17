@@ -577,7 +577,7 @@ invalid_url:
         service->nprocthreads = 8;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
-        service->use_cond_wait = 0;
+        service->use_cond_wait = 1;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;
