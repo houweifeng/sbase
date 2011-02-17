@@ -609,14 +609,22 @@ int conn_push_message(CONN *conn, int message_id)
         if((parent = (PROCTHREAD *)conn->parent))
         {
             DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to message_queue[%p] "
-                    "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
+                    "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p][%p]",
                     MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, QMTOTAL(conn->message_queue),
-                    PPL(conn), parent);
+                    PPL(conn), parent, (void *)(parent->threadid));
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                     -1, parent, conn, NULL);
-            if((mutex = parent->mutex) && parent->use_cond_wait){MUTEX_SIGNAL(mutex);}
+            if((mutex = parent->mutex) && parent->use_cond_wait)
+            {
+                MUTEX_SIGNAL(mutex);
+                DEBUG_LOGGER(conn->logger, "over for pushing message[%s] to message_queue[%p] "
+                    "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p][%p]",
+                    MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
+                    conn->remote_port, conn->local_ip, conn->local_port, conn->fd, 
+                    QMTOTAL(conn->message_queue), PPL(conn), parent, (void *)(parent->threadid));
+            }
         }
         ret = 0;
     }
