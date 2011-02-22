@@ -44,6 +44,7 @@ typedef struct _EVBASE
 	int state;
 
     void    (*set_logfile)(struct _EVBASE *, char *logfile);
+    void    (*set_log_level)(struct _EVBASE *, int level);
     int     (*set_evops)(struct _EVBASE *, int evopid);
 	int	    (*init)(struct _EVBASE *);
 	int	    (*add)(struct _EVBASE *, struct _EVENT*);

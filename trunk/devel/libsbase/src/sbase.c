@@ -55,6 +55,19 @@ int sbase_set_log(SBASE *sbase, char *logfile)
     return ret;
 }
 
+/* set sbase log level  */
+int sbase_set_log_level(SBASE *sbase, int level)
+{
+    int ret = -1;
+    if(sbase && sbase->logger)
+    {
+        LOGGER_SET_LEVEL(sbase->logger, level);
+        ret = 0;
+    }
+    return ret;
+}
+
+
 /* set evbase log */
 int sbase_set_evlog(SBASE *sbase, char *evlogfile)
 {
@@ -66,6 +79,19 @@ int sbase_set_evlog(SBASE *sbase, char *evlogfile)
     }
     return ret;
 }
+
+/* set evbase log level */
+int sbase_set_evlog_level(SBASE *sbase, int level)
+{
+    int ret = -1;
+    if(sbase && sbase->evbase && sbase->evbase->logger)
+    {
+        sbase->evbase->set_log_level(sbase->evbase, level);
+        ret = 0;
+    }
+    return ret;
+}
+
 
 /* add service to sbase */
 int sbase_add_service(SBASE *sbase, SERVICE  *service)
@@ -241,7 +267,9 @@ SBASE *sbase_init()
         sbase->evtimer          = EVTIMER_INIT();
         sbase->message_queue    = qmessage_init();
         sbase->set_log		    = sbase_set_log;
+        sbase->set_log_level	= sbase_set_log_level;
         sbase->set_evlog	    = sbase_set_evlog;
+        sbase->set_evlog_level	= sbase_set_evlog_level;
         sbase->add_service	    = sbase_add_service;
         sbase->running 		    = sbase_running;
         sbase->stop 		    = sbase_stop;

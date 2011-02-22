@@ -340,6 +340,18 @@ int service_set_log(SERVICE *service, char *logfile)
     return -1;
 }
 
+/* set logfile level  */
+int service_set_log_level(SERVICE *service, int level)
+{
+    if(service && service->logger)
+    {
+        LOGGER_SET_LEVEL(service->logger, level);
+        return 0;
+    }
+    return -1;
+}
+
+
 
 /* event handler */
 void service_event_handler(int event_fd, short flag, void *arg)
@@ -1602,6 +1614,7 @@ SERVICE *service_init()
         service->set                = service_set;
         service->run                = service_run;
         service->set_log            = service_set_log;
+        service->set_log_level      = service_set_log_level;
         service->stop               = service_stop;
         service->newproxy           = service_newproxy;
         service->newconn            = service_newconn;
