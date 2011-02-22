@@ -219,7 +219,7 @@ do{                                                                             
 }while(0)
 #define LOGGER_SET_LEVEL(ptr, num) {if(ptr){PL(ptr)->level = num;}}
 #define ACCESS_LOGGER(ptr, format...) {if(ptr && PL(ptr)->level>0){LOGGER_ADD(ptr, __ACCESS__, format);}}
-#define DEBUG_LOGGER(ptr, format...) {if(ptt && PL(ptr)->level>1){LOGGER_ADD(ptr, __DEBUG__, format);}}
+#define DEBUG_LOGGER(ptr, format...) {if(ptr && PL(ptr)->level>1){LOGGER_ADD(ptr, __DEBUG__, format);}}
 #define WARN_LOGGER(ptr, format...) {if(ptr){LOGGER_ADD(ptr, __WARN__, format);}}
 #define ERROR_LOGGER(ptr, format...) {if(ptr){LOGGER_ADD(ptr, __ERROR__, format);}}
 #define FATAL_LOGGER(ptr, format...) {if(ptr){LOGGER_ADD(ptr, __FATAL__, format);}}
