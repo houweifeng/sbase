@@ -68,6 +68,15 @@ void evbase_set_logfile(EVBASE *evbase, char *file)
     }
     return ;
 }
+/* set logger level */
+void evbase_set_log_level(EVBASE *evbase, int level)
+{
+    if(evbase && evbase->logger)
+    {
+        LOGGER_SET_LEVEL(evbase->logger, level);
+    }
+    return ;
+}
 /* set event operating */
 int evbase_set_evops(EVBASE *evbase, int evopid)
 {
@@ -189,6 +198,7 @@ EVBASE *evbase_init(int use_mutex)
         evops[EOP_WIN32].clean    = evwin32_clean;
 #endif
         evbase->set_logfile = evbase_set_logfile;
+        evbase->set_log_level = evbase_set_log_level;
         evbase->set_evops   = evbase_set_evops;
         //evbase->clean 	=  evbase_clean;
         if(evops_default == -1 || evbase->set_evops(evbase, evops_default) == -1)

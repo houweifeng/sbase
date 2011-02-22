@@ -137,7 +137,9 @@ typedef struct _SBASE
     void *message_queue;
 
 	int  (*set_log)(struct _SBASE *, char *);
+    int  (*set_log_level)(struct _SBASE *sbase, int level);
 	int  (*set_evlog)(struct _SBASE *, char *);
+	int  (*set_evlog_level)(struct _SBASE *, int level);
 	
 	int  (*add_service)(struct _SBASE *, struct _SERVICE *);
     int  (*running)(struct _SBASE *, int time_usec);
@@ -281,6 +283,7 @@ typedef struct _SERVICE
     void *logger;
     int  is_inside_logger;
     int (*set_log)(struct _SERVICE *service, char *logfile);
+    int (*set_log_level)(struct _SERVICE *service, int level);
 
     /* transaction and task */
     int ntask;

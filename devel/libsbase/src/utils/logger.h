@@ -55,6 +55,7 @@ typedef struct _LOGGER
     int n;
 	int fd ;
     int total;
+    int level;
 }LOGGER;
 #endif
 #ifdef HAVE_PTHREAD
@@ -216,15 +217,12 @@ do{                                                                             
     MUTEX_UNLOCK(PL(ptr)->mutex);                                                   \
     }                                                                               \
 }while(0)
-#ifdef _DEBUG
-#define DEBUG_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __DEBUG__, format);}
-#else
-#define DEBUG_LOGGER(ptr, format...)
-#endif
+#define LOGGER_SET_LEVEL(ptr, num) {if(ptr){PL(ptr)->level = num;}}
+#define ACCESS_LOGGER(ptr, format...) {if(PL(ptr)->level>0){LOGGER_ADD(ptr, __ACCESS__, format);}}
+#define DEBUG_LOGGER(ptr, format...) {if(PL(ptr)->level>1){LOGGER_ADD(ptr, __DEBUG__, format);}}
 #define WARN_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __WARN__, format);}
 #define ERROR_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __ERROR__, format);}
 #define FATAL_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __FATAL__, format);}
-#define ACCESS_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __ACCESS__, format);}
 #define LOGGER_CLEAN(ptr)                                                           \
 do{                                                                                 \
     if(ptr)                                                                         \

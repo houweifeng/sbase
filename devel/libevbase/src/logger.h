@@ -55,6 +55,7 @@ typedef struct _LOGGER
     int n;
 	int fd ;
     int total;
+    int level;
 }LOGGER;
 #endif
 #ifdef HAVE_PTHREAD
@@ -191,7 +192,7 @@ do{                                                                             
             "[%u/%p] #%s::%d# %s:", PLP(ptr)->tm_mday, ymonths[PLP(ptr)->tm_mon],   \
             (1900+PLP(ptr)->tm_year), PLP(ptr)->tm_hour, PLP(ptr)->tm_min,          \
         PLP(ptr)->tm_sec, (unsigned int)(PLTV(ptr).tv_usec),(unsigned int)getpid(), \
-        (char *)THREADID(), __FILE__, __LINE__, _logger_level_s[__level__]);        \
+        ((char *)THREADID()), __FILE__, __LINE__, _logger_level_s[__level__]);        \
     PLPS(ptr) += sprintf(PLPS(ptr), format);                                        \
     *PLPS(ptr)++ = '\n';                                                            \
     PLN(ptr) = write(PLFD(ptr), PLB(ptr), (PLPS(ptr) - PLB(ptr)));                  \
@@ -216,15 +217,12 @@ do{                                                                             
     MUTEX_UNLOCK(PL(ptr)->mutex);                                                   \
     }                                                                               \
 }while(0)
-#ifdef _DEBUG
-#define DEBUG_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __DEBUG__, format);}
-#else
-#define DEBUG_LOGGER(ptr, format...)
-#endif
+#define LOGGER_SET_LEVEL(ptr, num) {if(ptr){PL(ptr)->level = num;}}
+#define ACCESS_LOGGER(ptr, format...) {if(PL(ptr)->level>0){LOGGER_ADD(ptr, __ACCESS__, format);}}
+#define DEBUG_LOGGER(ptr, format...) {if(PL(ptr)->level>1){LOGGER_ADD(ptr, __DEBUG__, format);}}
 #define WARN_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __WARN__, format);}
 #define ERROR_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __ERROR__, format);}
 #define FATAL_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __FATAL__, format);}
-#define ACCESS_LOGGER(ptr, format...) {LOGGER_ADD(ptr, __ACCESS__, format);}
 #define LOGGER_CLEAN(ptr)                                                           \
 do{                                                                                 \
     if(ptr)                                                                         \
