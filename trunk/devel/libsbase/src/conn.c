@@ -158,9 +158,9 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) < 0 
                         || error != 0)
                 {
-                    ERROR_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
-                    "connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
-                    conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
+                    //ERROR_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
+                    //"connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
+                    //conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
                     conn_shut(conn, D_STATE_CLOSE);          
                     return ;
                 }
