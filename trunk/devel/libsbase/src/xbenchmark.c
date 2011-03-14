@@ -25,7 +25,7 @@ static int ncompleted = 0;
 static int is_quiet = 0;
 static int is_daemon = 0;
 static int is_keepalive = 0;
-static int is_wait_sleep = 0;
+static int workers = 32;
 static int is_post = 0;
 static int is_verbosity = 0;
 static char *server_host = NULL;
@@ -147,7 +147,6 @@ int http_show_state(int n)
                     (PT_USEC_U(timer)/ncompleted));
         }
     }
-    //if(is_wait_sleep){while(running_status)sleep(1);}
     if(is_daemon == 0){running_status = 0;sbase->stop(sbase);}
     return 0;
 }
@@ -378,12 +377,13 @@ static void benchmark_stop(int sig)
 
 int main(int argc, char **argv)
 {
-    pid_t pid;
     char *url = NULL, *urllist = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
     struct hostent *hent = NULL;
+    pid_t pid;
+    int n = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vqpkwdl:c:t:n:")) != -1)
+    while((ch = getopt(argc, argv, "vqpkdw:l:c:t:n:")) != -1)
     {
         switch(ch)
         {
@@ -400,7 +400,7 @@ int main(int argc, char **argv)
                 is_keepalive = 1;
                 break;
             case 'w':
-                is_wait_sleep = 1;
+                if((n = atoi(optarg)) > 0) workers = n;
                 break;
             case 'd':
                 is_daemon = 1;
@@ -434,10 +434,10 @@ int main(int argc, char **argv)
     if(url == NULL)
     {
         fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
-                "Options:\n\t-c concurrency\n\t-n requests\n"
+                "Options:\n\t-c concurrency\n\t-n requests\n\t-w worker threads\n"
                 "\t-t timeout (microseconds, default 1000000)\n"
                 "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
-                "\t-k is_keepalive\n\t-d is_daemon\n\t-w is_wait_sleep\n ", argv[0]);
+                "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
         _exit(-1);
     }
     p = url;
@@ -574,7 +574,7 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 1;
-        service->nprocthreads = 8;
+        service->nprocthreads = workers;
         service->ndaemons = 0;
         service->use_iodaemon = 1;
         service->use_cond_wait = 1;
