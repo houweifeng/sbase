@@ -21,7 +21,7 @@
 #include "trie.h"
 #include "stime.h"
 #include "logger.h"
-#define XHTTPD_VERSION 		    "0.0.1"
+#define XHTTPD_VERSION 		    "0.1.0"
 #define HTTP_RESP_OK            "HTTP/1.1 200 OK"
 #define HTTP_BAD_REQUEST        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NOT_FOUND          "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n" 

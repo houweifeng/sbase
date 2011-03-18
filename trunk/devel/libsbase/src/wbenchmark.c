@@ -174,7 +174,7 @@ int http_over(CONN *conn, int respcode)
             else
             {
                 conn->close(conn);
-                if(respcode != 0 && (respcode < 200 || respcode >= 300))nerrors++;
+                if(respcode != 0 && respcode != 200)nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 {
                     if(ncurrent > 0)--ncurrent;
@@ -218,7 +218,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             if(*s >= '0' && *s <= '9') respcode = atoi(s);
         }
         conn->s_id = respcode;
-        if(respcode < 200 || respcode > 300)
+        if(respcode != 200)
         {
             //fprintf(stdout, "HTTP:%s\n", p);
             return http_over(conn, respcode);
