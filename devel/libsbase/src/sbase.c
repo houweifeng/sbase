@@ -96,6 +96,8 @@ int sbase_set_evlog_level(SBASE *sbase, int level)
 /* add service to sbase */
 int sbase_add_service(SBASE *sbase, SERVICE  *service)
 {
+    int i = 0;
+
     if(sbase)
     {
         if(service && sbase->running_services < SB_SERVICE_MAX)
@@ -114,11 +116,39 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
                 fprintf(stdout, "replace %s logger with sbase\n", service->service_name);
                 service->logger = sbase->logger;
             }
-            sbase->services[sbase->running_services++] = service;
+            for(i = 0; i < SB_SERVICE_MAX; i++)
+            {
+                if(sbase->services[i] == NULL)
+                {
+                    sbase->services[i] = service;
+                    sbase->running_services++;
+                    break;
+                }
+            }
             return service->set(service);
         }
     }
     return -1;
+}
+
+/* sbase remove service */
+void sbase_remove_service(SBASE *sbase, SERVICE *service)
+{
+    int i = 0;
+
+    if(sbase && service)
+    {
+        for(i = 0; i < SB_SERVICE_MAX; i++)    
+        {
+            if(sbase->services[i] == service)
+            {
+                sbase->services[i] = NULL;
+                sbase->running_services--;
+                break;
+            }
+        }
+    }
+    return ;
 }
 
 /* sbase evtimer  handler */
@@ -271,6 +301,7 @@ SBASE *sbase_init()
         sbase->set_evlog	    = sbase_set_evlog;
         sbase->set_evlog_level	= sbase_set_evlog_level;
         sbase->add_service	    = sbase_add_service;
+        sbase->remove_service	= sbase_remove_service;
         sbase->running 		    = sbase_running;
         sbase->stop 		    = sbase_stop;
         sbase->clean 		    = sbase_clean;

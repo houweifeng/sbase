@@ -1603,6 +1603,17 @@ void service_clean(SERVICE **pservice)
     return ;
 }
 
+void service_close(SERVICE *service)
+{
+    if(service)
+    {
+        service_stop(service);
+        service->sbase->remove_service(service->sbase, service);
+        service_clean(&service);
+    }
+    return ;
+}
+
 /* Initialize service */
 SERVICE *service_init()
 {
@@ -1641,6 +1652,7 @@ SERVICE *service_init()
         service->newtransaction     = service_newtransaction;
         service->set_heartbeat      = service_set_heartbeat;
         service->clean              = service_clean;
+        service->close              = service_close;
     }
     return service;
 }
