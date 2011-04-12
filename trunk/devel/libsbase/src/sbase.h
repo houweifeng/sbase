@@ -142,6 +142,7 @@ typedef struct _SBASE
 	int  (*set_evlog_level)(struct _SBASE *, int level);
 	
 	int  (*add_service)(struct _SBASE *, struct _SERVICE *);
+	void (*remove_service)(struct _SBASE *, struct _SERVICE *);
     int  (*running)(struct _SBASE *, int time_usec);
 	void (*stop)(struct _SBASE *);
 	void (*clean)(struct _SBASE **);
@@ -168,6 +169,7 @@ typedef struct _CNGROUP
 typedef struct _SERVICE
 {
     /* global */
+    int id;
     int lock;
     int usec_sleep;
     int use_cond_wait;
@@ -296,6 +298,7 @@ typedef struct _SERVICE
 
     /* clean */
     void (*clean)(struct _SERVICE **pservice);
+    void (*close)(struct _SERVICE *);
 
 }SERVICE;
 /* Initialize service */
@@ -456,6 +459,7 @@ typedef struct _CONN
     int (*set_session)(struct _CONN *, SESSION *session);
     int (*over_session)(struct _CONN *);
     int (*newtask)(struct _CONN *, CALLBACK *);
+    int (*get_service_id)(struct _CONN *);
     /* connection bytes stats */
     long long   recv_oob_total;
     long long   sent_oob_total;

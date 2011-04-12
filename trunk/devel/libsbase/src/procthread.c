@@ -18,7 +18,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0};
-    int i = 0, k = 0, ret = 0;
+    int i = 0, k = 0;
 
     if(pth)
     {

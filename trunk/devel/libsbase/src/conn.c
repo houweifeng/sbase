@@ -256,6 +256,16 @@ int conn_set(CONN *conn)
     return -1;	
 }
 
+/* get service id */
+int conn_get_service_id(CONN *conn)
+{
+    if(conn && conn->parent)
+    {
+        return PPARENT(conn)->service->id;
+    }
+    return -1;
+}
+
 /* close connection */
 int conn_close(CONN *conn)
 {
@@ -1478,6 +1488,7 @@ CONN *conn_init()
         conn->send_queue            = queue_init();
         conn->event                 = ev_init();
         conn->set                   = conn_set;
+        conn->get_service_id        = conn_get_service_id;
         conn->close                 = conn_close;
         conn->over                  = conn_over;
         conn->terminate             = conn_terminate;
