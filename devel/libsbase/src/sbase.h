@@ -396,6 +396,8 @@ typedef struct _CONN
     void *message_queue;
     /* xid */
     int xids[SB_XIDS_MAX];
+    /* xid 64 bit */
+    int64_t xids64[SB_XIDS_MAX];
     /* conenction */
     int  sock_type;
     int  fd;
