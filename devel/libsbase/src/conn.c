@@ -1331,6 +1331,7 @@ void conn_reset_xids(CONN *conn)
     if(conn)
     {
         memset(conn->xids, 0, sizeof(int) * SB_XIDS_MAX);
+        memset(conn->xids64, 0, sizeof(int64_t) * SB_XIDS_MAX);
     }
     return ;
 }

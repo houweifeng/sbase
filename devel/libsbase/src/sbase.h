@@ -396,8 +396,6 @@ typedef struct _CONN
     void *message_queue;
     /* xid */
     int xids[SB_XIDS_MAX];
-    /* xid 64 bit */
-    int64_t xids64[SB_XIDS_MAX];
     /* conenction */
     int  sock_type;
     int  fd;
@@ -467,6 +465,8 @@ typedef struct _CONN
     long long   sent_oob_total;
     long long   recv_data_total;
     long long   sent_data_total;
+    /* xid 64 bit */
+    int64_t xids64[SB_XIDS_MAX];
     SESSION session;
 }CONN, *PCONN;
 CONN *conn_init();

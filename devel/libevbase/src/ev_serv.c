@@ -36,6 +36,7 @@ static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
 static int ev_sock_count = 2;
 static int is_use_ssl = 1;
+static in_addr_t multicast_addr = INADDR_NONE;
 #ifdef USE_SSL
 static SSL_CTX *ctx = NULL;
 static const char *cert_file = "cacert.pem";
@@ -117,8 +118,24 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
             if((n = conns[rfd].n = recvfrom(fd, conns[rfd].buffer, EV_BUF_SIZE - 1, 0, 
                             (struct sockaddr *)&rsa, &rsa_len)) > 0 )
             {
+                //sendto(fd, conns[rfd].buffer, n, 0, (struct sockaddr *)&rsa, rsa_len);
                 SHOW_LOG("Received %d bytes from %s:%d via %d, %s", conns[rfd].n, 
                         inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd, conns[rfd].buffer);
+                //return ;
+                /*
+                if(multicast_addr != INADDR_NONE)
+                {
+                    struct ip_mreq mreq;
+                    memset(&mreq, 0, sizeof(struct ip_mreq));
+                    mreq.imr_multiaddr.s_addr = multicast_addr;
+                    mreq.imr_interface.s_addr = INADDR_ANY;
+                    if(setsockopt(rfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
+                    {
+                        SHOW_LOG("Setsockopt(MULTICAST) failed, %s", strerror(errno));
+                        return ;
+                    }
+                }
+                */
                 if(connect(rfd, (struct sockaddr *)&rsa, rsa_len) == 0)
                 {
                     SHOW_LOG("Connected %s:%d via %d",
@@ -173,7 +190,7 @@ err_end:
         if(ev_flags & E_WRITE)
         {
             SHOW_LOG("E_WRITE on %d end", fd);
-            if(  (n = write(fd, conns[fd].buffer, conns[fd].n)) > 0 )
+            if((n = write(fd, conns[fd].buffer, conns[fd].n)) > 0 )
             {
                 SHOW_LOG("Echo %d bytes to %d", n, fd);
             }
@@ -449,20 +466,6 @@ int main(int argc, char **argv)
             fprintf(stderr, "setsockopt[SO_REUSEADDR] on fd[%d] failed, %s", fd, strerror(errno));
             _exit(-1);
         }
-        /* set multicast */
-        if(ev_sock_list[ev_sock_type] == SOCK_DGRAM && multicast_ip)
-        {
-            struct ip_mreq mreq;
-            memset(&mreq, 0, sizeof(struct ip_mreq));
-            mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
-            mreq.imr_interface.s_addr = INADDR_ANY;
-            if(setsockopt(lfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
-            {
-                SHOW_LOG("Setsockopt(MULTICAST) failed, %s", strerror(errno));
-                return -1;
-            }
-        }
-        fprintf(stdout, "%d::OK\n", __LINE__);
         /* Bind */
         if(bind(lfd, (struct sockaddr *)&sa, sa_len) != 0 )
         {
@@ -483,6 +486,19 @@ int main(int argc, char **argv)
             if(listen(lfd, CONN_MAX) != 0 )
             {
                 SHOW_LOG("Listening  failed, %s", strerror(errno));
+                return -1;
+            }
+        }
+        /* set multicast */
+        if(ev_sock_list[ev_sock_type] == SOCK_DGRAM && multicast_ip)
+        {
+            struct ip_mreq mreq;
+            memset(&mreq, 0, sizeof(struct ip_mreq));
+            mreq.imr_multiaddr.s_addr = multicast_addr = inet_addr(multicast_ip);
+            mreq.imr_interface.s_addr = INADDR_ANY;
+            if(setsockopt(lfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
+            {
+                SHOW_LOG("Setsockopt(MULTICAST) failed, %s", strerror(errno));
                 return -1;
             }
         }
