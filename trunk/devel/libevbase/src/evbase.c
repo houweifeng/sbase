@@ -203,7 +203,7 @@ EVBASE *evbase_init(int use_mutex)
         //evbase->clean 	=  evbase_clean;
         if(evops_default == -1 || evbase->set_evops(evbase, evops_default) == -1)
         {
-            free(evbase); 
+            xmm_free(evbase, sizeof(EVBASE)); 
             fprintf(stderr, "Initialize evbase to default[%d] failed, %s\n", 
                     evops_default, strerror(errno));
             evbase = NULL;
@@ -334,11 +334,7 @@ void event_clean(EVENT **event)
 	if(*event)
 	{
         MUTEX_DESTROY((*event)->mutex);
-#ifdef HAVE_MMAP
-        munmap((*event), sizeof(EVENT));
-#else
-		free((*event));
-#endif
+		xmm_free((*event), sizeof(EVENT));
 		(*event) = NULL;	
 	}
     return ;
