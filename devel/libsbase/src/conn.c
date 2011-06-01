@@ -134,8 +134,8 @@ do                                                                              
         MMB_RESET(conn->packet);                                                            \
         MMB_RESET(conn->cache);                                                             \
         chunk_reset(conn->chunk);                                                           \
-        if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}             \
 }while(0)
+        //if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}             
 /* chunk pop/push */
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
 
@@ -699,8 +699,7 @@ int conn_read_handler(CONN *conn)
             ret = conn->proxy_handler(conn);
             if(conn->session.packet_type == PACKET_PROXY) return ret;
         }
-        if(conn->s_state == 0 && PCB(conn->packet)->ndata == 0)
-            conn->packet_reader(conn);
+        conn->packet_reader(conn);
         ret = 0;
     }
     return ret;
@@ -791,6 +790,11 @@ int conn_packet_reader(CONN *conn)
 
     if(conn)
     {
+        if(conn->s_state != 0 || PCB(conn->packet)->ndata > 0)
+        {
+            PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);
+            return 0;
+        }
         data = PCB(conn->buffer);
         packet_type = conn->session.packet_type;
         DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%p][%d]", 
