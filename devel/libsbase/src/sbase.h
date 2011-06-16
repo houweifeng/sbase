@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 #define SB_CONN_MAX             65536
+#define SB_GROUP_CONN_MAX       1024
 #define SB_IP_MAX               16
 #define SB_XIDS_MAX             16
 #define SB_GROUPS_MAX           256
@@ -83,22 +84,20 @@ typedef struct _CB_DATA
 #define PCB(ptr) ((CB_DATA *)ptr)
 typedef struct _SESSION
 {
-    /* SSL */
-    int flag;
-    int is_use_SSL;
-    void *ctx;
-
-    /* packet */
-    int timeout;
-    int childid;
-    void *child;
+    /* SSL/timeout */
+    int  flag;
+    int  is_use_SSL;
+    int  timeout;
+    int  childid;
     int  parentid;
-    void *parent;
     int  packet_type;
     int  packet_length;
-    char *packet_delimiter;
     int  packet_delimiter_length;
     int  buffer_size;
+    void *child;
+    void *ctx;
+    void *parent;
+    char *packet_delimiter;
 
     /* methods */
     int (*error_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
@@ -120,18 +119,17 @@ typedef struct _SBASE
     int connections_limit;
 	int usec_sleep;
     int running_status;
-	EVBASE *evbase;
-    struct _SERVICE *services[SB_SERVICE_MAX];
     int running_services;
+    /* evtimer */
+    int evid;
+    int ssl_id;
     long long nheartbeat;
 
 	/* timer && logger */
 	void *logger;
-
-    /* evtimer */
+	EVBASE *evbase;
     void *evtimer;
-    int evid;
-    int ssl_id;
+    struct _SERVICE *services[SB_SERVICE_MAX];
 
     /* message queue for proc mode */
     void *message_queue;
@@ -154,14 +152,14 @@ SBASE *sbase_init();
 /* group */
 typedef struct _CNGROUP
 {
-  char  ip[SB_IP_MAX];
   short status;
   short nconnected;
   short port;
   short limit;
   short total;
   short nconns_free;
-  int   conns_free[SB_CONN_MAX];
+  int   conns_free[SB_GROUP_CONN_MAX];
+  char  ip[SB_IP_MAX];
   SESSION session;
 }CNGROUP;
 
@@ -175,46 +173,60 @@ typedef struct _SERVICE
     int use_cond_wait;
     int nconn;
     int nchunks;
+    int connections_limit; 
+    int index_max;
+    int running_connections;
+    int nconns_free;
+    int conns_free[SB_CONN_MAX];
+    int nconnection;
+    int client_connections_limit;
+    int  nqchunks;
+    int service_type;
+    int fd;
+    int backlog;
+    int port;
+    int sock_type;
+    int family;
+    int heartbeat_interval;
+    int working_mode;
+    int use_iodaemon;
+    int nprocthreads;
+    int ndaemons;
+    int is_use_SSL;
+    int nqconns;
+    int ngroups;
+    int evid;
+    int  is_inside_logger;
+    int ntask;
+
+    /* mutex */
     void *mutex;
     SBASE *sbase;
 
     /* heartbeat */
-    /* running heartbeat_handler when looped hearbeat_interval times*/
-    int heartbeat_interval;
     void *heartbeat_arg;
     CALLBACK *heartbeat_handler;
     void (*set_heartbeat)(struct _SERVICE *, int interval, CALLBACK *handler, void *arg);
     void (*active_heartbeat)(struct _SERVICE *);
 
     /* working mode */
-    int working_mode;
     struct _PROCTHREAD *daemon;
-    int use_iodaemon;
     struct _PROCTHREAD *iodaemon;
-    int nprocthreads;
     struct _PROCTHREAD **procthreads;
-    int ndaemons;
     struct _PROCTHREAD **daemons;
 
     /* socket and inet addr option  */
-    int family;
-    int sock_type;
     struct  sockaddr_in sa;
     char *ip;
     char *multicast;
-    int fd;
-    int backlog;
-    int port;
-    
+        
     /* SSL */
-    int is_use_SSL;
     char *cacert_file;
     char *privkey_file;
     void *s_ctx;
     void *c_ctx;
 
     /* service option */
-    int service_type;
     char *service_name;
     int  (*set)(struct _SERVICE *service);
     int  (*run)(struct _SERVICE *service);
@@ -229,25 +241,16 @@ typedef struct _SERVICE
 
     /* chunks queue */
     //void *chunks_queue;
-    int  nqchunks;
     struct _CHUNK *qchunks[SB_CHUNKS_MAX];
     struct _CHUNK *(*popchunk)(struct _SERVICE *service);
     int (*pushchunk)(struct _SERVICE *service, struct _CHUNK *cp);
     CB_DATA *(*newchunk)(struct _SERVICE *service, int len);
 
     /* connections option */
-    int connections_limit; 
-    int index_max;
-    int running_connections;
-    int nconns_free;
-    int conns_free[SB_CONN_MAX];
-    int nconnection;
     struct _CONN *connections[SB_CONN_MAX];
-    int nqconns;
     struct _CONN *qconns[SB_CONN_MAX];
 
     /* C_SERVICE ONLY */
-    int client_connections_limit;
     struct _CONN *(*newproxy)(struct _SERVICE *service, struct _CONN * parent, int inet_family, 
             int sock_type, char *ip, int port, SESSION *session);
     struct _CONN *(*newconn)(struct _SERVICE *service, int inet_family, int sock_type, 
@@ -269,8 +272,6 @@ typedef struct _SERVICE
     int (*broadcast)(struct _SERVICE *service, char *data, int len);
 
     /* group */
-    CNGROUP groups[SB_GROUPS_MAX];
-    int ngroups;
     int (*addgroup)(struct _SERVICE *service, char *ip, int port, int limit, SESSION *session);
     int (*closegroup)(struct _SERVICE *service, int groupid);
     int (*castgroup)(struct _SERVICE *service, char *data, int len);
@@ -279,27 +280,24 @@ typedef struct _SERVICE
     /* evtimer */
     void *etimer;
     void *evtimer;
-    int evid;
-
+    
     /* timer and logger */
     void *logger;
-    int  is_inside_logger;
     int (*set_log)(struct _SERVICE *service, char *logfile);
     int (*set_log_level)(struct _SERVICE *service, int level);
 
     /* transaction and task */
-    int ntask;
     int (*newtask)(struct _SERVICE *, CALLBACK *, void *arg); 
     int (*newtransaction)(struct _SERVICE *, struct _CONN *, int tid);
 
     /* service default session option */
-    SESSION session;
     int (*set_session)(struct _SERVICE *, SESSION *);
 
     /* clean */
     void (*clean)(struct _SERVICE **pservice);
     void (*close)(struct _SERVICE *);
-
+    SESSION session;
+    CNGROUP groups[SB_GROUPS_MAX];
 }SERVICE;
 /* Initialize service */
 SERVICE *service_init();
