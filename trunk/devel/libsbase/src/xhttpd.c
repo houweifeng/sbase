@@ -1093,6 +1093,7 @@ int main(int argc, char **argv)
         }
 
     }
+    //fprintf(stdout, "%s::%d sizeof(SERVICE):%u sizeof(SBASE):%u sizeof(PROCTHREAD):%u sizeof(CONN):%u sizeof(SESSION):%u sizeof(CNGROUP):%u\n", __FILE__, __LINE__, sizeof(SERVICE), sizeof(SBASE), sizeof(PROCTHREAD), sizeof(CONN), sizeof(SESSION), sizeof(CNGROUP));
     sbase->running(sbase, 0);
     //sbase->running(sbase, 300);
     //sbase->running(sbase, 120000000);sbase->stop(sbase);

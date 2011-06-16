@@ -772,7 +772,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 if((id = conn->groupid) > 0 && id < SB_GROUPS_MAX)
                 {
                     x = 0;
-                    while(x < SB_CONN_MAX)
+                    while(x < SB_GROUP_CONN_MAX)
                     {
                         if(service->groups[id].conns_free[x] == 0)
                         {
@@ -887,7 +887,7 @@ CONN *service_getconn(SERVICE *service, int groupid)
         if(groupid > 0 && groupid <= service->ngroups)
         {
             x = 0;
-            while(x < SB_CONN_MAX && service->groups[groupid].nconns_free > 0)
+            while(x < SB_GROUP_CONN_MAX && service->groups[groupid].nconns_free > 0)
             {
                 if((i = service->groups[groupid].conns_free[x]) > 0 
                         && (conn = service->connections[i]))
@@ -946,7 +946,7 @@ int service_freeconn(SERVICE *service, CONN *conn)
             else
             {
                 x = 0;
-                while(x < SB_CONN_MAX)
+                while(x < SB_GROUP_CONN_MAX)
                 {
                     if(service->groups[id].conns_free[x] == 0)
                     {
