@@ -360,7 +360,8 @@ int conn_terminate(CONN *conn)
                }
                */
         }
-        if((conn->c_state != 0 || conn->s_state != 0) && conn->session.error_handler)
+        if((conn->c_state != 0 || conn->s_state != 0 || conn->e_state == E_STATE_WAIT) 
+                && conn->session.error_handler)
         {
             ERROR_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, PCB(conn->packet)->ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
@@ -554,6 +555,40 @@ int conn_start_cstate(CONN *conn)
     }
     return ret;
 }
+
+/* start error wait state */
+int conn_wait_estate(CONN *conn)
+{
+    int ret = -1;
+    /* Check connection and transaction state */
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
+    if(conn)
+    {
+        if(conn->e_state == E_STATE_FREE)
+        {
+            conn->e_state = E_STATE_WAIT;
+            ret = 0;
+        }
+    }
+    return ret;
+}
+
+/* over error wait state */
+int conn_over_estate(CONN *conn)
+{
+    int ret = -1;
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
+    if(conn)
+    {
+        conn->e_state = E_STATE_FREE;
+        ret = 0;
+    }
+    return ret;
+}
+
+
 
 /* over client transaction state */
 int conn_over_cstate(CONN *conn)
@@ -1496,6 +1531,8 @@ CONN *conn_init()
         conn->terminate             = conn_terminate;
         conn->start_cstate          = conn_start_cstate;
         conn->over_cstate           = conn_over_cstate;
+        conn->wait_estate          = conn_wait_estate;
+        conn->over_estate           = conn_over_estate;
         conn->set_timeout           = conn_set_timeout;
         conn->over_timeout          = conn_over_timeout;
         conn->timeout_handler       = conn_timeout_handler;
