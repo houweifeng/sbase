@@ -758,7 +758,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
     int ret = -1, x = 0, id = 0, i = 0;
     CONN *parent = NULL;
 
-    if(service && conn && service->connections)
+    if(service && service->lock == 0 && conn && service->connections)
     {
         MUTEX_LOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "start pushconn()");
@@ -813,7 +813,7 @@ int service_popconn(SERVICE *service, CONN *conn)
 {
     int ret = -1, id = 0, x = 0;
 
-    if(service && service->connections && conn)
+    if(service && service->lock == 0 && service->connections && conn)
     {
         MUTEX_LOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "start popconn()");
@@ -881,7 +881,7 @@ CONN *service_getconn(SERVICE *service, int groupid)
     CONN *conn = NULL;
     int i = 0, x = 0;
 
-    if(service)
+    if(service && service->lock == 0)
     {
         MUTEX_LOCK(service->mutex);
         if(groupid > 0 && groupid <= service->ngroups)
@@ -976,7 +976,7 @@ int service_freeconn(SERVICE *service, CONN *conn)
 CONN *service_findconn(SERVICE *service, int index)
 {
     CONN *conn = NULL;
-    if(service && index >= 0 && index <= service->index_max)
+    if(service && service->lock == 0 && index >= 0 && index <= service->index_max)
     {
         conn = service->connections[index];
     }
@@ -1005,7 +1005,7 @@ CHUNK *service_popchunk(SERVICE *service)
     CHUNK *cp = NULL;
     int x = 0;
 
-    if(service && service->qchunks)
+    if(service && service->lock == 0 && service->qchunks)
     {
         MUTEX_LOCK(service->mutex);
         if(service->nqchunks > 0 && (x = --(service->nqchunks)) >= 0 
@@ -1033,7 +1033,7 @@ int service_pushtoq(SERVICE *service, CONN *conn)
 {
     int x = 0;
 
-    if(service && conn)
+    if(service && service->lock == 0 && conn)
     {
         MUTEX_LOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "starting pushq(%d) running_conns:%d conn[%p]->d_state:%d", service->nqconns, service->running_connections, conn, conn->d_state);
@@ -1060,7 +1060,7 @@ CONN *service_popfromq(SERVICE *service)
     CONN *conn = NULL;
     int x = 0;
 
-    if(service)
+    if(service && service->lock == 0)
     {
         MUTEX_LOCK(service->mutex);
         DEBUG_LOGGER(service->logger, "starting popfromq(%d)", service->nqconns);
@@ -1092,7 +1092,7 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
 {
     int ret = -1, x = 0;
 
-    if(service && service->qchunks && cp)
+    if(service && service->lock == 0 && service->qchunks && cp)
     {
         MUTEX_LOCK(service->mutex);
         if(service->nqchunks < SB_CHUNKS_MAX)
@@ -1120,7 +1120,7 @@ CB_DATA *service_newchunk(SERVICE *service, int len)
     CB_DATA *chunk = NULL;
     CHUNK *cp = NULL;
 
-    if(service)
+    if(service && service->lock == 0)
     {
         if((cp = service_popchunk(service)))
         {
@@ -1148,7 +1148,7 @@ int service_add_multicast(SERVICE *service, char *multicast_ip)
     struct ip_mreq mreq;
     int ret = -1;
 
-    if(service && service->sock_type == SOCK_DGRAM && multicast_ip 
+    if(service && service->lock == 0 && service->sock_type == SOCK_DGRAM && multicast_ip 
             && service->ip && service->fd > 0)
     {
         memset(&mreq, 0, sizeof(struct ip_mreq));
@@ -1186,7 +1186,7 @@ int service_broadcast(SERVICE *service, char *data, int len)
     int ret = -1, i = 0;
     CONN *conn = NULL;
 
-    if(service && service->running_connections > 0)
+    if(service && service->lock == 0 && service->running_connections > 0)
     {
         MUTEX_LOCK(service->mutex);
         for(i = 0; i < service->index_max; i++)
@@ -1206,7 +1206,7 @@ int service_broadcast(SERVICE *service, char *data, int len)
 int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *session)
 {
     int id = -1;
-    if(service && service->ngroups < SB_GROUPS_MAX)
+    if(service && service->lock == 0 && service->ngroups < SB_GROUPS_MAX)
     {
         MUTEX_LOCK(service->mutex);
         id = ++service->ngroups;
@@ -1249,7 +1249,7 @@ int service_castgroup(SERVICE *service, char *data, int len)
     CONN *conn = NULL;
     int i = 0;
 
-    if(service && data && len > 0 && service->ngroups > 0)
+    if(service && service->lock == 0 && data && len > 0 && service->ngroups > 0)
     {
         for(i = 1; i <= service->ngroups; i++)
         {
@@ -1271,7 +1271,7 @@ int service_stategroup(SERVICE *service)
     CONN *conn = NULL;
     int i = 0;
 
-    if(service && service->ngroups > 0)
+    if(service && service->lock == 0 && service->ngroups > 0)
     {
         for(i = 1; i <= service->ngroups; i++)
         {
@@ -1302,7 +1302,7 @@ int service_newtask(SERVICE *service, CALLBACK *task_handler, void *arg)
     PROCTHREAD *pth = NULL;
     int index = 0, ret = -1;
 
-    if(service)
+    if(service && service->lock == 0)
     {
         /* Add task for procthread */
         if(service->working_mode == WORKING_PROC && service->daemon)
@@ -1328,7 +1328,7 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
     PROCTHREAD *pth = NULL;
     int index = 0, ret = -1;
 
-    if(service && conn && conn->fd > 0)
+    if(service && service->lock == 0 && conn && conn->fd > 0)
     {
         /* Add transaction for procthread */
         if(service->working_mode == WORKING_PROC && service->daemon)
