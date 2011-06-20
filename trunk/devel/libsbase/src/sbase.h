@@ -46,6 +46,9 @@ extern "C" {
 #define C_STATE_WORKING         0x02
 #define C_STATE_USING           0x04
 #define C_STATE_OVER            0x08
+/* ERROR wait state */
+#define E_STATE_FREE            0x00
+#define E_STATE_WAIT            0x01
 /* connection running state */
 #ifndef S_STATES
 #define S_STATE_READY           0x00
@@ -366,6 +369,7 @@ typedef struct _CONN
     int status;
     int i_state;
     int c_state;
+    int e_state;
     int c_id;
     int d_state;
     void *parent;
@@ -406,10 +410,12 @@ typedef struct _CONN
     int (*over)(struct _CONN *);
     int (*terminate)(struct _CONN *);
 
-        /* client transaction state */
+    /* client transaction state */
     int (*start_cstate)(struct _CONN *);
     int (*over_cstate)(struct _CONN *);
-
+    /* error state */
+    int (*wait_estate)(struct _CONN *);
+    int (*over_estate)(struct _CONN *);
     
     /* event state */
 #define EVSTATE_INIT   0
