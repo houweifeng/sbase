@@ -336,9 +336,10 @@ int conn_terminate(CONN *conn)
     {
         parent = (PROCTHREAD *)conn->parent;
         DEBUG_LOGGER(conn->logger, "Ready for closeing conn[%p] remote[%s:%d] local[%s:%d] via %d "
-                "qtotal:%d d_state:%d i_state:%d ", conn, conn->remote_ip, conn->remote_port,
-                conn->local_ip, conn->local_port, conn->fd, QTOTAL(conn->send_queue),
-                conn->d_state, conn->i_state);
+                "qtotal:%d d_state:%d i_state:%d c_state:%d s_state:%d", conn, conn->remote_ip, 
+                conn->remote_port, conn->local_ip, conn->local_port, conn->fd,
+                QTOTAL(conn->send_queue), conn->d_state, conn->i_state, 
+                conn->c_state, conn->s_state);
         conn->d_state = D_STATE_CLOSE;
         //continue incompleted data handling 
         if(conn->s_state == S_STATE_DATA_HANDLING && CHK_NDATA(conn->chunk) > 0)
