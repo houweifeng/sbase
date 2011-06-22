@@ -237,7 +237,8 @@ running:
                 i = 0;
             }
             if(i > 0)++k;
-            if(i == 0 || k > 40000){usleep(sbase->usec_sleep); k = 0;}
+            else k = 0;
+            if(k > 4000000){usleep(sbase->usec_sleep); k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)

@@ -18,6 +18,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0};
+    struct timespec ts = {0};
     int i = 0, k = 0;
 
     if(pth)
@@ -31,6 +32,8 @@ void procthread_run(void *arg)
         pth->running_status = 1;
         tv.tv_usec = SB_USEC_SLEEP;
         if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
+        ts.tv_sec = tv.tv_sec;
+        ts.tv_nsec = 1000 * tv.tv_usec;
         //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         if(pth->have_evbase)
         {
@@ -48,8 +51,11 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     i = 1;
                 }
-                if(i > 0)++k;
-                if(i == 0 || k > 20000){usleep(pth->usec_sleep); k = 0;}
+                if(i <= 0)++k;
+                else k = 0;
+                //if(k > 0){select(0, NULL, NULL, NULL, &tv);}
+                if(k > 2000000){usleep(pth->usec_sleep);k = 0;}
+                //if(k > 1000000){nanosleep(&ts, NULL);}
                 //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
