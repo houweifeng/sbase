@@ -22,8 +22,8 @@ void procthread_event_handler(int event_fd, short event, void *arg)
 
     if(pth)
     {
-        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
         pth->event->del(pth->event, E_WRITE);
+        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
