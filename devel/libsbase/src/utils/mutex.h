@@ -39,6 +39,18 @@ do                                                                              
         pthread_mutex_unlock(&(MT(ptr)->mutex));                                        \
     }                                                                                   \
 }while(0)
+#define MUTEX_TIMEDWAIT(ptr, ts)                                                        \
+do                                                                                      \
+{                                                                                       \
+    if(ptr)                                                                             \
+    {                                                                                   \
+        pthread_mutex_lock(&(MT(ptr)->mutex));                                          \
+        if(MT(ptr)->nowait == 0)                                                        \
+            pthread_cond_timedwait(&(MT(ptr)->cond), &(MT(ptr)->mutex), &ts);           \
+        MT(ptr)->nowait = 0;                                                            \
+        pthread_mutex_unlock(&(MT(ptr)->mutex));                                        \
+    }                                                                                   \
+}while(0)
 #define MUTEX_SIGNAL(ptr)                                                               \
 do                                                                                      \
 {                                                                                       \
@@ -80,6 +92,7 @@ do                                                                          \
 #define MUTEX_LOCK(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
 #define MUTEX_UNLOCK(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1)
 #define MUTEX_WAIT(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
+#define MUTEX_TIMEDWAIT(ptr, ts) ((ptr)?sem_timedwait(&(MT(ptr)->sem), &ts):-1)
 #define MUTEX_SIGNAL(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1) 
 #define MUTEX_DESTROY(ptr)                                                  \
 do                                                                          \

@@ -234,11 +234,11 @@ running:
             if(QMTOTAL(sbase->message_queue) > 0)
             {
                 qmessage_handler(sbase->message_queue, sbase->logger);
-                i = 0;
+                i = 1;
             }
             if(i > 0)++k;
             else k = 0;
-            if(k > 4000000){usleep(sbase->usec_sleep); k = 0;}
+            if(i== 0 || k > 100000000){usleep(sbase->usec_sleep); k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)

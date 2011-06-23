@@ -66,7 +66,7 @@ am_libsbase_la_OBJECTS = libsbase_la-conn.lo libsbase_la-message.lo \
 	libsbase_la-procthread.lo libsbase_la-sbase.lo \
 	libsbase_la-service.lo libsbase_la-chunk.lo \
 	libsbase_la-mmblock.lo libsbase_la-queue.lo \
-	libsbase_la-evtimer.lo libsbase_la-xmm.lo
+	libsbase_la-evtimer.lo libsbase_la-xmm.lo libsbase_la-stime.lo
 libsbase_la_OBJECTS = $(am_libsbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
@@ -228,6 +228,8 @@ utils/evtimer.c \
 utils/xssl.h 	\
 utils/xmm.h 	\
 utils/xmm.c 	\
+utils/stime.h 	\
+utils/stime.c 	\
 utils/timer.h
 
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
@@ -399,6 +401,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-queue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-sbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-service.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-stime.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-xmm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-http.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-wbenchmark.Po@am__quote@
@@ -501,6 +504,13 @@ libsbase_la-xmm.lo: utils/xmm.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/xmm.c' object='libsbase_la-xmm.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-xmm.lo `test -f 'utils/xmm.c' || echo '$(srcdir)/'`utils/xmm.c
+
+libsbase_la-stime.lo: utils/stime.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-stime.lo -MD -MP -MF "$(DEPDIR)/libsbase_la-stime.Tpo" -c -o libsbase_la-stime.lo `test -f 'utils/stime.c' || echo '$(srcdir)/'`utils/stime.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbase_la-stime.Tpo" "$(DEPDIR)/libsbase_la-stime.Plo"; else rm -f "$(DEPDIR)/libsbase_la-stime.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/stime.c' object='libsbase_la-stime.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-stime.lo `test -f 'utils/stime.c' || echo '$(srcdir)/'`utils/stime.c
 
 lechod-lechod.o: lechod.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lechod-lechod.o -MD -MP -MF "$(DEPDIR)/lechod-lechod.Tpo" -c -o lechod-lechod.o `test -f 'lechod.c' || echo '$(srcdir)/'`lechod.c; \

@@ -6,6 +6,7 @@
 #include "message.h"
 #include "evtimer.h"
 #include "chunk.h"
+#include "stime.h"
 #include "xmm.h"
 #define PUSH_TASK_MESSAGE(pth, msgid, index, fd, tid, handler, arg)                         \
 do                                                                                          \
@@ -51,11 +52,16 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     i = 1;
                 }
-                if(i <= 0)++k;
+                if(i > 0)++k;
                 else k = 0;
-                //if(k > 0){select(0, NULL, NULL, NULL, &tv);}
-                if(k > 2000000){usleep(pth->usec_sleep);k = 0;}
-                //if(k > 1000000){nanosleep(&ts, NULL);}
+                if(i == 0 || k > 100000000)
+                {
+                    //timetospec(&ts, pth->usec_sleep);
+                    //MUTEX_TIMEDWAIT(pth->mutex, ts);
+                    //select(0, NULL, NULL, NULL, &tv);
+                    usleep(pth->usec_sleep);
+                    k = 0;
+                }
                 //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
