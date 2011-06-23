@@ -12,30 +12,45 @@
 do                                                                                          \
 {                                                                                           \
     qmessage_push(pth->message_queue, msgid, index, fd, tid, pth, handler, arg);            \
-    if(pth->mutex && pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}                         \
+    if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}                                               \
 }while(0)
+
+/* event */
+void procthread_event_handler(int event_fd, short event, void *arg)
+{
+    PROCTHREAD *pth = (PROCTHREAD *)arg;
+
+    if(pth)
+    {
+        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
+        pth->event->del(pth->event, E_WRITE);
+    }
+    return ;
+}
+
+/* wakeup */
+void procthread_wakeup(PROCTHREAD *pth)
+{
+    if(pth && pth->event && pth->evbase)
+    {
+        pth->event->add(pth->event, E_WRITE);
+    }
+    return ;
+}
+ 
 /* run procthread */
 void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0};
-    struct timespec ts = {0};
-    int i = 0, k = 0;
+    int i = 0;
 
     if(pth)
     {
-        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
-//#ifdef HAVE_PTHREAD
-//        pthread_detach((pthread_t)(pth->threadid));
-//#endif
-        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
         DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
         pth->running_status = 1;
-        tv.tv_usec = SB_USEC_SLEEP;
-        if(pth->usec_sleep > 0) tv.tv_usec = pth->usec_sleep;
-        ts.tv_sec = tv.tv_sec;
-        ts.tv_nsec = 1000 * tv.tv_usec;
-        //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+        if(pth->usec_sleep > 1000000) tv.tv_sec = pth->usec_sleep/1000000;
+        tv.tv_usec = pth->usec_sleep % 1000000;
         if(pth->have_evbase)
         {
             do
@@ -43,25 +58,13 @@ void procthread_run(void *arg)
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
                 i = pth->evbase->loop(pth->evbase, 0, NULL);
-                //if(i > 0){DEBUG_LOGGER(pth->logger, "over evbase->loop(%d)", i);}
-                //pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
                     qmessage_handler(pth->message_queue, pth->logger);
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
-                    i = 1;
                 }
-                if(i > 0)++k;
-                else k = 0;
-                if(i == 0 || k > 100000000)
-                {
-                    //timetospec(&ts, pth->usec_sleep);
-                    //MUTEX_TIMEDWAIT(pth->mutex, ts);
-                    //select(0, NULL, NULL, NULL, &tv);
-                    usleep(pth->usec_sleep);
-                    k = 0;
-                }
+                if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
                 //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
@@ -97,12 +100,11 @@ void procthread_run(void *arg)
                         //DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                         qmessage_handler(pth->message_queue, pth->logger);
                         //DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
-                        i = 0;
                     }
                     else
                     {
                         ++i;
-                        if(i > 1000){usleep(pth->usec_sleep); i = 0;}
+                        if(i > 100000){usleep(pth->usec_sleep); i = 0;}
                     }
                 }while(pth->running_status);
             }
@@ -228,6 +230,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
                 conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         conn->message_queue = pth->message_queue;
         conn->ioqmessage    = pth->ioqmessage;
+        conn->iodaemon      = pth->iodaemon;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
         //conn->reset_state(conn);
@@ -309,7 +312,8 @@ void procthread_stop(PROCTHREAD *pth)
         PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
         DEBUG_LOGGER(pth->logger, "Pushd MESSAGE_QUIT to procthreads[%d]", pth->index);
         pth->lock       = 1;
-        if(pth->mutex && pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
+        pth->wakeup(pth);
+        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
@@ -321,7 +325,8 @@ void procthread_terminate(PROCTHREAD *pth)
     {
         DEBUG_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
         pth->running_status = 0;
-        if(pth->mutex && pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
+        pth->wakeup(pth);
+        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
@@ -359,6 +364,7 @@ void procthread_clean(PROCTHREAD **ppth)
             if((*ppth)->have_evbase)
             {
                 (*ppth)->evbase->clean(&((*ppth)->evbase));
+                (*ppth)->event->clean(&((*ppth)->event));
             }
             qmessage_clean((*ppth)->message_queue);
         }
@@ -372,6 +378,7 @@ void procthread_clean(PROCTHREAD **ppth)
 PROCTHREAD *procthread_init(int have_evbase)
 {
     PROCTHREAD *pth = NULL;
+    struct ip_mreq mreq;
 
     if((pth = (PROCTHREAD *)xmm_new(sizeof(PROCTHREAD))))
     {
@@ -379,7 +386,11 @@ PROCTHREAD *procthread_init(int have_evbase)
         {
             pth->have_evbase        = have_evbase;
             pth->evbase             = evbase_init(1);
-            //pth->evbase->set_evops(pth->evbase, EOP_POLL);
+            pth->event              = ev_init();
+            pth->fd                 = 1;
+            pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
+                    &procthread_event_handler);
+            pth->evbase->add(pth->evbase, pth->event);
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
@@ -394,6 +405,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         pth->over_connection        = procthread_over_connection;
         pth->terminate_connection   = procthread_terminate_connection;
         pth->stop                   = procthread_stop;
+        pth->wakeup                 = procthread_wakeup;
         pth->terminate              = procthread_terminate;
         pth->state                  = procthread_state;
         pth->active_heartbeat       = procthread_active_heartbeat;

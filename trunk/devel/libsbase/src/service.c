@@ -261,6 +261,7 @@ running_threads:
                     {
                         PROCTHREAD_SET(service, service->procthreads[i]);
                         service->procthreads[i]->evbase = service->iodaemon->evbase;
+                        service->procthreads[i]->iodaemon = service->iodaemon;
                         service->procthreads[i]->ioqmessage = service->iodaemon->message_queue;
                         ret = 0;
                     }

@@ -40,6 +40,8 @@ int conn_read_buffer(CONN *conn)
 	if(conn->ssl) return MMB_READ_SSL(conn->buffer, conn->ssl);
 	else return MMB_READ(conn->buffer, conn->fd);
 }
+#define IODAEMON(conn) ((PROCTHREAD *)(conn->iodaemon))
+#define IOWAKEUP(conn) {if(IODAEMON(conn))IODAEMON(conn)->wakeup(IODAEMON(conn));}            
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
     if(conn == NULL ) return ret;                                                           \
@@ -97,6 +99,7 @@ do{                                                                             
         {                                                                                   \
             EVTIMER_UPDATE(conn->evtimer, conn->evid, conn->timeout,                        \
                     &conn_evtimer_handler, (void *)conn);                                   \
+            IOWAKEUP(conn);                                                                 \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
@@ -115,8 +118,10 @@ do                                                                              
     {                                                                                       \
             EVTIMER_UPDATE(_evtimer_, _evid_, conn->timeout,                                \
                     &conn_evtimer_handler, (void *)conn);                                   \
+            IOWAKEUP(conn);                                                                 \
     }                                                                                       \
 }while(0)
+
 
 #define PUSH_IOQMESSAGE(conn, msgid)                                                        \
 do                                                                                          \
@@ -125,6 +130,7 @@ do                                                                              
     {                                                                                       \
         qmessage_push(conn->ioqmessage, msgid,                                              \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
+        IOWAKEUP(conn);                                                                     \
     }                                                                                       \
 }while(0)
 #define SESSION_RESET(conn)                                                                 \

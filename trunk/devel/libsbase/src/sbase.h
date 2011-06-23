@@ -308,23 +308,26 @@ SERVICE *service_init();
 typedef struct _PROCTHREAD
 {
     /* global */
-    SERVICE *service;
     int lock;
     int running_status;
 	int usec_sleep;
     int index;
-    long threadid;
+    int fd;
     int  use_cond_wait;
+    int have_evbase;
+    long threadid;
     void *mutex;
     void *evtimer;
+    SERVICE *service;
 
     /* message queue */
+    void *iodaemon;
     void *ioqmessage;
     void *message_queue;
 
     /* evbase */
-    int have_evbase;
     EVBASE *evbase;
+    EVENT *event;
 
     /* connection */
     struct _CONN **connections;
@@ -349,6 +352,7 @@ typedef struct _PROCTHREAD
 
     /* normal */
     void (*run)(void *arg);
+    void (*wakeup)(struct _PROCTHREAD *procthread);
     void (*stop)(struct _PROCTHREAD *procthread);
     void (*terminate)(struct _PROCTHREAD *procthread);
     void (*clean)(struct _PROCTHREAD **procthread);
@@ -394,6 +398,7 @@ typedef struct _CONN
     /* queue */
     void *send_queue;
     /* message queue */
+    void *iodaemon;
     void *ioqmessage;
     void *message_queue;
     /* xid */
