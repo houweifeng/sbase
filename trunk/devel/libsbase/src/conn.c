@@ -1168,7 +1168,9 @@ int conn_recv_chunk(CONN *conn, int size)
         chunk_mem(conn->chunk, size);
         conn->s_state = S_STATE_READ_CHUNK;
         if(conn->d_state & D_STATE_CLOSE)
+        {
             conn->chunk_reader(conn);
+        }
         else
         {
             PUSH_IOQMESSAGE(conn, MESSAGE_CHUNK);

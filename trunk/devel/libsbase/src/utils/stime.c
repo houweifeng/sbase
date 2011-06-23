@@ -99,6 +99,26 @@ int strdate(time_t times, char *date)
     return n;
 }
 
+/* timetospec */
+void timetospec(struct timespec *ts, int usecs)
+{
+    struct timeval tv = {0};
+
+    if(ts)
+    {
+        gettimeofday(&tv, NULL);
+        ts->tv_sec = tv.tv_sec;
+        ts->tv_nsec = tv.tv_usec + usecs;
+        if(ts->tv_nsec > 1000000)
+        {
+            ts->tv_sec += ts->tv_nsec/1000000;
+            ts->tv_nsec %= 1000000;
+        }
+        ts->tv_nsec *= 1000000;
+    }
+    return ;
+}
+
 #ifdef _DEBUG_TM
 int main(int argc, char **argv)
 {
