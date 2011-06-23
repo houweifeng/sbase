@@ -64,7 +64,7 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                 }
-                if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
+                //if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
                 //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
             }while(pth->running_status);
         }
@@ -378,7 +378,6 @@ void procthread_clean(PROCTHREAD **ppth)
 PROCTHREAD *procthread_init(int have_evbase)
 {
     PROCTHREAD *pth = NULL;
-    struct ip_mreq mreq;
 
     if((pth = (PROCTHREAD *)xmm_new(sizeof(PROCTHREAD))))
     {
