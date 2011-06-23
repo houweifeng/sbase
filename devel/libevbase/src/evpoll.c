@@ -122,13 +122,13 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     EVENT *event = NULL;
     short ev_flags = 0;
     int n = 0, i = 0;
-    int sec = 0;
+    int msec = -1;
 
     //if(evbase && evbase->ev_fds && evbase->nfd > 0)
     if(evbase && evbase->ev_fds)
     {	
-        if(tv) sec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
-        n = poll(evbase->ev_fds, evbase->maxfd+1 , sec);		
+        if(tv) msec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
+        n = poll(evbase->ev_fds, evbase->maxfd+1 , msec);		
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
