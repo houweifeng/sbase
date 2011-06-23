@@ -167,7 +167,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
 /* Loop evbase */
 int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
 {
-    int i = 0, n = 0, timeout = 0, flags = 0, ev_flags = 0, fd = 0 ;
+    int i = 0, n = 0, timeout = -1, flags = 0, ev_flags = 0, fd = 0 ;
     struct epoll_event *evp = NULL;
     EVENT *ev = NULL;
 
