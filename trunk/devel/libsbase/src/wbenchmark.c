@@ -543,7 +543,7 @@ invalid_url:
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
     sbase->set_evlog(sbase, "/tmp/benchmark_ev.log");
-    sbase->set_evlog_level(sbase, 2);
+    //sbase->set_evlog_level(sbase, 2);
     if((service = service_init()))
     {
         service->working_mode = 1;
@@ -569,7 +569,7 @@ invalid_url:
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark.log");
-        service->set_log_level(service, 2);
+        //service->set_log_level(service, 2);
         LOGGER_INIT(logger, "/tmp/benchmark_res.log");
         if(sbase->add_service(sbase, service) == 0)
         {
