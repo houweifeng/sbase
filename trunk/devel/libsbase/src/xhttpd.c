@@ -923,7 +923,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
             }
             *s = '\0';
             dp = (void *)((long)(i + 1));
-            TRIETAB_ADD(http_headers_map, line, http_headers[i].elen, dp);
+            s = line;
+            TRIETAB_ADD(http_headers_map, s, http_headers[i].elen, dp);
         }
     }
     if((p = iniparser_getstr(dict, "XHTTPD:httpd_home")))

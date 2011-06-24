@@ -17,7 +17,7 @@
 #define LL(_x_) ((long long int)(_x_))
 #endif
 int conn__push__message(CONN *conn, int message_id);
-int conn_shut(CONN *conn, int state);
+int conn_shut(CONN *conn, int d_state, int e_state);
 int conn_read_chunk(CONN *conn)
 {
 	if(conn->ssl) return CHUNK_READ_SSL(conn->chunk, conn->ssl);
@@ -52,7 +52,7 @@ int conn_read_buffer(CONN *conn)
     if(conn == NULL) return ;                                                               \
     if(conn->d_state & (_state_)) return ;                                                  \
 }
-        //ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+//ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
 
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
@@ -72,7 +72,7 @@ int conn_read_buffer(CONN *conn)
             FATAL_LOGGER(conn->logger, "Reading %d bytes data from conn[%p][%s:%d] ssl:%p " \
                 "on %s:%d via %d failed, %s", n, conn, conn->remote_ip, conn->remote_port,  \
                 conn->ssl, conn->local_ip, conn->local_port, conn->fd, strerror(errno));    \
-            conn_shut(conn, D_STATE_CLOSE);                                            \
+            conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);                                     \
             return -1;                                                                      \
         }                                                                                   \
         DEBUG_LOGGER(conn->logger, "Read %d bytes ndata:%d left:%lld to chunk from %s:%d"   \
@@ -167,7 +167,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     ERROR_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
                         "connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
                         conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
-                    conn_shut(conn, D_STATE_CLOSE);          
+                    conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);          
                     return ;
                 }
                 DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
@@ -223,7 +223,6 @@ void conn_event_handler(int event_fd, short event, void *arg)
         else
         {
             FATAL_LOGGER(conn->logger, "Invalid fd[%d:%d] event:%d", event_fd, conn->fd, event);
-            //conn_shut(conn, D_STATE_CLOSE);          
         }
     }
     return ;
@@ -256,7 +255,7 @@ int conn_set(CONN *conn)
             FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or "
                     " initialize event failed, %s", conn, conn->fd, strerror(errno));	
             /* Terminate connection */
-            conn_shut(conn, D_STATE_CLOSE);
+            conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
         }
     }	
     return -1;	
@@ -283,7 +282,7 @@ int conn_close(CONN *conn)
         conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn->over_cstate(conn);
         conn->over_evstate(conn);
-        conn_shut(conn, D_STATE_CLOSE);
+        conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
         return 0;
     }
     return -1;
@@ -307,7 +306,7 @@ int conn_over(CONN *conn)
 }
 
 /* shutdown connection */
-int conn_shut(CONN *conn, int state)
+int conn_shut(CONN *conn, int d_state, int e_state)
 {
     if(conn)
     {
@@ -318,7 +317,8 @@ int conn_shut(CONN *conn, int state)
                 conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         if(conn->d_state == D_STATE_FREE && conn->fd > 0)
         {
-            conn->d_state |= state;
+            conn->d_state |= d_state;
+            if(conn->e_state == E_STATE_OFF) conn->e_state = e_state;
             //conn->event->del(conn->event, E_READ|E_WRITE);
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
@@ -366,8 +366,8 @@ int conn_terminate(CONN *conn)
                }
                */
         }
-        if((conn->c_state != 0 || conn->s_state != 0 || conn->e_state == E_STATE_WAIT) 
-                && conn->session.error_handler)
+        //if((conn->c_state != 0 || conn->s_state != 0 || conn->e_state == E_STATE_ON) 
+        if(conn->e_state == E_STATE_ON && conn->session.error_handler)
         {
             ERROR_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, PCB(conn->packet)->ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
@@ -520,7 +520,7 @@ int conn_timeout_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "TIMEOUT[%d]-close connection[%p] on remote[%s:%d] "
                     "local[%s:%d] via %d", conn->timeout, conn, conn->remote_ip, conn->remote_port, 
                     conn->local_ip, conn->local_port, conn->fd);
-            conn_shut(conn, D_STATE_CLOSE);
+            conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
         }
     }
     return -1;
@@ -571,9 +571,9 @@ int conn_wait_estate(CONN *conn)
 
     if(conn)
     {
-        if(conn->e_state == E_STATE_FREE)
+        if(conn->e_state == E_STATE_OFF)
         {
-            conn->e_state = E_STATE_WAIT;
+            conn->e_state = E_STATE_ON;
             ret = 0;
         }
     }
@@ -588,13 +588,11 @@ int conn_over_estate(CONN *conn)
 
     if(conn)
     {
-        conn->e_state = E_STATE_FREE;
+        conn->e_state = E_STATE_OFF;
         ret = 0;
     }
     return ret;
 }
-
-
 
 /* over client transaction state */
 int conn_over_cstate(CONN *conn)
@@ -727,7 +725,7 @@ int conn_read_handler(CONN *conn)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
             /* Terminate connection */
-            conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE);
+            conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
             return ret;
         }
         conn->recv_data_total += n;
@@ -783,7 +781,7 @@ int conn_write_handler(CONN *conn)
                     if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
                     /* Terminate connection */
-                    conn_shut(conn, D_STATE_CLOSE);
+                    conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
                     return ret;
                 }
             }
@@ -805,7 +803,7 @@ int conn_write_handler(CONN *conn)
             }
             if(chunk_over)
             {
-                conn_shut(conn, D_STATE_CLOSE);
+                conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
                 ret = -1;
             }
             else
@@ -844,7 +842,7 @@ int conn_packet_reader(CONN *conn)
                     packet_type, conn->remote_ip, conn->remote_port, conn, conn->local_ip,
                     conn->local_port, conn->fd);
             /* Terminate connection */
-            conn_shut(conn, D_STATE_CLOSE);
+            conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
         }
         /* Read packet with customized function from user */
         else if(packet_type & PACKET_CUSTOMIZED && conn->session.packet_reader)
@@ -1388,7 +1386,9 @@ void conn_reset_state(CONN *conn)
         conn->groupid = -1;
         conn->index = -1;
         conn->gindex = -1;
+        conn->c_state = 0;
         conn->d_state = 0;
+        conn->e_state = 0;
     }
     return ;
 }
@@ -1407,6 +1407,7 @@ void conn_reset(CONN *conn)
         conn->index = -1;
         conn->gindex = -1;
         conn->d_state = 0;
+        conn->e_state = 0;
         memset(conn->xids, 0, sizeof(int) * SB_XIDS_MAX);
         /* connection */
         conn->fd = 0;

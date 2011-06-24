@@ -47,8 +47,8 @@ extern "C" {
 #define C_STATE_USING           0x04
 #define C_STATE_OVER            0x08
 /* ERROR wait state */
-#define E_STATE_FREE            0x00
-#define E_STATE_WAIT            0x01
+#define E_STATE_OFF             0x00
+#define E_STATE_ON              0x01
 /* connection running state */
 #ifndef S_STATES
 #define S_STATE_READY           0x00
