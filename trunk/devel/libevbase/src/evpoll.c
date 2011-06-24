@@ -53,8 +53,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             ev->events = ev_flags;
             ev->revents = 0;
             ev->fd	  = event->ev_fd;
-            if(event->ev_fd > evbase->maxfd)
-                evbase->maxfd = event->ev_fd;
+            if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
             ++(evbase->nfd);
             DEBUG_LOGGER(evbase->logger, "Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
@@ -87,8 +86,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
             ev->events = ev_flags;
             ev->revents = 0;
             ev->fd	  = event->ev_fd;
-            if(event->ev_fd > evbase->maxfd)
-                evbase->maxfd = event->ev_fd;
+            if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;
             DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
                     event->ev_flags, event->ev_fd);
@@ -105,8 +103,7 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
     {
         MUTEX_LOCK(evbase->mutex);
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
-        if(event->ev_fd >= evbase->maxfd)
-            evbase->maxfd = event->ev_fd - 1;
+        if(event->ev_fd >= evbase->maxfd) evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
         if(evbase->nfd > 0) --(evbase->nfd);
         MUTEX_UNLOCK(evbase->mutex);
@@ -128,7 +125,7 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     if(evbase && evbase->ev_fds)
     {	
         if(tv) msec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
-        n = poll(evbase->ev_fds, evbase->maxfd+1 , msec);		
+        n = poll(evbase->ev_fds, evbase->allowed , msec);		
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
@@ -139,7 +136,7 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
         for(i = 0; i <= evbase->maxfd; i++)
         {
             ev = &(((struct pollfd *)evbase->ev_fds)[i]);
-            if((event = evbase->evlist[i]) && ev->fd > 0)
+            if((event = evbase->evlist[i]) && ev->fd >= 0)
             {
                 ev_flags = 0;
                 if(ev->revents & POLLIN)

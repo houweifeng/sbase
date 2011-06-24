@@ -57,7 +57,7 @@ void procthread_run(void *arg)
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
-                i = pth->evbase->loop(pth->evbase, 0, &tv);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -378,22 +378,40 @@ void procthread_clean(PROCTHREAD **ppth)
 PROCTHREAD *procthread_init(int have_evbase)
 {
     PROCTHREAD *pth = NULL;
-    struct ip_mreq mreq;
 
     if((pth = (PROCTHREAD *)xmm_new(sizeof(PROCTHREAD))))
     {
         if(have_evbase)
         {
-            pth->have_evbase        = have_evbase;
-            pth->evbase             = evbase_init(1);
+            pth->have_evbase = have_evbase;
+            /*
+            pth->fd = 1;
+            if((pth->evbase = evbase_init(1)) && (pth->event = ev_init()))
+            {
+                //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
+                pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
+                        &procthread_event_handler);
+                pth->evbase->add(pth->evbase, pth->event);
+            }
+            else 
+            {
+                fprintf(stderr, "set evbase & event failed, %s\n", strerror(errno));
+                _exit(-1);
+            }
+            */
+            struct ip_mreq mreq;
+            int flag = 0;
             memset(&mreq, 0, sizeof(struct ip_mreq));
             mreq.imr_multiaddr.s_addr = inet_addr("224.8.8.8");
-            mreq.imr_interface.s_addr = inet_addr("0.0.0.0");
-            if((pth->fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 && setsockopt(pth->fd, IPPROTO_IP, 
-                IP_ADD_MEMBERSHIP, (char*)&mreq, sizeof(struct ip_mreq)) == 0)
+            mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
+            if((pth->evbase = evbase_init(1)) && (pth->event = ev_init())
+                && (pth->fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
+                && setsockopt(pth->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
+                    sizeof(struct ip_mreq)) == 0)
             {
-
-                pth->event              = ev_init();
+                //flag = fcntl(pth->fd, F_GETFL, 0)|O_NONBLOCK;
+                //fcntl(pth->fd, F_SETFL, flag);
+                //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
                 pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, pth->event);

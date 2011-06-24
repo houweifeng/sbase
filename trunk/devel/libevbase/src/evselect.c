@@ -54,8 +54,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
         }
         if(ev_flags)
         {
-            if(event->ev_fd > evbase->maxfd) 
-                evbase->maxfd = event->ev_fd;
+            if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
             ++(evbase->nfd);
             DEBUG_LOGGER(evbase->logger, "Added event[%p] flags[%d] on fd[%d]", 
@@ -100,8 +99,7 @@ int evselect_update(EVBASE *evbase, EVENT *event)
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
             DEBUG_LOGGER(evbase->logger, "Deleted EV_WRITE on fd[%d]", event->ev_fd);
         }
-        if(event->ev_fd > evbase->maxfd)
-            evbase->maxfd = event->ev_fd;
+        if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
         DEBUG_LOGGER(evbase->logger, "Updated event[%p] flags[%d] on fd[%d]",
                 event, event->ev_flags, event->ev_fd);
@@ -126,8 +124,7 @@ int evselect_del(EVBASE *evbase, EVENT *event)
         }
         DEBUG_LOGGER(evbase->logger, "Deleted event[%p] flags[%d] on fd[%d]",
                 event, event->ev_flags, event->ev_fd);
-        if(event->ev_fd >= evbase->maxfd)
-            evbase->maxfd = event->ev_fd - 1;
+        if(event->ev_fd >= evbase->maxfd) evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;	
         if(evbase->nfd > 0) --(evbase->nfd);
         MUTEX_UNLOCK(evbase->mutex);
@@ -151,7 +148,8 @@ int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
         memcpy(&rd_fd_set, evbase->ev_read_fds, sizeof(fd_set));
         FD_ZERO(&wr_fd_set);
         memcpy(&wr_fd_set, evbase->ev_write_fds, sizeof(fd_set));
-        n = select(evbase->maxfd+1, &rd_fd_set, &wr_fd_set, NULL, tv);
+        n = select(evbase->allowed, &rd_fd_set, &wr_fd_set, NULL, tv);
+        //fprintf(stdout, "%s::%d n:%d\n", __FILE__, __LINE__, n);
         if(n <= 0) return n;
         DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->maxfd + 1);
         for(i = 0; i <= evbase->maxfd; ++i)
