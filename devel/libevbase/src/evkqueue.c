@@ -80,8 +80,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             DEBUG_LOGGER(evbase->logger, "add EVFILT_WRITE[%d] on %d", 
                     (int)kqev.filter, (int)kqev.ident);
         }
-        if(event->ev_fd > evbase->maxfd)
-            evbase->maxfd = event->ev_fd;
+        if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
         ++(evbase->nfd);
         MUTEX_UNLOCK(evbase->mutex);
@@ -174,6 +173,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
                         kqev.flags, (int)kqev.ident);
             }
         }
+        if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
         ret = 0;
 err:
@@ -210,8 +210,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
             kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
             DEBUG_LOGGER(evbase->logger, "del EVFILT_WRITE[%d] on %d", kqev.filter,(int)kqev.ident);
         }
-        if(event->ev_fd >= evbase->maxfd)
-            evbase->maxfd = event->ev_fd - 1;
+        if(event->ev_fd >= evbase->maxfd)evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
         if(evbase->nfd > 0) --(evbase->nfd);
         MUTEX_UNLOCK(evbase->mutex);
@@ -233,7 +232,7 @@ int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     {
         //memset(&ts, 0, sizeof(struct timespec));
         if(tv) {TIMEVAL_TO_TIMESPEC(tv, &ts); pts = &ts;}
-        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->maxfd+1, pts);	
+        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->allowed, pts);	
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 

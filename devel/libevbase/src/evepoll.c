@@ -74,8 +74,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
                 else
                 {
                     DEBUG_LOGGER(evbase->logger, "Added event[%p][%d] on fd[%d]", event, ev_flags, event->ev_fd);
-                    if(event->ev_fd > evbase->maxfd)
-                        evbase->maxfd = event->ev_fd;
+                    if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
                     evbase->evlist[event->ev_fd] = event;
                     ++(evbase->nfd);
                 }
@@ -122,6 +121,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
             {
                 DEBUG_LOGGER(evbase->logger, "Updated event[%p][%d] on fd[%d]", event, event->ev_flags, event->ev_fd);
                 evbase->evlist[event->ev_fd] = event;
+                if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
             }
         }
         MUTEX_UNLOCK(evbase->mutex);
@@ -152,8 +152,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
                 {
                     DEBUG_LOGGER(evbase->logger, "Deleted event[%p][%d] on fd[%d]", event, ep_event.events, event->ev_fd);
                 }
-                if(event->ev_fd >= evbase->maxfd)
-                    evbase->maxfd = event->ev_fd - 1;
+                if(event->ev_fd >= evbase->maxfd)evbase->maxfd = event->ev_fd - 1;
                 evbase->evlist[event->ev_fd] = NULL;
                 if(evbase->nfd > 0) --(evbase->nfd);
             }
