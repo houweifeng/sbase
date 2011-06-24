@@ -56,16 +56,18 @@ void procthread_run(void *arg)
             do
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
-                //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
+                //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
                 i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
                     qmessage_handler(pth->message_queue, pth->logger);
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
+                    //i = 1;
                 }
+                //if(i == 0){usleep(pth->usec_sleep);}
                 //if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
-                //DEBUG_LOGGER(pth->logger, "running_status:%d", pth->running_status);
+                DEBUG_LOGGER(pth->logger, "running_status:%d loop()-ret:%d", pth->running_status, i);
             }while(pth->running_status);
         }
         else
@@ -104,12 +106,12 @@ void procthread_run(void *arg)
                     else
                     {
                         ++i;
-                        if(i > 100000){usleep(pth->usec_sleep); i = 0;}
+                        if(i > 1000){usleep(pth->usec_sleep); i = 0;}
                     }
                 }while(pth->running_status);
             }
         }
-        DEBUG_LOGGER(pth->logger, "terminate threads[%p] qtotal:%d", (void *)(pth->threadid), QMTOTAL(pth->message_queue));
+        //DEBUG_LOGGER(pth->logger, "terminate threads[%p] qtotal:%d", (void *)(pth->threadid), QMTOTAL(pth->message_queue));
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 qmessage_handler(pth->message_queue, pth->logger);
     }
@@ -269,6 +271,7 @@ int procthread_shut_connection(PROCTHREAD *pth, CONN *conn)
         {
             qmessage_push(iodaemon->message_queue, MESSAGE_OVER, conn->index, conn->fd, 
                 -1, iodaemon, conn, NULL);
+            iodaemon->wakeup(iodaemon);
         }
         else
         {
@@ -384,7 +387,6 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase = have_evbase;
-            /*
             pth->fd = 1;
             if((pth->evbase = evbase_init(1)) && (pth->event = ev_init()))
             {
@@ -398,7 +400,8 @@ PROCTHREAD *procthread_init(int have_evbase)
                 fprintf(stderr, "set evbase & event failed, %s\n", strerror(errno));
                 _exit(-1);
             }
-            */
+
+            /*
             struct ip_mreq mreq;
             int flag = 0;
             memset(&mreq, 0, sizeof(struct ip_mreq));
@@ -409,9 +412,9 @@ PROCTHREAD *procthread_init(int have_evbase)
                 && setsockopt(pth->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
                     sizeof(struct ip_mreq)) == 0)
             {
-                //flag = fcntl(pth->fd, F_GETFL, 0)|O_NONBLOCK;
-                //fcntl(pth->fd, F_SETFL, flag);
-                //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
+                flag = fcntl(pth->fd, F_GETFL, 0)|O_NONBLOCK;
+                fcntl(pth->fd, F_SETFL, flag);
+                pth->evbase->set_evops(pth->evbase, EOP_POLL);
                 pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, pth->event);
@@ -421,6 +424,7 @@ PROCTHREAD *procthread_init(int have_evbase)
                 fprintf(stderr, "socket() failed, %s\n", strerror(errno));
                 _exit(-1);
             }
+            */
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();

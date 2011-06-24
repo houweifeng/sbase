@@ -278,9 +278,16 @@ void event_del(EVENT *event, short flags)
 			event->ev_flags ^= flags;
 			if(event->ev_base && event->ev_base->update)
 			{
-				DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
-					event, event->ev_flags, event->ev_fd);
-				event->ev_base->update(event->ev_base, event);
+                if(event->ev_flags & (E_READ|E_WRITE))
+                {
+                    DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
+                            event, event->ev_flags, event->ev_fd);
+                    event->ev_base->update(event->ev_base, event);
+                }
+                else
+                {
+                    event->ev_base->del(event->ev_base, event);
+                }
 			}
 		}
         //MUTEX_UNLOCK(event->mutex);

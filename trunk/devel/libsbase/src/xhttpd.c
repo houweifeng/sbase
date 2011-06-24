@@ -848,7 +848,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
     sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
     sbase->set_log_level(sbase, iniparser_getint(dict, "SBASE:log_level", 0));
-    sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlog"));
+    sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
     sbase->set_evlog_level(sbase, iniparser_getint(dict, "SBASE:evlog_level", 0));
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
     /* XHTTPD */
@@ -861,13 +861,15 @@ int sbase_initialize(SBASE *sbase, char *conf)
     service->sock_type = iniparser_getint(dict, "XHTTPD:socket_type", SOCK_STREAM);
     service->ip = iniparser_getstr(dict, "XHTTPD:service_ip");
     service->port = iniparser_getint(dict, "XHTTPD:service_port", 80);
-    service->working_mode = iniparser_getint(dict, "XHTTPD:working_mode", WORKING_PROC);
-    service->service_type = iniparser_getint(dict, "XHTTPD:service_type", C_SERVICE);
+    service->working_mode = iniparser_getint(dict, "XHTTPD:working_mode", WORKING_THREAD);
+    service->service_type = iniparser_getint(dict, "XHTTPD:service_type", S_SERVICE);
     service->service_name = iniparser_getstr(dict, "XHTTPD:service_name");
     service->nprocthreads = iniparser_getint(dict, "XHTTPD:nprocthreads", 1);
     service->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
     service->use_iodaemon = iniparser_getint(dict, "XHTTPD:use_iodaemon", 1);
-    service->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 0);
+    service->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
+    service->set_log(service, iniparser_getstr(dict, "XHTTPD:logfile"));
+    service->set_log_level(service, iniparser_getint(dict, "XHTTPD:log_level", 0));
     service->session.packet_type=iniparser_getint(dict, "XHTTPD:packet_type",PACKET_DELIMITER);
     if((service->session.packet_delimiter = iniparser_getstr(dict, "XHTTPD:packet_delimiter")))
     {

@@ -187,7 +187,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
 {
     struct kevent kqev;
     if(evbase && event && evbase->evs 
-            && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
+            && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
         if(event->ev_flags & E_READ)

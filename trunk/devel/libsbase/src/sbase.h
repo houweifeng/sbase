@@ -123,6 +123,7 @@ typedef struct _SBASE
 	int usec_sleep;
     int running_status;
     int running_services;
+    int  evlog_level;
     /* evtimer */
     int evid;
     int ssl_id;
@@ -131,6 +132,7 @@ typedef struct _SBASE
 	/* timer && logger */
 	void *logger;
 	EVBASE *evbase;
+    char *evlogfile;
     void *evtimer;
     struct _SERVICE *services[SB_SERVICE_MAX];
 
