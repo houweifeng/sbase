@@ -380,10 +380,10 @@ int main(int argc, char **argv)
     char *url = NULL, *urllist = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
     struct hostent *hent = NULL;
     pid_t pid;
-    int n = 0;
+    int n = 0, log_level = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vqpkdw:l:c:t:n:")) != -1)
+    while((ch = getopt(argc, argv, "vqpkdw:l:c:t:n:e:")) != -1)
     {
         switch(ch)
         {
@@ -416,6 +416,9 @@ int main(int argc, char **argv)
                 break;
             case 'v':
                 is_verbosity = 1;
+                break;
+            case 'e':
+                log_level = atoi(optarg);
                 break;
             case '?':
                 url = argv[optind];
@@ -596,6 +599,7 @@ invalid_url:
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark.log");
+        service->set_log_level(service, log_level);
         LOGGER_INIT(logger, "/tmp/benchmark_res.log");
         if(sbase->add_service(sbase, service) == 0)
         {
