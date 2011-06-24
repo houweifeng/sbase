@@ -164,9 +164,9 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) < 0 
                         || error != 0)
                 {
-                    //ERROR_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
-                    //"connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
-                    //conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
+                    ERROR_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
+                        "connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
+                        conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
                     conn_shut(conn, D_STATE_CLOSE);          
                     return ;
                 }
@@ -299,7 +299,7 @@ int conn_over(CONN *conn)
     {
         MUTEX_LOCK(conn->mutex);
         DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        conn_over_chunk(conn);
+        if(conn->d_state == D_STATE_FREE) conn_over_chunk(conn);
         MUTEX_UNLOCK(conn->mutex);
         return 0;
     }
@@ -319,8 +319,7 @@ int conn_shut(CONN *conn, int state)
         if(conn->d_state == D_STATE_FREE && conn->fd > 0)
         {
             conn->d_state |= state;
-            if(conn->event) conn->event->destroy(conn->event);
-            conn->event = NULL;
+            //conn->event->del(conn->event, E_READ|E_WRITE);
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);
@@ -380,7 +379,7 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        if(conn->event) conn->event->destroy(conn->event);
+        //if(conn->event) conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing conn[%p]->d_state:%d send_queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, QTOTAL(conn->send_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         while(QTOTAL(conn->send_queue) > 0)
         {
@@ -967,8 +966,8 @@ int conn_data_handler(CONN *conn)
         //reset session
         if(conn->s_state == S_STATE_DATA_HANDLING)
         {
-            DEBUG_LOGGER(conn->logger, "Reset data_handler(%p) buffer:%d on %s:%d via %d", conn->session.packet_handler, PCB(conn->buffer)->ndata, conn->remote_ip, conn->remote_port, conn->fd);
             SESSION_RESET(conn);
+            DEBUG_LOGGER(conn->logger, "Reset data_handler(%p) buffer:%d on %s:%d via %d", conn->session.packet_handler, PCB(conn->buffer)->ndata, conn->remote_ip, conn->remote_port, conn->fd);
         }
     }
     return ret;
