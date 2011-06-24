@@ -25,7 +25,7 @@ static int ncompleted = 0;
 static int is_quiet = 0;
 static int is_daemon = 0;
 static int is_keepalive = 0;
-static int workers = 1;
+static int workers = 32;
 static int is_post = 0;
 static int is_verbosity = 0;
 static char *server_host = NULL;
@@ -351,7 +351,7 @@ int main(int argc, char **argv)
     pid_t pid;
     char *url = NULL, *urllist = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
     struct hostent *hent = NULL;
-    int n = 0;
+    int n = 0, log_level = 0;
 
     /* get configure file */
     while((ch = getopt(argc, argv, "vqpkdw:l:c:t:n:")) != -1)
@@ -384,6 +384,9 @@ int main(int argc, char **argv)
                 break;
             case 'p':
                 is_post = 1;
+                break;
+            case 'e':
+                log_level = atoi(optarg);
                 break;
             case 'v':
                 is_verbosity = 1;
@@ -569,7 +572,7 @@ invalid_url:
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark.log");
-        //service->set_log_level(service, 2);
+        service->set_log_level(service, log_level);
         LOGGER_INIT(logger, "/tmp/benchmark_res.log");
         if(sbase->add_service(sbase, service) == 0)
         {
