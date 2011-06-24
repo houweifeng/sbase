@@ -56,7 +56,7 @@ void procthread_run(void *arg)
             do
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
-                //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
+                DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
                 i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {

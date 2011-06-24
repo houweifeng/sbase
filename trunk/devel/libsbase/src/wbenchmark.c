@@ -25,7 +25,7 @@ static int ncompleted = 0;
 static int is_quiet = 0;
 static int is_daemon = 0;
 static int is_keepalive = 0;
-static int workers = 0;
+static int workers = 1;
 static int is_post = 0;
 static int is_verbosity = 0;
 static char *server_host = NULL;
@@ -542,6 +542,8 @@ invalid_url:
     sbase->nchilds = 0;
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
+    sbase->set_evlog(sbase, "/tmp/benchmark_ev.log");
+    sbase->set_evlog_level(sbase, 2);
     if((service = service_init()))
     {
         service->working_mode = 1;
@@ -567,6 +569,7 @@ invalid_url:
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark.log");
+        service->set_log_level(service, 2);
         LOGGER_INIT(logger, "/tmp/benchmark_res.log");
         if(sbase->add_service(sbase, service) == 0)
         {

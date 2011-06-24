@@ -320,6 +320,7 @@ int conn_shut(CONN *conn, int state)
         {
             conn->d_state |= state;
             if(conn->event) conn->event->destroy(conn->event);
+            conn->event = NULL;
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);
@@ -379,7 +380,7 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        conn->event->destroy(conn->event);
+        if(conn->event) conn->event->destroy(conn->event);
         DEBUG_LOGGER(conn->logger, "terminateing conn[%p]->d_state:%d send_queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, QTOTAL(conn->send_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         while(QTOTAL(conn->send_queue) > 0)
         {
