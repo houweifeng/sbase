@@ -57,7 +57,7 @@ void procthread_run(void *arg)
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop()");
-                i = pth->evbase->loop(pth->evbase, 0, NULL);
+                i = pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -363,8 +363,8 @@ void procthread_clean(PROCTHREAD **ppth)
         {
             if((*ppth)->have_evbase)
             {
+                if((*ppth)->event)(*ppth)->event->clean(&((*ppth)->event));
                 (*ppth)->evbase->clean(&((*ppth)->evbase));
-                (*ppth)->event->clean(&((*ppth)->event));
             }
             qmessage_clean((*ppth)->message_queue);
         }
@@ -378,6 +378,7 @@ void procthread_clean(PROCTHREAD **ppth)
 PROCTHREAD *procthread_init(int have_evbase)
 {
     PROCTHREAD *pth = NULL;
+    struct ip_mreq mreq;
 
     if((pth = (PROCTHREAD *)xmm_new(sizeof(PROCTHREAD))))
     {
@@ -385,11 +386,23 @@ PROCTHREAD *procthread_init(int have_evbase)
         {
             pth->have_evbase        = have_evbase;
             pth->evbase             = evbase_init(1);
-            pth->event              = ev_init();
-            pth->fd                 = 1;
-            pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
-                    &procthread_event_handler);
-            pth->evbase->add(pth->evbase, pth->event);
+            memset(&mreq, 0, sizeof(struct ip_mreq));
+            mreq.imr_multiaddr.s_addr = inet_addr("224.8.8.8");
+            mreq.imr_interface.s_addr = inet_addr("0.0.0.0");
+            if((pth->fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 && setsockopt(pth->fd, IPPROTO_IP, 
+                IP_ADD_MEMBERSHIP, (char*)&mreq, sizeof(struct ip_mreq)) == 0)
+            {
+
+                pth->event              = ev_init();
+                pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
+                        &procthread_event_handler);
+                pth->evbase->add(pth->evbase, pth->event);
+            }
+            else 
+            {
+                fprintf(stderr, "socket() failed, %s\n", strerror(errno));
+                _exit(-1);
+            }
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
