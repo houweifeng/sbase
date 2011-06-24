@@ -8,6 +8,7 @@
 #include <sbase.h>
 #include "timer.h"
 #include "logger.h"
+#include "mutex.h"
 #include <sys/resource.h>
 #define HTTP_BUF_SIZE       65536
 #define HTTP_PATH_MAX       8192
@@ -41,6 +42,7 @@ static int running_status = 0;
 static int req_timeout = 1000000;
 static FILE *fp = NULL;
 static void *logger = NULL;
+static void *mutex = NULL;
 
 CONN *http_newconn(int id, char *ip, int port, int is_ssl)
 {
@@ -52,7 +54,6 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
         if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
         {
             conn->c_id = id;
-            conn->start_cstate(conn);
         }
         else
         {
@@ -71,16 +72,14 @@ int http_request(CONN *conn)
     if(running_status && conn)
     {
         //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
-        if(nrequests >= ntasks)
+        MUTEX_LOCK(mutex);n = nrequests++;MUTEX_UNLOCK(mutex);
+        if(n == 0){TIMER_INIT(timer);}
+        if(n >= ntasks)
         {
+            //WARN_LOGGER(logger, "close-conn[%s:%d] via %d", conn->local_ip, conn->local_port, conn->fd);
+            conn->close(conn);
             return -1;
         }
-        if(nrequests == 0)
-        {
-            TIMER_INIT(timer);
-        }
-        ++nrequests;
-        conn->start_cstate(conn);
         conn->set_timeout(conn, req_timeout);
         if(fp && fgets(path, HTTP_PATH_MAX, fp))
         {
@@ -152,22 +151,25 @@ int http_show_state(int n)
 /* http over */
 int http_over(CONN *conn, int respcode)
 {
-    int id = 0, n = 0;
+    int id = 0, n = 0, m = 0;
 
     if(conn)
     {
-        conn->over_cstate(conn);
-        n = ++ncompleted;
+        MUTEX_LOCK(mutex);n = ++ncompleted; m = nrequests;MUTEX_UNLOCK(mutex);
+        //WARN_LOGGER(logger, "complete %d conn[%s:%d] via %d", n, conn->local_ip, conn->local_port, conn->fd);
         id = conn->c_id;
         if(n > 0 && n <= ntasks && (n%1000) == 0)
         {
             if(is_quiet)
             {
-                REALLOG(logger, "completed %d current:%d", n, ncurrent);
+                REALLOG(logger, "requests:%d completed %d concurrecy:%d", m, n, ncurrent);
             }
-            else fprintf(stdout, "completed %d current:%d\n", n, ncurrent);
+            else 
+            {
+                fprintf(stdout, "requests:%d completed %d concurrecy:%d\n", m, n, ncurrent);
+            }
         }
-        if(nrequests < ntasks)
+        if(m < ntasks)
         {
             if(conn->d_state  == 0 && is_keepalive && respcode != 0) 
                 return http_request(conn);
@@ -186,9 +188,9 @@ int http_over(CONN *conn, int respcode)
             --ncurrent;
             conn->close(conn);
         }
-        if(running_status)
+        if(running_status && n == ntasks)
         {
-            if(n >= ntasks || (nrequests >= ntasks && ncurrent == 0))return http_show_state(n);
+            return http_show_state(n);
         }
     }
     return -1;
@@ -265,6 +267,7 @@ int benchmark_error_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA
 {
     if(conn)
     {
+        //fprintf(stdout, "%s::%d s_id:%d current:%d\n", __FILE__, __LINE__, conn->s_id, ncurrent);
         return http_over(conn, conn->s_id);
     }
     return -1;
@@ -275,6 +278,7 @@ int benchmark_ok_handler(CONN *conn)
 {
     if(conn)
     {
+        //WARN_LOGGER(logger, "ok_handler conn[%s:%d] via %d", conn->local_ip, conn->local_port, conn->fd);
         return http_request(conn);
     }
     return -1;
@@ -294,7 +298,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
             ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
         }
         ntimeout++;
-        conn->over_cstate(conn);
+        conn->close(conn);
         return http_over(conn, 0);
     }
     return -1;
@@ -314,18 +318,20 @@ void benchmark_heartbeat_handler(void *arg)
 {
     CONN *conn = NULL;
     int id = 0;
-
-    while(nrequests < ntasks && ncurrent < concurrency)
+    if(running_status == 0)
     {
-        id = ncurrent;
-        if((conn = http_newconn(id, server_ip, server_port, server_is_ssl)) == NULL)
+        running_status = 1;
+        while(ncurrent < concurrency)
         {
-            break;
-        }
-        else
-        {
-            //usleep(10);
-            ++ncurrent;
+            id = ncurrent;
+            if((conn = http_newconn(id, server_ip, server_port, server_is_ssl)) == NULL)
+            {
+                break;
+            }
+            else
+            {
+                ++ncurrent;
+            }
         }
     }
     return ;
@@ -339,6 +345,7 @@ static void benchmark_stop(int sig)
         case SIGTERM:
             fprintf(stderr, "benchmark  is interrupted by user.\n");
             running_status = 0;
+            http_show_state(ncompleted);
             if(sbase)sbase->stop(sbase);
             break;
         default:
@@ -354,7 +361,7 @@ int main(int argc, char **argv)
     int n = 0, log_level = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vqpkdw:l:c:t:n:")) != -1)
+    while((ch = getopt(argc, argv, "vqpkdw:l:c:t:n:e:")) != -1)
     {
         switch(ch)
         {
@@ -408,7 +415,8 @@ int main(int argc, char **argv)
     if(url == NULL)
     {
         fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
-                "Options:\n\t-c concurrency\n\t-n requests\n\t-w worker threads\n"
+                "Options:\n\t-c concurrency\n\t-n requests\n"
+                "\t-w worker threads\n\t-e log level\n"
                 "\t-t timeout (microseconds, default 1000000)\n"
                 "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
                 "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
@@ -546,6 +554,7 @@ invalid_url:
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
     sbase->set_evlog(sbase, "/tmp/benchmark_ev.log");
+    MUTEX_INIT(mutex);
     //sbase->set_evlog_level(sbase, 2);
     if((service = service_init()))
     {
@@ -576,7 +585,6 @@ invalid_url:
         LOGGER_INIT(logger, "/tmp/benchmark_res.log");
         if(sbase->add_service(sbase, service) == 0)
         {
-            running_status = 1;
             sbase->running(sbase, 0);
             //sbase->running(sbase, 3600);
             //sbase->running(sbase, 90000000);sbase->stop(sbase);
@@ -584,5 +592,6 @@ invalid_url:
         else fprintf(stderr, "add service failed, %s", strerror(errno));
     }
     sbase->clean(&sbase);
+    MUTEX_DESTROY(mutex);
     return 0;
 }
