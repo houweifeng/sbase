@@ -68,7 +68,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
 {
     struct pollfd *ev = NULL;
     short ev_flags = 0;
-    if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
+    if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
         event->ev_base = evbase;
@@ -99,7 +99,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
 /* Delete event from evbase */
 int evpoll_del(EVBASE *evbase, EVENT *event)
 {
-    if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
+    if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));

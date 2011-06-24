@@ -173,7 +173,11 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     //if(evbase && evbase->nfd > 0)
     if(evbase)
     {
-        if(tv) timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
+        if(tv) 
+        {
+            timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
+            
+        }
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->maxfd);
         n = epoll_wait(evbase->efd, evbase->evs, evbase->allowed, timeout);
         //n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd+1, timeout);
@@ -190,8 +194,6 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
             if(ev == NULL) continue;
             fd = ev->ev_fd;
             flags = evp->events;
-            DEBUG_LOGGER(evbase->logger, "Activing i:%d evp:%p ev:%p event[%p] fd:%d flags:%d",
-                    i, evp, ev, evbase->evlist[fd], fd, flags);
             //fd = evp->data.fd;
             if(fd >= 0 && fd < evbase->allowed && evbase->evlist[fd] && ev == evbase->evlist[fd])
             {
@@ -204,6 +206,7 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                 if(flags & EPOLLIN) ev_flags |= E_READ;
                 if(flags & EPOLLOUT) ev_flags |= E_WRITE;
                 if(ev_flags == 0) continue;
+                DEBUG_LOGGER(evbase->logger, "Activing i:%d evp:%p ev:%p event[%p] fd:%d flags:%d ev_flags:%d", i, evp, ev, evbase->evlist[fd], fd, flags, ev_flags);
                 if(ev_flags &= ev->ev_flags)
                 {
                     ev->active(ev, ev_flags);

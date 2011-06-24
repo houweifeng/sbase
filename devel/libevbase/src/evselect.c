@@ -111,7 +111,7 @@ int evselect_update(EVBASE *evbase, EVENT *event)
 /* Delete event from evbase */
 int evselect_del(EVBASE *evbase, EVENT *event)
 {
-    if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
+    if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
         if(evbase->ev_read_fds)

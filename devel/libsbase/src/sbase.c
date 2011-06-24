@@ -72,9 +72,9 @@ int sbase_set_log_level(SBASE *sbase, int level)
 int sbase_set_evlog(SBASE *sbase, char *evlogfile)
 {
     int ret = -1;
-    if(sbase && evlogfile && sbase->evbase)
+    if(sbase && evlogfile)
     {
-        sbase->evbase->set_logfile(sbase->evbase, evlogfile);
+        sbase->evlogfile = evlogfile;
         ret = 0;
     }
     return ret;
@@ -84,9 +84,9 @@ int sbase_set_evlog(SBASE *sbase, char *evlogfile)
 int sbase_set_evlog_level(SBASE *sbase, int level)
 {
     int ret = -1;
-    if(sbase && sbase->evbase && sbase->evbase->logger)
+    if(sbase)
     {
-        sbase->evbase->set_log_level(sbase->evbase, level);
+        sbase->evlog_level = level;
         ret = 0;
     }
     return ret;
@@ -205,6 +205,11 @@ int sbase_running(SBASE *sbase, int useconds)
 running:
         //evbase 
         sbase->evbase           = evbase_init(1);
+        if(sbase->evlogfile) 
+        {
+            sbase->evbase->set_logfile(sbase->evbase, sbase->evlogfile);
+            sbase->evbase->set_log_level(sbase->evbase, sbase->evlog_level);
+        }
         //running services
         if(sbase->services)
         {
@@ -219,12 +224,12 @@ running:
         }
         //running sbase 
         sbase->running_status = 1;
-        tv.tv_usec = SB_USEC_SLEEP;
-        if(sbase->usec_sleep > 0) tv.tv_usec = sbase->usec_sleep;
+        if(sbase->usec_sleep > 1000000) tv.tv_sec = sbase->usec_sleep/1000000;
+        tv.tv_usec = sbase->usec_sleep % 1000000;
         do
         {
             //running evbase 
-            i = sbase->evbase->loop(sbase->evbase, 0, NULL);
+            i = sbase->evbase->loop(sbase->evbase, 0, &tv);
             //sbase->evbase->loop(sbase->evbase, 0, &tv);
             //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
@@ -236,9 +241,7 @@ running:
                 qmessage_handler(sbase->message_queue, sbase->logger);
                 i = 1;
             }
-            if(i > 0)++k;
-            else k = 0;
-            if(i== 0 || k > 100000){usleep(sbase->usec_sleep); k = 0;}
+            if(i == 0){usleep(sbase->usec_sleep); k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)
