@@ -390,11 +390,10 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase = have_evbase;
-            /*
             pth->fd = 1;
             if((pth->evbase = evbase_init(1)) && (pth->event = ev_init()))
             {
-                //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
+                pth->evbase->set_evops(pth->evbase, EOP_POLL);
                 pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, pth->event);
@@ -404,11 +403,11 @@ PROCTHREAD *procthread_init(int have_evbase)
                 fprintf(stderr, "set evbase & event failed, %s\n", strerror(errno));
                 _exit(-1);
             }
-            */
+            /*
             struct ip_mreq mreq;
             int flag = 0;
             memset(&mreq, 0, sizeof(struct ip_mreq));
-            mreq.imr_multiaddr.s_addr = inet_addr("239.255.255.255");
+            mreq.imr_multiaddr.s_addr = inet_addr("224.8.8.8");
             mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
             if((pth->evbase = evbase_init(1)) && (pth->event = ev_init())
                 && (pth->fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
@@ -417,7 +416,7 @@ PROCTHREAD *procthread_init(int have_evbase)
             {
                 flag = fcntl(pth->fd, F_GETFL, 0)|O_NONBLOCK;
                 fcntl(pth->fd, F_SETFL, flag);
-                //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
+                pth->evbase->set_evops(pth->evbase, EOP_POLL);
                 pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, pth->event);
@@ -427,6 +426,7 @@ PROCTHREAD *procthread_init(int have_evbase)
                 fprintf(stderr, "socket() failed, %s\n", strerror(errno));
                 _exit(-1);
             }
+            */
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
