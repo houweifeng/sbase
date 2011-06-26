@@ -209,6 +209,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
 
 	if(conn)
     {
+        conn->over_timeout(conn);
         p = packet->data;
         end = packet->data + packet->ndata;
         //check response code 
@@ -248,6 +249,7 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
 {
     if(conn)
     {
+        conn->over_timeout(conn);
         return http_over(conn, conn->s_id);
     }
     return 0;
@@ -291,11 +293,11 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
     {
         if(cache && cache->data)
         {
-            ACCESS_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
+            WARN_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
         }
         else
         {
-            ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
+            WARN_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
         }
         ntimeout++;
         conn->close(conn);
