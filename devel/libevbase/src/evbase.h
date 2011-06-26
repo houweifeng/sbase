@@ -27,21 +27,22 @@ struct _EVENT;
 #define _TYPEDEF_EVBASE
 typedef struct _EVBASE
 {
+	int  efd;
+    int nfd;
+    int nevent;
+	int  maxfd;
+	int usec_sleep ;
+	int allowed;
+	int state;
+    int evopid;
+
 	void *ev_read_fds;
 	void *ev_write_fds;
 	void *ev_fds;
 	void *evs;
-	int  efd;
 	void *logger;
     void *mutex;
-
-	int nfd;
-    int nevent;
-	int  maxfd;
-	struct _EVENT **evlist;
-	int usec_sleep ;
-	int allowed;
-	int state;
+    struct _EVENT **evlist;
 
     void    (*set_logfile)(struct _EVBASE *, char *logfile);
     void    (*set_log_level)(struct _EVBASE *, int level);

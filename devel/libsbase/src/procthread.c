@@ -223,6 +223,7 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
 /* Add new connection */
 int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 {
+    PROCTHREAD *iodaemon = NULL;
     int ret = -1;
 
     if(pth && conn)
@@ -242,6 +243,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
                 " on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port, 
                 conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         }
+        if((iodaemon = pth->service->iodaemon)) iodaemon->wakeup(iodaemon);
     }
     return ret;
 }
@@ -388,6 +390,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase)
         {
             pth->have_evbase = have_evbase;
+            /*
             pth->fd = 1;
             if((pth->evbase = evbase_init(1)) && (pth->event = ev_init()))
             {
@@ -401,14 +404,13 @@ PROCTHREAD *procthread_init(int have_evbase)
                 fprintf(stderr, "set evbase & event failed, %s\n", strerror(errno));
                 _exit(-1);
             }
-
-            /*
+            */
             struct ip_mreq mreq;
             int flag = 0;
             memset(&mreq, 0, sizeof(struct ip_mreq));
-            mreq.imr_multiaddr.s_addr = inet_addr("224.8.8.8");
+            mreq.imr_multiaddr.s_addr = inet_addr("239.255.255.255");
             mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
-            if((pth->evbase = evbase_init(1)) && (pth->event = ev_init())
+            if((pth->evbase = evbase_init(0)) && (pth->event = ev_init())
                 && (pth->fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
                 && setsockopt(pth->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
                     sizeof(struct ip_mreq)) == 0)
@@ -425,7 +427,6 @@ PROCTHREAD *procthread_init(int have_evbase)
                 fprintf(stderr, "socket() failed, %s\n", strerror(errno));
                 _exit(-1);
             }
-            */
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();

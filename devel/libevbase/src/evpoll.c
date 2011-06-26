@@ -125,15 +125,15 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     if(evbase && evbase->ev_fds)
     {	
         if(tv) msec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
-        n = poll(evbase->ev_fds, evbase->allowed , msec);		
+        n = poll(evbase->ev_fds, evbase->allowed , msec);	
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
                     evbase, errno, strerror(errno));
         }
         if(n <= 0) return n;
-        DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->maxfd + 1);
-        for(i = 0; i <= evbase->maxfd; i++)
+        DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->allowed);
+        for(i = 0; i < evbase->allowed; i++)
         {
             ev = &(((struct pollfd *)evbase->ev_fds)[i]);
             if((event = evbase->evlist[i]) && ev->fd >= 0)
