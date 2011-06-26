@@ -81,16 +81,13 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
         {
             ev_flags |= POLLOUT;
         }
-        if(ev_flags)
-        {
-            ev->events = ev_flags;
-            ev->revents = 0;
-            ev->fd	  = event->ev_fd;
-            if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
-            evbase->evlist[event->ev_fd] = event;
-            DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
-                    event->ev_flags, event->ev_fd);
-        }
+        ev->events = ev_flags;
+        ev->revents = 0;
+        ev->fd	  = event->ev_fd;
+        if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
+        evbase->evlist[event->ev_fd] = event;
+        DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
+                event->ev_flags, event->ev_fd);
         MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }	
@@ -125,6 +122,7 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     if(evbase && evbase->ev_fds)
     {	
         if(tv) msec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
+        else msec = 1;
         n = poll(evbase->ev_fds, evbase->allowed , msec);	
         if(n == -1)
         {

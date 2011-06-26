@@ -281,8 +281,7 @@ void event_del(EVENT *event, short flags)
 			{
                 DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
                             event, event->ev_flags, event->ev_fd);
-                if(event->ev_base->evopid == EOP_POLL
-                    || event->ev_flags & (E_READ|E_WRITE))
+                if(event->ev_flags & (E_READ|E_WRITE))
                 {
                     event->ev_base->update(event->ev_base, event);
                 }
