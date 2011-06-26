@@ -739,9 +739,13 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     //conn->ioqmessage = procthread->ioqmessage;
                     //conn->message_queue = procthread->message_queue;
                     if(status == CONN_STATUS_FREE)
+                    {
                         procthread->add_connection(procthread, conn);   
+                    }
                     else
+                    {
                         procthread->addconn(procthread, conn);
+                    }
                     DEBUG_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 }
                 else

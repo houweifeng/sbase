@@ -94,6 +94,7 @@ int evbase_set_evops(EVBASE *evbase, int evopid)
             if(evops[evopid].clean) evbase->clean = evops[evopid].clean;
             if(evbase->init(evbase) == -1)
                 evbase->set_evops(evbase, evops_default);
+            evbase->evopid = evopid;
             DEBUG_LOGGER(evbase->logger, "Set event to [%s]", evops[evopid].name);
             return 0;
         }
@@ -280,7 +281,8 @@ void event_del(EVENT *event, short flags)
 			{
                 DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
                             event, event->ev_flags, event->ev_fd);
-                if(event->ev_flags & (E_READ|E_WRITE))
+                if(event->ev_base->evopid == EOP_POLL
+                    || event->ev_flags & (E_READ|E_WRITE))
                 {
                     event->ev_base->update(event->ev_base, event);
                 }
