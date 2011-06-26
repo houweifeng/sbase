@@ -410,7 +410,7 @@ PROCTHREAD *procthread_init(int have_evbase)
             memset(&mreq, 0, sizeof(struct ip_mreq));
             mreq.imr_multiaddr.s_addr = inet_addr("239.255.255.255");
             mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
-            if((pth->evbase = evbase_init(0)) && (pth->event = ev_init())
+            if((pth->evbase = evbase_init(1)) && (pth->event = ev_init())
                 && (pth->fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
                 && setsockopt(pth->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
                     sizeof(struct ip_mreq)) == 0)

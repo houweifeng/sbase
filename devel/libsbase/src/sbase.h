@@ -97,6 +97,7 @@ typedef struct _SESSION
     int  packet_length;
     int  packet_delimiter_length;
     int  buffer_size;
+    int  id;
     void *child;
     void *ctx;
     void *parent;
@@ -161,8 +162,8 @@ typedef struct _CNGROUP
   short nconnected;
   short port;
   short limit;
-  short total;
-  short nconns_free;
+  int   total;
+  int   nconns_free;
   int   conns_free[SB_GROUP_CONN_MAX];
   char  ip[SB_IP_MAX];
   SESSION session;
@@ -182,7 +183,6 @@ typedef struct _SERVICE
     int index_max;
     int running_connections;
     int nconns_free;
-    int conns_free[SB_CONN_MAX];
     int nconnection;
     int client_connections_limit;
     int  nqchunks;
@@ -204,6 +204,7 @@ typedef struct _SERVICE
     int  is_inside_logger;
     int ntask;
 
+    int conns_free[SB_CONN_MAX];
     /* mutex */
     void *mutex;
     SBASE *sbase;
@@ -310,12 +311,13 @@ SERVICE *service_init();
 typedef struct _PROCTHREAD
 {
     /* global */
+    int status; 
     int lock;
     int running_status;
 	int usec_sleep;
     int index;
     int fd;
-    int  use_cond_wait;
+    int use_cond_wait;
     int have_evbase;
     long threadid;
     void *mutex;
@@ -378,6 +380,14 @@ typedef struct _CONN
     int e_state;
     int c_id;
     int d_state;
+    int evid;
+    /* conenction */
+    int  sock_type;
+    int  fd;
+    int  remote_port;
+    int  local_port;
+    /* xid */
+    int xids[SB_XIDS_MAX];
     void *parent;
     void *mutex;
     /* evbase */
@@ -386,7 +396,6 @@ typedef struct _CONN
     /* SSL */
     void *ssl;
     /* evtimer */
-    int evid;
     void *evtimer;
     /* buffer */
     void *buffer;
@@ -403,15 +412,6 @@ typedef struct _CONN
     void *iodaemon;
     void *ioqmessage;
     void *message_queue;
-    /* xid */
-    int xids[SB_XIDS_MAX];
-    /* conenction */
-    int  sock_type;
-    int  fd;
-    int  remote_port;
-    int  local_port;
-    char remote_ip[SB_IP_MAX];
-    char local_ip[SB_IP_MAX];
     int (*set)(struct _CONN *);
     int (*close)(struct _CONN *);
     int (*over)(struct _CONN *);
@@ -479,6 +479,8 @@ typedef struct _CONN
     /* xid 64 bit */
     int64_t xids64[SB_XIDS_MAX];
     SESSION session;
+    char remote_ip[SB_IP_MAX];
+    char local_ip[SB_IP_MAX];
 }CONN, *PCONN;
 CONN *conn_init();
 #ifdef __cplusplus
