@@ -168,7 +168,7 @@ int sbase_running(SBASE *sbase, int useconds)
 {
     struct timeval tv = {0};
     SERVICE *service = NULL;
-    int ret = -1, i = -1, k = 0;
+    int ret = -1, i = -1;
     pid_t pid = 0;
 
     if(sbase)

@@ -417,7 +417,7 @@ PROCTHREAD *procthread_init(int have_evbase)
             {
                 flag = fcntl(pth->fd, F_GETFL, 0)|O_NONBLOCK;
                 fcntl(pth->fd, F_SETFL, flag);
-                pth->evbase->set_evops(pth->evbase, EOP_POLL);
+                //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
                 pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, pth->event);
