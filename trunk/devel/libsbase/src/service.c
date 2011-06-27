@@ -170,7 +170,7 @@ int service_run(SERVICE *service)
             ret = service->evbase->add(service->evbase, service->event);
         }
         //initliaze conns
-        for(i = 0; i < SB_INIT_CONNS; i++)
+        for(i = 0; i < service->init_conns; i++)
         {
             if((conn = conn_init()))
             {
