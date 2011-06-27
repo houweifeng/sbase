@@ -213,22 +213,6 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         sigpipe_ignore();
-        //daemon 
-        if((service->daemon = procthread_init(0)))
-        {
-            service->daemon->evtimer = service->etimer;
-            PROCTHREAD_SET(service, service->daemon);
-            service->daemon->use_cond_wait = 0;
-            NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
-            ret = 0;
-        }
-        else
-        {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
-                    service->working_mode, strerror(errno));
-            exit(EXIT_FAILURE);
-            return -1;
-        }
         //iodaemon 
         if(service->use_iodaemon)
         {
@@ -300,6 +284,23 @@ running_threads:
                         service->procthreads[i], service->logger);
             }
         }
+        //daemon 
+        if((service->daemon = procthread_init(0)))
+        {
+            service->daemon->evtimer = service->etimer;
+            PROCTHREAD_SET(service, service->daemon);
+            service->daemon->use_cond_wait = 0;
+            NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
+            ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
+                    service->working_mode, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
+        //daemon worker threads 
         if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
         if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)xmm_new(
                         service->ndaemons * sizeof(PROCTHREAD *))))
@@ -1011,7 +1012,6 @@ void service_overconn(SERVICE *service, CONN *conn)
     return ;
 }
 
-
 /* pop chunk from service  */
 CHUNK *service_popchunk(SERVICE *service)
 {
@@ -1616,6 +1616,7 @@ void service_clean(SERVICE **pservice)
     return ;
 }
 
+/* service close */
 void service_close(SERVICE *service)
 {
     if(service)
