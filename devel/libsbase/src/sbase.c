@@ -204,8 +204,8 @@ int sbase_running(SBASE *sbase, int useconds)
         }
 running:
         //evbase 
-        sbase->evbase           = evbase_init(1);
-        if(sbase->evlogfile) 
+        sbase->evbase   = evbase_init(1);
+        if(sbase->evlogfile && sbase->evlog_level > 0) 
         {
             sbase->evbase->set_logfile(sbase->evbase, sbase->evlogfile);
             sbase->evbase->set_log_level(sbase->evbase, sbase->evlog_level);
@@ -222,6 +222,7 @@ running:
                 }
             }
         }
+        sleep(1);
         //running sbase 
         sbase->running_status = 1;
         if(sbase->usec_sleep > 1000000) tv.tv_sec = sbase->usec_sleep/1000000;
