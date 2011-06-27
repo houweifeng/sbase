@@ -235,7 +235,7 @@ running_threads:
             if((service->iodaemon = procthread_init(1)))
             {
                 PROCTHREAD_SET(service, service->iodaemon);
-                if(service->sbase->evlogfile)
+                if(service->sbase->evlogfile && service->sbase->evlog_level > 0);
                 {
                     sprintf(logfile, "%s_%s", service->sbase->evlogfile, service->service_name);
                     service->iodaemon->evbase->set_logfile(service->iodaemon->evbase, logfile);
@@ -253,7 +253,7 @@ running_threads:
             }
         }
         if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
-        if(service->nprocthreads <= 0) service->nprocthreads = 2;
+        //if(service->nprocthreads <= 0) service->nprocthreads = 2;
         if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)xmm_new(
                         service->nprocthreads * sizeof(PROCTHREAD *))))
         {
@@ -751,8 +751,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 else
                 {
                     FATAL_LOGGER(service->logger, "can not add connection remote[%s:%d]-local[%s:%d] "
-                            "via %d  to service[%s]->procthreads[%p][%d]", remote_ip, remote_port, 
-                            local_ip, local_port, fd, service->service_name, service->procthreads, index);
+                            "via %d  to service[%s]->procthreads[%p][%d] nprocthreads:%d", remote_ip, remote_port, 
+                            local_ip, local_port, fd, service->service_name, service->procthreads, index, service->nprocthreads);
                     service_pushtoq(service, conn);
                 }
             }
