@@ -85,10 +85,10 @@ void procthread_run(void *arg)
                     }
                     else
                     {
-                        //DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
+                        DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
 
                         if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
-                        //DEBUG_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
+                        DEBUG_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                     }
                 }while(pth->running_status);
             }
@@ -99,19 +99,20 @@ void procthread_run(void *arg)
                     if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
-                        //DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
+                        DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                         qmessage_handler(pth->message_queue, pth->logger);
-                        //DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
+                        DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                     }
                     else
                     {
                         ++i;
-                        if(i > 1000){usleep(pth->usec_sleep); i = 0;}
                     }
+                    //if(i > 1000){usleep(pth->usec_sleep); i = 0;}
+                    if(i > 1000) select(0, NULL, NULL, NULL, &tv);
                 }while(pth->running_status);
             }
         }
-        //DEBUG_LOGGER(pth->logger, "terminate threads[%p] qtotal:%d", (void *)(pth->threadid), QMTOTAL(pth->message_queue));
+        DEBUG_LOGGER(pth->logger, "terminate threads[%p] qtotal:%d", (void *)(pth->threadid), QMTOTAL(pth->message_queue));
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 qmessage_handler(pth->message_queue, pth->logger);
     }
@@ -140,7 +141,7 @@ int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
 {
     int ret = -1;
 
-    if(pth && pth->message_queue && task_handler)
+    if(pth && pth->message_queue && task_handler && pth->lock == 0)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_TASK, -1, -1, -1, task_handler, arg);
         DEBUG_LOGGER(pth->logger, "Added message task to procthreads[%d]", pth->index);
@@ -154,7 +155,7 @@ int procthread_newtransaction(PROCTHREAD *pth, CONN *conn, int tid)
 {
     int ret = -1;
 
-    if(pth && pth->message_queue && conn)
+    if(pth && pth->message_queue && conn && pth->lock == 0)
     {
         PUSH_TASK_MESSAGE(pth,MESSAGE_TRANSACTION, -1, conn->fd, tid, conn, NULL);
         DEBUG_LOGGER(pth->logger, "Added thread[%p]->qmessage[%p] transaction[%d] to conn[%p][%s:%d] on %s:%d via %d total %d", (void *)(pth->threadid),  pth->message_queue, tid, conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, QMTOTAL(pth->message_queue));
@@ -208,7 +209,7 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
 {
     int ret = -1;
 
-    if(pth && pth->message_queue && conn)
+    if(pth && pth->message_queue && conn  && pth->lock == 0)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_NEW_SESSION, -1, conn->fd, -1, conn, NULL);
         DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%p][%s:%d] d_state:%d "
@@ -408,7 +409,7 @@ PROCTHREAD *procthread_init(int have_evbase)
             struct ip_mreq mreq;
             int flag = 0;
             memset(&mreq, 0, sizeof(struct ip_mreq));
-            mreq.imr_multiaddr.s_addr = inet_addr("224.254.254.254");
+            mreq.imr_multiaddr.s_addr = inet_addr("224.239.239.239");
             mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
             if((pth->evbase = evbase_init(1)) && (pth->event = ev_init())
                 && (pth->fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 

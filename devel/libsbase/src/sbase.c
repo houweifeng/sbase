@@ -222,7 +222,6 @@ running:
                 }
             }
         }
-        sleep(1);
         //running sbase 
         sbase->running_status = 1;
         if(sbase->usec_sleep > 1000000) tv.tv_sec = sbase->usec_sleep/1000000;

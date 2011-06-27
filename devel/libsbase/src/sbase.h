@@ -174,9 +174,11 @@ typedef struct _SERVICE
 {
     /* global */
     int id;
+    int bits;
     int lock;
     int usec_sleep;
     int use_cond_wait;
+    int init_conns;
     int nconn;
     int nchunks;
     int connections_limit; 
@@ -185,7 +187,7 @@ typedef struct _SERVICE
     int nconns_free;
     int nconnection;
     int client_connections_limit;
-    int  nqchunks;
+    int nqchunks;
     int service_type;
     int fd;
     int backlog;
@@ -201,7 +203,7 @@ typedef struct _SERVICE
     int nqconns;
     int ngroups;
     int evid;
-    int  is_inside_logger;
+    int is_inside_logger;
     int ntask;
 
     int conns_free[SB_CONN_MAX];

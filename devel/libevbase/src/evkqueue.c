@@ -95,11 +95,10 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
     short ev_flags = 0, ret = -1, add_ev_flags = 0, del_ev_flags = 0;
     struct kevent kqev;
 
-    if(evbase && event && evbase->evs 
-            && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
+    if(evbase && event && evbase->evs && event->ev_fd >= 0 
+            && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
-
         ev_flags = (event->ev_flags ^ event->old_ev_flags);
         add_ev_flags = (event->ev_flags & ev_flags);
         del_ev_flags = (event->old_ev_flags & ev_flags);
@@ -190,26 +189,17 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
             && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
-        if(event->ev_flags & E_READ)
-        {
-            memset(&kqev, 0, sizeof(struct kevent));
-            kqev.ident  = event->ev_fd;
-            kqev.filter = EVFILT_READ;
-            kqev.flags  = EV_DELETE;
-            kqev.udata  = (void *)event;
-            kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
-            DEBUG_LOGGER(evbase->logger, "del EVFILT_READ[%d] on %d", kqev.filter, (int)kqev.ident);
-        }
-        if(event->ev_flags & E_WRITE)
-        {
-            memset(&kqev, 0, sizeof(struct kevent));
-            kqev.ident      = event->ev_fd;
-            kqev.filter     = EVFILT_WRITE;
-            kqev.flags      = EV_DELETE;
-            kqev.udata      = (void *)event;
-            kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
-            DEBUG_LOGGER(evbase->logger, "del EVFILT_WRITE[%d] on %d", kqev.filter,(int)kqev.ident);
-        }
+        memset(&kqev, 0, sizeof(struct kevent));
+        kqev.ident  = event->ev_fd;
+        kqev.filter = EVFILT_READ;
+        kqev.flags  = EV_DELETE;
+        kqev.udata  = (void *)event;
+        kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
+        DEBUG_LOGGER(evbase->logger, "del EVFILT_READ[%d] on %d", kqev.filter, (int)kqev.ident);
+        kqev.filter = EVFILT_WRITE;
+        kqev.flags  = EV_DELETE;
+        kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
+        DEBUG_LOGGER(evbase->logger, "del EVFILT_WRITE[%d] on %d", kqev.filter,(int)kqev.ident);
         if(event->ev_fd >= evbase->maxfd)evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
         if(evbase->nfd > 0) --(evbase->nfd);
@@ -243,7 +233,7 @@ int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
         for(i = 0; i < n; i++)
         {
             kqev = &(((struct kevent *)evbase->evs)[i]);
-            //DEBUG_LOGGER(evbase->logger, "ident:%d fflags:%d", kqev->ident, kqev->filter);
+            DEBUG_LOGGER(evbase->logger, "ident:%d fflags:%d EVFILT_READ:%d EVFILT_WRITE:%d", kqev->ident, kqev->filter, EVFILT_READ, EVFILT_WRITE);
             if(kqev && kqev->ident >= 0 && kqev->ident < evbase->allowed && evbase->evlist
                     && evbase->evlist[kqev->ident] == kqev->udata && (ev = kqev->udata))
             {

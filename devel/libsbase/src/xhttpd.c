@@ -861,6 +861,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     service->sock_type = iniparser_getint(dict, "XHTTPD:socket_type", SOCK_STREAM);
     service->ip = iniparser_getstr(dict, "XHTTPD:service_ip");
     service->port = iniparser_getint(dict, "XHTTPD:service_port", 80);
+    service->init_conns = iniparser_getint(dict, "XHTTPD:init_conns", 0);
     service->working_mode = iniparser_getint(dict, "XHTTPD:working_mode", WORKING_THREAD);
     service->service_type = iniparser_getint(dict, "XHTTPD:service_type", S_SERVICE);
     service->service_name = iniparser_getstr(dict, "XHTTPD:service_name");
