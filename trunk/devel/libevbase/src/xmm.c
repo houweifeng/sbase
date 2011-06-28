@@ -19,6 +19,29 @@ void *xmm_new(size_t size)
     return m;
 }
 
+/* resize */
+void *xmm_resize(void *old, size_t old_size, size_t new_size)
+{
+    void *m = NULL;
+    if(new_size > 0)
+    {
+#ifdef HAVE_MMAP
+        if((m =  mmap(NULL, new_size, PROT_READ|PROT_WRITE,
+                        MAP_ANON|MAP_PRIVATE, -1, 0)) && m != (void *)-1)
+        {
+            if(old) 
+            {
+                memcpy(m, old, old_size);
+                munmap(old, old_size);
+            }
+        }
+#else
+        m = realloc(old, new_size);
+#endif
+    }
+    return m;
+}
+
 /* remalloc */
 void *xmm_renew(void *old, size_t old_size, size_t new_size)
 {
@@ -31,7 +54,7 @@ void *xmm_renew(void *old, size_t old_size, size_t new_size)
         {
             if(old) 
             {
-                memcpy(m, old, old_size);
+                //memcpy(m, old, old_size);
                 munmap(old, old_size);
             }
         }
