@@ -1389,17 +1389,6 @@ void service_stop(SERVICE *service)
                 }
             }
         }
-        //stop all procthreads
-        //iodaemon
-        if(service->iodaemon)
-        {
-            //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
-            service->iodaemon->terminate(service->iodaemon);
-            //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
-            PROCTHREAD_EXIT(service->iodaemon->threadid, NULL);
-            //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
-            //DEBUG_LOGGER(service->logger, "over for stop daemon");
-        }
         //threads
         if(service->procthreads && service->nprocthreads > 0)
         {
@@ -1433,6 +1422,16 @@ void service_stop(SERVICE *service)
             service->daemon->stop(service->daemon);
             //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
             PROCTHREAD_EXIT(service->daemon->threadid, NULL);
+            //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
+            //DEBUG_LOGGER(service->logger, "over for stop daemon");
+        }
+        //iodaemon
+        if(service->iodaemon)
+        {
+            //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
+            service->iodaemon->terminate(service->iodaemon);
+            //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
+            PROCTHREAD_EXIT(service->iodaemon->threadid, NULL);
             //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
             //DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
