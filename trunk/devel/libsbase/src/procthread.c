@@ -76,6 +76,7 @@ void procthread_run(void *arg)
             {
                 do
                 {
+                    DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                     if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
@@ -85,36 +86,35 @@ void procthread_run(void *arg)
                     }
                     else
                     {
-                        DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
 
                         if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
-                        DEBUG_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                     }
+                    DEBUG_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                 }while(pth->running_status);
             }
             else
             {
                 do
                 {
+                    DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                     if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
-                        DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                         qmessage_handler(pth->message_queue, pth->logger);
-                        DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                     }
                     else
                     {
                         ++i;
                     }
-                    //if(i > 1000){usleep(pth->usec_sleep); i = 0;}
-                    if(i > 1000) select(0, NULL, NULL, NULL, &tv);
+                    if(i > 1000){usleep(pth->usec_sleep); i = 0;}
+                    //if(i > 1000) select(0, NULL, NULL, NULL, &tv);
+                    DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                 }while(pth->running_status);
             }
         }
-        DEBUG_LOGGER(pth->logger, "terminate threads[%p] qtotal:%d", (void *)(pth->threadid), QMTOTAL(pth->message_queue));
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 qmessage_handler(pth->message_queue, pth->logger);
+        DEBUG_LOGGER(pth->logger, "terminate threads[%p] qtotal:%d", (void *)(pth->threadid), QMTOTAL(pth->message_queue));
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
@@ -313,13 +313,21 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
 /* stop procthread */
 void procthread_stop(PROCTHREAD *pth)
 {
-    if(pth && pth->message_queue)
+    if(pth)
     {
-        DEBUG_LOGGER(pth->logger, "Ready for stopping procthreads[%d]", pth->index);
-        PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
-        DEBUG_LOGGER(pth->logger, "Pushd MESSAGE_QUIT to procthreads[%d]", pth->index);
-        pth->lock       = 1;
-        pth->wakeup(pth);
+        if(pth->message_queue)
+        {
+            DEBUG_LOGGER(pth->logger, "Ready for stopping procthreads[%d]", pth->index);
+            PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
+            DEBUG_LOGGER(pth->logger, "Pushd MESSAGE_QUIT to procthreads[%d]", pth->index);
+            pth->lock       = 1;
+        }
+        else
+        {
+            pth->lock       = 1;
+            pth->running_status = 0;
+            pth->wakeup(pth);
+        }
         if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;

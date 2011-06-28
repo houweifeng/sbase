@@ -1394,7 +1394,7 @@ void service_stop(SERVICE *service)
         if(service->iodaemon)
         {
             //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
-            service->iodaemon->stop(service->iodaemon);
+            service->iodaemon->terminate(service->iodaemon);
             //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
             PROCTHREAD_EXIT(service->iodaemon->threadid, NULL);
             //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
