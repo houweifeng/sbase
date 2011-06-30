@@ -1420,7 +1420,7 @@ void service_stop(SERVICE *service)
             {
                 if(service->daemons[i])
                 {
-                    service->daemons[i]->stop(service->daemons[i]);
+                    service->daemons[i]->terminate(service->daemons[i]);
                     PROCTHREAD_EXIT(service->daemons[i]->threadid, NULL);
                 }
             }
