@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(libsbase, [0.7.7], [SounOS@gmail.com])
+AC_INIT(libsbase, [0.7.8], [SounOS@gmail.com])
 AC_CONFIG_SRCDIR([src/iniparser.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -35,6 +35,12 @@ if test "$havepthread" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
     LDFLAGS="${LDFLAGS} -lpthread"
 fi
+#semaphore
+havesemaphore=no
+AC_CHECK_LIB(c, sem_timedwait, havesemaphore=yes)
+if test "$havesemaphore" = "yes" ; then
+    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+fi
 
 #ssl
 havessl=no
@@ -50,7 +56,6 @@ if test "$havezlib" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_ZLIB"
     LDFLAGS="${LDFLAGS} -lz"
 fi
-
 #bz2lib
 havebz2lib=no
 AC_CHECK_LIB(bz2, BZ2_bzCompress, havebz2lib=yes)
@@ -58,7 +63,7 @@ if test "$havebz2lib" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_BZ2LIB"
     LDFLAGS="${LDFLAGS} -lbz2"
 fi
-
+#mmap
 havemmap=no
 AC_CHECK_LIB(c, munmap, havemmap=yes)
 if test "$havemmap" = "yes" ; then

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(libevbase, [0.1.3], [SounOS@gmail.com])
+AC_INIT(libevbase, [0.1.4], [SounOS@gmail.com])
 AC_CONFIG_SRCDIR([src/evbase.h])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -83,6 +83,12 @@ AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
 if test "$havepthread" = "yes" ; then
         CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
         LDFLAGS="${LDFLAGS} -lpthread"
+fi
+#semaphore
+havesemaphore=no
+AC_CHECK_LIB(c, sem_timedwait, havesemaphore=yes)
+if test "$havesemaphore" = "yes" ; then
+    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
 fi
 
 #ssl
