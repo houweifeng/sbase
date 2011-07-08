@@ -213,10 +213,15 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         sigpipe_ignore();
+        if((service->cond = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        {
+            FATAL_LOGGER(service->logger, "new socket() failed, %s", strerror(errno));
+            return 0;
+        }
         //iodaemon 
         if(service->use_iodaemon)
         {
-            if((service->iodaemon = procthread_init(1)))
+            if((service->iodaemon = procthread_init(service->cond)))
             {
                 PROCTHREAD_SET(service, service->iodaemon);
                 if(service->sbase->evlogfile && service->sbase->evlog_level > 0);
@@ -263,7 +268,7 @@ running_threads:
                 }
                 else
                 {
-                    if((service->procthreads[i] = procthread_init(1)))
+                    if((service->procthreads[i] = procthread_init(service->cond)))
                     {
                         PROCTHREAD_SET(service, service->procthreads[i]);
                         service->procthreads[i]->ioqmessage = service->procthreads[i]->message_queue;
@@ -1438,7 +1443,8 @@ void service_stop(SERVICE *service)
         EVTIMER_DEL(service->evtimer, service->evid);
         //remove event
         if(service->event)service->event->destroy(service->event);
-        close(service->fd);
+        if(service->fd > 0)close(service->fd);
+        if(service->cond > 0)close(service->cond);
     }
     return ;
 }

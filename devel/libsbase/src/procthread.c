@@ -57,7 +57,7 @@ void procthread_run(void *arg)
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                i = pth->evbase->loop(pth->evbase, 0, &tv);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -392,15 +392,15 @@ void procthread_clean(PROCTHREAD **ppth)
 }
 
 /* Initialize procthread */
-PROCTHREAD *procthread_init(int have_evbase)
+PROCTHREAD *procthread_init(int cond)
 {
     PROCTHREAD *pth = NULL;
 
     if((pth = (PROCTHREAD *)xmm_new(sizeof(PROCTHREAD))))
     {
-        if(have_evbase)
+        if(cond > 0)
         {
-            pth->have_evbase = have_evbase;
+            pth->have_evbase = 1;
             /*
             pth->fd = 1;
             if((pth->evbase = evbase_init(1)) && (pth->event = ev_init()))
@@ -415,7 +415,6 @@ PROCTHREAD *procthread_init(int have_evbase)
                 fprintf(stderr, "set evbase & event failed, %s\n", strerror(errno));
                 _exit(-1);
             }
-            */
             struct ip_mreq mreq;
             int flag = 0;
             memset(&mreq, 0, sizeof(struct ip_mreq));
@@ -426,16 +425,18 @@ PROCTHREAD *procthread_init(int have_evbase)
                 && setsockopt(pth->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
                     sizeof(struct ip_mreq)) == 0)
             {
-                flag = fcntl(pth->fd, F_GETFL, 0)|O_NONBLOCK;
-                fcntl(pth->fd, F_SETFL, flag);
+            */
+            if((pth->evbase = evbase_init(1)) && (pth->event = ev_init()))
+            {
+                pth->cond = cond;
                 //pth->evbase->set_evops(pth->evbase, EOP_POLL);
-                pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
+                pth->event->set(pth->event, pth->cond, E_PERSIST|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, pth->event);
             }
             else 
             {
-                fprintf(stderr, "socket() failed, %s\n", strerror(errno));
+                fprintf(stderr, "evbase_init failed, %s\n", strerror(errno));
                 _exit(-1);
             }
         }
