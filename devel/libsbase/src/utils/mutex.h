@@ -1,13 +1,38 @@
-#ifndef _MUTEX_H
-#define _MUTEX_H
-#ifdef HAVE_PTHREAD
-#include <pthread.h>
-#endif
+#ifndef __MUTEX_H__
+#define __MUTEX_H__
+#include "xmm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "xmm.h"
-//#ifdef USE_PTHREAD_MUTEX
+#ifdef HAVE_PTHREAD
+#include <pthread.h>
+#endif
+#ifdef HAVE_SEMAPHORE
+#include <semaphore.h>
+typedef struct _MUTEX
+{
+    sem_t sem;
+}MUTEX;
+#define MT(ptr) ((MUTEX *)ptr)
+#define MUTEX_INIT(ptr)                                                     \
+do                                                                          \
+{                                                                           \
+    if((ptr = xmm_new(sizeof(MUTEX))))                                      \
+    {                                                                       \
+        sem_init(&(MT(ptr)->sem), 0, 1);                                    \
+    }                                                                       \
+}while(0)
+#define MUTEX_LOCK(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
+#define MUTEX_UNLOCK(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1)
+#define MUTEX_WAIT(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
+#define MUTEX_TIMEDWAIT(ptr, ts) ((ptr)?sem_timedwait(&(MT(ptr)->sem), &ts):-1)
+#define MUTEX_SIGNAL(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1) 
+#define MUTEX_DESTROY(ptr)                                                  \
+do                                                                          \
+{                                                                           \
+    if(ptr){sem_destroy(&(MT(ptr)->sem));xmm_free(ptr, sizeof(MUTEX));}     \
+}while(0)
+#else
 #ifdef HAVE_PTHREAD
 typedef struct _MUTEX
 {
@@ -73,39 +98,6 @@ do                                                                              
 		ptr = NULL;												                        \
 	}														                            \
 }while(0)
-#else
-#ifdef HAVE_SEMAPHORE
-#include <semaphore.h>
-typedef struct _MUTEX
-{
-    sem_t sem;
-}MUTEX;
-#define MT(ptr) ((MUTEX *)ptr)
-#define MUTEX_INIT(ptr)                                                     \
-do                                                                          \
-{                                                                           \
-    if((ptr = xmm_new(sizeof(MUTEX))))                                      \
-    {                                                                       \
-        sem_init(&(MT(ptr)->sem), 0, 1);                                    \
-    }                                                                       \
-}while(0)
-#define MUTEX_LOCK(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
-#define MUTEX_UNLOCK(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1)
-#define MUTEX_WAIT(ptr) ((ptr)?sem_wait(&(MT(ptr)->sem)):-1)
-#define MUTEX_TIMEDWAIT(ptr, ts) ((ptr)?sem_timedwait(&(MT(ptr)->sem), &ts):-1)
-#define MUTEX_SIGNAL(ptr) ((ptr)?sem_post(&(MT(ptr)->sem)):-1) 
-#define MUTEX_DESTROY(ptr)                                                  \
-do                                                                          \
-{                                                                           \
-    if(ptr){sem_destroy(&(MT(ptr)->sem));xmm_free(ptr, sizeof(MUTEX));}     \
-}while(0)
-#else
-#define MUTEX_INIT(ptr)
-#define MUTEX_LOCK(ptr)
-#define MUTEX_UNLOCK(ptr)
-#define MUTEX_WAIT(ptr)
-#define MUTEX_SIGNAL(ptr)
-#define MUTEX_DESTROY(ptr)
 #endif
 #endif
 #ifdef __cplusplus

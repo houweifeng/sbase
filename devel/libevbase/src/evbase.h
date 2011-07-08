@@ -61,10 +61,10 @@ EVBASE *evbase_init(int use_mutex);
 #define _TYPEDEF_EVENT
 typedef struct _EVENT
 {
-	struct timeval tv;
 	short ev_flags;
 	short old_ev_flags;
 	int ev_fd;
+	struct timeval tv;
 	void *ev_arg;
     void *mutex;
 	struct _EVBASE *ev_base;
