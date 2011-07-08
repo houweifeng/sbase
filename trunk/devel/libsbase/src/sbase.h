@@ -174,7 +174,7 @@ typedef struct _SERVICE
 {
     /* global */
     int id;
-    int bits;
+    int cond;
     int lock;
     int usec_sleep;
     int use_cond_wait;
@@ -205,6 +205,7 @@ typedef struct _SERVICE
     int evid;
     int is_inside_logger;
     int ntask;
+    struct  sockaddr_in sa;
 
     int conns_free[SB_CONN_MAX];
     /* mutex */
@@ -224,7 +225,6 @@ typedef struct _SERVICE
     struct _PROCTHREAD **daemons;
 
     /* socket and inet addr option  */
-    struct  sockaddr_in sa;
     char *ip;
     char *multicast;
         
@@ -318,7 +318,7 @@ typedef struct _PROCTHREAD
     int running_status;
 	int usec_sleep;
     int index;
-    int fd;
+    int cond;
     int use_cond_wait;
     int have_evbase;
     long threadid;
