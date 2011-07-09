@@ -1,12 +1,12 @@
 #ifndef __MUTEX_H__
 #define __MUTEX_H__
-#include "xmm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
+#include "xmm.h"
 #ifdef HAVE_SEMAPHORE
 #include <semaphore.h>
 typedef struct _MUTEX
