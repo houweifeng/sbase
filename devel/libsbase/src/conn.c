@@ -52,6 +52,14 @@ int conn_read_buffer(CONN *conn)
     if(conn == NULL) return ;                                                               \
     if(conn->d_state & (_state_)) return ;                                                  \
 }
+#define CONN_EVENT_ADD(conn, flag)                                                          \
+{                                                                                           \
+    if(conn && conn->event)                                                                 \
+    {                                                                                       \
+        conn->event->add(conn->event, flag);                                                \
+        IOWAKEUP(conn);                                                                     \
+    }                                                                                       \
+}
 //ACCESS_LOGGER(conn->logger, "Ready for close-connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
 
 #define CONN_STATE_RESET(conn)                                                              \
@@ -1205,7 +1213,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
                     conn->remote_port, QTOTAL(conn->send_queue), conn->local_ip, 
                     conn->local_port, conn->fd);
             if(QTOTAL(conn->send_queue) > 0) 
-                conn->event->add(conn->event, E_WRITE);
+            {CONN_EVENT_ADD(conn, E_WRITE);}
             ret = 0;
         }
     }
@@ -1254,7 +1262,7 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
             chunk_file(cp, filename, offset, size);
             queue_push(conn->send_queue, cp);
             if(QTOTAL(conn->send_queue) > 0) 
-                conn->event->add(conn->event, E_WRITE);
+            {CONN_EVENT_ADD(conn, E_WRITE);}
             DEBUG_LOGGER(conn->logger, "Pushed file[%s] [%lld][%lld] to %s:%d "
                     "send_queue total %d on %s:%d via %d ", filename, LL(offset), LL(size), 
                     conn->remote_ip, conn->remote_port, QTOTAL(conn->send_queue), 
@@ -1277,7 +1285,7 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
         CHK_LEFT(cp) = len;
         queue_push(conn->send_queue, cp);
         if(QTOTAL(conn->send_queue) > 0 && conn->d_state == D_STATE_FREE) 
-            conn->event->add(conn->event, E_WRITE);
+            {CONN_EVENT_ADD(conn, E_WRITE);}
         DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d send_queue "
                 "total %d on %s:%d via %d", len, CHK_BSIZE(cp),conn->remote_ip,conn->remote_port, 
                 QTOTAL(conn->send_queue), conn->local_ip, conn->local_port, conn->fd);
@@ -1299,7 +1307,7 @@ int conn_over_chunk(CONN *conn)
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
             queue_push(conn->send_queue, cp);
-            conn->event->add(conn->event, E_WRITE);
+            {CONN_EVENT_ADD(conn, E_WRITE);}
             ret = 0;
         }
         else 

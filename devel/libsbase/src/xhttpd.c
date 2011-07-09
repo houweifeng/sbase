@@ -1000,11 +1000,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
     //host map
     TRIETAB_INIT(hostmap);
     TRIETAB_INIT(urlmap);
-    if((p = iniparser_getstr(dict, "XHTTPD:logfile")))
-    {
-        service->set_log(service, p);
-        service->set_log_level(service, iniparser_getint(dict, "XHTTPD:log_level", 0));
-    }
     if((p = iniparser_getstr(dict, "XHTTPD:access_log")))
     {
         LOGGER_INIT(logger, p);
