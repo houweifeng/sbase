@@ -31,9 +31,11 @@ void procthread_event_handler(int event_fd, short event, void *arg)
 /* wakeup */
 void procthread_wakeup(PROCTHREAD *pth)
 {
-    if(pth && pth->event && pth->evbase)
+    if(pth)
     {
-        pth->event->add(pth->event, E_WRITE);
+        if(pth->event && pth->evbase)
+            pth->event->add(pth->event, E_WRITE);
+        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
@@ -417,7 +419,6 @@ PROCTHREAD *procthread_init(int have_evbase)
             }
             */
             struct ip_mreq mreq;
-            int flag = 0;
             memset(&mreq, 0, sizeof(struct ip_mreq));
             mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");
             mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
@@ -426,7 +427,7 @@ PROCTHREAD *procthread_init(int have_evbase)
                 && setsockopt(pth->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
                     sizeof(struct ip_mreq)) == 0)
             {
-                //pth->evbase->set_evops(pth->evbase, EOP_POLL);
+                //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
                 pth->event->set(pth->event, pth->cond, E_PERSIST|E_READ|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, pth->event);

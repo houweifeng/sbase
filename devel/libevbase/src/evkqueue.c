@@ -106,6 +106,38 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         memset(&kqev, 0, sizeof(struct kevent));
         kqev.ident      = event->ev_fd;
         kqev.udata      = (void *)event;
+        if(del_ev_flags & E_READ)
+        {
+            kqev.flags      = EV_DELETE;
+            kqev.filter     = EVFILT_READ;
+            if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
+            {   
+                ERROR_LOGGER(evbase->logger, "deleting EVFILT_READ flags[%d] on fd[%d] failed, %s", 
+                        kqev.flags, (int)kqev.ident, strerror(errno));
+                goto err;
+            }
+            else
+            {
+                DEBUG_LOGGER(evbase->logger, "deleted EVFILT_READ flags[%d] on %d",
+                        kqev.flags, (int)kqev.ident);
+            }
+        }
+        if(del_ev_flags & E_WRITE)
+        {
+            kqev.flags      = EV_DELETE;
+            kqev.filter     = EVFILT_WRITE;
+            if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
+            {   
+                ERROR_LOGGER(evbase->logger, "deleting EVFILT_WRITE flags[%d] on %d failed, %s", 
+                        kqev.flags, (int)kqev.ident, strerror(errno));
+                goto err;
+            }
+            else
+            {
+                DEBUG_LOGGER(evbase->logger, "deleted EVFILT_WRITE flags[%d] on %d",
+                        kqev.flags, (int)kqev.ident);
+            }
+        }
         if(add_ev_flags & E_READ)
         {
             kqev.flags      = EV_ADD;
@@ -137,38 +169,6 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             else
             {
                 DEBUG_LOGGER(evbase->logger, "added EVFILT_WRITE flags[%d] on fd[%d]",
-                        kqev.flags, (int)kqev.ident);
-            }
-        }
-        if(del_ev_flags & E_READ)
-        {
-            kqev.flags      = EV_DELETE;
-            kqev.filter     = EVFILT_READ;
-            if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
-            {   
-                ERROR_LOGGER(evbase->logger, "deleting EVFILT_READ flags[%d] on fd[%d] failed, %s", 
-                        kqev.flags, (int)kqev.ident, strerror(errno));
-                goto err;
-            }
-            else
-            {
-                DEBUG_LOGGER(evbase->logger, "deleted EVFILT_READ flags[%d] on %d",
-                        kqev.flags, (int)kqev.ident);
-            }
-        }
-        if(del_ev_flags & E_WRITE)
-        {
-            kqev.flags      = EV_DELETE;
-            kqev.filter     = EVFILT_WRITE;
-            if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
-            {   
-                ERROR_LOGGER(evbase->logger, "deleting EVFILT_WRITE flags[%d] on %d failed, %s", 
-                        kqev.flags, (int)kqev.ident, strerror(errno));
-                goto err;
-            }
-            else
-            {
-                DEBUG_LOGGER(evbase->logger, "deleted EVFILT_WRITE flags[%d] on %d",
                         kqev.flags, (int)kqev.ident);
             }
         }

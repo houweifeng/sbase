@@ -1396,6 +1396,7 @@ void service_stop(SERVICE *service)
                 }
             }
         }
+        fprintf(stdout, "ready for close iodaemon\n");
         //iodaemon
         if(service->iodaemon)
         {
@@ -1406,6 +1407,7 @@ void service_stop(SERVICE *service)
             //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
             //DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
+        fprintf(stdout, "ready for close threads\n");
         //threads
         if(service->procthreads && service->nprocthreads > 0)
         {
@@ -1419,6 +1421,7 @@ void service_stop(SERVICE *service)
                 }
             }
         }
+        fprintf(stdout, "ready for close daemons\n");
         //daemons
         if(service->daemons && service->ndaemons > 0)
         {
@@ -1432,6 +1435,7 @@ void service_stop(SERVICE *service)
                 }
             }
         }
+        fprintf(stdout, "ready for close daemon\n");
         //daemon
         if(service->daemon)
         {
