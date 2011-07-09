@@ -392,13 +392,13 @@ void procthread_clean(PROCTHREAD **ppth)
 }
 
 /* Initialize procthread */
-PROCTHREAD *procthread_init(int cond)
+PROCTHREAD *procthread_init(int have_evbase)
 {
     PROCTHREAD *pth = NULL;
 
     if((pth = (PROCTHREAD *)xmm_new(sizeof(PROCTHREAD))))
     {
-        if(cond > 0)
+        if(have_evbase > 0)
         {
             pth->have_evbase = 1;
             /*
@@ -415,22 +415,19 @@ PROCTHREAD *procthread_init(int cond)
                 fprintf(stderr, "set evbase & event failed, %s\n", strerror(errno));
                 _exit(-1);
             }
+            */
             struct ip_mreq mreq;
             int flag = 0;
             memset(&mreq, 0, sizeof(struct ip_mreq));
-            mreq.imr_multiaddr.s_addr = inet_addr("224.239.239.239");
+            mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");
             mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
             if((pth->evbase = evbase_init(1)) && (pth->event = ev_init())
-                && (pth->fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
-                && setsockopt(pth->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
+                && (pth->cond = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
+                && setsockopt(pth->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
                     sizeof(struct ip_mreq)) == 0)
             {
-            */
-            if((pth->evbase = evbase_init(1)) && (pth->event = ev_init()))
-            {
-                pth->cond = cond;
                 //pth->evbase->set_evops(pth->evbase, EOP_POLL);
-                pth->event->set(pth->event, pth->cond, E_PERSIST|E_WRITE, (void *)pth, 
+                pth->event->set(pth->event, pth->cond, E_PERSIST|E_READ|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, pth->event);
             }
