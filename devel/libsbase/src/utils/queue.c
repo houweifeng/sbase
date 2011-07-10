@@ -1,7 +1,7 @@
 #include <stdio.h>
+#include "xmm.h"
 #include "mutex.h"
 #include "queue.h"
-#include "xmm.h"
 
 void *queue_init()
 {
@@ -16,9 +16,9 @@ void *queue_init()
 
 void queue_push(void *queue, void *ptr)
 {
-    QNODE *node = NULL, *tmp = NULL;
+    QNODE *node = NULL, *tmp = NULL, *nodes = NULL;
     QUEUE *q = (QUEUE *)queue;
-    int i = 0;
+    int k = 0, j = 0;
 
     if(q)
     {
@@ -30,21 +30,22 @@ void queue_push(void *queue, void *ptr)
         }
         else 
         {
-            if((i = q->nlist) < QNODE_LINE_MAX 
-                    && (node = (QNODE *)xmm_new(QNODE_LINE_NUM * sizeof(QNODE))))
+            if((k = q->nlist) < QNODE_LINE_MAX 
+                    && (nodes = (QNODE *)xmm_new(QNODE_LINE_NUM * sizeof(QNODE))))
             {
-                q->list[i] = node;
+                q->list[k] = nodes;
                 q->nlist++;
-                i = 1;
-                while(i  < QNODE_LINE_NUM)
+                j = 1;
+                while(j  < QNODE_LINE_NUM)
                 {
-                    tmp = &(node[i]);
+                    tmp = &(nodes[j]);
                     tmp->next = q->left;
                     q->left = tmp;
                     q->nleft++;
-                    ++i;
+                    ++j;
                 }
                 q->qtotal += QNODE_LINE_NUM;
+                node = nodes;
             }
         }
         if(node)
@@ -116,6 +117,7 @@ void queue_clean(void *queue)
 
     if(q)
     {
+        //fprintf(stdout, "%s::%d q:%p nleft:%d qtotal:%d qleft:%p\n", __FILE__, __LINE__, q, q->nleft, q->qtotal, q->left);
         for(i = 0; i < q->nlist; i++);
         {
             xmm_free(q->list[i], QNODE_LINE_NUM * sizeof(QNODE));
