@@ -332,6 +332,7 @@ typedef struct _PROCTHREAD
     void *iodaemon;
     void *ioqmessage;
     void *message_queue;
+    void *send_queue;
 
     /* evbase */
     EVBASE *evbase;
@@ -385,6 +386,8 @@ typedef struct _CONN
     int c_id;
     int d_state;
     int evid;
+    int qid;
+    int bits;
     /* conenction */
     int  sock_type;
     int  fd;

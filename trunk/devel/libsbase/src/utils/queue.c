@@ -7,7 +7,7 @@ void *queue_init()
 {
     QUEUE *q = NULL;
 
-    if((q = (QUEUE *)xmm_new(sizeof(QUEUE)))) 
+    if((q = (QUEUE *)calloc(1, sizeof(QUEUE)))) 
     {
         MUTEX_INIT(q->mutex);
     }
@@ -123,7 +123,8 @@ void queue_clean(void *queue)
             xmm_free(q->list[i], QNODE_LINE_NUM * sizeof(QNODE));
         }
         MUTEX_DESTROY(q->mutex);
-        xmm_free(q, sizeof(QUEUE));
+        free(q);
+        //xmm_free(q, sizeof(QUEUE));
     }
     return ;
 }
