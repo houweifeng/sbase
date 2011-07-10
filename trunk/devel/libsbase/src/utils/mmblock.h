@@ -7,8 +7,8 @@ typedef struct _MMBLOCK
    	int  ndata;
   	int  size;
 	int  left;
+    int  bit;
 	char *end;
-    char block[2048];
 }MMBLOCK;
 #define  MMBLOCK_BASE 	    8192
 //#define  MMBLOCK_BASE 	32768

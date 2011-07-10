@@ -59,7 +59,7 @@ void procthread_run(void *arg)
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                i = pth->evbase->loop(pth->evbase, 0, NULL);
+                i = pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -258,7 +258,7 @@ int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && pth->service)
     {
-        conn->event->destroy(conn->event);
+        if(conn->event)conn->event->destroy(conn->event);
         pth->service->overconn(pth->service, conn);
         ret = 0;
     }

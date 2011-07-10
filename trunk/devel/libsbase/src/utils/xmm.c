@@ -1,21 +1,22 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#ifdef HAVE_MMAP
 #include <sys/mman.h>
-#endif
+#define MMSIZE(xxx) (((xxx/_SC_PAGE_SIZE) + ((xxx%_SC_PAGE_SIZE) != 0)) * _SC_PAGE_SIZE)
 /* new memory */
 void *xmm_new(size_t size)
 {
     void *m = NULL;
-
-#ifdef HAVE_MMAP
-    if((m = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0)) && m != (void *)-1)
-        memset(m, 0, size);
-    else m = NULL;
-#else
-    m = calloc(1, size);
-#endif
+    if(size > 0)
+    {
+        if(size < _SC_PAGE_SIZE)
+            m = calloc(1, size);
+        else
+        {
+            m = mmap(NULL, MMSIZE(size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+            if(m == (void *)-1) m = NULL;
+        }
+    }
     return m;
 }
 
@@ -23,21 +24,26 @@ void *xmm_new(size_t size)
 void *xmm_resize(void *old, size_t old_size, size_t new_size)
 {
     void *m = NULL;
-    if(new_size > 0)
+    if(new_size > 0 && new_size > old_size)
     {
-#ifdef HAVE_MMAP
-        if((m =  mmap(NULL, new_size, PROT_READ|PROT_WRITE,
-                        MAP_ANON|MAP_PRIVATE, -1, 0)) && m != (void *)-1)
+        if(new_size < _SC_PAGE_SIZE)
         {
-            if(old) 
+            m = calloc(1, new_size);
+        }
+        else
+        {
+            m = mmap(NULL, MMSIZE(new_size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+            if(m == (void *)-1) m = NULL;
+        }
+        if(old)
+        {
+            if(old_size > 0)
             {
-                memcpy(m, old, old_size);
-                munmap(old, old_size);
+                if(m) memcpy(m, old, old_size);
+                if(old_size < _SC_PAGE_SIZE) free(old);
+                else munmap(old, MMSIZE(old_size));
             }
         }
-#else
-        m = realloc(old, new_size);
-#endif
     }
     return m;
 }
@@ -45,50 +51,17 @@ void *xmm_resize(void *old, size_t old_size, size_t new_size)
 /* remalloc */
 void *xmm_renew(void *old, size_t old_size, size_t new_size)
 {
-    void *m = NULL;
-    if(new_size > 0)
-    {
-#ifdef HAVE_MMAP
-        if((m =  mmap(NULL, new_size, PROT_READ|PROT_WRITE,
-                        MAP_ANON|MAP_PRIVATE, -1, 0)) && m != (void *)-1)
-        {
-            if(old) 
-            {
-                //memcpy(m, old, old_size);
-                munmap(old, old_size);
-            }
-        }
-        else
-        {
-            munmap(old, old_size);
-            m = NULL;
-        }
-#else
-        m = realloc(old, new_size);
-#endif
-    }
-    else 
-    {
-#ifdef HAVE_MMAP
-        munmap(old, old_size);
-#else
-        free(old);
-#endif
-        m = NULL;
-    }
-    return m;
+    xmm_free(old, old_size);
+    return xmm_new(new_size);
 }
 
 /* free memory */
 void xmm_free(void *m, size_t size)
 {
-    if(m)
+    if(m && size > 0)
     {
-#ifdef HAVE_MMAP
-        munmap(m, size);
-#else
-        free(m);
-#endif
+        if(size < _SC_PAGE_SIZE) free(m);
+        else munmap(m, MMSIZE(size));
     }
     return ;
 }

@@ -32,6 +32,7 @@
 #include "evwin32.h"
 #endif
 #include "xmm.h"
+#include "mutex.h"
 typedef struct _EVOPS
 {
     char    *name ;
@@ -252,7 +253,7 @@ void event_add(EVENT *event, short flags)
 {
 	if(event)
 	{
-        MUTEX_LOCK(event->mutex);
+        //MUTEX_LOCK(event->mutex);
         event->old_ev_flags = event->ev_flags;
 		event->ev_flags |= flags;
 		if(event->ev_base && event->ev_base->update)
@@ -262,7 +263,7 @@ void event_add(EVENT *event, short flags)
 				event, event->ev_flags, event->ev_fd);
 			event->ev_base->update(event->ev_base, event);
 		}
-        MUTEX_UNLOCK(event->mutex);
+        //MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -272,7 +273,7 @@ void event_del(EVENT *event, short flags)
 {
 	if(event)
 	{
-        MUTEX_LOCK(event->mutex);
+        //MUTEX_LOCK(event->mutex);
 		if(event->ev_flags & flags)
 		{
             event->old_ev_flags = event->ev_flags;
@@ -291,7 +292,7 @@ void event_del(EVENT *event, short flags)
                 }
 			}
 		}
-        MUTEX_UNLOCK(event->mutex);
+        //MUTEX_UNLOCK(event->mutex);
 	}	
     return ;
 }
@@ -301,7 +302,7 @@ void event_destroy(EVENT *event)
 {
     if(event)
     {
-        MUTEX_LOCK(event->mutex);
+        //MUTEX_LOCK(event->mutex);
         event->ev_flags = 0;
         if(event->ev_base && event->ev_base->del)
         {
@@ -309,7 +310,7 @@ void event_destroy(EVENT *event)
             event->ev_base->del(event->ev_base, event);
             event->ev_base = NULL;
         }
-        MUTEX_UNLOCK(event->mutex);
+        //MUTEX_UNLOCK(event->mutex);
     }
     return ;
 }

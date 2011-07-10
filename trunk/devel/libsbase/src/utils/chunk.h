@@ -40,6 +40,7 @@ typedef struct _CHUNK
     int  bsize;
     int  type;
     int  fd;
+    int  bits;
     off_t size;
     off_t offset;
     off_t left;
