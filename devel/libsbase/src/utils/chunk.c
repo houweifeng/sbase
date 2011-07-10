@@ -11,7 +11,7 @@
 CHUNK *chunk_init()
 {
     CHUNK *chunk = NULL;
-    chunk = (CHUNK *)xmm_new(sizeof(CHUNK));
+    chunk = (CHUNK *)xmm_mnew(sizeof(CHUNK));
     return chunk;
 }
 
@@ -27,7 +27,7 @@ int chunk_set_bsize(void *chunk, int len)
             n = len / CHUNK_BLOCK_SIZE;
             if(len % CHUNK_BLOCK_SIZE) ++n;
             size = n * CHUNK_BLOCK_SIZE;
-            CHK(chunk)->data = (char *)xmm_renew(CHK(chunk)->data, CHK(chunk)->bsize, size);
+            CHK(chunk)->data = (char *)xmm_mrenew(CHK(chunk)->data, CHK(chunk)->bsize, size);
             if(CHK(chunk)->data) CHK(chunk)->bsize = size;
             else CHK(chunk)->bsize = 0;
         }
@@ -51,7 +51,7 @@ int chunk_mem(void *chunk, int len)
             n = len/CHUNK_BLOCK_SIZE;
             if(len % CHUNK_BLOCK_SIZE) ++n;
             size = n * CHUNK_BLOCK_SIZE;
-            CHK(chunk)->data = (char *)xmm_renew(CHK(chunk)->data, CHK(chunk)->bsize, size);
+            CHK(chunk)->data = (char *)xmm_mrenew(CHK(chunk)->data, CHK(chunk)->bsize, size);
             if(CHK(chunk)->data) CHK(chunk)->bsize = size;
             else CHK(chunk)->bsize = 0;
         }

@@ -17,7 +17,7 @@ typedef struct _MUTEX
 #define MUTEX_INIT(ptr)                                                     \
 do                                                                          \
 {                                                                           \
-    if((ptr = xmm_new(sizeof(MUTEX))))                                      \
+    if((ptr = xmm_mnew(sizeof(MUTEX))))                                     \
     {                                                                       \
         sem_init(&(MT(ptr)->sem), 0, 1);                                    \
     }                                                                       \

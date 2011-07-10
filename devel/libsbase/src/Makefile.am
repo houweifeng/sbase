@@ -16,6 +16,8 @@ utils/mmblock.c \
 utils/queue.h \
 utils/queue.c \
 utils/mutex.h \
+utils/xqueue.h \
+utils/xqueue.c \
 utils/logger.h \
 utils/evtimer.h \
 utils/evtimer.c \

@@ -1,7 +1,7 @@
 #include "sbase.h"
 #include "service.h"
 #include "procthread.h"
-#include "queue.h"
+#include "xqueue.h"
 #include "logger.h"
 #include "message.h"
 #include "evtimer.h"
@@ -59,7 +59,7 @@ void procthread_run(void *arg)
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                i = pth->evbase->loop(pth->evbase, 0, &tv);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -132,7 +132,7 @@ int procthread_pushconn(PROCTHREAD *pth, int fd, void *ssl)
     if(pth && pth->message_queue && fd > 0)
     {
         PUSH_TASK_MESSAGE(pth,MESSAGE_NEW_CONN, -1, fd, -1, ssl, NULL);
-        DEBUG_LOGGER(pth->logger, "Added message[NEW_CONN][%d] to procthreads[%d] qtotal:%d", fd, pth->index, QTOTAL(pth->message_queue));
+        DEBUG_LOGGER(pth->logger, "Added message[NEW_CONN][%d] to procthreads[%d] qtotal:%d", fd, pth->index, QMTOTAL(pth->message_queue));
         ret = 0;
     }
     return ret;
@@ -239,6 +239,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->iodaemon      = pth->iodaemon;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
+        conn->send_queue    = pth->send_queue;
         //conn->reset_state(conn);
         if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
         {
@@ -387,6 +388,7 @@ void procthread_clean(PROCTHREAD **ppth)
             }
             qmessage_clean((*ppth)->message_queue);
         }
+        xqueue_clean((*ppth)->send_queue);
         MUTEX_DESTROY((*ppth)->mutex);
         xmm_free((*ppth), sizeof(PROCTHREAD));
         (*ppth) = NULL;
@@ -440,6 +442,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
+        pth->send_queue             = xqueue_init();
         pth->run                    = procthread_run;
         pth->pushconn               = procthread_pushconn;
         pth->newconn                = procthread_newconn;

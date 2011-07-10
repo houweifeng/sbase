@@ -11,6 +11,7 @@
 #include "message.h"
 #include "evtimer.h"
 #include "xmm.h"
+#include "xqueue.h"
 #ifndef UI
 #define UI(_x_) ((unsigned int)(_x_))
 #endif
