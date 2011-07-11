@@ -30,7 +30,7 @@ extern "C" {
 #define MESSAGE_TIMEOUT         0x8000
 #define MESSAGE_STOP            0x10000
 #define MESSAGE_PROXY           0x20000
-#define MESSAGE_ACTIVE          0x40000
+#define MESSAGE_END             0x40000
 #define MESSAGE_ALL		        0x7ffff
 #define QLEFT_MAX               2048
 static char *messagelist[] = 
@@ -53,7 +53,7 @@ static char *messagelist[] =
 	"MESSAGE_TIMEOUT",
 	"MESSAGE_STOP",
 	"MESSAGE_PROXY",
-	"MESSAGE_ACTIVE"
+	"MESSAGE_END"
 };
 typedef struct _MESSAGE
 {

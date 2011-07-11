@@ -175,11 +175,6 @@ void qmessage_handler(void *qmsg, void *logger)
                  pth->terminate(pth);
                  goto next;
             }
-            if(msg->msg_id == MESSAGE_ACTIVE && pth)
-            {
-                 pth->active(pth);
-                 goto next;
-            }
             //task and heartbeat
             if(msg->msg_id == MESSAGE_TASK || msg->msg_id == MESSAGE_HEARTBEAT 
                     || msg->msg_id == MESSAGE_STATE)
@@ -219,22 +214,25 @@ void qmessage_handler(void *qmsg, void *logger)
                     pth->terminate_connection(pth, conn);
                     break;
                 case MESSAGE_INPUT :
-                    conn->input_handler(conn);
+                    conn->read_handler(conn);
                     break;
                 case MESSAGE_OUTPUT :
-                    conn->output_handler(conn);
+                    conn->write_handler(conn);
                     break;
                 case MESSAGE_BUFFER:
-                    conn->packet_reader(conn);
+                    conn->buffer_handler(conn);
                     break;
                 case MESSAGE_PACKET :
                     conn->packet_handler(conn);
                     break;
                 case MESSAGE_CHUNK :
-                    conn->chunk_reader(conn);
+                    conn->chunk_handler(conn);
                     break;
                 case MESSAGE_DATA :
                     conn->data_handler(conn);
+                    break;
+                case MESSAGE_END :
+                    conn->end_handler(conn);
                     break;
                 case MESSAGE_TRANSACTION :
                     conn->transaction_handler(conn, msg->tid);
