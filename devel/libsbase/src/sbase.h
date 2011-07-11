@@ -520,8 +520,9 @@ typedef struct _CONN
     int (*push_file)(struct _CONN *, char *file, long long offset, long long size);
     int (*send_chunk)(struct _CONN *, CB_DATA *chunk, int len);
     int (*over_chunk)(struct _CONN *);
-    void(*input_handler)(struct _CONN *);
-    void(*output_handler)(struct _CONN *);
+    void(*buffer_handler)(struct _CONN *);
+    void(*chunk_handler)(struct _CONN *);
+    void(*end_handler)(struct _CONN *);
     
     /* normal */
     void (*reset_xids)(struct _CONN *);
