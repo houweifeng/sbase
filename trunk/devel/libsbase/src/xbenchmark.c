@@ -610,6 +610,6 @@ invalid_url:
         }
         else fprintf(stderr, "add service failed, %s", strerror(errno));
     }
-    sbase->clean(&sbase);
+    sbase->clean(sbase);
     return 0;
 }
