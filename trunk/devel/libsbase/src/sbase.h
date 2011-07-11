@@ -23,8 +23,8 @@ extern "C" {
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
-#define SB_QCONN_MAX            0
-#define SB_CHUNKS_MAX           0
+#define SB_QCONN_MAX            256
+#define SB_CHUNKS_MAX           256
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -300,8 +300,8 @@ typedef struct _SERVICE
 
     /* message queue for proc mode */
     void *message_queue;
+    void *send_queue;
 
-    /* chunks queue */
     //void *chunks_queue;
     CHUNK *qchunks[SB_CHUNKS_MAX];
     CHUNK *(*popchunk)(struct _SERVICE *service);

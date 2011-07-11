@@ -8,7 +8,7 @@ void *xqueue_init()
     XQUEUE *q = NULL;
     int i = 0, j = 0;
 
-    if((q = (XQUEUE *)xmm_new(sizeof(XQUEUE)))) 
+    if((q = (XQUEUE *)xmm_mnew(sizeof(XQUEUE)))) 
     {
         memset(q, 0, sizeof(XQUEUE));
         for(i = 1; i < XQ_ROOTS_MAX; i++)
@@ -79,9 +79,10 @@ void xqueue_close(void *xqueue, int qid)
 
 void xqueue_push(void *xqueue, int qid, void *ptr)
 {
+    XQNODE *node = NULL, *nodes = NULL;
     XQUEUE *q = (XQUEUE *)xqueue;
-    XQNODE *node = NULL;
     XQROOT *root = NULL;
+    int i = 0;
 
     if(q)
     {
@@ -95,7 +96,16 @@ void xqueue_push(void *xqueue, int qid, void *ptr)
             }
             else 
             {
-                node = (XQNODE *)xmm_mnew(sizeof(XQNODE));
+                if((nodes = (XQNODE *)xmm_mnew(sizeof(XQNODE) * XQ_NODES_MAX)))
+                {
+                    q->list[q->nlist++] = nodes;
+                    for(i = 1; i < XQ_NODES_MAX; i++)
+                    {
+                        nodes[i].next = q->left;
+                        q->left = &nodes[i];
+                    }
+                    node = &(nodes[0]);
+                }
             }
             if(node)
             {
@@ -171,17 +181,18 @@ void xqueue_clean(void *xqueue)
     if(q)
     {
         //fprintf(stdout, "%s::%d q:%p nleft:%d qtotal:%d qleft:%p\n", __FILE__, __LINE__, q, q->nleft, q->qtotal, q->left);
-        /*
-        for(i = 0; i < XQNODE_LINE_MAX; i++);
+        for(i = 0; i < q->nlist; i++);
         {
-            if(q->list[i]) xmm_free(q->list[i], XQNODE_LINE_NUM * sizeof(XQNODE));
+            if(q->list[i]) 
+                xmm_free(q->list[i], XQ_NODES_MAX * sizeof(XQNODE));
         }
-        */
+        /*
        while((node = q->left))
        {
            q->left = node->next;
            xmm_free(node, sizeof(XQNODE));
        }
+       */
         MUTEX_DESTROY(q->mutex);
         xmm_free(q, sizeof(XQUEUE));
     }
