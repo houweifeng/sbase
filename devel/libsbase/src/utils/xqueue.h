@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 #define XQ_ROOTS_MAX  65536
+#define XQ_NODES_MAX  1024 
+#define XQ_LINE_MAX   1024
 typedef struct _XQNODE
 {
     void *ptr;
@@ -26,9 +28,12 @@ typedef struct _XQUEUE
     int qtotal;
     int nwaits;
     int total;
+    int nlist;
+    int bits;
     MUTEX mutex;
     XQNODE *left;
     int waits[XQ_ROOTS_MAX];
+    XQNODE *list[XQ_LINE_MAX];
     XQROOT roots[XQ_ROOTS_MAX];
 }XQUEUE;
 void *xqueue_init();

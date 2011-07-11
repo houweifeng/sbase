@@ -13,8 +13,6 @@ utils/chunk.h \
 utils/chunk.c \
 utils/mmblock.h \
 utils/mmblock.c \
-utils/queue.h \
-utils/queue.c \
 utils/mutex.h \
 utils/xqueue.h \
 utils/xqueue.c \

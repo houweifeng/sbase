@@ -7,6 +7,7 @@
 #include "evtimer.h"
 #include "chunk.h"
 #include "stime.h"
+#include "mutex.h"
 #include "xmm.h"
 #define PUSH_TASK_MESSAGE(pth, msgid, index, fd, tid, handler, arg)                         \
 do                                                                                          \
@@ -33,7 +34,8 @@ void procthread_wakeup(PROCTHREAD *pth)
 {
     if(pth)
     {
-        if(pth->evbase) event_add(&pth->event, E_WRITE);
+        if(pth->have_evbase && pth->evbase) 
+            event_add(&pth->event, E_WRITE);
         MUTEX_SIGNAL(pth->mutex);
     }
     return ;
@@ -320,7 +322,7 @@ void procthread_stop(PROCTHREAD *pth)
         if(pth->message_queue)
         {
             PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
-            DEBUG_LOGGER(pth->logger, "Pushd MESSAGE_QUIT to procthreads[%d]", pth->index);
+            DEBUG_LOGGER(pth->logger, "Pushed MESSAGE_QUIT to procthreads[%d]", pth->index);
             pth->lock       = 1;
         }
         else
@@ -329,8 +331,7 @@ void procthread_stop(PROCTHREAD *pth)
             pth->running_status = 0;
             pth->wakeup(pth);
         }
-        MUTEX_SIGNAL(pth->mutex);
-        //WARN_LOGGER(pth->logger, "Ready for stopping procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
+        WARN_LOGGER(pth->logger, "Ready for stopping procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
 }
@@ -344,8 +345,7 @@ void procthread_terminate(PROCTHREAD *pth)
         pth->lock       = 1;
         pth->running_status = 0;
         pth->wakeup(pth);
-        MUTEX_SIGNAL(pth->mutex);
-        //WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
+        WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
 }
@@ -387,7 +387,6 @@ void procthread_clean(PROCTHREAD *pth)
             }
             qmessage_clean(pth->message_queue);
         }
-        xqueue_clean(pth->send_queue);
         MUTEX_DESTROY(pth->mutex);
         xmm_free(pth, sizeof(PROCTHREAD));
     }
@@ -426,7 +425,6 @@ PROCTHREAD *procthread_init(int have_evbase)
         }
         MUTEX_RESET(pth->mutex);
         pth->message_queue          = qmessage_init();
-        pth->send_queue             = xqueue_init();
         pth->run                    = procthread_run;
         pth->pushconn               = procthread_pushconn;
         pth->newconn                = procthread_newconn;

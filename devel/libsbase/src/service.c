@@ -142,6 +142,7 @@ void sigpipe_ignore()
     pth->logger = service->logger;                                                          \
     pth->usec_sleep = service->usec_sleep;                                                  \
     pth->use_cond_wait = service->use_cond_wait;                                            \
+    pth->send_queue = service->send_queue;                                                  \
 }
 
 /* running */
@@ -1447,7 +1448,6 @@ void service_stop(SERVICE *service)
         //remove event
         event_destroy(&service->event);
         if(service->fd > 0)close(service->fd);
-        if(service->cond > 0)close(service->cond);
     }
     return ;
 }
@@ -1618,6 +1618,7 @@ void service_clean(SERVICE *service)
         {
             LOGGER_CLEAN(service->logger);
         }
+        xqueue_clean(service->send_queue);
         xmm_free(service, sizeof(SERVICE));
     }
     return ;
@@ -1643,6 +1644,7 @@ SERVICE *service_init()
     {
         memset(service, 0, sizeof(SERVICE));
         MUTEX_RESET(service->mutex);
+        service->send_queue         = xqueue_init();
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;
