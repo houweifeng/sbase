@@ -13,7 +13,7 @@
 do                                                                                          \
 {                                                                                           \
     qmessage_push(pth->message_queue, msgid, index, fd, tid, pth, handler, arg);            \
-    pth->wakeup(pth);                                                                       \
+    MUTEX_SIGNAL(pth->mutex);                                                               \
 }while(0)
 
 /* event */
@@ -23,9 +23,10 @@ void procthread_event_handler(int event_fd, short event, void *arg)
 
     if(pth)
     {
-        if(pth->have_evbase) 
+        if(pth->have_evbase && pth->evbase) 
+        {
             event_del(&pth->event, E_WRITE);
-        MUTEX_SIGNAL(pth->mutex);
+        }
     }
     return ;
 }
@@ -36,8 +37,23 @@ void procthread_wakeup(PROCTHREAD *pth)
     if(pth)
     {
         if(pth->have_evbase && pth->evbase) 
+        {
             event_add(&pth->event, E_WRITE);
+        }
         MUTEX_SIGNAL(pth->mutex);
+    }
+    return ;
+}
+
+/* active */
+void procthread_active(PROCTHREAD *pth)
+{
+    if(pth)
+    {
+        if(pth->have_evbase && pth->evbase) 
+        {
+            event_del(&pth->event, E_WRITE);
+        }
     }
     return ;
 }
@@ -241,7 +257,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->iodaemon      = pth->iodaemon;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
-        conn->send_queue    = pth->send_queue;
+        conn->queue         = pth->queue;
         //conn->reset_state(conn);
         if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
         {
@@ -324,6 +340,7 @@ void procthread_stop(PROCTHREAD *pth)
         {
             pth->lock       = 1;
             PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
+            pth->wakeup(pth);
             DEBUG_LOGGER(pth->logger, "Pushed MESSAGE_QUIT to procthreads[%d]", pth->index);
         }
         else
@@ -414,7 +431,7 @@ PROCTHREAD *procthread_init(int have_evbase)
                     sizeof(struct ip_mreq)) == 0)
             {
                 //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
-                event_set(&pth->event, pth->cond, E_PERSIST|E_READ|E_WRITE, (void *)pth, 
+                event_set(&pth->event, pth->cond, E_LOCK|E_PERSIST|E_READ|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, &pth->event);
             }
@@ -438,6 +455,7 @@ PROCTHREAD *procthread_init(int have_evbase)
         pth->terminate_connection   = procthread_terminate_connection;
         pth->stop                   = procthread_stop;
         pth->wakeup                 = procthread_wakeup;
+        pth->active                 = procthread_active;
         pth->terminate              = procthread_terminate;
         pth->state                  = procthread_state;
         pth->active_heartbeat       = procthread_active_heartbeat;

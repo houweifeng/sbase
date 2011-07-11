@@ -300,7 +300,7 @@ typedef struct _SERVICE
 
     /* message queue for proc mode */
     void *message_queue;
-    void *send_queue;
+    void *queue;
 
     //void *chunks_queue;
     CHUNK *qchunks[SB_CHUNKS_MAX];
@@ -385,7 +385,7 @@ typedef struct _PROCTHREAD
     void *iodaemon;
     void *ioqmessage;
     void *message_queue;
-    void *send_queue;
+    void *queue;
 
     /* evbase */
     EVBASE *evbase;
@@ -414,6 +414,7 @@ typedef struct _PROCTHREAD
     /* normal */
     void (*run)(void *arg);
     void (*wakeup)(struct _PROCTHREAD *procthread);
+    void (*active)(struct _PROCTHREAD *procthread);
     void (*stop)(struct _PROCTHREAD *procthread);
     void (*terminate)(struct _PROCTHREAD *procthread);
     void (*clean)(struct _PROCTHREAD *procthread);
@@ -439,7 +440,7 @@ typedef struct _CONN
     int d_state;
     int evid;
     int qid;
-    int bits;
+    int mid;
     /* conenction */
     int  sock_type;
     int  fd;
@@ -466,7 +467,7 @@ typedef struct _CONN
     /* logger and timer */
     void *logger;
     /* queue */
-    void *send_queue;
+    void *queue;
     /* message queue */
     void *iodaemon;
     void *ioqmessage;
@@ -519,6 +520,8 @@ typedef struct _CONN
     int (*push_file)(struct _CONN *, char *file, long long offset, long long size);
     int (*send_chunk)(struct _CONN *, CB_DATA *chunk, int len);
     int (*over_chunk)(struct _CONN *);
+    void(*input_handler)(struct _CONN *);
+    void(*output_handler)(struct _CONN *);
     
     /* normal */
     void (*reset_xids)(struct _CONN *);

@@ -224,7 +224,6 @@ void event_add(EVENT *event, short flags)
 {
 	if(event)
 	{
-        MUTEX_LOCK(event->mutex);
         event->old_ev_flags = event->ev_flags;
 		event->ev_flags |= flags;
 		if(event->ev_base && event->ev_base->update)
@@ -234,7 +233,6 @@ void event_add(EVENT *event, short flags)
 				event, event->ev_flags, event->ev_fd);
 			event->ev_base->update(event->ev_base, event);
 		}
-        MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -244,7 +242,6 @@ void event_del(EVENT *event, short flags)
 {
 	if(event)
 	{
-        MUTEX_LOCK(event->mutex);
 		if(event->ev_flags & flags)
 		{
             event->old_ev_flags = event->ev_flags;
@@ -263,7 +260,6 @@ void event_del(EVENT *event, short flags)
                 }
 			}
 		}
-        MUTEX_UNLOCK(event->mutex);
 	}	
     return ;
 }

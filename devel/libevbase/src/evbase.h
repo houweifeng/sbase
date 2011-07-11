@@ -10,6 +10,7 @@ extern "C" {
 #define E_WRITE		0x02
 #define E_CLOSE		0x04
 #define E_PERSIST	0x08
+#define E_LOCK	    0x10
 #define EV_MAX_FD	1024
 #define EV_USEC_SLEEP	100
 /*event operating */
