@@ -273,7 +273,7 @@ void event_destroy(EVENT *event)
 {
     if(event)
     {
-        MUTEX_LOCK(event->mutex);
+        //MUTEX_LOCK(event->mutex);
         event->ev_flags = 0;
         if(event->ev_base && event->ev_base->del)
         {
@@ -281,7 +281,7 @@ void event_destroy(EVENT *event)
             event->ev_base->del(event->ev_base, event);
             event->ev_base = NULL;
         }
-        MUTEX_UNLOCK(event->mutex);
+        //MUTEX_UNLOCK(event->mutex);
     }
     return ;
 }
