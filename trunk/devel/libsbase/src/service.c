@@ -1401,17 +1401,17 @@ void service_stop(SERVICE *service)
         //iodaemon
         if(service->iodaemon)
         {
-            //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
-            service->iodaemon->terminate(service->iodaemon);
-            //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
+            DEBUG_LOGGER(service->logger, "Ready for stop daemon");
+            service->iodaemon->stop(service->iodaemon);
+            DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
             PROCTHREAD_EXIT(service->iodaemon->threadid, NULL);
-            //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
-            //DEBUG_LOGGER(service->logger, "over for stop daemon");
+            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
+            DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
         //threads
         if(service->procthreads && service->nprocthreads > 0)
         {
-            //DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
+            DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
             {
                 if(service->procthreads[i])
@@ -1420,34 +1420,39 @@ void service_stop(SERVICE *service)
                     PROCTHREAD_EXIT(service->procthreads[i]->threadid, NULL);
                 }
             }
+            DEBUG_LOGGER(service->logger, "over for stop threads");
         }
         //daemons
         if(service->daemons && service->ndaemons > 0)
         {
-            //DEBUG_LOGGER(service->logger, "Ready for stop daemonss");
+            DEBUG_LOGGER(service->logger, "Ready for stop daemonss");
             for(i = 0; i < service->ndaemons; i++)
             {
                 if(service->daemons[i])
                 {
-                    service->daemons[i]->terminate(service->daemons[i]);
+                    service->daemons[i]->stop(service->daemons[i]);
                     PROCTHREAD_EXIT(service->daemons[i]->threadid, NULL);
                 }
             }
+            DEBUG_LOGGER(service->logger, "over for stop daemons");
         }
         //daemon
         if(service->daemon)
         {
-            //DEBUG_LOGGER(service->logger, "Ready for stop daemon");
+            DEBUG_LOGGER(service->logger, "Ready for stop daemon");
             service->daemon->stop(service->daemon);
-            //DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
+            DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
             PROCTHREAD_EXIT(service->daemon->threadid, NULL);
-            //DEBUG_LOGGER(service->logger, "Joinning daemon thread");
-            //DEBUG_LOGGER(service->logger, "over for stop daemon");
+            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
+            DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
         EVTIMER_DEL(service->evtimer, service->evid);
+            DEBUG_LOGGER(service->logger, "Ready for remove event");
         //remove event
         event_destroy(&service->event);
+        DEBUG_LOGGER(service->logger, "over for remove event");
         if(service->fd > 0)close(service->fd);
+        DEBUG_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
     return ;
 }
