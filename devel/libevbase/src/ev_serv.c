@@ -31,7 +31,6 @@ static int lfd = 0;
 static struct sockaddr_in sa = {0};	
 static socklen_t sa_len = sizeof(struct sockaddr_in);
 static EVBASE *evbase = NULL;
-static EVENT *events[CONN_MAX];
 static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
 static int ev_sock_count = 2;
@@ -45,7 +44,7 @@ static const char *priv_file = "privkey.pem";
 typedef struct _CONN
 {
     int fd;
-    EVENT *event;
+    EVENT event;
     char buffer[EV_BUF_SIZE];
     int n;
 #ifdef USE_SSL
@@ -149,12 +148,9 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                 }
                 /* set FD NON-BLOCK */
                 fcntl(rfd, F_SETFL, O_NONBLOCK);
-                if((conns[rfd].event = ev_init()))
-                {
-                    conns[rfd].event->set(conns[rfd].event, rfd, E_READ|E_WRITE|E_PERSIST,
-                            (void *)conns[rfd].event, &ev_udp_handler);
-                    evbase->add(evbase, conns[rfd].event);
-                }
+                event_set(&(conns[rfd].event), rfd, E_READ|E_WRITE|E_PERSIST,
+                        (void *)&(conns[rfd].event), &ev_udp_handler);
+                evbase->add(evbase, &(conns[rfd].event));
                 return ;
             }
 err_end:
@@ -172,12 +168,9 @@ err_end:
             if((n = conns[fd].n = read(fd, conns[fd].buffer, EV_BUF_SIZE - 1)) > 0)
             {
                 SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
-                SHOW_LOG("Updating event[%p] on %d ", conns[fd].event, fd);
-                if(conns[fd].event)
-                {
-                    conns[fd].event->add(conns[fd].event, E_WRITE);	
-                    SHOW_LOG("Updated event[%p] on %d ", conns[fd].event, fd);
-                }
+                SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
+                event_add(&conns[fd].event, E_WRITE);	
+                SHOW_LOG("Updated event[%p] on %d ", &conns[fd].event, fd);
             }	
             else
             {
@@ -200,20 +193,16 @@ err_end:
                     FATAL_LOG("Echo data to %d failed, %s", fd, strerror(errno));	
                 goto err;
             }
-            if(conns[fd].event) conns[fd].event->del(conns[fd].event, E_WRITE);
+            event_del(&conns[fd].event, E_WRITE);
         }
         DEBUG_LOG("EV_OVER on %d", fd);
         return ;
 err:
         {
-            if(conns[fd].event)
-            {
-                conns[fd].event->destroy(conns[fd].event);
-                conns[fd].event = NULL;
-                shutdown(fd, SHUT_RDWR);
-                close(fd);
-                SHOW_LOG("Connection %d closed", fd);
-            }
+            event_destroy(&conns[fd].event);
+            shutdown(fd, SHUT_RDWR);
+            close(fd);
+            SHOW_LOG("Connection %d closed", fd);
         }
         return ;
     }
@@ -273,12 +262,9 @@ void ev_handler(int fd, short ev_flags, void *arg)
             }
             /* set FD NON-BLOCK */
             fcntl(rfd, F_SETFL, O_NONBLOCK);
-            if((conns[rfd].event = ev_init()))
-            {
-                conns[rfd].event->set(conns[rfd].event, rfd, E_READ|E_PERSIST,
-                        (void *)conns[rfd].event, &ev_handler);
-                evbase->add(evbase, conns[rfd].event);
-            }
+                event_set(&conns[rfd].event, rfd, E_READ|E_PERSIST,
+                        (void *)&conns[rfd].event, &ev_handler);
+                evbase->add(evbase, &conns[rfd].event);
             return ;
         }
     }
@@ -304,11 +290,8 @@ void ev_handler(int fd, short ev_flags, void *arg)
                 conns[fd].n = n;
                 SHOW_LOG("Read %d bytes from %d", n, fd);
                 conns[fd].buffer[n] = 0;
-                SHOW_LOG("Updating event[%p] on %d ", conns[fd].event, fd);
-                if(conns[fd].event)
-                {
-                    conns[fd].event->add(conns[fd].event, E_WRITE);	
-                }
+                SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
+                    event_add(&conns[fd].event, E_WRITE);	
             }		
             else
             {
@@ -345,27 +328,23 @@ void ev_handler(int fd, short ev_flags, void *arg)
                     FATAL_LOG("Echo data to %d failed, %s", fd, strerror(errno));	
                 goto err;
             }
-            if(conns[fd].event) conns[fd].event->del(conns[fd].event, E_WRITE);
+            event_del(&conns[fd].event, E_WRITE);
         }
         return ;
 err:
         {
-            if(conns[fd].event)
-            {
-                conns[fd].event->destroy(conns[fd].event);
-                conns[fd].event = NULL;
-                shutdown(fd, SHUT_RDWR);
-                close(fd);
+            event_destroy(&conns[fd].event);
+            shutdown(fd, SHUT_RDWR);
+            close(fd);
 #ifdef USE_SSL
-                if(conns[fd].ssl)
-                {   SSL_shutdown(conns[fd].ssl);
-                    SSL_free(conns[fd].ssl);
-                    conns[fd].ssl = NULL;
-                }
+            if(conns[fd].ssl)
+            {   SSL_shutdown(conns[fd].ssl);
+                SSL_free(conns[fd].ssl);
+                conns[fd].ssl = NULL;
+            }
 #endif
 
-                SHOW_LOG("Connection %d closed", fd);
-            }
+            SHOW_LOG("Connection %d closed", fd);
         }
         return ;
     }
@@ -396,7 +375,6 @@ int main(int argc, char **argv)
     /* Set resource limit */
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
     /* Initialize global vars */
-    //memset(events, 0, sizeof(EVENT *) * CONN_MAX);
     if((conns = (CONN *)calloc(CONN_MAX, sizeof(CONN))))
     {
 #ifdef USE_SSL
@@ -530,27 +508,20 @@ running:
         {
             evbase->set_logfile(evbase, "/tmp/ev_server.log");
             //evbase->set_evops(evbase, EOP_POLL);
-            if((conns[lfd].event = ev_init()))
+            SHOW_LOG("Initialized event ");
+            if(ev_sock_list[ev_sock_type] == SOCK_STREAM)
+                event_set(&conns[lfd].event, lfd, E_READ|E_PERSIST, 
+                        (void *)&conns[lfd].event, &ev_handler);
+            else 
+                event_set(&conns[lfd].event, lfd, E_READ|E_PERSIST, 
+                        (void *)&conns[lfd].event, &ev_udp_handler);
+            evbase->add(evbase, &conns[lfd].event);
+            struct timeval tv = {0};
+            tv.tv_usec = 1000;
+            while(1)
             {
-                SHOW_LOG("Initialized event ");
-                if(ev_sock_list[ev_sock_type] == SOCK_STREAM)
-                    conns[lfd].event->set(conns[lfd].event, lfd, E_READ|E_PERSIST, 
-                            (void *)conns[lfd].event, &ev_handler);
-                else 
-                    conns[lfd].event->set(conns[lfd].event, lfd, E_READ|E_PERSIST, 
-                            (void *)conns[lfd].event, &ev_udp_handler);
-                evbase->add(evbase, conns[lfd].event);
-                struct timeval tv = {0};
-                tv.tv_usec = 1000;
-                while(1)
-                {
-                    evbase->loop(evbase, 0, &tv);
-                    //usleep(1000);
-                }
-            }
-            else
-            {
-                evbase->clean(&evbase);
+                evbase->loop(evbase, 0, &tv);
+                //usleep(1000);
             }
         }
         for(i = 0; i < CONN_MAX; i++)
@@ -563,14 +534,9 @@ running:
                 conns[i].ssl = NULL;
             }
 #endif
-            if(conns[i].event)
-            {
-                shutdown(conns[i].fd, SHUT_RDWR);
-                close(conns[i].fd);
-                conns[i].event->destroy(conns[i].event);
-                conns[i].event = NULL;
-            }
-
+            shutdown(conns[i].fd, SHUT_RDWR);
+            close(conns[i].fd);
+            event_destroy(&conns[i].event);
         }
 #ifdef USE_SSL
         ERR_free_strings();

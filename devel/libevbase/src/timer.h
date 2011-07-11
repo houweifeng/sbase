@@ -26,7 +26,7 @@ typedef struct _TIMER
 	time_t last_sec_used;
     long long last_usec_used;
     long long now;
-	void *mutex;
+	MUTEX mutex;
 }TIMER;
 #define PT(ptr) ((TIMER *)ptr)
 #define PT_SEC_U(ptr) ((PT(ptr))?PT(ptr)->sec_used:0)
@@ -48,7 +48,7 @@ do{                                                                             
             + PT(ptr)->tv.tv_usec * 1ll;                                        \
         PT(ptr)->last_sec     = PT(ptr)->start_sec;                             \
         PT(ptr)->last_usec    = PT(ptr)->start_usec;                            \
-        MUTEX_INIT(PT(ptr)->mutex);                                             \
+        MUTEX_RESET(PT(ptr)->mutex);                                            \
     }                                                                           \
 }while(0)                                                                      
 #define TIMER_SAMPLE(ptr)                                                       \

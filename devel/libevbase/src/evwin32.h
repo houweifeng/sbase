@@ -15,7 +15,7 @@ int evwin32_loop(EVBASE *evbase, short, struct timeval *tv);
 /* Reset evbase */
 void evwin32_reset(EVBASE *evbase);
 /* Clean evbase */
-void evwin32_clean(EVBASE **evbase);
+void evwin32_clean(EVBASE *evbase);
 #endif
 #endif
 

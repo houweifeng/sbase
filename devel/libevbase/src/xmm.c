@@ -13,7 +13,7 @@ void *xmm_new(size_t size)
             m = calloc(1, size);
         else
         {
-            m = mmap(NULL, MMSIZE(size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+            m = mmap(NULL, MMSIZE(size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
             if(m == (void *)-1) m = NULL;
         }
     }
@@ -32,7 +32,7 @@ void *xmm_resize(void *old, size_t old_size, size_t new_size)
         }
         else
         {
-            m = mmap(NULL, MMSIZE(new_size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+            m = mmap(NULL, MMSIZE(new_size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
             if(m == (void *)-1) m = NULL;
         }
         if(old)

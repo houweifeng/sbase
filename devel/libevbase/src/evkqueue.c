@@ -243,7 +243,7 @@ int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                 if(ev_flags == 0) continue;
                 if(ev == evbase->evlist[kqev->ident] && (ev_flags &=  ev->ev_flags)) 
                 {
-                    ev->active(ev, ev_flags);
+                    event_active(ev, ev_flags);
                 }
             }
         }
@@ -269,20 +269,19 @@ void evkqueue_reset(EVBASE *evbase)
 }
 
 /* Clean evbase */
-void evkqueue_clean(EVBASE **evbase)
+void evkqueue_clean(EVBASE *evbase)
 {
-    if(*evbase)
+    if(evbase)
     {
-        if((*evbase)->mutex){MUTEX_DESTROY((*evbase)->mutex);}
-        if((*evbase)->logger)LOGGER_CLEAN((*evbase)->logger);
-        if((*evbase)->evlist)free((*evbase)->evlist);
-        if((*evbase)->evs)free((*evbase)->evs);
-        if((*evbase)->ev_fds)free((*evbase)->ev_fds);
-        if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
-        if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
-        close((*evbase)->efd);
-        xmm_free(*evbase, sizeof(EVBASE));
-        (*evbase) = NULL;
+        MUTEX_DESTROY(evbase->mutex);
+        if(evbase->logger)LOGGER_CLEAN(evbase->logger);
+        if(evbase->evlist)free(evbase->evlist);
+        if(evbase->evs)free(evbase->evs);
+        if(evbase->ev_fds)free(evbase->ev_fds);
+        if(evbase->ev_read_fds)free(evbase->ev_read_fds);
+        if(evbase->ev_write_fds)free(evbase->ev_write_fds);
+        close(evbase->efd);
+        xmm_free(evbase, sizeof(EVBASE));
     }	
     return ;
 }

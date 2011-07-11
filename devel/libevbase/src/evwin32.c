@@ -31,7 +31,7 @@ void evwin32_reset(EVBASE *evbase)
     return ;
 }
 /* Clean evbase */
-void evwin32_clean(EVBASE **evbase)
+void evwin32_clean(EVBASE *evbase)
 {
     return ;
 }

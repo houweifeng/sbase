@@ -15,7 +15,7 @@ int evrtsig_loop(EVBASE *evbase, short, struct timeval *tv);
 /* Reset evbase */
 void evrtsig_reset(EVBASE *evbase);
 /* Clean evbase */
-void evrtsig_clean(EVBASE **evbase);
+void evrtsig_clean(EVBASE *evbase);
 #endif
 #endif
 

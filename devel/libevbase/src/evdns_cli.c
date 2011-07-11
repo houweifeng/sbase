@@ -24,7 +24,7 @@
 #define EV_BUF_SIZE 1024
 static EVBASE *evbase = NULL;
 static char buffer[CONN_MAX][EV_BUF_SIZE];
-static EVENT *events[CONN_MAX];
+static EVENT events[CONN_MAX];
 static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
 static int ev_sock_count  = 2;
@@ -99,11 +99,8 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
             }
             SHOW_LOG("Read %d bytes from %d", n, fd);
             buffer[fd][n] = 0;
-            SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
-            if(events[fd])
-            {
-                events[fd]->add(events[fd], E_WRITE);	
-            }
+            SHOW_LOG("Updating event[%p] on %d ", &events[fd], fd);
+            event_add(&events[fd], E_WRITE);	
         }		
         else
         {
@@ -133,19 +130,15 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                 FATAL_LOG("Wrote data via %d failed, %s", fd, strerror(errno));	
             goto err;
         }
-        if(events[fd]) events[fd]->del(events[fd], E_WRITE);
+        event_del(&events[fd], E_WRITE);
     }
     return ;
 err:
     {
-        if(events[fd])
-        {
-            events[fd]->destroy(events[fd]);
-            events[fd] = NULL;
-            shutdown(fd, SHUT_RDWR);
-            close(fd);
-            SHOW_LOG("Connection %d closed", fd);
-        }
+        event_destroy(&events[fd]);
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
+        SHOW_LOG("Connection %d closed", fd);
     }
 }
 
@@ -168,11 +161,8 @@ void ev_handler(int fd, short ev_flags, void *arg)
             }
             SHOW_LOG("Read %d bytes from %d", n, fd);
             buffer[fd][n] = 0;
-            SHOW_LOG("Updating event[%p] on %d ", events[fd], fd);
-            if(events[fd])
-            {
-                events[fd]->add(events[fd], E_WRITE);	
-            }
+            SHOW_LOG("Updating event[%p] on %d ", &events[fd], fd);
+            event_add(&events[fd], E_WRITE);	
         }		
         else
         {
@@ -187,7 +177,7 @@ void ev_handler(int fd, short ev_flags, void *arg)
         if((reqfd = open("/tmp/dns.query", O_CREAT|O_RDWR, 0644)) > 0)
         {
             if(write(reqfd, evdnsbuf, nevdnsbuf) <= 0)
-               _exit(-1);
+                _exit(-1);
             close(reqfd);
             reqfd = -1;
         }
@@ -202,19 +192,15 @@ void ev_handler(int fd, short ev_flags, void *arg)
                 FATAL_LOG("Wrote data via %d failed, %s", fd, strerror(errno));	
             goto err;
         }
-        if(events[fd]) events[fd]->del(events[fd], E_WRITE);
+        event_del(&events[fd], E_WRITE);
     }
     return ;
 err:
     {
-        if(events[fd])
-        {
-            events[fd]->destroy(events[fd]);
-            events[fd] = NULL;
-            shutdown(fd, SHUT_RDWR);
-            close(fd);
-            SHOW_LOG("Connection %d closed", fd);
-        }
+        event_destroy(&events[fd]);
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
+        SHOW_LOG("Connection %d closed", fd);
 
     }
 }
@@ -246,7 +232,7 @@ int main(int argc, char **argv)
     /* Set resource limit */
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
     /* Initialize global vars */
-    memset(events, 0, sizeof(EVENT *) * CONN_MAX);
+    memset(events, 0, sizeof(EVENT) * CONN_MAX);
     /* Initialize inet */ 
     memset(&sa, 0, sizeof(struct sockaddr_in));	
     sa.sin_family = AF_INET;
@@ -266,21 +252,18 @@ int main(int argc, char **argv)
             {
                 /* set FD NON-BLOCK */
                 fcntl(fd, F_SETFL, O_NONBLOCK);
-                if((events[fd] = ev_init()))
+                if(sock_type == SOCK_STREAM)
                 {
-                    if(sock_type == SOCK_STREAM)
-                    {
-                        events[fd]->set(events[fd], fd, E_READ|E_WRITE|E_PERSIST, 
-                                (void *)events[fd], &ev_handler);
-                    }
-                    else
-                    {
-                        events[fd]->set(events[fd], fd, E_READ|E_WRITE|E_PERSIST, 
-                                (void *)events[fd], &ev_udp_handler);
-                    }
-                    evbase->add(evbase, events[fd]);
-                    sprintf(buffer[fd], "%d:client message\r\n", fd);
+                    event_set(&events[fd], fd, E_READ|E_WRITE|E_PERSIST, 
+                            (void *)&events[fd], &ev_handler);
                 }
+                else
+                {
+                    event_set(&events[fd], fd, E_READ|E_WRITE|E_PERSIST, 
+                            (void *)&events[fd], &ev_udp_handler);
+                }
+                evbase->add(evbase, &events[fd]);
+                sprintf(buffer[fd], "%d:client message\r\n", fd);
                 lsa_len = sizeof(struct sockaddr);
                 memset(&lsa, 0, lsa_len);
                 getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);

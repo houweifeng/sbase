@@ -209,7 +209,7 @@ int evepoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
                 DEBUG_LOGGER(evbase->logger, "Activing i:%d evp:%p ev:%p event[%p] fd:%d flags:%d ev_flags:%d", i, evp, ev, evbase->evlist[fd], fd, flags, ev_flags);
                 if(ev_flags &= ev->ev_flags)
                 {
-                    ev->active(ev, ev_flags);
+                    event_active(ev, ev_flags);
                 }
             }
         }
@@ -235,21 +235,20 @@ void evepoll_reset(EVBASE *evbase)
 }
 
 /* Clean evbase */
-void evepoll_clean(EVBASE **evbase)
+void evepoll_clean(EVBASE *evbase)
 {
-    if(*evbase)
+    if(evbase)
     {
-        close((*evbase)->efd);
-        if((*evbase)->mutex){MUTEX_DESTROY((*evbase)->mutex);}
-        if((*evbase)->logger)LOGGER_CLEAN((*evbase)->logger);
-        if((*evbase)->evlist)free((*evbase)->evlist);
-        if((*evbase)->evs)free((*evbase)->evs);
-        if((*evbase)->ev_fds)free((*evbase)->ev_fds);
-        if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
-        if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
-        if((*evbase)->efd > 0 )close((*evbase)->efd);
-        xmm_free(*evbase, sizeof(EVBASE));
-        (*evbase) = NULL;
+        close(evbase->efd);
+        MUTEX_DESTROY(evbase->mutex);
+        if(evbase->logger){LOGGER_CLEAN(evbase->logger);}
+        if(evbase->evlist)free(evbase->evlist);
+        if(evbase->evs)free(evbase->evs);
+        if(evbase->ev_fds)free(evbase->ev_fds);
+        if(evbase->ev_read_fds)free(evbase->ev_read_fds);
+        if(evbase->ev_write_fds)free(evbase->ev_write_fds);
+        if(evbase->efd > 0 )close(evbase->efd);
+        xmm_free(evbase, sizeof(EVBASE));
     }	
     return ;
 }

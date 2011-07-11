@@ -32,7 +32,7 @@ void evport_reset(EVBASE *evbase)
     return ;
 }
 /* Clean evbase */
-int evport_clean(EVBASE **evbase)
+int evport_clean(EVBASE *evbase)
 {
     return -1;
 }

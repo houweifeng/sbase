@@ -32,7 +32,7 @@ void evdevpoll_reset(EVBASE *evbase)
     return ;
 }
 /* Clean evbase */
-void evdevpoll_clean(EVBASE **evbase)
+void evdevpoll_clean(EVBASE *evbase)
 {
     return;
 }
