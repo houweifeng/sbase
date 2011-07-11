@@ -26,7 +26,7 @@ typedef struct _XQUEUE
     int qtotal;
     int nwaits;
     int total;
-    void *mutex;
+    MUTEX mutex;
     XQNODE *left;
     int waits[XQ_ROOTS_MAX];
     XQROOT roots[XQ_ROOTS_MAX];

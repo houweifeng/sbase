@@ -414,6 +414,18 @@ void chunk_reset(void *chunk)
     return ;
 }
 
+/* destroy chunk */
+void chunk_destroy(void *chunk)
+{
+    if(chunk)
+    {
+        if(CHK(chunk)->mmap) munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
+        xmm_free(CHK(chunk)->data, CHK(chunk)->bsize);
+        if(CHK(chunk)->fd > 0) close(CHK(chunk)->fd);
+    }
+    return ;
+}
+
 /* clean chunk */
 void chunk_clean(void *chunk)
 {

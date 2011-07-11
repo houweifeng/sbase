@@ -1,5 +1,6 @@
 #ifndef _EVTIMER_H
 #define _EVTIMER_H
+#include "mutex.h"
 typedef void (EVTCALLBACK)(void *);
 typedef struct _EVTNODE
 {
@@ -17,12 +18,12 @@ typedef struct _EVTIMER
 {
    int nevlist;
    int ntimeout;
+   MUTEX mutex;
    EVTNODE *evlist[EVTNODE_LINE_MAX];
    EVTNODE *timeouts[EVTNODE_LINE_MAX];
    EVTNODE *left;
    EVTNODE *head;
    EVTNODE *tail;
-   void *mutex;
 }EVTIMER;
 
 /* initialize evtimer */

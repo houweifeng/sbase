@@ -18,7 +18,7 @@ void *qmessage_init()
 
     if((q = (QMESSAGE *)xmm_new(sizeof(QMESSAGE))))
     {
-        MUTEX_INIT(q->mutex);
+        MUTEX_RESET(q->mutex);
     }
     return q;
 }

@@ -42,7 +42,7 @@ static int running_status = 0;
 static int req_timeout = 1000000;
 static FILE *fp = NULL;
 static void *logger = NULL;
-static void *mutex = NULL;
+static MUTEX mutex;
 
 CONN *http_newconn(int id, char *ip, int port, int is_ssl)
 {
@@ -556,7 +556,7 @@ invalid_url:
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
     sbase->set_evlog(sbase, "/tmp/benchmark_ev.log");
-    MUTEX_INIT(mutex);
+    MUTEX_RESET(mutex);
     //sbase->set_evlog_level(sbase, 2);
     if((service = service_init()))
     {
@@ -593,7 +593,7 @@ invalid_url:
         }
         else fprintf(stderr, "add service failed, %s", strerror(errno));
     }
-    sbase->clean(&sbase);
+    sbase->clean(sbase);
     MUTEX_DESTROY(mutex);
     return 0;
 }

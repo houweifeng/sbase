@@ -5,7 +5,6 @@
 #include <errno.h>
 #include "sbase.h"
 #include "logger.h"
-#include "queue.h"
 #include "message.h"
 #include "evtimer.h"
 #include "xssl.h"
@@ -269,27 +268,27 @@ void sbase_stop(SBASE *sbase)
 }
 
 /* clean sbase */
-void sbase_clean(SBASE **psbase)
+void sbase_clean(SBASE *sbase)
 {
     int i = 0;
 
-    if(psbase && *psbase)
+    if(sbase)
     {
-        for(i = 0; i < (*psbase)->running_services; i++)
+        for(i = 0; i < sbase->running_services; i++)
         {
-            if((*psbase)->services[i])
-                (*psbase)->services[i]->clean(&((*psbase)->services[i]));
+            if(sbase->services[i])
+                sbase->services[i]->clean(sbase->services[i]);
         }
-        if((*psbase)->evtimer){EVTIMER_CLEAN((*psbase)->evtimer);}
-        if((*psbase)->logger){LOGGER_CLEAN((*psbase)->logger);}
-        if((*psbase)->evbase){(*psbase)->evbase->clean(&((*psbase)->evbase));}
-        if((*psbase)->message_queue){qmessage_clean((*psbase)->message_queue);}
+        if(sbase->evtimer){EVTIMER_CLEAN(sbase->evtimer);}
+        if(sbase->logger){LOGGER_CLEAN(sbase->logger);}
+        if(sbase->evbase){sbase->evbase->clean(sbase->evbase);}
+        if(sbase->message_queue){qmessage_clean(sbase->message_queue);}
 #ifdef HAVE_SSL
         ERR_free_strings();
 #endif
-        xmm_free(*psbase, sizeof(SBASE));
-        *psbase = NULL;
+        xmm_free(sbase, sizeof(SBASE));
     }
+    return ;
 }
 
 /* Initialize sbase */

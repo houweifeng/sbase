@@ -1095,7 +1095,7 @@ int main(int argc, char **argv)
     //fprintf(stdout, "%s::%d sizeof(SERVICE):%u sizeof(SBASE):%u sizeof(PROCTHREAD):%u sizeof(CONN):%u sizeof(SESSION):%u sizeof(CNGROUP):%u sizeof(struct sockaddr_in):%u sizeof(MUTEX):%d\n", __FILE__, __LINE__, sizeof(SERVICE), sizeof(SBASE), sizeof(PROCTHREAD), sizeof(CONN), sizeof(SESSION), sizeof(CNGROUP), sizeof(struct sockaddr_in), sizeof(MUTEX));
     sbase->running(sbase, 0);
     //sbase->running(sbase, 300000000);sbase->stop(sbase);
-    sbase->clean(&sbase);
+    sbase->clean(sbase);
     if(namemap) TRIETAB_CLEAN(namemap);
     if(hostmap) TRIETAB_CLEAN(hostmap);
     if(urlmap) TRIETAB_CLEAN(urlmap);
