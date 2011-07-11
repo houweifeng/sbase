@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/mman.h>
+#include "xmm.h"
 #define MM_PAGESIZE 4096
 #define MMSIZE(xxx) (((xxx/MM_PAGESIZE) + ((xxx%MM_PAGESIZE) != 0)) * MM_PAGESIZE)
 /* new memory */

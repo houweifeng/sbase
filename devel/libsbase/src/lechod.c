@@ -212,7 +212,7 @@ int main(int argc, char **argv)
     //sbase->running(sbase, 0);
     sbase->running(sbase, 60000000); sbase->stop(sbase);
     //sbase->running(sbase, 90000000);sbase->stop(sbase);
-    sbase->clean(&sbase);
+    sbase->clean(sbase);
     if(dict)iniparser_free(dict);
     return 0;
 }
