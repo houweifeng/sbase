@@ -1065,7 +1065,7 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         else 
         {
             service->nfreeconns++;
-            WARN_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d new:%d free:%d", conn,conn->d_state, service->nnewconns, service->nfreeconns);
+            //WARN_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d new:%d free:%d", conn,conn->d_state, service->nnewconns, service->nfreeconns);
             conn->clean(conn);
             service->nconn--;
         }

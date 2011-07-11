@@ -135,7 +135,7 @@ do                                                                              
     if(conn && conn->d_state == 0)                                                          \
     {                                                                                       \
         qmessage_push(conn->ioqmessage, msgid,                                              \
-                conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
+                conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);                     \
         event_add(&conn->event, E_WRITE);                                                   \
     }                                                                                       \
 }while(0)
@@ -176,13 +176,38 @@ void conn_chunk_handler(CONN *conn)
     return ;
 }
 
+/* over */
+void conn_shut_handler(CONN *conn)
+{
+
+    if(conn)
+    {
+        /*
+        if(conn->iodaemon)
+        {
+            qmessage_push(conn->ioqmessage, MESSAGE_OVER,
+                    conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);
+            event_add(&conn->event, E_WRITE);
+        }
+        else
+        {
+            qmessage_push(conn->message_queue, MESSAGE_QUIT, 
+                    conn->index, conn->fd, -1, conn->parent, conn, NULL);
+        }*/
+        event_destroy(&conn->event);
+        qmessage_push(conn->message_queue, MESSAGE_OVER, 
+            conn->index, conn->fd, -1, conn->parent, conn, NULL);
+    }
+    return ;
+}
+
 /* end handler  */
 void conn_end_handler(CONN *conn)
 {
 
     if(conn)
     {
-        if(xqueue_total(conn->queue, conn->qid))
+        if(xqueue_total(conn->queue, conn->qid) < 1)
             event_del(&conn->event, E_WRITE);
     }
     return ;
@@ -207,7 +232,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                 if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) < 0 
                         || error != 0)
                 {
-                    ERROR_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
+                    WARN_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
                             "connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
                             conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);          
@@ -221,7 +246,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
                     PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
                 if(xqueue_total(conn->queue, conn->qid) < 1) 
                 {
-                    conn->push_message(conn, MESSAGE_END);
+                    event_del(&conn->event, E_WRITE);
                 }
                 if(conn->session.ok_handler) conn->session.ok_handler(conn);
                 return ;
@@ -369,7 +394,8 @@ int conn_shut(CONN *conn, int d_state, int e_state)
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);
-            conn__push__message(conn, MESSAGE_SHUT);
+            PUSH_IOQMESSAGE(conn, MESSAGE_SHUT);
+            //conn__push__message(conn, MESSAGE_SHUT);
         }
         MUTEX_UNLOCK(conn->mutex);
     }
@@ -402,7 +428,7 @@ int conn_terminate(CONN *conn)
         }
         if(conn->e_state == E_STATE_ON && conn->session.error_handler)
         {
-            ERROR_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
+            WARN_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
             MMB_RESET(conn->buffer); 
             MMB_RESET(conn->packet); 
@@ -426,7 +452,7 @@ int conn_terminate(CONN *conn)
                 cp = NULL;
             }
         }
-        DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, xqueue_total(conn->queue, conn->qid), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        WARN_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, xqueue_total(conn->queue, conn->qid), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
 #ifdef HAVE_SSL
         if(conn->ssl)
@@ -738,7 +764,7 @@ int conn_read_handler(CONN *conn)
         /* Receive normal data */
         if((n = conn_read_buffer(conn)) <= 0)
         {
-            ERROR_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
+            WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
                     "from %s:%d on %s:%d via %d failed, %s",
                     n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
@@ -834,6 +860,7 @@ int conn_write_handler(CONN *conn)
             {
                 if(xqueue_total(conn->queue, conn->qid) < 1) 
                 {
+                    //event_del(&conn->event, E_WRITE);
                     conn->push_message(conn, MESSAGE_END);
                 }
                 ret = 0;
@@ -1587,6 +1614,7 @@ CONN *conn_init()
         conn->buffer_handler        = conn_buffer_handler;
         conn->chunk_handler         = conn_chunk_handler;
         conn->end_handler           = conn_end_handler;
+        conn->shut_handler          = conn_shut_handler;
         conn->set_session           = conn_set_session;
         conn->over_session          = conn_over_session;
         conn->newtask               = conn_newtask;
