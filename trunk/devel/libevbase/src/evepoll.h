@@ -15,7 +15,7 @@ int evepoll_loop(EVBASE *evbase, short, struct timeval *tv);
 /* Reset evbase */
 void evepoll_reset(EVBASE *evbase);
 /* Clean evbase */
-void evepoll_clean(EVBASE **evbase);
+void evepoll_clean(EVBASE *evbase);
 #endif
 #endif
 

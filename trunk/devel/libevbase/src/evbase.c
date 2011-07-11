@@ -42,23 +42,10 @@ typedef struct _EVOPS
     int     (*del)(struct _EVBASE *, struct _EVENT*);
     int     (*loop)(struct _EVBASE *, short , struct timeval *tv);
     void    (*reset)(struct _EVBASE *);
-    void    (*clean)(struct _EVBASE **);
+    void    (*clean)(struct _EVBASE *);
 }EVOPS;
 static EVOPS evops[EOP_LIMIT];
 static int evops_default =      -1;
-/* Set event */
-void event_set(EVENT *event, int fd, short flags, void *arg, void *handler);
-/* Add event */
-void event_add(EVENT *event, short flags);
-/* Delete event */
-void event_del(EVENT *event, short flags);
-/* Active event */
-void event_active(EVENT *event, short ev_flags);
-/* Destroy event */
-void event_destroy(EVENT *event);
-/* Clean event */
-void event_clean(EVENT **event);
-
 /* set logfile */
 void evbase_set_logfile(EVBASE *evbase, char *file)
 {
@@ -104,13 +91,14 @@ int evbase_set_evops(EVBASE *evbase, int evopid)
 }
 
 /* Initialize evbase */
-EVBASE *evbase_init(int use_mutex)
+EVBASE *evbase_init()
 {
     EVBASE *evbase = NULL;
 
     if((evbase = (EVBASE *)xmm_new(sizeof(EVBASE))))
     {
-        if(use_mutex){MUTEX_INIT(evbase->mutex);}
+        memset(evbase, 0, sizeof(EVBASE));
+        MUTEX_RESET(evbase->mutex);
 #ifdef HAVE_EVPORT
         evops_default = EOP_PORT;
         evops[EOP_PORT].name = "PORT";
@@ -214,24 +202,6 @@ EVBASE *evbase_init(int use_mutex)
     return evbase;
 }
 
-/* Initialize event */
-EVENT *ev_init()
-{
-	EVENT *event =  NULL;
-
-	if((event = (EVENT *)xmm_new(sizeof(EVENT))))
-	{
-        MUTEX_INIT(event->mutex);
-		event->set 	= event_set;
-		event->add	= event_add;
-		event->del	= event_del;
-		event->active	= event_active;
-		event->destroy	= event_destroy;
-		event->clean	= event_clean;
-	}
-	return event;
-}
-
 /* Set event */
 void event_set(EVENT *event, int fd, short flags, void *arg, void *handler)
 {
@@ -239,6 +209,7 @@ void event_set(EVENT *event, int fd, short flags, void *arg, void *handler)
 	{
 		if(fd > 0 && handler)
 		{
+            MUTEX_RESET(event->mutex);
 			event->ev_fd		= 	fd;
 			event->ev_flags		=	flags;
 			event->ev_arg		=	arg;
@@ -253,7 +224,7 @@ void event_add(EVENT *event, short flags)
 {
 	if(event)
 	{
-        //MUTEX_LOCK(event->mutex);
+        MUTEX_LOCK(event->mutex);
         event->old_ev_flags = event->ev_flags;
 		event->ev_flags |= flags;
 		if(event->ev_base && event->ev_base->update)
@@ -263,7 +234,7 @@ void event_add(EVENT *event, short flags)
 				event, event->ev_flags, event->ev_fd);
 			event->ev_base->update(event->ev_base, event);
 		}
-        //MUTEX_UNLOCK(event->mutex);
+        MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -273,7 +244,7 @@ void event_del(EVENT *event, short flags)
 {
 	if(event)
 	{
-        //MUTEX_LOCK(event->mutex);
+        MUTEX_LOCK(event->mutex);
 		if(event->ev_flags & flags)
 		{
             event->old_ev_flags = event->ev_flags;
@@ -292,7 +263,7 @@ void event_del(EVENT *event, short flags)
                 }
 			}
 		}
-        //MUTEX_UNLOCK(event->mutex);
+        MUTEX_UNLOCK(event->mutex);
 	}	
     return ;
 }
@@ -331,20 +302,18 @@ void event_active(EVENT *event, short ev_flags)
         //MUTEX_LOCK(event->mutex);
         if(!(event->ev_flags & E_PERSIST) && event->ev_base)
         {
-        	event->destroy(event);
+        	event_destroy(event);
         }
     }
     return ;
 }
 
 /* Clean event */
-void event_clean(EVENT **event)
+void event_clean(EVENT *event)
 {
-	if(*event)
+	if(event)
 	{
-        MUTEX_DESTROY((*event)->mutex);
-		xmm_free((*event), sizeof(EVENT));
-		(*event) = NULL;	
+        MUTEX_DESTROY(event->mutex);
 	}
     return ;
 }

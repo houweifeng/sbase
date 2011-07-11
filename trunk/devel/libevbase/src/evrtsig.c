@@ -33,7 +33,7 @@ void evrtsig_reset(EVBASE *evbase)
     return ;
 }
 /* Clean evbase */
-void evrtsig_clean(EVBASE **evbase)
+void evrtsig_clean(EVBASE *evbase)
 {
     return ;
 }

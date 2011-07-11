@@ -175,7 +175,7 @@ int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
                 if(ev_flags == 0) continue;
                 if((ev_flags  &= ev->ev_flags))	
                 {
-                    ev->active(ev, ev_flags);
+                    event_active(ev, ev_flags);
                 }
             }			
         }
@@ -199,19 +199,18 @@ void evselect_reset(EVBASE *evbase)
 }
 
 /* Clean evbase */
-void evselect_clean(EVBASE **evbase)
+void evselect_clean(EVBASE *evbase)
 {
-    if(*evbase)
+    if(evbase)
     {
-        if((*evbase)->mutex){MUTEX_DESTROY((*evbase)->mutex);}
-        if((*evbase)->logger)LOGGER_CLEAN((*evbase)->logger);
-        if((*evbase)->evlist)free((*evbase)->evlist);
-        if((*evbase)->evs)free((*evbase)->evs);
-        if((*evbase)->ev_fds)free((*evbase)->ev_fds);
-        if((*evbase)->ev_read_fds)free((*evbase)->ev_read_fds);
-        if((*evbase)->ev_write_fds)free((*evbase)->ev_write_fds);
-        xmm_free(*evbase, sizeof(EVBASE));
-        (*evbase) = NULL;
+        MUTEX_DESTROY(evbase->mutex);
+        if(evbase->logger)LOGGER_CLEAN(evbase->logger);
+        if(evbase->evlist)free(evbase->evlist);
+        if(evbase->evs)free(evbase->evs);
+        if(evbase->ev_fds)free(evbase->ev_fds);
+        if(evbase->ev_read_fds)free(evbase->ev_read_fds);
+        if(evbase->ev_write_fds)free(evbase->ev_write_fds);
+        xmm_free(evbase, sizeof(EVBASE));
     }
     return ;
 }

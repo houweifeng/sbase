@@ -15,7 +15,7 @@ int evkqueue_loop(EVBASE *evbase, short, struct timeval *tv);
 /* Reset evbase */
 void evkqueue_reset(EVBASE *evbase);
 /* Clean evbase */
-void evkqueue_clean(EVBASE **evbase);
+void evkqueue_clean(EVBASE *evbase);
 #endif
 #endif
 

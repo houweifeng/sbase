@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include "mutex.h"
 #ifndef _LOGGER_H
 #define _LOGGER_H
@@ -50,7 +51,7 @@ typedef struct _LOGGER
     time_t x;
     struct tm *p;
     char *ps;
-    void *mutex;
+    MUTEX mutex;
     int rflag;
     int n;
 	int fd ;
@@ -160,7 +161,7 @@ do                                                                              
 {                                                                                   \
     if((ptr = (LOGGER *)calloc(1, sizeof(LOGGER))))                                 \
     {                                                                               \
-        MUTEX_INIT(PL(ptr)->mutex);                                                 \
+        MUTEX_RESET(PL(ptr)->mutex);                                                \
         strcpy(PLF(ptr), lp);                                                       \
         PMKDIR(ptr, lp);                                                            \
         LOGGER_ROTATE_CHECK(ptr);                                                   \
@@ -228,7 +229,7 @@ do{                                                                             
     if(ptr)                                                                         \
     {                                                                               \
         close(PLFD(ptr));                                                           \
-        if(PL(ptr)->mutex){MUTEX_DESTROY(PL(ptr)->mutex);}                          \
+        MUTEX_DESTROY(PL(ptr)->mutex);                                              \
         free(ptr);                                                                  \
         ptr = NULL;                                                                 \
     }                                                                               \

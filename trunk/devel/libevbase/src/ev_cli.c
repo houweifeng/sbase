@@ -37,7 +37,7 @@ static SSL_CTX *ctx = NULL;
 typedef struct _CONN
 {
     int fd;
-    EVENT *event;
+    EVENT event;
     char request[EV_BUF_SIZE];
     char response[EV_BUF_SIZE];
 #ifdef USE_SSL
@@ -85,11 +85,8 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
         {
             SHOW_LOG("Read %d bytes from %d", n, fd);
             conns[fd].response[n] = 0;
-            SHOW_LOG("Updating event[%p] on %d ", conns[fd].event, fd);
-            if(conns[fd].event)
-            {
-                conns[fd].event->add(conns[fd].event, E_WRITE);	
-            }
+            SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
+            event_add(&conns[fd].event, E_WRITE);	
         }		
         else
         {
@@ -110,19 +107,15 @@ void ev_udp_handler(int fd, short ev_flags, void *arg)
                 FATAL_LOG("Wrote data via %d failed, %s", fd, strerror(errno));	
             goto err;
         }
-        if(conns[fd].event) conns[fd].event->del(conns[fd].event, E_WRITE);
+        event_del(&conns[fd].event, E_WRITE);
     }
     return ;
 err:
     {
-        if(conns[fd].event)
-        {
-            conns[fd].event->destroy(conns[fd].event);
-            conns[fd].event = NULL;
-            shutdown(fd, SHUT_RDWR);
-            close(fd);
-            SHOW_LOG("Connection %d closed", fd);
-        }
+        event_destroy(&conns[fd].event);
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
+        SHOW_LOG("Connection %d closed", fd);
     }
 }
 
@@ -148,11 +141,8 @@ void ev_handler(int fd, short ev_flags, void *arg)
         {
             SHOW_LOG("Read %d bytes from %d", n, fd);
             conns[fd].response[n] = 0;
-            SHOW_LOG("Updating event[%p] on %d ", conns[fd].event, fd);
-            if(conns[fd].event)
-            {
-                conns[fd].event->add(conns[fd].event, E_WRITE);	
-            }
+            SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
+            event_add(&conns[fd].event, E_WRITE);	
         }		
         else
         {
@@ -186,29 +176,24 @@ void ev_handler(int fd, short ev_flags, void *arg)
                 FATAL_LOG("Wrote data via %d failed, %s", fd, strerror(errno));	
             goto err;
         }
-        if(conns[fd].event) conns[fd].event->del(conns[fd].event, E_WRITE);
+        event_del(&conns[fd].event, E_WRITE);
     }
     return ;
 err:
     {
-        if(conns[fd].event)
-        {
-            conns[fd].event->destroy(conns[fd].event);
-            conns[fd].event = NULL;
-            shutdown(fd, SHUT_RDWR);
-            close(fd);
+        event_destroy(&conns[fd].event);
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
 #ifdef USE_SSL
-            if(conns[fd].ssl)
-            {
-                SSL_shutdown(conns[fd].ssl);
-                SSL_free(conns[fd].ssl);
-                conns[fd].ssl = NULL;
-            }
+        if(conns[fd].ssl)
+        {
+            SSL_shutdown(conns[fd].ssl);
+            SSL_free(conns[fd].ssl);
+            conns[fd].ssl = NULL;
+        }
 #endif
 
-            SHOW_LOG("Connection %d closed", fd);
-        }
-
+        SHOW_LOG("Connection %d closed", fd);
     }
 }
 
@@ -304,21 +289,18 @@ int main(int argc, char **argv)
                 flag = fcntl(fd, F_GETFL, 0);
                 flag |= O_NONBLOCK;
                 fcntl(fd, F_SETFL, flag);
-                if((conns[fd].event = ev_init()))
-                {
                     if(sock_type == SOCK_STREAM)
                     {
-                        conns[fd].event->set(conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
-                                (void *)conns[fd].event, &ev_handler);
+                        event_set(&conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
+                                (void *)&conns[fd].event, &ev_handler);
                     }
                     else
                     {
-                        conns[fd].event->set(conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
-                                (void *)conns[fd].event, &ev_udp_handler);
+                        event_set(&conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
+                                (void *)&conns[fd].event, &ev_udp_handler);
                     }
-                    evbase->add(evbase, conns[fd].event);
+                    evbase->add(evbase, &conns[fd].event);
                     sprintf(conns[fd].request, "GET / HTTP/1.0\r\n\r\n");
-                }
                 lsa_len = sizeof(struct sockaddr);
                 memset(&lsa, 0, lsa_len);
                 getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
@@ -332,13 +314,9 @@ int main(int argc, char **argv)
             }
             for(i = 0; i < CONN_MAX; i++)
             {
-                if(conns[i].event)
-                {
                     shutdown(conns[i].fd, SHUT_RDWR);
                     close(conns[i].fd);
-                    conns[i].event->destroy(conns[i].event);
-                    conns[i].event = NULL;
-                }
+                    event_destroy(&conns[i].event);
 #ifdef USE_SSL
                 if(conns[i].ssl)
                 {
