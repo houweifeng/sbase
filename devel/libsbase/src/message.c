@@ -16,7 +16,7 @@ void *qmessage_init()
 {
     QMESSAGE *q = NULL;
 
-    if((q = (QMESSAGE *)xmm_mnew(sizeof(QMESSAGE))))
+    if((q = (QMESSAGE *)xmm_new(sizeof(QMESSAGE))))
     {
         MUTEX_RESET(q->mutex);
     }
@@ -43,7 +43,7 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
         {
             if((i = q->nlist) < QMSG_LINE_MAX)
             {
-                if((msg = (MESSAGE *)xmm_mnew(QMSG_LINE_NUM * sizeof(MESSAGE))))
+                if((msg = (MESSAGE *)xmm_new(QMSG_LINE_NUM * sizeof(MESSAGE))))
                 {
                     q->list[i] = msg;
                     q->nlist++;

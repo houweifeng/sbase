@@ -1498,7 +1498,7 @@ CONN *conn_init()
 {
     CONN *conn = NULL;
 
-    if((conn = (CONN *)xmm_mnew(sizeof(CONN))))
+    if((conn = (CONN *)xmm_new(sizeof(CONN))))
     {
         memset(conn, 0, sizeof(CONN));
         conn->groupid = -1;
