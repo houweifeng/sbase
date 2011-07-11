@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include "mutex.h"
 #ifndef _MESSAGE_H
 #define _MESSAGE_H
 #ifdef __cplusplus
@@ -76,7 +77,7 @@ typedef struct _QMESSAGE
     MESSAGE *left;
     MESSAGE *first;
     MESSAGE *last;
-    void *mutex;
+    MUTEX mutex;
 }QMESSAGE;
 int get_msg_no(int message_id);
 void *qmessage_init();

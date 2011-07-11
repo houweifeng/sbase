@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "mutex.h"
+
 #ifndef _TIMER_H
 #define _TIMER_H
 #ifdef __cplusplus
@@ -25,7 +26,7 @@ typedef struct _TIMER
 	time_t last_sec_used;
     long long last_usec_used;
     long long now;
-	void *mutex;
+	MUTEX mutex;
 }TIMER;
 #define PT(ptr) ((TIMER *)ptr)
 #define PT_SEC_U(ptr) ((PT(ptr))?PT(ptr)->sec_used:0)
@@ -39,7 +40,7 @@ typedef struct _TIMER
         (PT_NOW(ptr) = PT(ptr)->tv.tv_sec * 1000000ll + PT(ptr)->tv.tv_usec * 1ll) : -1)
 #define TIMER_INIT(ptr)                                                         \
 do{                                                                             \
-    if((ptr = xmm_new(sizeof(TIMER))))                                          \
+    if((ptr = (calloc(1, sizeof(TIMER)))))                                      \
     {                                                                           \
         gettimeofday(&(PT(ptr)->tv), NULL);                                     \
         PT(ptr)->start_sec    = PT(ptr)->tv.tv_sec;                             \
@@ -47,7 +48,7 @@ do{                                                                             
             + PT(ptr)->tv.tv_usec * 1ll;                                        \
         PT(ptr)->last_sec     = PT(ptr)->start_sec;                             \
         PT(ptr)->last_usec    = PT(ptr)->start_usec;                            \
-        MUTEX_INIT(PT(ptr)->mutex);                                             \
+        MUTEX_RESET(PT(ptr)->mutex);                                            \
     }                                                                           \
 }while(0)                                                                      
 #define TIMER_SAMPLE(ptr)                                                       \
@@ -93,7 +94,7 @@ do{                                                                             
     if(ptr)                                                                     \
     {                                                                           \
         MUTEX_DESTROY(PT(ptr)->mutex);                                          \
-        xmm_free(ptr, sizeof(TIMER));                                           \
+        free(ptr);                                                              \
         ptr = NULL;                                                             \
     }                                                                           \
 }while(0)

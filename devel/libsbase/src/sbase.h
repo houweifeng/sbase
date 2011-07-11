@@ -78,13 +78,65 @@ struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
-struct _CHUNK;
+#ifndef __TYPEDEF__MUTEX
+#define __TYPEDEF__MUTEX
+#ifdef HAVE_SEMAPHORE
+#include <semaphore.h>
+typedef struct _MUTEX
+{
+        sem_t sem;
+}MUTEX;
+#else
+#include <pthread.h>
+typedef struct _MUTEX
+{
+    pthread_mutex_t mutex;
+    pthread_cond_t  cond;
+    int nowait;
+}MUTEX;
+#endif
+#endif
+#ifndef __TYPEDEF__MMBLOCK
+#define __TYPEDEF__MMBLOCK
+typedef struct _MMBLOCK
+{
+    char *data;
+    int  ndata;
+    int  size;
+    int  left;
+    int  bit;
+    char *end;
+}MMBLOCK;
+#endif
+#ifndef __TYPEDEF__CHUNK
+#define __TYPEDEF__CHUNK
+#define CHUNK_FILE_NAME_MAX     1024
+typedef struct _CHUNK
+{
+    char *data;
+    int  ndata;
+    int  status;
+    int  bsize;
+    int  type;
+    int  fd;
+    int  bits;
+    off_t size;
+    off_t offset;
+    off_t left;
+    off_t mmleft;
+    off_t mmoff;
+    char *mmap;
+    char *end;
+    char filename[CHUNK_FILE_NAME_MAX];
+}CHUNK;
+#endif
 typedef struct _CB_DATA
 {
     char *data;
     int ndata;
+    int size;
 }CB_DATA;
-#define PCB(ptr) ((CB_DATA *)ptr)
+#define PCB(mmm) ((CB_DATA *)((void *)&mmm))
 typedef struct _SESSION
 {
     /* SSL/timeout */
@@ -149,7 +201,7 @@ typedef struct _SBASE
 	void (*remove_service)(struct _SBASE *, struct _SERVICE *);
     int  (*running)(struct _SBASE *, int time_usec);
 	void (*stop)(struct _SBASE *);
-	void (*clean)(struct _SBASE **);
+	void (*clean)(struct _SBASE *);
 }SBASE;
 /* Initialize sbase */
 int setrlimiter(char *name, int rlimid, int nset);
@@ -208,10 +260,11 @@ typedef struct _SERVICE
     int is_inside_logger;
     int ntask;
     struct  sockaddr_in sa;
+    EVENT event;
+    MUTEX mutex;
 
     int conns_free[SB_CONN_MAX];
     /* mutex */
-    void *mutex;
     SBASE *sbase;
 
     /* heartbeat */
@@ -244,16 +297,15 @@ typedef struct _SERVICE
 
     /* event option */
     EVBASE *evbase;
-    EVENT *event;
 
     /* message queue for proc mode */
     void *message_queue;
 
     /* chunks queue */
     //void *chunks_queue;
-    struct _CHUNK *qchunks[SB_CHUNKS_MAX];
-    struct _CHUNK *(*popchunk)(struct _SERVICE *service);
-    int (*pushchunk)(struct _SERVICE *service, struct _CHUNK *cp);
+    CHUNK *qchunks[SB_CHUNKS_MAX];
+    CHUNK *(*popchunk)(struct _SERVICE *service);
+    int (*pushchunk)(struct _SERVICE *service, CHUNK *cp);
     CB_DATA *(*newchunk)(struct _SERVICE *service, int len);
 
     /* connections option */
@@ -304,7 +356,7 @@ typedef struct _SERVICE
     int (*set_session)(struct _SERVICE *, SESSION *);
 
     /* clean */
-    void (*clean)(struct _SERVICE **pservice);
+    void (*clean)(struct _SERVICE *pservice);
     void (*close)(struct _SERVICE *);
     SESSION session;
     CNGROUP groups[SB_GROUPS_MAX];
@@ -324,7 +376,8 @@ typedef struct _PROCTHREAD
     int use_cond_wait;
     int have_evbase;
     long threadid;
-    void *mutex;
+    MUTEX mutex;
+    EVENT event;
     void *evtimer;
     SERVICE *service;
 
@@ -336,7 +389,6 @@ typedef struct _PROCTHREAD
 
     /* evbase */
     EVBASE *evbase;
-    EVENT *event;
 
     /* connection */
     struct _CONN **connections;
@@ -364,7 +416,7 @@ typedef struct _PROCTHREAD
     void (*wakeup)(struct _PROCTHREAD *procthread);
     void (*stop)(struct _PROCTHREAD *procthread);
     void (*terminate)(struct _PROCTHREAD *procthread);
-    void (*clean)(struct _PROCTHREAD **procthread);
+    void (*clean)(struct _PROCTHREAD *procthread);
 }PROCTHREAD;
 /* Initialize procthread */
 PROCTHREAD *procthread_init(int have_evbase);
@@ -395,22 +447,22 @@ typedef struct _CONN
     int  local_port;
     /* xid */
     int xids[SB_XIDS_MAX];
-    void *parent;
-    void *mutex;
+    EVENT event;
+    MUTEX mutex;
     /* evbase */
     EVBASE *evbase;
-    EVENT *event;
+    void *parent;
     /* SSL */
     void *ssl;
     /* evtimer */
     void *evtimer;
     /* buffer */
-    void *buffer;
-    void *packet;
-    void *cache;
-    void *oob;
-    void *exchange;
-    void *chunk;
+    MMBLOCK buffer;
+    MMBLOCK packet;
+    MMBLOCK cache;
+    MMBLOCK oob;
+    MMBLOCK exchange;
+    CHUNK chunk;
     /* logger and timer */
     void *logger;
     /* queue */

@@ -20,10 +20,10 @@ typedef struct _QUEUE
     int qtotal;
     int total;
     int nlist;
+    MUTEX mutex;
     QNODE *left;
     QNODE *first;
     QNODE *last;
-    void *mutex;
     QNODE *list[QNODE_LINE_MAX];
 }QUEUE;
 void *queue_init();

@@ -180,6 +180,16 @@ void mmblock_reset(MMBLOCK *mmblock)
 	return ;
 }
 
+/* destroy */
+void mmblock_destroy(MMBLOCK *mmblock)
+{
+	if(mmblock)
+    {
+        if(mmblock->data) xmm_free(mmblock->data, mmblock->size);
+    }
+	return ;
+}
+
 /* clean() */
 void mmblock_clean(MMBLOCK *mmblock)
 {

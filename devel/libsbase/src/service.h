@@ -76,7 +76,7 @@ void service_active_heartbeat(void *arg);
 /* active evtimer heartbeat */
 void service_evtimer_handler(void *arg);
 /* clean service */
-void service_clean(SERVICE **pservice);
+void service_clean(SERVICE *service);
 #ifdef __cplusplus
  }
 #endif

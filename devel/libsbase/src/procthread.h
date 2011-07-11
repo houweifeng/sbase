@@ -21,7 +21,6 @@ int procthread_addconn(PROCTHREAD *, CONN *);
 /* Add new connection */
 int procthread_add_connection(PROCTHREAD *, CONN *);
 
-
 /* Shut connection */
 int procthread_shut_connection(PROCTHREAD *, CONN *);
 
@@ -44,5 +43,5 @@ void procthread_state(PROCTHREAD *,  CALLBACK *handler, void *arg);
 void procthread_active_heartbeat(PROCTHREAD *,  CALLBACK *handler, void *arg);
 
 /* Clean procthread */
-void procthread_clean(PROCTHREAD **);
+void procthread_clean(PROCTHREAD *);
 #endif

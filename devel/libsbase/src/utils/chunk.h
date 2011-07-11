@@ -13,7 +13,6 @@ extern "C" {
 #define CHUNK_MEM   0x02
 #define CHUNK_FILE  0x04
 #define CHUNK_ALL  (CHUNK_MEM | CHUNK_FILE)
-#define CHUNK_FILE_NAME_MAX     2048
 #define CHUNK_BLOCK_MAX         524288
 //#define CHUNK_BLOCK_MAX       1024
 #define MMAP_PAGE_SIZE          4096
@@ -32,6 +31,9 @@ extern "C" {
 #endif
 #define CHUNK_STATUS_ON         0x01
 #define CHUNK_STATUS_OVER       0x02
+#ifndef __TYPEDEF__CHUNK
+#define __TYPEDEF__CHUNK
+#define CHUNK_FILE_NAME_MAX     1024
 typedef struct _CHUNK
 {
     char *data;
@@ -50,19 +52,20 @@ typedef struct _CHUNK
     char *end;
     char filename[CHUNK_FILE_NAME_MAX];
 }CHUNK;
+#endif
 typedef struct _CHUNK * PCHUNK;
 #define CHK(ptr) ((CHUNK *)ptr)
-#define CHK_DATA(ptr) (CHK(ptr)->data)
-#define CHK_NDATA(ptr) (CHK(ptr)->ndata)
-#define CHK_LEFT(ptr) (CHK(ptr)->left)
-#define CHK_END(ptr) (CHK(ptr)->end)
-#define CHK_TYPE(ptr) (CHK(ptr)->type)
-#define CHK_FD(ptr) (CHK(ptr)->fd)
-#define CHK_FILENAME(ptr) (CHK(ptr)->filename)
-#define CHK_SIZE(ptr) (CHK(ptr)->size)
-#define CHK_BSIZE(ptr) (CHK(ptr)->bsize)
-#define CHK_OFFSET(ptr) (CHK(ptr)->offset)
-#define CHK_STATUS(ptr) (CHK(ptr)->status)
+#define CHK_DATA(chk) (chk.data)
+#define CHK_NDATA(chk) (chk.ndata)
+#define CHK_LEFT(chk) (chk.left)
+#define CHK_END(chk) (chk.end)
+#define CHK_TYPE(chk) (chk.type)
+#define CHK_FD(chk) (chk.fd)
+#define CHK_FILENAME(chk) (chk.filename)
+#define CHK_SIZE(chk) (chk.size)
+#define CHK_BSIZE(chk) (chk.bsize)
+#define CHK_OFFSET(chk) (chk.offset)
+#define CHK_STATUS(chk) (chk.status)
 /* initialize chunk */
 CHUNK *chunk_init();
 /* set/initialize chunk mem */
@@ -93,6 +96,8 @@ int chunk_write_from_file_SSL(void *chunk, void *ssl);
 int chunk_file_fill(void *chunk, char *data, int ndata);
 /* chunk reset */
 void chunk_reset(void *chunk);
+/* chunk destroy */
+void chunk_destroy(void *chunk);
 /* clean chunk */
 void chunk_clean(void *chunk);
 /* initialize chunk file */

@@ -163,12 +163,11 @@ int service_run(SERVICE *service)
                     service->heartbeat_interval);
         }
         //evbase setting 
-        if(service->service_type == S_SERVICE 
-                && service->evbase && (service->event = ev_init()))
+        if(service->service_type == S_SERVICE && service->evbase)
         {
-            service->event->set(service->event, service->fd, E_READ|E_PERSIST,
+            event_set(&(service->event), service->fd, E_READ|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
-            ret = service->evbase->add(service->evbase, service->event);
+            ret = service->evbase->add(service->evbase, &service->event);
         }
         //initliaze conns
         for(i = 0; i < service->init_conns; i++)
@@ -470,7 +469,7 @@ err_conn:
                             {
                                 qmessage_push(pth->message_queue, 
                                     MESSAGE_INPUT, -1, conn->fd, -1, conn, pth, NULL);
-                                if(pth->mutex && pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
+                                MUTEX_SIGNAL(pth->mutex);
                             }
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
                                     " buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
@@ -1009,13 +1008,12 @@ CONN *service_findconn(SERVICE *service, int index)
 void service_overconn(SERVICE *service, CONN *conn)
 {
     PROCTHREAD *daemon = NULL;
-    void *mutex = NULL;
 
     if(service && conn && (daemon = service->daemon))
     {
         qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
                 -1, daemon, conn, NULL);
-        if((mutex = daemon->mutex) && daemon->use_cond_wait){MUTEX_SIGNAL(mutex);}
+        MUTEX_SIGNAL(daemon->mutex);
     }
     return ;
 }
@@ -1447,7 +1445,7 @@ void service_stop(SERVICE *service)
         }
         EVTIMER_DEL(service->evtimer, service->evid);
         //remove event
-        if(service->event)service->event->destroy(service->event);
+        event_destroy(&service->event);
         if(service->fd > 0)close(service->fd);
         if(service->cond > 0)close(service->cond);
     }
@@ -1543,85 +1541,84 @@ void service_evtimer_handler(void *arg)
 }
 
 /* service clean */
-void service_clean(SERVICE **pservice)
+void service_clean(SERVICE *service)
 {
     CONN *conn = NULL;
     CHUNK *cp = NULL;
     int i = 0;
 
-    if(pservice && *pservice)
+    if(service)
     {
         
-        if((*pservice)->event) (*pservice)->event->clean(&((*pservice)->event)); 
-        if((*pservice)->daemon) (*pservice)->daemon->clean(&((*pservice)->daemon));
-        if((*pservice)->etimer) {EVTIMER_CLEAN((*pservice)->etimer);}
-        if((*pservice)->iodaemon) (*pservice)->iodaemon->clean(&((*pservice)->iodaemon));
+        event_clean(&(service->event)); 
+        if(service->daemon) service->daemon->clean(service->daemon);
+        if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
+        if(service->iodaemon) service->iodaemon->clean(service->iodaemon);
         //clean procthreads
-        if((*pservice)->procthreads && (*pservice)->nprocthreads)
+        if(service->procthreads && service->nprocthreads)
         {
-            for(i = 0; i < (*pservice)->nprocthreads; i++)
+            for(i = 0; i < service->nprocthreads; i++)
             {
-                if((*pservice)->procthreads[i])
+                if(service->procthreads[i])
                 {
-                    (*pservice)->procthreads[i]->clean(&((*pservice)->procthreads[i]));
+                    service->procthreads[i]->clean(service->procthreads[i]);
                 }
             }
-            xmm_free((*pservice)->procthreads, sizeof(PROCTHREAD));
+            xmm_free(service->procthreads, sizeof(PROCTHREAD));
         }
         //clean daemons
-        if((*pservice)->daemons && (*pservice)->ndaemons)
+        if(service->daemons && service->ndaemons)
         {
-            for(i = 0; i < (*pservice)->ndaemons; i++)
+            for(i = 0; i < service->ndaemons; i++)
             {
-                if((*pservice)->daemons[i])
+                if(service->daemons[i])
                 {
-                    (*pservice)->daemons[i]->clean(&((*pservice)->daemons[i]));
+                    service->daemons[i]->clean(service->daemons[i]);
                 }
             }
-            xmm_free((*pservice)->daemons, sizeof(PROCTHREAD));
+            xmm_free(service->daemons, sizeof(PROCTHREAD));
         }
         //clean connection_queue
-        DEBUG_LOGGER((*pservice)->logger, "Ready for clean connection_chunk:%d", (*pservice)->nqconns);
-        if((*pservice)->nqconns > 0)
+        DEBUG_LOGGER(service->logger, "Ready for clean connection_chunk:%d", service->nqconns);
+        if(service->nqconns > 0)
         {
-            //fprintf(stdout, "nqconns:%d\n", (*pservice)->nqconns);
-            //DEBUG_LOGGER((*pservice)->logger, "Ready for clean connections");
-            while((i = --((*pservice)->nqconns)) >= 0)
+            //fprintf(stdout, "nqconns:%d\n", service->nqconns);
+            //DEBUG_LOGGER(service->logger, "Ready for clean connections");
+            while((i = --(service->nqconns)) >= 0)
             {
-                if((conn = ((*pservice)->qconns[i]))) 
+                if((conn = (service->qconns[i]))) 
                 {
-                    DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p] fd[%d]", conn, conn->fd);
+                    DEBUG_LOGGER(service->logger, "Ready for clean conn[%p] fd[%d]", conn, conn->fd);
                     conn->clean(conn);
-                    (*pservice)->nconn--;
+                    service->nconn--;
                 }
             }
         }
         //clean chunks queue
-        DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks_queue:%d", (*pservice)->nqchunks);
-        if((*pservice)->nqchunks > 0)
+        DEBUG_LOGGER(service->logger, "Ready for clean chunks_queue:%d", service->nqchunks);
+        if(service->nqchunks > 0)
         {
-            //DEBUG_LOGGER((*pservice)->logger, "Ready for clean chunks");
-            while((i = --((*pservice)->nqchunks)) >= 0)
+            //DEBUG_LOGGER(service->logger, "Ready for clean chunks");
+            while((i = --(service->nqchunks)) >= 0)
             {
-                if((cp = (*pservice)->qchunks[i]))
+                if((cp = service->qchunks[i]))
                 {
-                    DEBUG_LOGGER((*pservice)->logger, "Ready for clean conn[%p]", cp);
+                    DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]", cp);
                     chunk_clean(cp);
                 }
             }
         }
         /* SSL */
 #ifdef HAVE_SSL
-        if((*pservice)->s_ctx) SSL_CTX_free(XSSL_CTX((*pservice)->s_ctx));
-        if((*pservice)->c_ctx) SSL_CTX_free(XSSL_CTX((*pservice)->c_ctx));
+        if(service->s_ctx) SSL_CTX_free(XSSL_CTX(service->s_ctx));
+        if(service->c_ctx) SSL_CTX_free(XSSL_CTX(service->c_ctx));
 #endif
-        MUTEX_DESTROY((*pservice)->mutex);
-        if((*pservice)->is_inside_logger) 
+        MUTEX_DESTROY(service->mutex);
+        if(service->is_inside_logger) 
         {
-            LOGGER_CLEAN((*pservice)->logger);
+            LOGGER_CLEAN(service->logger);
         }
-        xmm_free(*pservice, sizeof(SERVICE));
-        *pservice = NULL;
+        xmm_free(service, sizeof(SERVICE));
     }
     return ;
 }
@@ -1633,7 +1630,7 @@ void service_close(SERVICE *service)
     {
         service_stop(service);
         service->sbase->remove_service(service->sbase, service);
-        service_clean(&service);
+        service_clean(service);
     }
     return ;
 }
@@ -1644,7 +1641,8 @@ SERVICE *service_init()
     SERVICE *service = NULL;
     if((service = (SERVICE *)xmm_new(sizeof(SERVICE))))
     {
-        MUTEX_INIT(service->mutex);
+        memset(service, 0, sizeof(SERVICE));
+        MUTEX_RESET(service->mutex);
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;

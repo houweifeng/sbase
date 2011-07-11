@@ -9,7 +9,7 @@ void *queue_init()
 
     if((q = (QUEUE *)calloc(1, sizeof(QUEUE)))) 
     {
-        MUTEX_INIT(q->mutex);
+        MUTEX_RESET(q->mutex);
     }
     return q;
 }

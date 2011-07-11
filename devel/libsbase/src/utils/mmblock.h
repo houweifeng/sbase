@@ -1,15 +1,18 @@
 #ifndef _MMBLOCK_H_
 #define _MMBLOCK_H_
 #define MMBLOCK_BITS    1024
+#ifndef __TYPEDEF__MMBLOCK
+#define __TYPEDEF__MMBLOCK
 typedef struct _MMBLOCK
 {
-   	char *data;
-   	int  ndata;
-  	int  size;
-	int  left;
+    char *data;
+    int  ndata;
+    int  size;
+    int  left;
     int  bit;
-	char *end;
+    char *end;
 }MMBLOCK;
+#endif
 #define  MMBLOCK_BASE 	    8192
 //#define  MMBLOCK_BASE 	32768
 //#define  MMBLOCK_BASE 	131072
@@ -31,19 +34,22 @@ int mmblock_push(MMBLOCK *mmblock, char *data, int ndata);
 int mmblock_del(MMBLOCK *mmblock, int ndata);
 /* reset() */
 void mmblock_reset(MMBLOCK *mmblock);
+/* destroy */
+void mmblock_destroy(MMBLOCK *mmblock);
 /* clean() */
 void mmblock_clean(MMBLOCK *mmblock);
-#define MMB(x) ((MMBLOCK *)x)
-#define MMB_NDATA(x) ((MMBLOCK *)x)->ndata
-#define MMB_SIZE(x) ((MMBLOCK *)x)->size
-#define MMB_LEFT(x) ((MMBLOCK *)x)->left
-#define MMB_DATA(x) ((MMBLOCK *)x)->data
-#define MMB_END(x) ((MMBLOCK *)x)->end
-#define MMB_RECV(x, fd, flag) mmblock_recv(MMB(x), fd, flag)
-#define MMB_READ(x, fd) mmblock_read(MMB(x), fd)
-#define MMB_READ_SSL(x, ssl) mmblock_read_SSL(MMB(x), ssl)
-#define MMB_PUSH(x, pdata, ndata) mmblock_push(MMB(x), pdata, ndata)
-#define MMB_DELETE(x, ndata) mmblock_del(MMB(x), ndata)
-#define MMB_RESET(x) mmblock_reset(MMB(x))
-#define MMB_CLEAN(x) mmblock_clean(MMB(x))
+#define MMB(px) ((MMBLOCK *)px)
+#define MMB_NDATA(x) (x.ndata)
+#define MMB_SIZE(x) (x.size)
+#define MMB_LEFT(x) (x.left)
+#define MMB_DATA(x) (x.data)
+#define MMB_END(x) (x.end)
+#define MMB_RECV(x, fd, flag) mmblock_recv(&x, fd, flag)
+#define MMB_READ(x, fd) mmblock_read(&x, fd)
+#define MMB_READ_SSL(x, ssl) mmblock_read_SSL(&x, ssl)
+#define MMB_PUSH(x, pdata, ndata) mmblock_push(&x, pdata, ndata)
+#define MMB_DELETE(x, ndata) mmblock_del(&x, ndata)
+#define MMB_RESET(x) mmblock_reset(&x)
+#define MMB_DESTROY(x) mmblock_destroy(&x)
+#define MMB_CLEAN(x) mmblock_clean(&x)
 #endif

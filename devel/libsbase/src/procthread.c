@@ -12,7 +12,7 @@
 do                                                                                          \
 {                                                                                           \
     qmessage_push(pth->message_queue, msgid, index, fd, tid, pth, handler, arg);            \
-    if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}                                               \
+    MUTEX_SIGNAL(pth->mutex);                                                               \
 }while(0)
 
 /* event */
@@ -22,8 +22,8 @@ void procthread_event_handler(int event_fd, short event, void *arg)
 
     if(pth)
     {
-        pth->event->del(pth->event, E_WRITE);
-        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
+        event_del(&pth->event, E_WRITE);
+        MUTEX_SIGNAL(pth->mutex);
     }
     return ;
 }
@@ -33,9 +33,8 @@ void procthread_wakeup(PROCTHREAD *pth)
 {
     if(pth)
     {
-        if(pth->event && pth->evbase)
-            pth->event->add(pth->event, E_WRITE);
-        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
+        if(pth->evbase) event_add(&pth->event, E_WRITE);
+        MUTEX_SIGNAL(pth->mutex);
     }
     return ;
 }
@@ -259,7 +258,7 @@ int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && pth->service)
     {
-        if(conn->event)conn->event->destroy(conn->event);
+        event_destroy(&conn->event);
         pth->service->overconn(pth->service, conn);
         ret = 0;
     }
@@ -330,7 +329,7 @@ void procthread_stop(PROCTHREAD *pth)
             pth->running_status = 0;
             pth->wakeup(pth);
         }
-        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
+        MUTEX_SIGNAL(pth->mutex);
         //WARN_LOGGER(pth->logger, "Ready for stopping procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
@@ -345,7 +344,7 @@ void procthread_terminate(PROCTHREAD *pth)
         pth->lock       = 1;
         pth->running_status = 0;
         pth->wakeup(pth);
-        if(pth->mutex){MUTEX_SIGNAL(pth->mutex);}
+        MUTEX_SIGNAL(pth->mutex);
         //WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
@@ -375,24 +374,24 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 }
 
 /* clean procthread */
-void procthread_clean(PROCTHREAD **ppth)
+void procthread_clean(PROCTHREAD *pth)
 {
-    if(ppth && *ppth)
+    if(pth)
     {
-        if((*ppth)->service->working_mode != WORKING_PROC)
+        if(pth->service->working_mode != WORKING_PROC)
         {
-            if((*ppth)->have_evbase)
+            if(pth->have_evbase)
             {
-                if((*ppth)->event)(*ppth)->event->clean(&((*ppth)->event));
-                (*ppth)->evbase->clean(&((*ppth)->evbase));
+                event_clean(&(pth->event));
+                if(pth->evbase) pth->evbase->clean(pth->evbase);
             }
-            qmessage_clean((*ppth)->message_queue);
+            qmessage_clean(pth->message_queue);
         }
-        xqueue_clean((*ppth)->send_queue);
-        MUTEX_DESTROY((*ppth)->mutex);
-        xmm_free((*ppth), sizeof(PROCTHREAD));
-        (*ppth) = NULL;
+        xqueue_clean(pth->send_queue);
+        MUTEX_DESTROY(pth->mutex);
+        xmm_free(pth, sizeof(PROCTHREAD));
     }
+    return ;
 }
 
 /* Initialize procthread */
@@ -405,34 +404,19 @@ PROCTHREAD *procthread_init(int have_evbase)
         if(have_evbase > 0)
         {
             pth->have_evbase = 1;
-            /*
-            pth->fd = 1;
-            if((pth->evbase = evbase_init(1)) && (pth->event = ev_init()))
-            {
-                //pth->evbase->set_evops(pth->evbase, EOP_POLL);
-                pth->event->set(pth->event, pth->fd, E_PERSIST|E_WRITE, (void *)pth, 
-                        &procthread_event_handler);
-                pth->evbase->add(pth->evbase, pth->event);
-            }
-            else 
-            {
-                fprintf(stderr, "set evbase & event failed, %s\n", strerror(errno));
-                _exit(-1);
-            }
-            */
             struct ip_mreq mreq;
             memset(&mreq, 0, sizeof(struct ip_mreq));
             mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");
             mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
-            if((pth->evbase = evbase_init(1)) && (pth->event = ev_init())
+            if((pth->evbase = evbase_init(1)) 
                 && (pth->cond = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
                 && setsockopt(pth->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
                     sizeof(struct ip_mreq)) == 0)
             {
                 //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
-                pth->event->set(pth->event, pth->cond, E_PERSIST|E_READ|E_WRITE, (void *)pth, 
+                event_set(&pth->event, pth->cond, E_PERSIST|E_READ|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
-                pth->evbase->add(pth->evbase, pth->event);
+                pth->evbase->add(pth->evbase, &pth->event);
             }
             else 
             {
@@ -440,7 +424,7 @@ PROCTHREAD *procthread_init(int have_evbase)
                 _exit(-1);
             }
         }
-        MUTEX_INIT(pth->mutex);
+        MUTEX_RESET(pth->mutex);
         pth->message_queue          = qmessage_init();
         pth->send_queue             = xqueue_init();
         pth->run                    = procthread_run;
