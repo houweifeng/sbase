@@ -216,6 +216,8 @@ void conn_end_handler(CONN *conn)
     {
         if(xqueue_total(conn->queue, conn->qid) > 0)
             event_add(&conn->event, E_WRITE);
+        else
+            event_del(&conn->event, E_WRITE);
     }
     return ;
 }
