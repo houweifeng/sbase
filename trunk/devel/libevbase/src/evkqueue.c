@@ -54,7 +54,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
     struct kevent kqev;
     if(evbase && event && evbase->evs && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        //MUTEX_LOCK(evbase->mutex);
+        MUTEX_LOCK(evbase->mutex);
         event->ev_base = evbase;
         if(event->ev_flags & E_READ)
         {
@@ -64,7 +64,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             kqev.flags  = EV_ADD;
             kqev.udata  = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
-            if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
+            if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) goto err;
             DEBUG_LOGGER(evbase->logger, "add EVFILT_READ[%d] on %d", 
                     (int)kqev.filter, (int)kqev.ident);
         }
@@ -76,14 +76,15 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             kqev.flags     = EV_ADD;
             kqev.udata     = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
-            if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) return -1;
+            if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) goto err;
             DEBUG_LOGGER(evbase->logger, "add EVFILT_WRITE[%d] on %d", 
                     (int)kqev.filter, (int)kqev.ident);
         }
         if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
         ++(evbase->nfd);
-        //MUTEX_UNLOCK(evbase->mutex);
+err:
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -98,7 +99,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
     if(evbase && event && evbase->evs && event->ev_fd >= 0 
             && event->ev_fd < evbase->allowed)
     {
-        //MUTEX_LOCK(evbase->mutex);
+        MUTEX_LOCK(evbase->mutex);
         ev_flags = (event->ev_flags ^ event->old_ev_flags);
         add_ev_flags = (event->ev_flags & ev_flags);
         del_ev_flags = (event->old_ev_flags & ev_flags);
@@ -114,6 +115,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             {   
                 ERROR_LOGGER(evbase->logger, "deleting EVFILT_READ flags[%d] on fd[%d] failed, %s", 
                         kqev.flags, (int)kqev.ident, strerror(errno));
+                goto err;
             }
             else
             {
@@ -130,6 +132,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             {   
                 ERROR_LOGGER(evbase->logger, "deleting EVFILT_WRITE flags[%d] on %d failed, %s", 
                         kqev.flags, (int)kqev.ident, strerror(errno));
+                goto err;
             }
             else
             {
@@ -147,6 +150,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             {   
                 ERROR_LOGGER(evbase->logger, "adding EVFILT_READ flags[%d] on fd[%d] failed, %s", 
                         kqev.flags, (int)kqev.ident, strerror(errno));
+                goto err;
             }
             else
             {
@@ -164,6 +168,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             {   
                 ERROR_LOGGER(evbase->logger, "adding EVFILT_WRITE flags[%d] on fd[%d] failed, %s", 
                         kqev.flags, (int)kqev.ident, strerror(errno));
+                goto err;
             }
             else
             {
@@ -174,7 +179,8 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         }
         if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
-        //MUTEX_UNLOCK(evbase->mutex);
+err:
+        MUTEX_UNLOCK(evbase->mutex);
     }
     return ret;
 }
@@ -186,7 +192,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
     if(evbase && event && evbase->evs 
             && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        //MUTEX_LOCK(evbase->mutex);
+        MUTEX_LOCK(evbase->mutex);
         memset(&kqev, 0, sizeof(struct kevent));
         kqev.ident  = event->ev_fd;
         kqev.filter = EVFILT_READ;
@@ -201,7 +207,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
         if(event->ev_fd >= evbase->maxfd)evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
         if(evbase->nfd > 0) --(evbase->nfd);
-        //MUTEX_UNLOCK(evbase->mutex);
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;

@@ -203,7 +203,7 @@ int sbase_running(SBASE *sbase, int useconds)
         }
 running:
         //evbase 
-        sbase->evbase   = evbase_init(1);
+        sbase->evbase   = evbase_init(0);
         if(sbase->evlogfile && sbase->evlog_level > 0) 
         {
             sbase->evbase->set_logfile(sbase->evbase, sbase->evlogfile);
