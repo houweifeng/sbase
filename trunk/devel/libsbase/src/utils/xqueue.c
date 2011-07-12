@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 #include "xmm.h"
 #include "mutex.h"
 #include "xqueue.h"
@@ -106,6 +108,10 @@ void xqueue_push(void *xqueue, int qid, void *ptr)
                     }
                     node = &(nodes[0]);
                 }
+                else
+                {
+                    //fprintf(stderr, "xmm_new failed, %s\n", strerror(errno));
+                }
             }
             if(node)
             {
@@ -121,6 +127,10 @@ void xqueue_push(void *xqueue, int qid, void *ptr)
                 }
                 node->next = NULL;
                 root->total++;
+            }
+            else
+            {
+                //fprintf(stderr, "push_node(%p) failed, %s\n", ptr, strerror(errno));
             }
         }
         MUTEX_UNLOCK(q->mutex);

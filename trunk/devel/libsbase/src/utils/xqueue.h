@@ -7,7 +7,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define XQ_ROOTS_MAX  65536
+#define XQ_ROOTS_MAX  131072
 #define XQ_NODES_MAX  1024 
 #define XQ_LINE_MAX   1024
 typedef struct _XQNODE

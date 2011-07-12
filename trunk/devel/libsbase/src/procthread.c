@@ -134,7 +134,7 @@ void procthread_run(void *arg)
         }
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 qmessage_handler(pth->message_queue, pth->logger);
-        WARN_LOGGER(pth->logger, "terminate threads[%d][%p] evbase[%p] qmessage[%p] ioqmessage[%p] qtotal:%d", pth->index, (void *)(pth->threadid), pth->evbase, pth->message_queue, pth->ioqmessage, QMTOTAL(pth->message_queue));
+        //WARN_LOGGER(pth->logger, "terminate threads[%d][%p] evbase[%p] qmessage[%p] ioqmessage[%p] qtotal:%d", pth->index, (void *)(pth->threadid), pth->evbase, pth->message_queue, pth->ioqmessage, QMTOTAL(pth->message_queue));
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
@@ -349,7 +349,7 @@ void procthread_stop(PROCTHREAD *pth)
             pth->running_status = 0;
             pth->wakeup(pth);
         }
-        WARN_LOGGER(pth->logger, "Ready for stopping procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
+        //WARN_LOGGER(pth->logger, "Ready for stopping procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
 }
@@ -363,7 +363,7 @@ void procthread_terminate(PROCTHREAD *pth)
         pth->lock       = 1;
         pth->running_status = 0;
         pth->wakeup(pth);
-        WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
+        //WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
 }
@@ -425,7 +425,7 @@ PROCTHREAD *procthread_init(int have_evbase)
             memset(&mreq, 0, sizeof(struct ip_mreq));
             mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");
             mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
-            if((pth->evbase = evbase_init(1)) 
+            if((pth->evbase = evbase_init(0)) 
                 && (pth->cond = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
                 && setsockopt(pth->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
                     sizeof(struct ip_mreq)) == 0)
