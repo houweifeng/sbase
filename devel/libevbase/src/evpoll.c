@@ -37,7 +37,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed
             && evbase->ev_fds && evbase->evlist)
     {
-        MUTEX_LOCK(evbase->mutex);
+        //MUTEX_LOCK(evbase->mutex);
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
         if(event->ev_flags & E_READ)
@@ -58,7 +58,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             ++(evbase->nfd);
             DEBUG_LOGGER(evbase->logger, "Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
         }
-        MUTEX_UNLOCK(evbase->mutex);
+        //MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -70,7 +70,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
     short ev_flags = 0;
     if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        MUTEX_LOCK(evbase->mutex);
+        //MUTEX_LOCK(evbase->mutex);
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
         if(event->ev_flags & E_READ)
@@ -88,7 +88,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
         evbase->evlist[event->ev_fd] = event;
         DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
                 event->ev_flags, event->ev_fd);
-        MUTEX_UNLOCK(evbase->mutex);
+        //MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }	
     return -1;
@@ -98,12 +98,12 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
 {
     if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        MUTEX_LOCK(evbase->mutex);
+        //MUTEX_LOCK(evbase->mutex);
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
         if(event->ev_fd >= evbase->maxfd) evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
         if(evbase->nfd > 0) --(evbase->nfd);
-        MUTEX_UNLOCK(evbase->mutex);
+        //MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }	
     return -1;
