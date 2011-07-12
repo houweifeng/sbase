@@ -157,7 +157,7 @@ void conn_buffer_handler(CONN *conn)
 
     if(conn)
     {
-        event_del(&conn->event, E_WRITE);
+        //event_del(&conn->event, E_WRITE);
         ret = conn->packet_reader(conn);
     }
     return ;
@@ -170,7 +170,7 @@ void conn_chunk_handler(CONN *conn)
 
     if(conn)
     {
-        event_del(&conn->event, E_WRITE);
+        //event_del(&conn->event, E_WRITE);
         ret = conn__read__chunk(conn);
     }
     return ;
@@ -182,21 +182,28 @@ void conn_shut_handler(CONN *conn)
 
     if(conn)
     {
-        /*
         if(conn->iodaemon)
         {
+            DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
+                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
+                        conn->fd);
             qmessage_push(conn->ioqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);
             event_add(&conn->event, E_WRITE);
         }
         else
         {
+            DEBUG_LOGGER(conn->logger, "Ready for quit-connection[%s:%d] local[%s:%d] via %d ",
+                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
+                        conn->fd)
             qmessage_push(conn->message_queue, MESSAGE_QUIT, 
                     conn->index, conn->fd, -1, conn->parent, conn, NULL);
-        }*/
+        }
+        /*
         event_destroy(&conn->event);
         qmessage_push(conn->message_queue, MESSAGE_OVER, 
             conn->index, conn->fd, -1, conn->parent, conn, NULL);
+        */
     }
     return ;
 }
@@ -394,8 +401,7 @@ int conn_shut(CONN *conn, int d_state, int e_state)
             DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
                     "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
                     conn->d_state, conn->local_ip, conn->local_port, conn->fd);
-            PUSH_IOQMESSAGE(conn, MESSAGE_SHUT);
-            //conn__push__message(conn, MESSAGE_SHUT);
+            conn__push__message(conn, MESSAGE_SHUT);
         }
         MUTEX_UNLOCK(conn->mutex);
     }

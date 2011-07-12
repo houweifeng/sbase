@@ -440,7 +440,7 @@ typedef struct _CONN
     int d_state;
     int evid;
     int qid;
-    int mid;
+    int bits;
     /* conenction */
     int  sock_type;
     int  fd;

@@ -277,7 +277,7 @@ int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && pth->service)
     {
-        //event_destroy(&conn->event);
+        event_destroy(&conn->event);
         pth->service->overconn(pth->service, conn);
         ret = 0;
     }
