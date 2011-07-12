@@ -583,7 +583,7 @@ invalid_url:
         service->set_heartbeat(service, 1000000, &benchmark_heartbeat_handler, NULL);
         //service->set_session(service, &session);
         service->set_log(service, "/tmp/benchmark.log");
-        //service->set_log_level(service, log_level);
+        service->set_log_level(service, log_level);
         LOGGER_INIT(logger, "/tmp/benchmark_res.log");
         if(sbase->add_service(sbase, service) == 0)
         {
