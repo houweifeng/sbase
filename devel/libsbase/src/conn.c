@@ -106,7 +106,6 @@ int conn_read_buffer(CONN *conn)
             {                                                                                   \
                 EVTIMER_UPDATE(conn->evtimer, conn->evid, conn->timeout,                        \
                         &conn_evtimer_handler, (void *)conn);                                   \
-                IOWAKEUP(conn);                                                                 \
             }                                                                                   \
             else                                                                                \
             {                                                                                   \
@@ -125,7 +124,6 @@ int conn_read_buffer(CONN *conn)
     {                                                                                       \
         EVTIMER_UPDATE(_evtimer_, _evid_, conn->timeout,                                    \
                 &conn_evtimer_handler, (void *)conn);                                       \
-        IOWAKEUP(conn);                                                                     \
     }                                                                                       \
 }while(0)
 
@@ -436,7 +434,7 @@ int conn_terminate(CONN *conn)
         }
         if(conn->e_state == E_STATE_ON && conn->session.error_handler)
         {
-            WARN_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
+            DEBUG_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
             conn->session.error_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->chunk));
             MMB_RESET(conn->buffer); 
             MMB_RESET(conn->packet); 
@@ -447,6 +445,7 @@ int conn_terminate(CONN *conn)
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
         DEBUG_LOGGER(conn->logger, "terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, xqueue_total(conn->queue, conn->qid), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        /* clean send queue */
         while(xqueue_total(conn->queue, conn->qid) > 0)
         {
             if((cp = (CHUNK *)xqueue_pop(conn->queue, conn->qid)))
@@ -460,7 +459,8 @@ int conn_terminate(CONN *conn)
                 cp = NULL;
             }
         }
-        WARN_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, xqueue_total(conn->queue, conn->qid), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        if(conn->queue) xqueue_close(conn->queue, conn->qid);
+        DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, xqueue_total(conn->queue, conn->qid), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
 #ifdef HAVE_SSL
         if(conn->ssl)
@@ -1262,10 +1262,10 @@ int conn_push_chunk(CONN *conn, void *data, int size)
             chunk_mem_copy(cp, data, size);
             xqueue_push(conn->queue,conn->qid, cp);
             CONN_READY_WRITE(conn);
-            DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d queue "
-                    "total %d on %s:%d via %d", size, cp->bsize,conn->remote_ip, 
-                    conn->remote_port, xqueue_total(conn->queue, conn->qid), conn->local_ip, 
-                    conn->local_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d queue[%d] "
+                    "total:%d on %s:%d via %d", size, cp->bsize,conn->remote_ip, 
+                    conn->remote_port, conn->qid, xqueue_total(conn->queue, conn->qid), 
+                    conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
         }
     }
@@ -1464,6 +1464,7 @@ void conn_reset(CONN *conn)
         conn->groupid = -1;
         conn->index = -1;
         conn->gindex = -1;
+        conn->qid = 0;
         conn->d_state = 0;
         conn->e_state = 0;
         memset(conn->xids, 0, sizeof(int) * SB_XIDS_MAX);
@@ -1554,11 +1555,6 @@ void conn_clean(CONN *conn)
         MMB_DESTROY(conn->exchange);
         /* Clean chunk */
         chunk_destroy(&(conn->chunk));
-        /* Clean send queue */
-        if(conn->queue) 
-        {
-            xqueue_close(conn->queue, conn->qid);
-        }
 #ifdef HAVE_SSL
         if(conn->ssl)
         {
