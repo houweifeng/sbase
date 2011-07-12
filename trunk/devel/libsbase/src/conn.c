@@ -157,7 +157,7 @@ void conn_buffer_handler(CONN *conn)
 
     if(conn)
     {
-        //event_del(&conn->event, E_WRITE);
+        event_del(&conn->event, E_WRITE);
         ret = conn->packet_reader(conn);
     }
     return ;
@@ -170,7 +170,7 @@ void conn_chunk_handler(CONN *conn)
 
     if(conn)
     {
-        //event_del(&conn->event, E_WRITE);
+        event_del(&conn->event, E_WRITE);
         ret = conn__read__chunk(conn);
     }
     return ;
@@ -187,9 +187,9 @@ void conn_shut_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
+            event_add(&conn->event, E_WRITE);
             qmessage_push(conn->ioqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);
-            event_add(&conn->event, E_WRITE);
         }
         else
         {
