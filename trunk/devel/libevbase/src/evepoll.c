@@ -41,7 +41,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
     {
         if(event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
         {
-            MUTEX_LOCK(evbase->mutex);
+            //MUTEX_LOCK(evbase->mutex);
             DEBUG_LOGGER(evbase->logger, "Ready for adding event[%p][%d] on fd[%d]", event, event->ev_flags, event->ev_fd);
             event->ev_base = evbase;
             /* Delete OLD garbage */
@@ -79,7 +79,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
                     ++(evbase->nfd);
                 }
             }
-            MUTEX_UNLOCK(evbase->mutex);
+            //MUTEX_UNLOCK(evbase->mutex);
         }
     }
     return ret;
@@ -93,7 +93,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
 
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        MUTEX_LOCK(evbase->mutex);
+        //MUTEX_LOCK(evbase->mutex);
         DEBUG_LOGGER(evbase->logger, "Ready for updating event[%p][%d] on fd[%d]", event, event->ev_flags, event->ev_fd);
         if(event->ev_flags & E_READ)
         {
@@ -124,7 +124,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
                 if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
             }
         }
-        MUTEX_UNLOCK(evbase->mutex);
+        //MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;	
@@ -139,7 +139,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
     {
         if(event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
         {
-            MUTEX_LOCK(evbase->mutex);
+            //MUTEX_LOCK(evbase->mutex);
             if(evbase->evlist[event->ev_fd]) 
             {
                 ep_event.data.fd = event->ev_fd;
@@ -156,7 +156,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
                 evbase->evlist[event->ev_fd] = NULL;
                 if(evbase->nfd > 0) --(evbase->nfd);
             }
-            MUTEX_UNLOCK(evbase->mutex);
+            //MUTEX_UNLOCK(evbase->mutex);
         }
         return 0;
     }
@@ -240,7 +240,7 @@ void evepoll_clean(EVBASE *evbase)
     if(evbase)
     {
         close(evbase->efd);
-        MUTEX_DESTROY(evbase->mutex);
+        //MUTEX_DESTROY(evbase->mutex);
         if(evbase->logger){LOGGER_CLEAN(evbase->logger);}
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);

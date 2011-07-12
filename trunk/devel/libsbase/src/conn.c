@@ -214,8 +214,8 @@ void conn_end_handler(CONN *conn)
 
     if(conn)
     {
-        if(xqueue_total(conn->queue, conn->qid) < 1)
-            event_del(&conn->event, E_WRITE);
+        if(xqueue_total(conn->queue, conn->qid) > 0)
+            event_add(&conn->event, E_WRITE);
     }
     return ;
 }
@@ -868,7 +868,7 @@ int conn_write_handler(CONN *conn)
             {
                 if(xqueue_total(conn->queue, conn->qid) < 1) 
                 {
-                    //event_del(&conn->event, E_WRITE);
+                    event_del(&conn->event, E_WRITE);
                     conn->push_message(conn, MESSAGE_END);
                 }
                 ret = 0;
