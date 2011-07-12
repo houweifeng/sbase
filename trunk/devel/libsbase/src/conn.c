@@ -154,6 +154,7 @@ do                                                                              
 void conn_buffer_handler(CONN *conn)
 {
     int ret = -1;
+    CONN_CHECK(conn, D_STATE_CLOSE);
 
     if(conn)
     {
@@ -167,6 +168,7 @@ void conn_buffer_handler(CONN *conn)
 void conn_chunk_handler(CONN *conn)
 {
     int ret = -1;
+    CONN_CHECK(conn, D_STATE_CLOSE);
 
     if(conn)
     {
@@ -179,7 +181,6 @@ void conn_chunk_handler(CONN *conn)
 /* over */
 void conn_shut_handler(CONN *conn)
 {
-
     if(conn)
     {
         if(conn->iodaemon)
@@ -211,6 +212,7 @@ void conn_shut_handler(CONN *conn)
 /* end handler  */
 void conn_end_handler(CONN *conn)
 {
+    CONN_CHECK(conn, D_STATE_CLOSE);
 
     if(conn)
     {
