@@ -99,11 +99,11 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 /* xhttpd index view */
 int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, char *end)
 {
-    char url[HTTP_PATH_MAX], *p = NULL, *e = NULL, *pp = NULL;
-    CB_DATA *block = NULL, *chunk = NULL;
+    char buf[HTTP_BUF_SIZE], url[HTTP_PATH_MAX], *p = NULL, *e = NULL, *pp = NULL;
     int len = 0, n = 0, keepalive = 0;
     struct dirent *ent = NULL;
     unsigned char *s = NULL;
+    CB_DATA *block = NULL;
     struct stat st = {0};
     DIR *dirp = NULL;
 
@@ -179,27 +179,23 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             if(end != p) p += sprintf(p, "<hr noshade>");
             p += sprintf(p, "<em></body></html>");
             len = (p - pp);
-            if((chunk = httpd->newchunk(httpd, HTTP_LINE_SIZE)))
+            p = buf;
+            p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
+                    "Content-Type: text/html; charset=%s\r\n",
+                    LL(len), http_default_charset);
+            if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
             {
-                p = chunk->data;
-                p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
-                        "Content-Type: text/html; charset=%s\r\n",
-                        LL(len), http_default_charset);
-                if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
-                {
-                    p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
-                    if((strncasecmp(http_req->hlines + n, "close", 5)) !=0 )
-                        keepalive = 1;
-                }
-                else 
-                {
-                    p += sprintf(p, "Connection: close\r\n");
-                }
-                p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
-                p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
-                if(conn->send_chunk(conn, chunk, (p - chunk->data)) != 0)
-                    httpd->pushchunk(httpd, (CHUNK *)chunk);
+                p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
+                if((strncasecmp(http_req->hlines + n, "close", 5)) !=0 )
+                    keepalive = 1;
             }
+            else 
+            {
+                p += sprintf(p, "Connection: close\r\n");
+            }
+            p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
+            p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
+            conn->push_chunk(conn, buf, p - buf);
             if(conn->send_chunk(conn, block, len) != 0)
                 httpd->pushchunk(httpd, (CHUNK *)block);
             //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
@@ -576,8 +572,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
          *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL;
     int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0, keepalive = 0;
     off_t from = 0, to = 0, len = 0;
-    struct stat st = {0};
     HTTP_REQ http_req = {0};
+    struct stat st = {0};
     void *dp = NULL;
 
     if(conn && packet)
@@ -735,6 +731,9 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     }
                     else 
                         outfile = file;
+
+                    //if((chunk = httpd->newchunk(httpd, HTTP_LINE_SIZE)))
+                    //{p = chunk->data;
                     p = buf;
                     if(from > 0)
                         p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
@@ -766,7 +765,10 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL),p);p += sprintf(p,"\r\n");
                     p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
-                    conn->push_chunk(conn, buf, (p - buf));
+                    conn->push_chunk(conn, buf, p - buf);
+                    //if(conn->send_chunk(conn, chunk, (p - chunk->data)) != 0)
+                    //    httpd->pushchunk(httpd, (CHUNK *)chunk);
+                    //}
                     conn->push_file(conn, outfile, from, len);
                     if(!keepalive) conn->over(conn);
                     return 0;

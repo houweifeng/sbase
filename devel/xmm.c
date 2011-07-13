@@ -35,7 +35,7 @@ void *xmm_new(size_t size)
         {
             m = mmap(NULL, MMSIZE(size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
             if(m == (void *)-1) m = NULL;
-            else memset(m, 0, MMSIZE(size));
+            //else memset(m, 0, MMSIZE(size));
         }
     }
     return m;
