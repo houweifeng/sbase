@@ -12,7 +12,7 @@
 #define HTTP_IP_MAX 		    16
 #define HTTP_VHOST_MAX     	    256
 #define HTTP_INDEX_MAX     	    32
-#define HTTP_INDEXES_MAX   	    1048576
+#define HTTP_INDEXES_MAX   	    131072
 #define HTTP_URL_PATH_MAX  	    1024
 #define HTTP_PATH_MAX      	    1024
 #define HTTP_BUF_SIZE      	    65536

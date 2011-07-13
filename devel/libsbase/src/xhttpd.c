@@ -27,10 +27,12 @@
 #define HTTP_NOT_FOUND          "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
 #define HTTP_NOT_MODIFIED       "HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NO_CONTENT         "HTTP/1.1 206 No Content\r\nContent-Length: 0\r\n\r\n"
+#define HTTP_LINE_SIZE      65536
+#define HTTP_VIEW_SIZE      131072
 #define LL(x) ((long long)x)
 #define UL(x) ((unsigned long int)x)
 static SBASE *sbase = NULL;
-static SERVICE *service = NULL;
+static SERVICE *httpd = NULL;
 static dictionary *dict = NULL;
 static char *httpd_home = "/tmp/xhttpd/html";
 static char *http_indexes[HTTP_INDEX_MAX];
@@ -97,17 +99,19 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 /* xhttpd index view */
 int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, char *end)
 {
-    char buf[HTTP_BUF_SIZE], url[HTTP_PATH_MAX], *p = NULL, *e = NULL, *pp = NULL;
+    char url[HTTP_PATH_MAX], *p = NULL, *e = NULL, *pp = NULL;
+    CB_DATA *block = NULL, *chunk = NULL;
+    int len = 0, n = 0, keepalive = 0;
     struct dirent *ent = NULL;
     unsigned char *s = NULL;
     struct stat st = {0};
-    int len = 0, n = 0, keepalive = 0;
     DIR *dirp = NULL;
 
     if(conn && file && root && end && (dirp = opendir(file)))
     {
-        if((p = pp = (char *)calloc(1, HTTP_INDEXES_MAX)))
+        if((block = httpd->newchunk(httpd, HTTP_VIEW_SIZE)))
         {
+            p = pp = block->data;
             p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
                     "<head><body><h1 align=center>xhttpd</h1>", root);
             if(*end == '/') --end;
@@ -148,8 +152,8 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
                         p += sprintf(p, "<td><a href='%s' >%s</a></td>", 
                                 url, ent->d_name);
                     }
-                    sprintf(buf, "%s/%s", file, ent->d_name);
-                    if(ent->d_type != DT_DIR && lstat(buf, &st) == 0)
+                    sprintf(url, "%s/%s", file, ent->d_name);
+                    if(ent->d_type != DT_DIR && lstat(url, &st) == 0)
                     {
                         if(st.st_size >= (off_t)HTTP_BYTE_G)
                             p += sprintf(p, "<td> %.1fG </td>", 
@@ -175,27 +179,30 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             if(end != p) p += sprintf(p, "<hr noshade>");
             p += sprintf(p, "<em></body></html>");
             len = (p - pp);
-            p = buf;
-            p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
-                    "Content-Type: text/html; charset=%s\r\n",
-                    LL(len), http_default_charset);
-            if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
+            if((chunk = httpd->newchunk(httpd, HTTP_LINE_SIZE)))
             {
-                p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
-                if((strncasecmp(http_req->hlines + n, "close", 5)) !=0 )
-                    keepalive = 1;
+                p = chunk->data;
+                p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
+                        "Content-Type: text/html; charset=%s\r\n",
+                        LL(len), http_default_charset);
+                if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
+                {
+                    p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
+                    if((strncasecmp(http_req->hlines + n, "close", 5)) !=0 )
+                        keepalive = 1;
+                }
+                else 
+                {
+                    p += sprintf(p, "Connection: close\r\n");
+                }
+                p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
+                p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
+                if(conn->send_chunk(conn, chunk, (p - chunk->data)) != 0)
+                    httpd->pushchunk(httpd, (CHUNK *)chunk);
             }
-            else 
-            {
-                p += sprintf(p, "Connection: close\r\n");
-            }
-            p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
-            p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
-            conn->push_chunk(conn, buf, (p - buf));
-            conn->push_chunk(conn, pp, len);
+            if(conn->send_chunk(conn, block, len) != 0)
+                httpd->pushchunk(httpd, (CHUNK *)block);
             //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
-            free(pp);
-            pp = NULL;
             if(!keepalive) conn->over(conn);
         }
         closedir(dirp);
@@ -551,7 +558,7 @@ int xhttpd_bind_proxy(CONN *conn, char *host, int port)
         {
             session.packet_type = PACKET_PROXY;
             session.timeout = httpd_proxy_timeout;
-            if((new_conn = service->newproxy(service, conn, -1, -1, ip, port, &session)))
+            if((new_conn = httpd->newproxy(httpd, conn, -1, -1, ip, port, &session)))
             {
                 new_conn->start_cstate(new_conn);
                 return 0;
@@ -852,29 +859,29 @@ int sbase_initialize(SBASE *sbase, char *conf)
     sbase->set_evlog_level(sbase, iniparser_getint(dict, "SBASE:evlog_level", 0));
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
     /* XHTTPD */
-    if((service = service_init()) == NULL)
+    if((httpd = service_init()) == NULL)
     {
         fprintf(stderr, "Initialize service failed, %s", strerror(errno));
         _exit(-1);
     }
-    service->family = iniparser_getint(dict, "XHTTPD:inet_family", AF_INET);
-    service->sock_type = iniparser_getint(dict, "XHTTPD:socket_type", SOCK_STREAM);
-    service->ip = iniparser_getstr(dict, "XHTTPD:service_ip");
-    service->port = iniparser_getint(dict, "XHTTPD:service_port", 80);
-    service->init_conns = iniparser_getint(dict, "XHTTPD:init_conns", 0);
-    service->working_mode = iniparser_getint(dict, "XHTTPD:working_mode", WORKING_THREAD);
-    service->service_type = iniparser_getint(dict, "XHTTPD:service_type", S_SERVICE);
-    service->service_name = iniparser_getstr(dict, "XHTTPD:service_name");
-    service->nprocthreads = iniparser_getint(dict, "XHTTPD:nprocthreads", 1);
-    service->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
-    service->niodaemons = iniparser_getint(dict, "XHTTPD:niodaemons", 2);
-    service->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
-    service->set_log(service, iniparser_getstr(dict, "XHTTPD:logfile"));
-    service->set_log_level(service, iniparser_getint(dict, "XHTTPD:log_level", 0));
-    service->session.packet_type=iniparser_getint(dict, "XHTTPD:packet_type",PACKET_DELIMITER);
-    if((service->session.packet_delimiter = iniparser_getstr(dict, "XHTTPD:packet_delimiter")))
+    httpd->family = iniparser_getint(dict, "XHTTPD:inet_family", AF_INET);
+    httpd->sock_type = iniparser_getint(dict, "XHTTPD:socket_type", SOCK_STREAM);
+    httpd->ip = iniparser_getstr(dict, "XHTTPD:service_ip");
+    httpd->port = iniparser_getint(dict, "XHTTPD:service_port", 80);
+    httpd->init_conns = iniparser_getint(dict, "XHTTPD:init_conns", 0);
+    httpd->working_mode = iniparser_getint(dict, "XHTTPD:working_mode", WORKING_THREAD);
+    httpd->service_type = iniparser_getint(dict, "XHTTPD:service_type", S_SERVICE);
+    httpd->service_name = iniparser_getstr(dict, "XHTTPD:service_name");
+    httpd->nprocthreads = iniparser_getint(dict, "XHTTPD:nprocthreads", 1);
+    httpd->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
+    httpd->niodaemons = iniparser_getint(dict, "XHTTPD:niodaemons", 2);
+    httpd->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
+    httpd->set_log(httpd, iniparser_getstr(dict, "XHTTPD:logfile"));
+    httpd->set_log_level(httpd, iniparser_getint(dict, "XHTTPD:log_level", 0));
+    httpd->session.packet_type=iniparser_getint(dict, "XHTTPD:packet_type",PACKET_DELIMITER);
+    if((httpd->session.packet_delimiter = iniparser_getstr(dict, "XHTTPD:packet_delimiter")))
     {
-        p = s = service->session.packet_delimiter;
+        p = s = httpd->session.packet_delimiter;
         while(*p != 0 )
         {
             if(*p == '\\' && *(p+1) == 'n')
@@ -891,20 +898,20 @@ int sbase_initialize(SBASE *sbase, char *conf)
                 *s++ = *p++;
         }
         *s++ = 0;
-        service->session.packet_delimiter_length = strlen(service->session.packet_delimiter);
+        httpd->session.packet_delimiter_length = strlen(httpd->session.packet_delimiter);
     }
-    service->session.buffer_size = iniparser_getint(dict, "XHTTPD:buffer_size", SB_BUF_SIZE);
-    service->session.packet_reader = &xhttpd_packet_reader;
-    service->session.packet_handler = &xhttpd_packet_handler;
-    service->session.data_handler = &xhttpd_data_handler;
-    service->session.oob_handler = &xhttpd_oob_handler;
+    httpd->session.buffer_size = iniparser_getint(dict, "XHTTPD:buffer_size", SB_BUF_SIZE);
+    httpd->session.packet_reader = &xhttpd_packet_reader;
+    httpd->session.packet_handler = &xhttpd_packet_handler;
+    httpd->session.data_handler = &xhttpd_data_handler;
+    httpd->session.oob_handler = &xhttpd_oob_handler;
     cacert_file = iniparser_getstr(dict, "XHTTPD:cacert_file");
     privkey_file = iniparser_getstr(dict, "XHTTPD:privkey_file");
     if(cacert_file && privkey_file && iniparser_getint(dict, "XHTTPD:is_use_SSL", 0))
     {
-        service->is_use_SSL = 1;
-        service->cacert_file = cacert_file;
-        service->privkey_file = privkey_file;
+        httpd->is_use_SSL = 1;
+        httpd->cacert_file = cacert_file;
+        httpd->privkey_file = privkey_file;
     }
     //httpd home
     TRIETAB_INIT(http_headers_map);
@@ -1006,12 +1013,12 @@ int sbase_initialize(SBASE *sbase, char *conf)
     }
     /* server */
     //fprintf(stdout, "Parsing for server...\n");
-    return sbase->add_service(sbase, service);
+    return sbase->add_service(sbase, httpd);
     /*
-       if(service->sock_type == SOCK_DGRAM 
+       if(httpd->sock_type == SOCK_DGRAM 
        && (p = iniparser_getstr(dict, "XHTTPD:multicast")) && ret == 0)
        {
-       ret = service->add_multicast(service, p);
+       ret = httpd->add_multicast(service, p);
        }
        return ret;
        */
@@ -1074,17 +1081,17 @@ int main(int argc, char **argv)
         return -1;
     }
     fprintf(stdout, "Initialized successed\n");
-    if(service->sock_type == SOCK_DGRAM 
+    if(httpd->sock_type == SOCK_DGRAM 
             && (p = iniparser_getstr(dict, "XHTTPD:multicast")))
     {
-        if(service->add_multicast(service, p) != 0)
+        if(httpd->add_multicast(httpd, p) != 0)
         {
             fprintf(stderr, "add multicast:%s failed, %s", p, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
         }
         p = "224.1.1.168";
-        if(service->add_multicast(service, p) != 0)
+        if(httpd->add_multicast(httpd, p) != 0)
         {
             fprintf(stderr, "add multicast:%s failed, %s", p, strerror(errno));
             exit(EXIT_FAILURE);
