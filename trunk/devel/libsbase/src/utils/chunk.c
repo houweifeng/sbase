@@ -288,7 +288,7 @@ char *chunk_mmap(void *chunk)
         {
             if(CHK(chunk)->mmap) munmap(CHK(chunk)->mmap, MMAP_CHUNK_SIZE);
             offset = (CHK(chunk)->offset / MMAP_PAGE_SIZE) * MMAP_PAGE_SIZE;
-            if((CHK(chunk)->mmap = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_PRIVATE, 
+            if((CHK(chunk)->mmap = (char *)mmap(NULL, MMAP_CHUNK_SIZE, PROT_READ, MAP_SHARED, 
                             CHK(chunk)->fd, offset)) && CHK(chunk)->mmap != (void *)-1)
             {
                 CHK(chunk)->mmoff = CHK(chunk)->offset - offset;

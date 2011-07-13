@@ -214,14 +214,19 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         sigpipe_ignore();
-        /*
-        if((service->cond = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        struct ip_mreq mreq;
+        memset(&mreq, 0, sizeof(struct ip_mreq));
+        mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");
+        mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
+        if((service->cond = socket(AF_INET, SOCK_DGRAM, 0)) < 0
+            || setsockopt(service->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
+                        sizeof(struct ip_mreq)) != 0)
         {
-            FATAL_LOGGER(service->logger, "new socket() failed, %s", strerror(errno));
-            return 0;
+            FATAL_LOGGER(service->logger, "new cond socket() failed, %s", strerror(errno));
+            _exit(-1);
         }
-        */
         //iodaemon 
+        /*
         if(service->use_iodaemon)
         {
             if((service->iodaemon = procthread_init(1)))
@@ -243,56 +248,64 @@ running_threads:
                 exit(EXIT_FAILURE);
                 return -1;
             }
-        }
-        if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
-        //if(service->nprocthreads <= 0) service->nprocthreads = 2;
-        if(service->nprocthreads > 0 && (service->procthreads = (PROCTHREAD **)xmm_new(
-                        service->nprocthreads * sizeof(PROCTHREAD *))))
+        }*/
+        /* initialize iodaemons */
+        if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
+        if(service->niodaemons < 1) service->niodaemons = 1;
+        if(service->niodaemons > 0)
         {
-            for(i = 0; i < service->nprocthreads; i++)
+            for(i = 0; i < service->niodaemons; i++)
             {
-                if(service->use_iodaemon && service->iodaemon)
+                if((service->iodaemons[i] = procthread_init(service->cond)))
                 {
-                    if((service->procthreads[i] = procthread_init(0)))
+                    PROCTHREAD_SET(service, service->iodaemons[i]);
+                    if(service->sbase->evlogfile && service->sbase->evlog_level > 0)
                     {
-                        PROCTHREAD_SET(service, service->procthreads[i]);
-                        service->procthreads[i]->evbase = service->iodaemon->evbase;
-                        service->procthreads[i]->iodaemon = service->iodaemon;
-                        service->procthreads[i]->ioqmessage = service->iodaemon->message_queue;
-                        ret = 0;
+                        sprintf(logfile, "%s_%s_iodemon%d", service->sbase->evlogfile, service->service_name, i);
+                        service->iodaemons[i]->evbase->set_logfile(service->iodaemons[i]->evbase, logfile);
+                        service->iodaemons[i]->evbase->set_log_level(service->iodaemons[i]->evbase, service->sbase->evlog_level);
                     }
-                    else
-                    {
-                        FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
-                                strerror(errno));
-                        exit(EXIT_FAILURE);
-                        return -1;
-                    }
+                    ret = 0;
                 }
                 else
                 {
-                    if((service->procthreads[i] = procthread_init(1)))
-                    {
-                        PROCTHREAD_SET(service, service->procthreads[i]);
-                        service->procthreads[i]->ioqmessage = service->procthreads[i]->message_queue;
-                        //sprintf(logfile, "/tmp/evbase_%s_thread_%d.log", service->service_name, i);
-                        //if(service->use_cond_wait)
-                        //service->procthreads[i]->evbase->set_logfile(service->procthreads[i]->evbase, logfile);
-                        ret = 0;
-                    }
-                    else
-                    {
-                        FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
-                                strerror(errno));
-                        exit(EXIT_FAILURE);
-                        return -1;
-                    }
+                    FATAL_LOGGER(service->logger, "Initialize iodaemons pool failed, %s",
+                            strerror(errno));
+                    exit(EXIT_FAILURE);
+                    return -1;
+                }
+                NEW_PROCTHREAD("iodaemons", i, service->iodaemons[i]->threadid, 
+                        service->iodaemons[i], service->logger);
+            }
+        }
+        /* initialize threads  */
+        if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
+        if(service->nprocthreads < 1) service->nprocthreads = 2;
+        if(service->nprocthreads > 0)
+        {
+            for(i = 0; i < service->nprocthreads; i++)
+            {
+                if((service->procthreads[i] = procthread_init(0)))
+                {
+                    PROCTHREAD_SET(service, service->procthreads[i]);
+                    x = service->nprocthreads % service->niodaemons;
+                    service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
+                    service->procthreads[i]->iodaemon = service->iodaemons[x];
+                    service->procthreads[i]->ioqmessage = service->iodaemons[x]->message_queue;
+                    ret = 0;
+                }
+                else
+                {
+                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
+                            strerror(errno));
+                    exit(EXIT_FAILURE);
+                    return -1;
                 }
                 NEW_PROCTHREAD("procthreads", i, service->procthreads[i]->threadid, 
                         service->procthreads[i], service->logger);
             }
         }
-        //daemon 
+        /* daemon */ 
         if((service->daemon = procthread_init(0)))
         {
             service->daemon->evtimer = service->etimer;
@@ -308,10 +321,9 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        //daemon worker threads 
+        /* daemon worker threads */
         if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
-        if(service->ndaemons > 0 && (service->daemons = (PROCTHREAD **)xmm_new(
-                        service->ndaemons * sizeof(PROCTHREAD *))))
+        if(service->ndaemons > 0)
         {
             for(i = 0; i < service->ndaemons; i++)
             {
@@ -1399,6 +1411,7 @@ void service_stop(SERVICE *service)
             }
         }
         //iodaemon
+        /*
         if(service->iodaemon)
         {
             DEBUG_LOGGER(service->logger, "Ready for stop daemon");
@@ -1408,8 +1421,23 @@ void service_stop(SERVICE *service)
             DEBUG_LOGGER(service->logger, "Joinning daemon thread");
             DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
+        */
+        //iodaemons
+        if(service->niodaemons > 0)
+        {
+            DEBUG_LOGGER(service->logger, "Ready for stop iodaemons");
+            for(i = 0; i < service->niodaemons; i++)
+            {
+                if(service->iodaemons[i])
+                {
+                    service->iodaemons[i]->stop(service->iodaemons[i]);
+                    PROCTHREAD_EXIT(service->iodaemons[i]->threadid, NULL);
+                }
+            }
+            DEBUG_LOGGER(service->logger, "over for stop iodaemons");
+        }
         //threads
-        if(service->procthreads && service->nprocthreads > 0)
+        if(service->nprocthreads > 0)
         {
             DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
@@ -1423,9 +1451,9 @@ void service_stop(SERVICE *service)
             DEBUG_LOGGER(service->logger, "over for stop threads");
         }
         //daemons
-        if(service->daemons && service->ndaemons > 0)
+        if(service->ndaemons > 0)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop daemonss");
+            DEBUG_LOGGER(service->logger, "Ready for stop daemons");
             for(i = 0; i < service->ndaemons; i++)
             {
                 if(service->daemons[i])
@@ -1452,6 +1480,7 @@ void service_stop(SERVICE *service)
         event_destroy(&service->event);
         DEBUG_LOGGER(service->logger, "over for remove event");
         if(service->fd > 0)close(service->fd);
+        if(service->cond > 0)close(service->cond);
         DEBUG_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
     return ;
@@ -1558,21 +1587,22 @@ void service_clean(SERVICE *service)
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
         if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
-        if(service->iodaemon) service->iodaemon->clean(service->iodaemon);
+        //if(service->iodaemon) service->iodaemon->clean(service->iodaemon);
         //clean procthreads
-        if(service->procthreads && service->nprocthreads)
+        if(service->nprocthreads > 0)
         {
             for(i = 0; i < service->nprocthreads; i++)
             {
+                if(service->iodaemons[i])
+                    service->iodaemons[i]->clean(service->iodaemons[i]);
                 if(service->procthreads[i])
-                {
                     service->procthreads[i]->clean(service->procthreads[i]);
-                }
             }
-            xmm_free(service->procthreads, sizeof(PROCTHREAD));
+            //xmm_free(service->iodaemons, sizeof(PROCTHREAD *) * service->nprocthreads);
+            //xmm_free(service->procthreads, sizeof(PROCTHREAD *) * service->nprocthreads);
         }
         //clean daemons
-        if(service->daemons && service->ndaemons)
+        if(service->ndaemons > 0)
         {
             for(i = 0; i < service->ndaemons; i++)
             {
@@ -1581,7 +1611,7 @@ void service_clean(SERVICE *service)
                     service->daemons[i]->clean(service->daemons[i]);
                 }
             }
-            xmm_free(service->daemons, sizeof(PROCTHREAD));
+            //xmm_free(service->daemons, sizeof(PROCTHREAD *) * service->ndaemons);
         }
         //clean connection_queue
         DEBUG_LOGGER(service->logger, "Ready for clean connection_chunk:%d", service->nqconns);

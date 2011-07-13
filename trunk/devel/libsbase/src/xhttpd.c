@@ -867,7 +867,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     service->service_name = iniparser_getstr(dict, "XHTTPD:service_name");
     service->nprocthreads = iniparser_getint(dict, "XHTTPD:nprocthreads", 1);
     service->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
-    service->use_iodaemon = iniparser_getint(dict, "XHTTPD:use_iodaemon", 1);
+    service->niodaemons = iniparser_getint(dict, "XHTTPD:niodaemons", 2);
     service->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
     service->set_log(service, iniparser_getstr(dict, "XHTTPD:logfile"));
     service->set_log_level(service, iniparser_getint(dict, "XHTTPD:log_level", 0));
