@@ -250,8 +250,8 @@ typedef struct _SERVICE
     int family;
     int heartbeat_interval;
     int working_mode;
-    int use_iodaemon;
     int nprocthreads;
+    int niodaemons;
     int ndaemons;
     int is_use_SSL;
     int nqconns;
@@ -275,9 +275,9 @@ typedef struct _SERVICE
 
     /* working mode */
     struct _PROCTHREAD *daemon;
-    struct _PROCTHREAD *iodaemon;
-    struct _PROCTHREAD **procthreads;
-    struct _PROCTHREAD **daemons;
+    struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
+    struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
+    struct _PROCTHREAD *daemons[SB_THREADS_MAX];
 
     /* socket and inet addr option  */
     char *ip;

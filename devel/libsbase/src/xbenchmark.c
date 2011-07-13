@@ -579,7 +579,7 @@ invalid_url:
         service->working_mode = 1;
         service->nprocthreads = workers;
         service->ndaemons = 0;
-        service->use_iodaemon = 1;
+        service->niodaemons = 2;
         service->use_cond_wait = 1;
         service->service_type = C_SERVICE;
         service->family = AF_INET;

@@ -359,7 +359,7 @@ int conn_close(CONN *conn)
 
     if(conn)
     {
-        DEBUG_LOGGER(conn->logger, "Ready for close conn[%p] remote[%s:%d] local[%s:%d] via %d",
+        DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] local[%s:%d] via %d",
                 conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         conn->over_cstate(conn);
         conn->over_evstate(conn);
@@ -378,7 +378,7 @@ int conn_over(CONN *conn)
     if(conn)
     {
         MUTEX_LOCK(conn->mutex);
-        DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        WARN_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->d_state == D_STATE_FREE) conn_over_chunk(conn);
         MUTEX_UNLOCK(conn->mutex);
         return 0;
@@ -393,7 +393,7 @@ int conn_shut(CONN *conn, int d_state, int e_state)
     {
         MUTEX_LOCK(conn->mutex);
         conn->over_timeout(conn);
-        DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "
+        WARN_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "
                 "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
                 conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         if(conn->d_state == D_STATE_FREE && conn->fd > 0)
@@ -420,7 +420,7 @@ int conn_terminate(CONN *conn)
     if(conn)
     {
         parent = (PROCTHREAD *)conn->parent;
-        DEBUG_LOGGER(conn->logger, "Ready for closeing conn[%p] remote[%s:%d] local[%s:%d] via %d "
+        WARN_LOGGER(conn->logger, "Ready for terminate-conn[%p] remote[%s:%d] local[%s:%d] via %d "
                 "qtotal:%d d_state:%d i_state:%d c_state:%d s_state:%d e_state:%d", conn, 
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd,
                 xqueue_total(conn->queue, conn->qid), conn->d_state, conn->i_state, 
@@ -745,8 +745,9 @@ int conn_read_handler(CONN *conn)
 
     if(conn)
     {
-        DEBUG_LOGGER(conn->logger, "ready-reading conn[%p] buffer[%d/%d] packet[%d/%d] oob[%d/%d] cache[%d/%d] exchange[%d/%d] chunk[%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer), MMB_LEFT(conn->packet), MMB_SIZE(conn->packet), MMB_LEFT(conn->oob), MMB_SIZE(conn->oob), MMB_LEFT(conn->cache), MMB_SIZE(conn->cache), MMB_LEFT(conn->exchange), MMB_SIZE(conn->exchange), LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        WARN_LOGGER(conn->logger, "Ready for reading conn[%p] buffer[%d/%d] packet[%d/%d] oob[%d/%d] cache[%d/%d] exchange[%d/%d] chunk[%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer), MMB_LEFT(conn->packet), MMB_SIZE(conn->packet), MMB_LEFT(conn->oob), MMB_SIZE(conn->oob), MMB_LEFT(conn->cache), MMB_SIZE(conn->cache), MMB_LEFT(conn->exchange), MMB_SIZE(conn->exchange), LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* Receive OOB */
+        /*
         if((n = MMB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
             conn->recv_oob_total += n;
@@ -761,6 +762,7 @@ int conn_read_handler(CONN *conn)
             // CONN TIMER sample 
             return ret = 0;
         }
+        */
         /* Receive to chunk with chunk_read_state before reading to buffer */
         if(conn->s_state == S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
@@ -810,7 +812,7 @@ int conn_write_handler(CONN *conn)
 
     if(conn && conn->queue && xqueue_total(conn->queue, conn->qid) > 0)
     {
-        DEBUG_LOGGER(conn->logger, "Ready for send data to %s:%d on %s:%d via %d "
+        WARN_LOGGER(conn->logger, "Ready for send-data to %s:%d on %s:%d via %d "
                 "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
                 conn->local_ip, conn->local_port, conn->fd, xqueue_total(conn->queue, conn->qid),
                 conn->d_state, conn->i_state);
@@ -871,7 +873,7 @@ int conn_write_handler(CONN *conn)
                 if(xqueue_total(conn->queue, conn->qid) < 1) 
                 {
                     event_del(&conn->event, E_WRITE);
-                    conn->push_message(conn, MESSAGE_END);
+                    //conn->push_message(conn, MESSAGE_END);
                 }
                 ret = 0;
             }
@@ -894,7 +896,7 @@ int conn_packet_reader(CONN *conn)
     {
         data = PCB(conn->buffer);
         packet_type = conn->session.packet_type;
-        DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%d]", 
+        WARN_LOGGER(conn->logger, "Reading packet type[%d] buffer[%d]", 
                 packet_type, MMB_NDATA(conn->buffer));
         /* Remove invalid packet type */
         if(!(packet_type & PACKET_ALL))
@@ -1229,7 +1231,7 @@ int conn_recv_chunk(CONN *conn, int size)
 
     if(conn && size > 0)
     {
-        DEBUG_LOGGER(conn->logger, "Ready for recv chunk size:%d from %s:%d on %s:%d via %d",
+        DEBUG_LOGGER(conn->logger, "Ready for recv-chunk size:%d from %s:%d on %s:%d via %d",
                 size, conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
         chunk_mem(&conn->chunk, size);
@@ -1281,7 +1283,7 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
 
     if(conn && filename && offset >= 0 && size > 0)
     {
-        DEBUG_LOGGER(conn->logger, "Ready for recv chunk file:%s offset:%lld size:%lld"
+        DEBUG_LOGGER(conn->logger, "Ready for recv-chunk file:%s offset:%lld size:%lld"
                 " from %s:%d on %s:%d via %d", filename, LL(offset), LL(size), conn->remote_ip, 
                 conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         chunk_file(&conn->chunk, filename, offset, size);

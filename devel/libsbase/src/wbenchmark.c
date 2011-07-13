@@ -26,7 +26,7 @@ static int ncompleted = 0;
 static int is_quiet = 0;
 static int is_daemon = 0;
 static int is_keepalive = 0;
-static int workers = 32;
+static int workers = 8;
 static int is_post = 0;
 static int is_verbosity = 0;
 static char *server_host = NULL;
@@ -562,8 +562,8 @@ invalid_url:
     {
         service->working_mode = 1;
         service->nprocthreads = workers;
+        service->niodaemons = 2;
         service->ndaemons = 0;
-        service->use_iodaemon = 1;
         service->use_cond_wait = 1;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
