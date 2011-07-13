@@ -39,6 +39,7 @@ typedef struct _MUTEX
     pthread_mutex_t mutex;
     pthread_cond_t  cond;
     int nowait;
+    int bits;
 }MUTEX;
 #endif
 #endif

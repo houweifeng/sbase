@@ -57,6 +57,7 @@ typedef struct _LOGGER
 	int fd ;
     int total;
     int level;
+    int bits;
 }LOGGER;
 #endif
 #ifdef HAVE_PTHREAD
