@@ -60,6 +60,7 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
                 }
             }
         }
+        MUTEX_UNLOCK(q->mutex);
         if(msg)
         {
             msg->msg_id = id;
@@ -70,6 +71,7 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
             msg->parent = parent;
             msg->arg = arg;
             msg->next = NULL;
+            MUTEX_LOCK(q->mutex);
             if(q->last)
             {
                 q->last->next = msg;
@@ -80,8 +82,8 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
                 q->first = q->last = msg;
             }
             ++(q->total);
+            MUTEX_UNLOCK(q->mutex);
         }
-        MUTEX_UNLOCK(q->mutex);
     }
     return ;
 }

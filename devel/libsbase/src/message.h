@@ -70,7 +70,6 @@ typedef struct _MESSAGE
 #define QMSG_LINE_NUM 1024
 typedef struct _QMESSAGE
 {
-    int status;
     int total;
     int qtotal;
     int nleft;

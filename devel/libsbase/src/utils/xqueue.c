@@ -10,7 +10,7 @@ void *xqueue_init()
     XQUEUE *q = NULL;
     int i = 0, j = 0;
 
-    if((q = (XQUEUE *)xmm_mnew(sizeof(XQUEUE)))) 
+    if((q = (XQUEUE *)xmm_new(sizeof(XQUEUE)))) 
     {
         memset(q, 0, sizeof(XQUEUE));
         for(i = 1; i < XQ_ROOTS_MAX; i++)
@@ -38,6 +38,7 @@ int xqueue_new(void *xqueue)
             q->roots[qid].status = 1;
         }
         MUTEX_UNLOCK(q->mutex);
+        MUTEX_RESET(q->roots[qid].mutex);
     }
     return qid;
 }
@@ -73,6 +74,7 @@ void xqueue_close(void *xqueue, int qid)
         }
         memset(root, 0, sizeof(XQROOT));
         q->waits[q->nwaits++] = qid;
+        MUTEX_DESTROY(root->mutex);
         MUTEX_UNLOCK(q->mutex);
     }
     return ;
@@ -88,9 +90,9 @@ void xqueue_push(void *xqueue, int qid, void *ptr)
 
     if(q)
     {
-        MUTEX_LOCK(q->mutex);
         if(q && qid > 0 && qid < XQ_ROOTS_MAX && (root = &(q->roots[qid])))
         {
+            MUTEX_LOCK(q->mutex);
             if((node = q->left))
             {
                 q->left = node->next;
@@ -98,7 +100,7 @@ void xqueue_push(void *xqueue, int qid, void *ptr)
             }
             else 
             {
-                if((nodes = (XQNODE *)xmm_mnew(sizeof(XQNODE) * XQ_NODES_MAX)))
+                if((nodes = (XQNODE *)xmm_new(sizeof(XQNODE) * XQ_NODES_MAX)))
                 {
                     q->list[q->nlist++] = nodes;
                     for(i = 1; i < XQ_NODES_MAX; i++)
@@ -110,11 +112,13 @@ void xqueue_push(void *xqueue, int qid, void *ptr)
                 }
                 else
                 {
-                    //fprintf(stderr, "xmm_new failed, %s\n", strerror(errno));
+                    //fprintf(stderr, xmm_new failed, %s\n", strerror(errno));
                 }
             }
+            MUTEX_UNLOCK(q->mutex);
             if(node)
             {
+                MUTEX_LOCK(root->mutex);
                 node->ptr = ptr;
                 if(root->last)
                 {
@@ -127,13 +131,9 @@ void xqueue_push(void *xqueue, int qid, void *ptr)
                 }
                 node->next = NULL;
                 root->total++;
-            }
-            else
-            {
-                //fprintf(stderr, "push_node(%p) failed, %s\n", ptr, strerror(errno));
+                MUTEX_UNLOCK(root->mutex);
             }
         }
-        MUTEX_UNLOCK(q->mutex);
     }
     return ;
 }
@@ -164,7 +164,7 @@ void *xqueue_pop(void *xqueue, int qid)
 
     if(q && qid > 0 && qid < XQ_ROOTS_MAX && (root = &(q->roots[qid])))
     {
-        MUTEX_LOCK(q->mutex);
+        MUTEX_LOCK(root->mutex);
         if((node = root->first))
         {
             ptr = node->ptr;
@@ -172,12 +172,14 @@ void *xqueue_pop(void *xqueue, int qid)
             {
                 root->last = NULL;
             }
+            MUTEX_LOCK(q->mutex);
             node->next = q->left;
             q->left = node;
             q->nleft++;
+            MUTEX_UNLOCK(q->mutex);
             --(root->total);
         }
-        MUTEX_UNLOCK(q->mutex);
+        MUTEX_UNLOCK(root->mutex);
     } 
     return ptr;
 }

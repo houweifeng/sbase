@@ -47,7 +47,7 @@ int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 /* check() */
 int mmblock_check(MMBLOCK *mmblock)
 {
-	if(mmblock && mmblock->left < MMBLOCK_MIN)
+	if(mmblock)
 	{
 		return mmblock_incre(mmblock, MMBLOCK_BASE);		
 	}
@@ -61,7 +61,7 @@ int mmblock_recv(MMBLOCK *mmblock, int fd, int flag)
 
 	if(mmblock && fd > 0)
 	{
-		mmblock_check(mmblock);
+        if(mmblock->left < MMBLOCK_MIN) mmblock_incre(mmblock, MMBLOCK_BASE);
 		if(mmblock->data && mmblock->end && mmblock->left > 0
 		&& (n = recv(fd, mmblock->end, mmblock->left, flag)) > 0)
 		{
@@ -80,7 +80,7 @@ int mmblock_read(MMBLOCK *mmblock, int fd)
 
 	if(mmblock && fd > 0)
 	{
-		mmblock_check(mmblock);
+        if(mmblock->left < MMBLOCK_MIN) mmblock_incre(mmblock, MMBLOCK_BASE);
 		if(mmblock->data && mmblock->end && mmblock->left > 0
 		&& (n = read(fd, mmblock->end, mmblock->left)) > 0)
 		{
@@ -98,7 +98,7 @@ int mmblock_read_SSL(MMBLOCK *mmblock, void *ssl)
 	int n = -1;
 	if(mmblock && ssl)
 	{
-		mmblock_check(mmblock);
+        if(mmblock->left < MMBLOCK_MIN) mmblock_incre(mmblock, MMBLOCK_BASE);
 #ifdef HAVE_SSL
 		if(mmblock->data && mmblock->end && mmblock->left > 0
 		&& (n = SSL_read(XSSL(ssl), mmblock->end, mmblock->left)) > 0)
@@ -171,7 +171,7 @@ void mmblock_reset(MMBLOCK *mmblock)
         }
 		else
 		{
-            if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
+            //if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
 			mmblock->end = mmblock->data;
 			mmblock->left = mmblock->size;
 			mmblock->ndata = 0;

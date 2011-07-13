@@ -77,14 +77,15 @@ void procthread_run(void *arg)
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                i = pth->evbase->loop(pth->evbase, 0, &tv);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
                     qmessage_handler(pth->message_queue, pth->logger);
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
-                    //i = 1;
+                    i = 0;
                 }
+                //if(i  < 1) usleep(1000);
             }while(pth->running_status);
             DEBUG_LOGGER(pth->logger, "ready to exit iodaemon");
         }
@@ -363,7 +364,7 @@ void procthread_terminate(PROCTHREAD *pth)
         pth->lock       = 1;
         pth->running_status = 0;
         pth->wakeup(pth);
-        WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
+        //WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
 }

@@ -19,6 +19,7 @@ typedef struct _XQROOT
 {
     int total;
     int status;
+    MUTEX mutex;
     XQNODE *first;
     XQNODE *last;
 }XQROOT;
