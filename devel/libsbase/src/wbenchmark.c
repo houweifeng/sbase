@@ -63,6 +63,8 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
     return conn;
 }
 
+
+
 /* http request */
 int http_request(CONN *conn)
 {
@@ -92,7 +94,7 @@ int http_request(CONN *conn)
                 p = buf;
                 p += sprintf(p, "POST /%s HTTP/1.1\r\n", path);
                 p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
-                if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+                if(is_keepalive) p += sprintf(p, "Connection: Keep-Alive\r\n");
                 p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
                 p += sprintf(p, "\r\n");
                 if(strlen(server_argv) > 0) p += sprintf(p, "%s", server_argv);
@@ -106,7 +108,7 @@ int http_request(CONN *conn)
                 else 
                     p += sprintf(p, "GET /%s HTTP/1.1\r\n", path);
                 p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
-                if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+                if(is_keepalive) p += sprintf(p, "Connection: Keep-Alive\r\n");
                 p += sprintf(p, "\r\n");
                 n = p - buf;
             }
@@ -173,11 +175,13 @@ int http_over(CONN *conn, int respcode)
         }
         if(m < ntasks)
         {
-            if(conn->d_state  == 0 && is_keepalive && respcode != 0) 
+            if(conn->d_state  == 0 && is_keepalive && respcode == 200) 
+            {
                 return http_request(conn);
+            }
             else
             {
-                conn->close(conn);
+                if(is_keepalive) conn->close(conn);
                 if(respcode != 0 && respcode != 200)nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 {
@@ -194,6 +198,17 @@ int http_over(CONN *conn, int respcode)
         {
             return http_show_state(n);
         }
+    }
+    return -1;
+}
+
+int http_check_over(CONN *conn)
+{
+    if(conn)
+    {
+        conn->over_timeout(conn);
+        if(is_keepalive) return http_over(conn, conn->s_id);
+        return 0;
     }
     return -1;
 }
@@ -223,11 +238,14 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             if(*s >= '0' && *s <= '9') respcode = atoi(s);
         }
         conn->s_id = respcode;
+        /*
         if(respcode != 200)
         {
             //fprintf(stdout, "HTTP:%s\n", p);
+            conn->over_timeout(conn);
             return http_over(conn, respcode);
         }
+        */
         //check Content-Length
         if((s = strstr(p, "Content-Length")) || (s = strstr(p, "content-length")))
         {
@@ -239,9 +257,14 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             }
             if(*s >= '0' && *s <= '9' && (len = atoll(s)) > 0) 
                 conn->recv_chunk(conn, len);
-            else 
-                return http_over(conn, respcode);
-            
+            else
+            {
+                return http_check_over(conn);
+            }
+        }
+        else
+        {
+                return http_check_over(conn);
         }
     }
     return -1;
@@ -251,8 +274,7 @@ int benchmark_data_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA 
 {
     if(conn)
     {
-        conn->over_timeout(conn);
-        return http_over(conn, conn->s_id);
+        return http_check_over(conn);
     }
     return 0;
 }
@@ -302,6 +324,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
             WARN_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
         }
         ntimeout++;
+        conn->over_timeout(conn);
         conn->close(conn);
         return http_over(conn, 0);
     }
@@ -489,7 +512,7 @@ invalid_url:
         p = request;
         p += sprintf(p, "POST /%s HTTP/1.1\r\n", server_url);
         p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
-        if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+        if(is_keepalive) p += sprintf(p, "Connection: Keep-Alive\r\n");
         p += sprintf(p, "Content-Length: %d\r\n\r\n", (int)strlen(server_argv));
         p += sprintf(p, "\r\n");
         if(strlen(server_argv)) p += sprintf(p, "%s", server_argv);
@@ -503,7 +526,7 @@ invalid_url:
         else 
             p += sprintf(p, "GET /%s HTTP/1.1\r\n", server_url);
         p += sprintf(p, "Host: %s:%d\r\n", server_host, server_port);
-        if(is_keepalive) p += sprintf(p, "Connection: KeepAlive\r\n");
+        if(is_keepalive) p += sprintf(p, "Connection: Keep-Alive\r\n");
         p += sprintf(p, "\r\n");
         request_len = p - request;
     }
