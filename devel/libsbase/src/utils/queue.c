@@ -31,7 +31,7 @@ void queue_push(void *queue, void *ptr)
         else 
         {
             if((k = q->nlist) < QNODE_LINE_MAX 
-                    && (nodes = (QNODE *)xmm_new(QNODE_LINE_NUM * sizeof(QNODE))))
+                    && (nodes = (QNODE *)xmm_mnew(QNODE_LINE_NUM * sizeof(QNODE))))
             {
                 q->list[k] = nodes;
                 q->nlist++;

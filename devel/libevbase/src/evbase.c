@@ -95,7 +95,7 @@ EVBASE *evbase_init()
 {
     EVBASE *evbase = NULL;
 
-    if((evbase = (EVBASE *)xmm_new(sizeof(EVBASE))))
+    if((evbase = (EVBASE *)xmm_mnew(sizeof(EVBASE))))
     {
         memset(evbase, 0, sizeof(EVBASE));
         MUTEX_RESET(evbase->mutex);

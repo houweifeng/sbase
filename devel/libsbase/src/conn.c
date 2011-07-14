@@ -1609,9 +1609,8 @@ CONN *conn_init()
 {
     CONN *conn = NULL;
 
-    if((conn = (CONN *)xmm_new(sizeof(CONN))))
+    if((conn = (CONN *)xmm_mnew(sizeof(CONN))))
     {
-        memset(conn, 0, sizeof(CONN));
         conn->groupid = -1;
         conn->index = -1;
         conn->gindex = -1;

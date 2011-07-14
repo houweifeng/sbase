@@ -67,7 +67,7 @@ int evtimer_add(EVTIMER *evtimer, off_t timeout, EVTCALLBACK *handler, void *arg
         else
         {
             if((x = evtimer->nevlist) < EVTNODE_LINE_MAX 
-                    && (node = (EVTNODE *)xmm_new(sizeof(EVTNODE) * EVTNODE_LINE_NUM)))
+                    && (node = (EVTNODE *)xmm_mnew(sizeof(EVTNODE) * EVTNODE_LINE_NUM)))
             {
                 evtimer->evlist[x] = node;
                 evtimer->nevlist++;
@@ -239,7 +239,7 @@ EVTIMER *evtimer_init()
 {
     EVTIMER *evtimer = NULL;
 
-    if((evtimer = (EVTIMER *)xmm_new(sizeof(EVTIMER))))
+    if((evtimer = (EVTIMER *)xmm_mnew(sizeof(EVTIMER))))
     {
         MUTEX_RESET(evtimer->mutex);
     }

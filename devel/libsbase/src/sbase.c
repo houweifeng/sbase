@@ -295,7 +295,7 @@ void sbase_clean(SBASE *sbase)
 SBASE *sbase_init()
 {
     SBASE *sbase = NULL;
-    if((sbase = (SBASE *)xmm_new(sizeof(SBASE))))
+    if((sbase = (SBASE *)xmm_mnew(sizeof(SBASE))))
     {
         sbase->evtimer          = EVTIMER_INIT();
         sbase->message_queue    = qmessage_init();

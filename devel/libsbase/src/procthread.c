@@ -417,7 +417,7 @@ PROCTHREAD *procthread_init(int cond)
 {
     PROCTHREAD *pth = NULL;
 
-    if((pth = (PROCTHREAD *)xmm_new(sizeof(PROCTHREAD))))
+    if((pth = (PROCTHREAD *)xmm_mnew(sizeof(PROCTHREAD))))
     {
         if(cond  > 0)
         {

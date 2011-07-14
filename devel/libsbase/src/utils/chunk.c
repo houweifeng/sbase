@@ -11,7 +11,7 @@
 CHUNK *chunk_init()
 {
     CHUNK *chunk = NULL;
-    chunk = (CHUNK *)xmm_new(sizeof(CHUNK));
+    chunk = (CHUNK *)xmm_mnew(sizeof(CHUNK));
     return chunk;
 }
 
