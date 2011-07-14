@@ -11,7 +11,7 @@
 MMBLOCK *mmblock_init()
 {
 	MMBLOCK *mmblock = NULL;
-	mmblock = (MMBLOCK *)xmm_new(sizeof(MMBLOCK));
+	mmblock = (MMBLOCK *)xmm_mnew(sizeof(MMBLOCK));
     return mmblock;
 }
 

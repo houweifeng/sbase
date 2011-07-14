@@ -1675,9 +1675,8 @@ void service_close(SERVICE *service)
 SERVICE *service_init()
 {
     SERVICE *service = NULL;
-    if((service = (SERVICE *)xmm_new(sizeof(SERVICE))))
+    if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
-        memset(service, 0, sizeof(SERVICE));
         MUTEX_RESET(service->mutex);
         service->queue              = xqueue_init();
         service->etimer             = EVTIMER_INIT();

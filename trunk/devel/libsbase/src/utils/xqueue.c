@@ -10,7 +10,7 @@ void *xqueue_init()
     XQUEUE *q = NULL;
     int i = 0, j = 0;
 
-    if((q = (XQUEUE *)xmm_new(sizeof(XQUEUE)))) 
+    if((q = (XQUEUE *)xmm_mnew(sizeof(XQUEUE)))) 
     {
         memset(q, 0, sizeof(XQUEUE));
         for(i = 1; i < XQ_ROOTS_MAX; i++)
@@ -100,7 +100,7 @@ void xqueue_push(void *xqueue, int qid, void *ptr)
             }
             else 
             {
-                if((nodes = (XQNODE *)xmm_new(sizeof(XQNODE) * XQ_NODES_MAX)))
+                if((nodes = (XQNODE *)xmm_mnew(sizeof(XQNODE) * XQ_NODES_MAX)))
                 {
                     q->list[q->nlist++] = nodes;
                     for(i = 1; i < XQ_NODES_MAX; i++)
