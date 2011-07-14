@@ -73,19 +73,24 @@ void procthread_run(void *arg)
         tv.tv_usec = pth->usec_sleep % 1000000;
         if(pth->have_evbase)
         {
+            //tv.tv_usec = 0;
+            //tv.tv_sec = 0;
             do
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                i = pth->evbase->loop(pth->evbase, 0, NULL);
+                i = pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
                     qmessage_handler(pth->message_queue, pth->logger);
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
-                    i = 0;
+                    i = 1;
                 }
-                //if(i  < 1) usleep(1000);
+                //if(i < 1) usleep(pth->usec_sleep);
+                //if(i < 1)++k;else k = 0;
+                //fprintf(stdout, "%s::%d i:%d\n", __FILE__, __LINE__, i);
+                //if(k  > 10000){usleep(pth->usec_sleep); k = 0;}
             }while(pth->running_status);
             DEBUG_LOGGER(pth->logger, "ready to exit iodaemon");
         }
@@ -435,10 +440,12 @@ PROCTHREAD *procthread_init(int cond)
             if((pth->evbase = evbase_init())) 
             {
                 //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
+                /*
                 pth->cond = cond;
                 event_set(&pth->event, pth->cond, E_LOCK|E_PERSIST|E_READ|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
                 pth->evbase->add(pth->evbase, &pth->event);
+                */
             }
             else 
             {

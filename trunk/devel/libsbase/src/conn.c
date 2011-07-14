@@ -807,14 +807,12 @@ int conn_read_handler(CONN *conn)
         }
         if(n < 1)
         {
-            /*
             WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d "
                     "from %s:%d on %s:%d via %d failed, %s",
                     n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), 
                     xqueue_total(conn->queue, conn->qid), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
-            */
             // Terminate connection 
             conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
             return ret;
@@ -909,7 +907,7 @@ int conn_write_handler(CONN *conn)
             {
                 if(xqueue_total(conn->queue, conn->qid) < 1) 
                 {
-                    //event_del(&conn->event, E_WRITE);
+                    event_del(&conn->event, E_WRITE);
                     CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                 }
                 ret = 0;

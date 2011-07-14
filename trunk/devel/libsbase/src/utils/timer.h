@@ -18,12 +18,12 @@ typedef struct _TIMER
 {
 	struct timeval tv;
 	time_t start_sec;
-	long long start_usec;
 	time_t sec_used;
-	long long usec_used;
 	time_t  last_sec;
-	long long last_usec;
 	time_t last_sec_used;
+	long long start_usec;
+	long long usec_used;
+	long long last_usec;
     long long last_usec_used;
     long long now;
 	MUTEX mutex;
