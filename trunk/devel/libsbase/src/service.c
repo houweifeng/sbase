@@ -1339,9 +1339,9 @@ int service_newtask(SERVICE *service, CALLBACK *task_handler, void *arg)
     if(service && service->lock == 0)
     {
         /* Add task for procthread */
-        if(service->working_mode == WORKING_PROC && service->daemon)
+        if(service->working_mode == WORKING_PROC)
             pth = service->daemon;
-        else if(service->working_mode == WORKING_THREAD && service->daemons)
+        else if(service->working_mode == WORKING_THREAD && service->ndaemons > 0)
         {
             index = service->ntask % service->ndaemons;
             pth = service->daemons[index];
@@ -1373,7 +1373,7 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
             return service->daemon->newtransaction(service->daemon, conn, tid);
         }
         /* Add transaction to procthread pool */
-        if(service->working_mode == WORKING_THREAD && service->procthreads)
+        if(service->working_mode == WORKING_THREAD && service->nprocthreads > 0)
         {
             index = conn->fd % service->nprocthreads;
             pth = service->procthreads[index];
