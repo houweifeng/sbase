@@ -36,10 +36,12 @@ void procthread_wakeup(PROCTHREAD *pth)
 {
     if(pth)
     {
+        /*
         if(pth->have_evbase && pth->evbase) 
         {
             event_add(&pth->event, E_WRITE);
         }
+        */
         MUTEX_SIGNAL(pth->mutex);
     }
     return ;
@@ -62,7 +64,7 @@ void procthread_active(PROCTHREAD *pth)
 void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
-    struct timeval tv = {0};
+    struct timeval tv = {0,0};
     int i = 0;
 
     if(pth)
