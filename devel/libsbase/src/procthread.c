@@ -65,7 +65,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0,0};
-    int i = 0;
+    int i = 0, k = 0;
 
     if(pth)
     {
@@ -75,13 +75,13 @@ void procthread_run(void *arg)
         tv.tv_usec = pth->usec_sleep % 1000000;
         if(pth->have_evbase)
         {
-            //tv.tv_usec = 0;
-            //tv.tv_sec = 0;
+            tv.tv_usec = 0;
+            tv.tv_sec = 0;
             do
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                i = pth->evbase->loop(pth->evbase, 0, &tv);
+                i = pth->evbase->loop(pth->evbase, 0,&tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -89,10 +89,10 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     i = 1;
                 }
-                //if(i < 1) usleep(pth->usec_sleep);
+                if(i < 1) usleep(pth->usec_sleep);
                 //if(i < 1)++k;else k = 0;
                 //fprintf(stdout, "%s::%d i:%d\n", __FILE__, __LINE__, i);
-                //if(k  > 10000){usleep(pth->usec_sleep); k = 0;}
+                //if(k  > 10000){usleep(5000); k = 0;}
             }while(pth->running_status);
             DEBUG_LOGGER(pth->logger, "ready to exit iodaemon");
         }
