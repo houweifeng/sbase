@@ -97,7 +97,6 @@ EVBASE *evbase_init()
 
     if((evbase = (EVBASE *)xmm_mnew(sizeof(EVBASE))))
     {
-        memset(evbase, 0, sizeof(EVBASE));
         MUTEX_RESET(evbase->mutex);
 #ifdef HAVE_EVPORT
         evops_default = EOP_PORT;
@@ -224,15 +223,20 @@ void event_add(EVENT *event, short flags)
 {
 	if(event)
 	{
-        event->old_ev_flags = event->ev_flags;
-		event->ev_flags |= flags;
-		if(event->ev_base && event->ev_base->update)
-		{
-			DEBUG_LOGGER(event->ev_base->logger, 
-                    "Added event[%p] flags[%d] on fd[%d]",
-				event, event->ev_flags, event->ev_fd);
-			event->ev_base->update(event->ev_base, event);
-		}
+        MUTEX_LOCK(event->mutex);
+        if((event->ev_flags & flags) != flags)
+        {
+            event->old_ev_flags = event->ev_flags;
+            event->ev_flags |= flags;
+            if(event->ev_base && event->ev_base->update)
+            {
+                DEBUG_LOGGER(event->ev_base->logger, 
+                        "Added event[%p] flags[%d] on fd[%d]",
+                        event, event->ev_flags, event->ev_fd);
+                event->ev_base->update(event->ev_base, event);
+            }
+        }
+        MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -242,6 +246,7 @@ void event_del(EVENT *event, short flags)
 {
 	if(event)
 	{
+        MUTEX_LOCK(event->mutex);
 		if(event->ev_flags & flags)
 		{
             event->old_ev_flags = event->ev_flags;
@@ -260,6 +265,7 @@ void event_del(EVENT *event, short flags)
                 }
 			}
 		}
+        MUTEX_UNLOCK(event->mutex);
 	}	
     return ;
 }

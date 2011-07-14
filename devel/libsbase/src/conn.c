@@ -55,11 +55,11 @@ int conn_read_buffer(CONN *conn)
 }
 #define CONN_EVENT_ADD(conn, flag)                                                          \
 {                                                                                           \
-        event_add(&conn->event, flag);                                                      \
+        event_add(&(conn->event), flag);                                                    \
 }
 #define CONN_READY_WRITE(conn)                                                              \
 {                                                                                           \
-    event_add(&conn->event, E_WRITE);                                                       \
+    event_add(&(conn->event), E_WRITE);                                                     \
 }
 
 #define CONN_STATE_RESET(conn)                                                              \
@@ -155,7 +155,7 @@ do                                                                              
     {                                                                                       \
         qmessage_push(conn->ioqmessage, msgid,                                              \
                 conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);                     \
-        event_add(&conn->event, E_WRITE);                                                   \
+        event_add(&(conn->event), E_WRITE);                                                 \
     }                                                                                       \
 }while(0)
 #define SESSION_RESET(conn)                                                                 \
@@ -177,7 +177,8 @@ void conn_buffer_handler(CONN *conn)
 
     if(conn)
     {
-        event_del(&conn->event, E_WRITE);
+        if(xqueue_total(conn->queue, conn->qid) < 1)
+            event_del(&(conn->event), E_WRITE);
         ret = conn->packet_reader(conn);
     }
     return ;
@@ -191,7 +192,8 @@ void conn_chunk_handler(CONN *conn)
 
     if(conn)
     {
-        event_del(&conn->event, E_WRITE);
+        if(xqueue_total(conn->queue, conn->qid) < 1)
+            event_del(&(conn->event), E_WRITE);
         ret = conn__read__chunk(conn);
     }
     return ;
@@ -207,7 +209,7 @@ void conn_shut_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
-            event_add(&conn->event, E_WRITE);
+            event_add(&(conn->event), E_WRITE);
             qmessage_push(conn->ioqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);
         }
@@ -236,9 +238,9 @@ void conn_end_handler(CONN *conn)
     if(conn)
     {
         if(xqueue_total(conn->queue, conn->qid) > 0)
-            event_add(&conn->event, E_WRITE);
+            event_add(&(conn->event), E_WRITE);
         else
-            event_del(&conn->event, E_WRITE);
+            event_del(&(conn->event), E_WRITE);
         if(conn->s_state == 0 && MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}
     }
     return ;
