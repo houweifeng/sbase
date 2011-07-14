@@ -317,11 +317,11 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
     {
         if(cache && cache->data)
         {
-            WARN_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
+            ACCESS_LOGGER(logger, "timeout on conn[%s:%d] uri[%s] via %d status:%d", conn->local_ip, conn->local_port, cache->data, conn->fd, conn->status);
         }
         else
         {
-            WARN_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
+            ACCESS_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
         }
         ntimeout++;
         conn->over_timeout(conn);
