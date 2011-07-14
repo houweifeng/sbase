@@ -166,8 +166,8 @@ do                                                                              
     chunk_reset(&conn->chunk);                                                              \
     CONN_STATE_RESET(conn);                                                                 \
     if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                 \
-    else{CONN_PUSH_MESSAGE(conn, MESSAGE_END);}                                             \
 }while(0)
+    //else{CONN_PUSH_MESSAGE(conn, MESSAGE_END);}                                             
 /* chunk pop/push */
 /* read */
 void conn_buffer_handler(CONN *conn)
@@ -807,11 +807,14 @@ int conn_read_handler(CONN *conn)
         }
         if(n < 1)
         {
-            WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p left:%d "
+            /*
+            WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d "
                     "from %s:%d on %s:%d via %d failed, %s",
-                    n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), conn->remote_ip, 
+                    n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), 
+                    xqueue_total(conn->queue, conn->qid), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
+            */
             // Terminate connection 
             conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
             return ret;
@@ -861,17 +864,18 @@ int conn_write_handler(CONN *conn)
                 {
                     conn->sent_data_total += n;
                     DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
-                            "to %s:%d on %s:%d via %d leave %lld", n, conn->sent_data_total, 
-                            conn->remote_ip, conn->remote_port, conn->local_ip, 
-                            conn->local_port, conn->fd, LL(CHK(cp)->left));
+                            "to %s:%d on %s:%d via %d leave %lld qtotal:%d", 
+                            n, conn->sent_data_total, conn->remote_ip, conn->remote_port, 
+                            conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left),
+                            xqueue_total(conn->queue, conn->qid));
                 }
                 else
                 {
                     WARN_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) "
-                            "to %s:%d on %s:%d via %d leave %lld failed, %s", n, 
+                            "to %s:%d on %s:%d via %d leave %lld qtotal:%d failed, %s", n, 
                             conn->sent_data_total, conn->remote_ip, conn->remote_port, 
-                            conn->local_ip, conn->local_port, conn->fd, 
-                            LL(CHK(cp)->left), strerror(errno));
+                            conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left), 
+                            xqueue_total(conn->queue, conn->qid), strerror(errno));
 #ifdef HAVE_SSL
                     if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
@@ -905,7 +909,7 @@ int conn_write_handler(CONN *conn)
             {
                 if(xqueue_total(conn->queue, conn->qid) < 1) 
                 {
-                    event_del(&conn->event, E_WRITE);
+                    //event_del(&conn->event, E_WRITE);
                     CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                 }
                 ret = 0;
