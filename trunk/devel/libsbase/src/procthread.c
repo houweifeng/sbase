@@ -36,12 +36,10 @@ void procthread_wakeup(PROCTHREAD *pth)
 {
     if(pth)
     {
-        /*
         if(pth->have_evbase && pth->evbase) 
         {
-            event_add(&pth->event, E_WRITE);
+            event_add(&(pth->event), E_WRITE);
         }
-        */
         MUTEX_SIGNAL(pth->mutex);
     }
     return ;
@@ -81,7 +79,7 @@ void procthread_run(void *arg)
             {
                 if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                i = pth->evbase->loop(pth->evbase, 0,&tv);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -89,7 +87,7 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     i = 1;
                 }
-                if(i < 1) usleep(pth->usec_sleep);
+                //if(i < 1) usleep(pth->usec_sleep);
                 //if(i < 1)++k;else k = 0;
                 //fprintf(stdout, "%s::%d i:%d\n", __FILE__, __LINE__, i);
                 //if(k  > 10000){usleep(5000); k = 0;}
@@ -442,12 +440,10 @@ PROCTHREAD *procthread_init(int cond)
             if((pth->evbase = evbase_init())) 
             {
                 //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
-                /*
                 pth->cond = cond;
-                event_set(&pth->event, pth->cond, E_LOCK|E_PERSIST|E_READ|E_WRITE, (void *)pth, 
+                event_set(&(pth->event), pth->cond, E_PERSIST|E_READ|E_WRITE, (void *)pth, 
                         &procthread_event_handler);
-                pth->evbase->add(pth->evbase, &pth->event);
-                */
+                pth->evbase->add(pth->evbase, &(pth->event));
             }
             else 
             {
