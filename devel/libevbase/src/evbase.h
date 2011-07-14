@@ -55,7 +55,7 @@ typedef struct _EVBASE
 	int allowed;
 	int state;
     int evopid;
-    struct _MUTEX mutex;
+    MUTEX mutex;
 
 	void *ev_read_fds;
 	void *ev_write_fds;
@@ -81,11 +81,12 @@ EVBASE *evbase_init();
 #define _TYPEDEF_EVENT
 typedef struct _EVENT
 {
-	short ev_flags;
-	short old_ev_flags;
+	int ev_flags;
+	int old_ev_flags;
 	int ev_fd;
+    int bits;
+    MUTEX mutex;
 	struct timeval tv;
-    struct _MUTEX mutex;
 	void *ev_arg;
 	struct _EVBASE *ev_base;
 	void (*ev_handler)(int fd, short flags, void *arg);	

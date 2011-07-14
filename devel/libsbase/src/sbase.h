@@ -543,9 +543,9 @@ typedef struct _CONN
     long long   sent_data_total;
     /* xid 64 bit */
     int64_t xids64[SB_XIDS_MAX];
-    SESSION session;
     char remote_ip[SB_IP_MAX];
     char local_ip[SB_IP_MAX];
+    SESSION session;
 }CONN, *PCONN;
 CONN *conn_init();
 #ifdef __cplusplus
