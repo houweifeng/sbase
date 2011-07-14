@@ -124,24 +124,26 @@ int http_request(CONN *conn)
 
 int http_show_state(int n)
 {
+    int nok = 0;
     TIMER_SAMPLE(timer);
-    if(PT_USEC_U(timer) > 0 && n > 0)
+    nok = n - ntimeout - nerrors;
+    if(PT_USEC_U(timer) > 0 && nok  > 0)
     {
         if(is_quiet)
         {
-            REALLOG(logger, "timeout:%d error:%d total:%d "
+            REALLOG(logger, "timeout:%d error:%d ok:%d total:%d "
                     "time used:%lld request per sec:%lld avg_time:%lld", 
-                    ntimeout, nerrors, n, PT_USEC_U(timer), 
-                    ((long long int)n * 1000000ll/PT_USEC_U(timer)),
-                    (PT_USEC_U(timer)/n));
+                    ntimeout, nerrors, nok, n, PT_USEC_U(timer), 
+                    ((long long int)nok * 1000000ll/PT_USEC_U(timer)),
+                    (PT_USEC_U(timer)/nok));
         }
         else
         {
-            fprintf(stdout, "timeout:%d error:%d total:%d\n"
+            fprintf(stdout, "timeout:%d error:%d ok:%d total:%d\n"
                     "time used:%lld request per sec:%lld avg_time:%lld\n", 
-                    ntimeout, nerrors, n, PT_USEC_U(timer), 
-                    ((long long int)n * 1000000ll/PT_USEC_U(timer)),
-                    (PT_USEC_U(timer)/n));
+                    ntimeout, nerrors, nok, n, PT_USEC_U(timer), 
+                    ((long long int)nok * 1000000ll/PT_USEC_U(timer)),
+                    (PT_USEC_U(timer)/nok));
         }
     }
     if(is_daemon == 0){running_status = 0;sbase->stop(sbase);}
