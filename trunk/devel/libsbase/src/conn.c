@@ -168,6 +168,7 @@ do                                                                              
     if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                 \
 }while(0)
 /* chunk pop/push */
+    //else{CONN_PUSH_MESSAGE(conn, MESSAGE_END);}                                             
 /* read */
 void conn_buffer_handler(CONN *conn)
 {
@@ -238,6 +239,7 @@ void conn_end_handler(CONN *conn)
             event_add(&conn->event, E_WRITE);
         else
             event_del(&conn->event, E_WRITE);
+        if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}
     }
     return ;
 }
