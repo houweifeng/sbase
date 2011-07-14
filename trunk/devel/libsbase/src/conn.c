@@ -346,7 +346,7 @@ int conn_set(CONN *conn)
         {
             flag = E_READ|E_PERSIST;
             if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
-            event_set(&conn->event, conn->fd, flag, (void *)conn, &conn_event_handler);
+            event_set(&(conn->event), conn->fd, flag, (void *)conn, &conn_event_handler);
             conn->evbase->add(conn->evbase, &conn->event);
             IOWAKEUP(conn);
             DEBUG_LOGGER(conn->logger, "setting conn[%p]->evbase->nfd[%d][%p] remote[%s:%d]"
@@ -909,8 +909,8 @@ int conn_write_handler(CONN *conn)
             {
                 if(xqueue_total(conn->queue, conn->qid) < 1) 
                 {
-                    //event_del(&conn->event, E_WRITE);
-                    CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+                    event_del(&(conn->event), E_WRITE);
+                    //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                 }
                 ret = 0;
             }

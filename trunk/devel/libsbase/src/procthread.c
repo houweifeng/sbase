@@ -25,7 +25,7 @@ void procthread_event_handler(int event_fd, short event, void *arg)
     {
         if(pth->have_evbase && pth->evbase) 
         {
-            event_del(&pth->event, E_WRITE);
+            event_del(&(pth->event), E_WRITE);
         }
     }
     return ;
@@ -52,7 +52,7 @@ void procthread_active(PROCTHREAD *pth)
     {
         if(pth->have_evbase && pth->evbase) 
         {
-            event_del(&pth->event, E_WRITE);
+            event_del(&(pth->event), E_WRITE);
         }
     }
     return ;
@@ -283,7 +283,7 @@ int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && pth->service)
     {
-        event_destroy(&conn->event);
+        event_destroy(&(conn->event));
         pth->service->overconn(pth->service, conn);
         ret = 0;
     }
