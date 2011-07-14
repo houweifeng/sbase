@@ -35,8 +35,8 @@ do                                                                              
 /* set service */
 int service_set(SERVICE *service)
 {
+    int ret = -1, opt = 1, flag = 0;
     char *p = NULL;
-    int ret = -1, opt = 1;
 
     if(service)
     {
@@ -78,19 +78,25 @@ int service_set(SERVICE *service)
                 }
             }
 #endif
-            //flag = fcntl(service->fd, F_GETFL, 0);
-            //flag |= O_NONBLOCK;
-            //&& fcntl(service->fd, F_SETFL, flag) == 0
-            if((service->fd = socket(service->family, service->sock_type, 0)) > 0 
-                    && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
-#ifdef SO_REUSEPORT
-                    && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
-#endif
-                    && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
-                        sizeof(service->sa))) == 0)
+            if((service->fd = socket(service->family, service->sock_type, 0)) > 0)
             {
-                if(service->sock_type == SOCK_STREAM)
-                    ret = listen(service->fd, service->backlog);
+                flag = fcntl(service->fd, F_GETFL, 0)|O_NONBLOCK;
+                if(fcntl(service->fd, F_SETFL, flag) == 0
+                        && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+#ifdef SO_REUSEPORT
+                        && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+#endif
+                        && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
+                                sizeof(service->sa))) == 0)
+                {
+                    if(service->sock_type == SOCK_STREAM)
+                        ret = listen(service->fd, service->backlog);
+                }
+            }
+            else
+            {
+                fprintf(stderr, "new socket() failed, %s", strerror(errno));
+                exit(1);
             }
         }
         else if(service->service_type == C_SERVICE)
@@ -399,7 +405,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
             {
                 if(service->sock_type == SOCK_STREAM)
                 {
-                    if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                    while((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
                     {
                         ip = inet_ntoa(rsa.sin_addr);
                         port = ntohs(rsa.sin_port);
