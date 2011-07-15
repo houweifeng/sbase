@@ -421,7 +421,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
             {
                 if(service->sock_type == SOCK_STREAM)
                 {
-                    while((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                    if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
                     {
                         ip = inet_ntoa(rsa.sin_addr);
                         port = ntohs(rsa.sin_port);
@@ -438,10 +438,13 @@ void service_event_handler(int event_fd, short flag, void *arg)
 #endif
 new_conn:
                         if(service->tracker)
+                        {
                             service->tracker->pushconn(service->tracker,fd,ssl);
+                        }
                         else
                             service->daemon->pushconn(service->daemon,fd,ssl);
-                        continue;
+                        DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
+                        return ;
                         /*
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
@@ -453,16 +456,6 @@ new_conn:
                             return ;
                         }
                         */
-
-                        if(service->tracker && service->tracker->newconn(service->tracker,fd,ssl)==0)
-                        {
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
-                            continue;
-                        }
-                        else 
-                        {
-                            WARN_LOGGER(service->logger, "adding new connection[%s:%d] via %d failed, %s",ip, port, fd, strerror(errno));
-                        }
 err_conn:               
 #ifdef HAVE_SSL
                         if(ssl)
