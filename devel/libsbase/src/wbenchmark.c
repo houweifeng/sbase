@@ -53,7 +53,6 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
         if(is_ssl) service->session.is_use_SSL = 1;
         if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
         {
-            conn->set_timeout(conn);
             conn->c_id = id;
         }
         else
@@ -129,7 +128,7 @@ int http_show_state(int n)
 {
     int nok = 0;
     TIMER_SAMPLE(timer);
-    nok = n - ntimeout - nerrors;
+    nok = n - ntimeout;
     if(PT_USEC_U(timer) > 0 && nok  > 0)
     {
         if(is_quiet)
