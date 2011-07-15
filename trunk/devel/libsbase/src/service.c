@@ -35,7 +35,7 @@ do                                                                              
 /* set service */
 int service_set(SERVICE *service)
 {
-    int ret = -1, opt = 1, flag = 0;
+    int ret = -1, opt = 1;
     char *p = NULL;
 
     if(service)
@@ -54,49 +54,45 @@ int service_set(SERVICE *service)
                 if((service->s_ctx = SSL_CTX_new(SSLv23_server_method())) == NULL)
                 {
                     ERR_print_errors_fp(stdout);
-                    _exit(-1);
+                    return -1;
                 }
                 /*load certificate */
                 if(SSL_CTX_use_certificate_file(XSSL_CTX(service->s_ctx), service->cacert_file, 
                             SSL_FILETYPE_PEM) <= 0)
                 {
                     ERR_print_errors_fp(stdout);
-                    _exit(-1);
+                    return -1;
                 }
                 /*load private key file */
                 if (SSL_CTX_use_PrivateKey_file(XSSL_CTX(service->s_ctx), service->privkey_file, 
                             SSL_FILETYPE_PEM) <= 0)
                 {
                     ERR_print_errors_fp(stdout);
-                    _exit(-1);
+                    return -1;
                 }
                 /*check private key file */
                 if (!SSL_CTX_check_private_key(XSSL_CTX(service->s_ctx)))
                 {
                     ERR_print_errors_fp(stdout);
-                    exit(1);
+                    return -1;
                 }
             }
 #endif
-            if((service->fd = socket(service->family, service->sock_type, 0)) > 0)
-            {
-                flag = fcntl(service->fd, F_GETFL, 0)|O_NONBLOCK;
-                if(fcntl(service->fd, F_SETFL, flag) == 0
-                        && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+            if((service->fd = socket(service->family, service->sock_type, 0)) > 0
+                    && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
-                        && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+                    && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                        && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
-                                sizeof(service->sa))) == 0)
-                {
-                    if(service->sock_type == SOCK_STREAM)
-                        ret = listen(service->fd, service->backlog);
-                }
+                    && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
+                            sizeof(service->sa))) == 0)
+            {
+                if(service->sock_type == SOCK_STREAM)
+                    ret = listen(service->fd, service->backlog);
             }
             else
             {
-                fprintf(stderr, "new socket() failed, %s", strerror(errno));
-                exit(1);
+                fprintf(stderr, "bind() failed, %s", strerror(errno));
+                return -1;
             }
         }
         else if(service->service_type == C_SERVICE)
@@ -231,30 +227,6 @@ running_threads:
             FATAL_LOGGER(service->logger, "new cond socket() failed, %s", strerror(errno));
             _exit(-1);
         }
-        //iodaemon 
-        /*
-        if(service->use_iodaemon)
-        {
-            if((service->iodaemon = procthread_init(1)))
-            {
-                PROCTHREAD_SET(service, service->iodaemon);
-                if(service->sbase->evlogfile && service->sbase->evlog_level > 0);
-                {
-                    sprintf(logfile, "%s_%s", service->sbase->evlogfile, service->service_name);
-                    service->iodaemon->evbase->set_logfile(service->iodaemon->evbase, logfile);
-                    service->iodaemon->evbase->set_log_level(service->iodaemon->evbase, service->sbase->evlog_level);
-                }
-                NEW_PROCTHREAD("iodaemon", 0, service->iodaemon->threadid, service->iodaemon, service->logger);
-                ret = 0;
-            }
-            else
-            {
-                FATAL_LOGGER(service->logger, "Initialize new mode[%d] procthread failed, %s",
-                        service->working_mode, strerror(errno));
-                exit(EXIT_FAILURE);
-                return -1;
-            }
-        }*/
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
         if(service->niodaemons < 1) service->niodaemons = 1;
@@ -437,6 +409,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
                         }
 #endif
 new_conn:
+                        /*
                         if(service->tracker)
                         {
                             service->tracker->pushconn(service->tracker,fd,ssl);
@@ -445,7 +418,7 @@ new_conn:
                             service->daemon->pushconn(service->daemon,fd,ssl);
                         DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
                         return ;
-                        /*
+                        */
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
                         {
@@ -455,7 +428,6 @@ new_conn:
 #endif
                             return ;
                         }
-                        */
 err_conn:               
 #ifdef HAVE_SSL
                         if(ssl)
