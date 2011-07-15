@@ -771,9 +771,8 @@ int conn_read_handler(CONN *conn)
 
     if(conn)
     {
-        DEBUG_LOGGER(conn->logger, "Ready for reading conn[%p] buffer[%d/%d] packet[%d/%d] oob[%d/%d] cache[%d/%d] exchange[%d/%d] chunk[%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer), MMB_LEFT(conn->packet), MMB_SIZE(conn->packet), MMB_LEFT(conn->oob), MMB_SIZE(conn->oob), MMB_LEFT(conn->cache), MMB_SIZE(conn->cache), MMB_LEFT(conn->exchange), MMB_SIZE(conn->exchange), LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        /* Receive OOB */
         /*
+        DEBUG_LOGGER(conn->logger, "Ready for reading conn[%p] buffer[%d/%d] packet[%d/%d] oob[%d/%d] cache[%d/%d] exchange[%d/%d] chunk[%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer), MMB_LEFT(conn->packet), MMB_SIZE(conn->packet), MMB_LEFT(conn->oob), MMB_SIZE(conn->oob), MMB_LEFT(conn->cache), MMB_SIZE(conn->cache), MMB_LEFT(conn->exchange), MMB_SIZE(conn->exchange), LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if((n = MMB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
             conn->recv_oob_total += n;
