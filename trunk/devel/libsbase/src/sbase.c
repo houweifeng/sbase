@@ -240,8 +240,8 @@ running:
                 qmessage_handler(sbase->message_queue, sbase->logger);
                 i = 1;
             }
-            if(i < 1) ++k;
-            if(k > 50000){usleep(sbase->usec_sleep); k = 0;}
+            //if(i < 1) ++k;
+            if(i < 1){usleep(sbase->usec_sleep); k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)
