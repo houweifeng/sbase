@@ -441,7 +441,7 @@ new_conn:
                             service->tracker->pushconn(service->tracker,fd,ssl);
                         else
                             service->daemon->pushconn(service->daemon,fd,ssl);
-                        return ;
+                        continue;
                         /*
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
