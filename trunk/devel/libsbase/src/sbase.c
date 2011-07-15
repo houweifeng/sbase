@@ -165,9 +165,9 @@ void sbase_evtimer_handler(void *arg)
 /* running all service */
 int sbase_running(SBASE *sbase, int useconds)
 {
+    int ret = -1, i = -1, k = 0;
     struct timeval tv = {0};
     SERVICE *service = NULL;
-    int ret = -1, i = -1;
     pid_t pid = 0;
 
     if(sbase)
@@ -223,8 +223,8 @@ running:
         }
         //running sbase 
         sbase->running_status = 1;
-        if(sbase->usec_sleep > 1000000) tv.tv_sec = sbase->usec_sleep/1000000;
-        tv.tv_usec = sbase->usec_sleep % 1000000;
+        //if(sbase->usec_sleep > 1000000) tv.tv_sec = sbase->usec_sleep/1000000;
+        //tv.tv_usec = sbase->usec_sleep % 1000000;
         do
         {
             //running evbase 
@@ -240,7 +240,8 @@ running:
                 qmessage_handler(sbase->message_queue, sbase->logger);
                 i = 1;
             }
-            //if(i == 0){usleep(sbase->usec_sleep); k = 0;}
+            if(i < 1) ++k;
+            if(k > 50000){usleep(sbase->usec_sleep); k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)

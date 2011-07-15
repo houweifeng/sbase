@@ -327,29 +327,13 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        /* load */ 
-        if((service->load = procthread_init(0)))
+        /* tracker */ 
+        if((service->tracker = procthread_init(0)))
         {
-            service->load->evtimer = service->etimer;
-            PROCTHREAD_SET(service, service->load);
-            service->load->use_cond_wait = 0;
-            NEW_PROCTHREAD("load", 0, service->load->threadid, service->load, service->logger);
-            ret = 0;
-        }
-        else
-        {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
-                    service->working_mode, strerror(errno));
-            exit(EXIT_FAILURE);
-            return -1;
-        }
-        /* recover */ 
-        if((service->recover = procthread_init(0)))
-        {
-            service->recover->evtimer = service->etimer;
-            PROCTHREAD_SET(service, service->recover);
-            service->recover->use_cond_wait = 0;
-            NEW_PROCTHREAD("recover", 0, service->recover->threadid, service->recover, service->logger);
+            service->tracker->evtimer = service->etimer;
+            PROCTHREAD_SET(service, service->tracker);
+            service->tracker->use_cond_wait = 0;
+            NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger);
             ret = 0;
         }
         else
@@ -453,6 +437,11 @@ void service_event_handler(int event_fd, short flag, void *arg)
                         }
 #endif
 new_conn:
+                        if(service->tracker)
+                            service->tracker->pushconn(service->tracker,fd,ssl);
+                        else
+                            service->daemon->pushconn(service->daemon,fd,ssl);
+                        return ;
                         /*
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
@@ -465,7 +454,7 @@ new_conn:
                         }
                         */
 
-                        if(service->load && service->load->newconn(service->load,fd,ssl)==0)
+                        if(service->tracker && service->tracker->newconn(service->tracker,fd,ssl)==0)
                         {
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
                             continue;
@@ -1063,13 +1052,13 @@ CONN *service_findconn(SERVICE *service, int index)
 /* service over conn */
 void service_overconn(SERVICE *service, CONN *conn)
 {
-    PROCTHREAD *recover = NULL;
+    PROCTHREAD *tracker = NULL;
 
-    if(service && conn && (recover = service->recover))
+    if(service && conn && (tracker = service->tracker))
     {
-        qmessage_push(recover->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
-                -1, recover, conn, NULL);
-        MUTEX_SIGNAL(recover->mutex);
+        qmessage_push(tracker->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
+                -1, tracker, conn, NULL);
+        MUTEX_SIGNAL(tracker->mutex);
     }
     return ;
 }
@@ -1511,17 +1500,11 @@ void service_stop(SERVICE *service)
             service->daemon->terminate(service->daemon);
             PROCTHREAD_EXIT(service->daemon->threadid, NULL);
         }
-        //load
-        if(service->load)
+        //tracker
+        if(service->tracker)
         {
-            service->load->terminate(service->load);
-            PROCTHREAD_EXIT(service->load->threadid, NULL);
-        }
-        //recover
-        if(service->recover)
-        {
-            service->recover->terminate(service->recover);
-            PROCTHREAD_EXIT(service->recover->threadid, NULL);
+            service->tracker->terminate(service->tracker);
+            PROCTHREAD_EXIT(service->tracker->threadid, NULL);
         }
         /* delete evtimer */
         EVTIMER_DEL(service->evtimer, service->evid);
@@ -1636,8 +1619,7 @@ void service_clean(SERVICE *service)
         
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
-        if(service->load) service->load->clean(service->load);
-        if(service->recover) service->recover->clean(service->recover);
+        if(service->tracker) service->tracker->clean(service->tracker);
         if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
         //if(service->iodaemon) service->iodaemon->clean(service->iodaemon);
         //clean procthreads

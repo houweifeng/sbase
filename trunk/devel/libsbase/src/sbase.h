@@ -276,8 +276,7 @@ typedef struct _SERVICE
 
     /* working mode */
     struct _PROCTHREAD *daemon;
-    struct _PROCTHREAD *load;
-    struct _PROCTHREAD *recover;
+    struct _PROCTHREAD *tracker;
     struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
     struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
     struct _PROCTHREAD *daemons[SB_THREADS_MAX];
