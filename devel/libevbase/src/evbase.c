@@ -97,7 +97,7 @@ EVBASE *evbase_init()
 
     if((evbase = (EVBASE *)xmm_mnew(sizeof(EVBASE))))
     {
-        MUTEX_RESET(evbase->mutex);
+        //MUTEX_RESET(evbase->mutex);
 #ifdef HAVE_EVPORT
         evops_default = EOP_PORT;
         evops[EOP_PORT].name = "PORT";
@@ -230,7 +230,7 @@ void event_add(EVENT *event, short flags)
             event->ev_flags |= flags;
             if(event->ev_base && event->ev_base->update)
             {
-                DEBUG_LOGGER(event->ev_base->logger, 
+                WARN_LOGGER(event->ev_base->logger, 
                         "Added event[%p] flags[%d] on fd[%d]",
                         event, event->ev_flags, event->ev_fd);
                 event->ev_base->update(event->ev_base, event);
@@ -253,16 +253,18 @@ void event_del(EVENT *event, short flags)
 			event->ev_flags ^= flags;
 			if(event->ev_base)
 			{
-                DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
+                WARN_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
                             event, event->ev_flags, event->ev_fd);
-                if(event->ev_flags & (E_READ|E_WRITE))
-                {
-                    event->ev_base->update(event->ev_base, event);
+                //if(event->ev_flags & (E_READ|E_WRITE))
+                //{
+                event->ev_base->update(event->ev_base, event);
+                /*
                 }
                 else
                 {
                     event->ev_base->del(event->ev_base, event);
                 }
+                */
 			}
 		}
         MUTEX_UNLOCK(event->mutex);
@@ -296,9 +298,11 @@ void event_active(EVENT *event, short ev_flags)
     {
         if(event->ev_handler && event->ev_base && event->ev_flags)
         {
-            DEBUG_LOGGER(event->ev_base->logger, 
-                    "Activing event[%p] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
+            //WARN_LOGGER(event->ev_base->logger, 
+            //        "Activing event[%p] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
             event->ev_handler(event->ev_fd, e_flags, event->ev_arg);	
+            WARN_LOGGER(event->ev_base->logger, 
+                    "over Activing event[%p] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
         }
         if(!(event->ev_flags & E_PERSIST) && event->ev_base)
         {

@@ -53,9 +53,9 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             ev->events = ev_flags;
             ev->revents = 0;
             ev->fd	  = event->ev_fd;
-            if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
-            ++(evbase->nfd);
+            //if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
+            //++(evbase->nfd);
             DEBUG_LOGGER(evbase->logger, "Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
         }
         //MUTEX_UNLOCK(evbase->mutex);
@@ -84,8 +84,8 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
         ev->events = ev_flags;
         ev->revents = 0;
         ev->fd	  = event->ev_fd;
-        if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
+        //if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;
         DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
                 event->ev_flags, event->ev_fd);
         //MUTEX_UNLOCK(evbase->mutex);
@@ -100,9 +100,9 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
     {
         //MUTEX_LOCK(evbase->mutex);
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
-        if(event->ev_fd >= evbase->maxfd) evbase->maxfd = event->ev_fd - 1;
         evbase->evlist[event->ev_fd] = NULL;
-        if(evbase->nfd > 0) --(evbase->nfd);
+        //if(event->ev_fd >= evbase->maxfd) evbase->maxfd = event->ev_fd - 1;
+        //if(evbase->nfd > 0) --(evbase->nfd);
         //MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }	
@@ -123,7 +123,7 @@ int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
     {	
         if(tv) msec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         else msec = 1;
-        n = poll(evbase->ev_fds, evbase->allowed , msec);	
+        n = poll(evbase->ev_fds, evbase->allowed, msec);	
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 

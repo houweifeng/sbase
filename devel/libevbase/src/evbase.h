@@ -55,7 +55,7 @@ typedef struct _EVBASE
 	int allowed;
 	int state;
     int evopid;
-    MUTEX mutex;
+    //MUTEX mutex;
 
 	void *ev_read_fds;
 	void *ev_write_fds;

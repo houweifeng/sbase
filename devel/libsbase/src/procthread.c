@@ -439,7 +439,7 @@ PROCTHREAD *procthread_init(int cond)
             */
             if((pth->evbase = evbase_init())) 
             {
-                //pth->evbase->set_evops(pth->evbase, EOP_SELECT);
+                //pth->evbase->set_evops(pth->evbase, EOP_POLL);
                 pth->cond = cond;
                 event_set(&(pth->event), pth->cond, E_PERSIST|E_READ|E_WRITE, (void *)pth, 
                         &procthread_event_handler);

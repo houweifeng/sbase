@@ -327,6 +327,38 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
+        /* load */ 
+        if((service->load = procthread_init(0)))
+        {
+            service->load->evtimer = service->etimer;
+            PROCTHREAD_SET(service, service->load);
+            service->load->use_cond_wait = 0;
+            NEW_PROCTHREAD("load", 0, service->load->threadid, service->load, service->logger);
+            ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
+                    service->working_mode, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
+        /* recover */ 
+        if((service->recover = procthread_init(0)))
+        {
+            service->recover->evtimer = service->etimer;
+            PROCTHREAD_SET(service, service->recover);
+            service->recover->use_cond_wait = 0;
+            NEW_PROCTHREAD("recover", 0, service->recover->threadid, service->recover, service->logger);
+            ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
+                    service->working_mode, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
         /* daemon worker threads */
         if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
         if(service->ndaemons > 0)
@@ -424,18 +456,22 @@ new_conn:
                         /*
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
+                        {
+                            WARN_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
 #ifdef HAVE_SSL
                             conn->ssl = ssl;
 #endif
-                        */
-                        DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
-                        if(service->daemon && service->daemon->newconn(service->daemon,fd,ssl)==0)
-                        {
                             return ;
+                        }
+                        */
+                        if(service->load && service->load->newconn(service->load,fd,ssl)==0)
+                        {
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
+                            continue;
                         }
                         else 
                         {
-                            DEBUG_LOGGER(service->logger, "adding new connection[%s:%d] via %d failed, %s",ip, port, fd, strerror(errno));
+                            WARN_LOGGER(service->logger, "adding new connection[%s:%d] via %d failed, %s",ip, port, fd, strerror(errno));
                         }
 err_conn:               
 #ifdef HAVE_SSL
@@ -451,8 +487,8 @@ err_conn:
                             shutdown(fd, SHUT_RDWR);
                             close(fd);
                         }
-                        return ;
                     }
+                    return ;
                     /*
                     else
                     {
@@ -1026,13 +1062,13 @@ CONN *service_findconn(SERVICE *service, int index)
 /* service over conn */
 void service_overconn(SERVICE *service, CONN *conn)
 {
-    PROCTHREAD *daemon = NULL;
+    PROCTHREAD *recover = NULL;
 
-    if(service && conn && (daemon = service->daemon))
+    if(service && conn && (recover = service->recover))
     {
-        qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
-                -1, daemon, conn, NULL);
-        MUTEX_SIGNAL(daemon->mutex);
+        qmessage_push(recover->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
+                -1, recover, conn, NULL);
+        MUTEX_SIGNAL(recover->mutex);
     }
     return ;
 }
@@ -1140,11 +1176,9 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
             chunk_reset(cp);
             x = service->nqchunks++;
             service->qchunks[x] = cp;
-            DEBUG_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
         }
         else 
         {
-            ACCESS_LOGGER(service->logger, "pushchunk(%p) nchunks:%d", cp, service->nchunks);
             chunk_clean(cp);
             service->nchunks--;
         }
@@ -1473,16 +1507,25 @@ void service_stop(SERVICE *service)
         //daemon
         if(service->daemon)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop daemon");
             service->daemon->terminate(service->daemon);
-            DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
             PROCTHREAD_EXIT(service->daemon->threadid, NULL);
-            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
-            DEBUG_LOGGER(service->logger, "over for stop daemon");
         }
+        //load
+        if(service->load)
+        {
+            service->load->terminate(service->load);
+            PROCTHREAD_EXIT(service->load->threadid, NULL);
+        }
+        //recover
+        if(service->recover)
+        {
+            service->recover->terminate(service->recover);
+            PROCTHREAD_EXIT(service->recover->threadid, NULL);
+        }
+        /* delete evtimer */
         EVTIMER_DEL(service->evtimer, service->evid);
             DEBUG_LOGGER(service->logger, "Ready for remove event");
-        //remove event
+        /*remove event */
         event_destroy(&service->event);
         DEBUG_LOGGER(service->logger, "over for remove event");
         if(service->fd > 0)close(service->fd);
@@ -1592,6 +1635,8 @@ void service_clean(SERVICE *service)
         
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
+        if(service->load) service->load->clean(service->load);
+        if(service->recover) service->recover->clean(service->recover);
         if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
         //if(service->iodaemon) service->iodaemon->clean(service->iodaemon);
         //clean procthreads
