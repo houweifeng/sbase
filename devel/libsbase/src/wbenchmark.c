@@ -53,6 +53,7 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
         if(is_ssl) service->session.is_use_SSL = 1;
         if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
         {
+            conn->set_timeout(conn);
             conn->c_id = id;
         }
         else
