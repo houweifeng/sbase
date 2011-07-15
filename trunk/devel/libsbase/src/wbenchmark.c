@@ -580,8 +580,8 @@ invalid_url:
     sbase->nchilds = 0;
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
-    sbase->set_evlog(sbase, "/tmp/benchmark_ev.log");
     MUTEX_RESET(mutex);
+    if(log_level > 1)sbase->set_evlog(sbase, "/tmp/benchmark_ev.log");
     if(log_level > 0) sbase->set_evlog_level(sbase, log_level);
     if((service = service_init()))
     {

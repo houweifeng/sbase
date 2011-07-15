@@ -59,8 +59,9 @@ int conn_read_buffer(CONN *conn)
 }
 #define CONN_READY_WRITE(conn)                                                              \
 {                                                                                           \
-    event_add(&(conn->event), E_WRITE);                                                     \
-}
+    if(xqueue_total(conn->queue, conn->qid) > 0)                                            \
+        event_add(&(conn->event), E_WRITE);                                                 \
+}                                                                                           
 
 #define CONN_STATE_RESET(conn)                                                              \
 {                                                                                           \
@@ -854,11 +855,7 @@ int conn_write_handler(CONN *conn)
                 conn->d_state, conn->i_state);
         if((cp = (CHUNK *)xqueue_head(conn->queue, conn->qid)))
         {
-            if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
-            {
-                chunk_over = 1; 
-            }
-            else 
+            if(CHUNK_STATUS(cp) != CHUNK_STATUS_OVER)
             {
                 if((n = conn_write_chunk(conn, cp)) > 0)
                 {
@@ -884,6 +881,10 @@ int conn_write_handler(CONN *conn)
                     return ret;
                 }
             }
+            else
+            {
+                chunk_over = 1;
+            }
             /* CONN TIMER sample */
             if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
             {
@@ -900,8 +901,22 @@ int conn_write_handler(CONN *conn)
                     cp  = NULL;
                 }
             }
+            if(xqueue_total(conn->queue, conn->qid) == 1 
+                && (cp = (CHUNK *)xqueue_head(conn->queue, conn->qid))
+                && CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
+            {
+                if((cp = (CHUNK *)xqueue_pop(conn->queue, conn->qid)))
+                {
+                    if(cp && PPARENT(conn) && PPARENT(conn)->service)
+                        PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
+                    else
+                        chunk_clean(cp);
+                }
+                chunk_over = 1; 
+            }
             if(chunk_over)
             {
+                event_del(&(conn->event), E_WRITE);
                 conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
                 ret = -1;
             }
@@ -909,11 +924,15 @@ int conn_write_handler(CONN *conn)
             {
                 if(xqueue_total(conn->queue, conn->qid) < 1) 
                 {
-                    event_del(&(conn->event), E_WRITE);
-                    //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+                    //event_del(&(conn->event), E_WRITE);
+                    CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                 }
                 ret = 0;
             }
+            DEBUG_LOGGER(conn->logger, "Over for send-data to %s:%d on %s:%d via %d "
+                "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
+                conn->local_ip, conn->local_port, conn->fd, xqueue_total(conn->queue, conn->qid),
+                conn->d_state, conn->i_state);
         }
     }
     return ret;
