@@ -58,7 +58,7 @@ new_conn:
                                         service->ip, service->port, &(service->session), 
                                         ssl, CONN_STATUS_FREE)))
                         {
-                            WARN_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
                             continue;
                         }
                         else
