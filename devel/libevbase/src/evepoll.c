@@ -67,7 +67,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
                 {
                     DEBUG_LOGGER(evbase->logger, "Added event[%p][%d] on fd[%d]", event, ev_flags, event->ev_fd);
                     evbase->evlist[event->ev_fd] = event;
-                    SET_MAX_FD(evbase, event);
+                    //SET_MAX_FD(evbase, event);
                 }
             }
         }
@@ -106,7 +106,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         {
             DEBUG_LOGGER(evbase->logger, "Updated event[%p][%d] on fd[%d]", event, event->ev_flags, event->ev_fd);
             evbase->evlist[event->ev_fd] = event;
-            SET_MAX_FD(evbase, event);
+            //SET_MAX_FD(evbase, event);
         }
         return 0;
     }
@@ -135,7 +135,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
                     DEBUG_LOGGER(evbase->logger, "Deleted event[%p][%d] on fd[%d]", event, ep_event.events, event->ev_fd);
                 }
                 evbase->evlist[event->ev_fd] = NULL;
-                RESET_MAX_FD(evbase, event);
+                //RESET_MAX_FD(evbase, event);
             }
         }
         return 0;

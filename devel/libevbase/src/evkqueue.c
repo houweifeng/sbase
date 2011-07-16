@@ -80,7 +80,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
                     (int)kqev.filter, (int)kqev.ident);
         }
         evbase->evlist[event->ev_fd] = event;
-        SET_MAX_FD(evbase, event);
+        //SET_MAX_FD(evbase, event);
 err:
         return 0;
     }
@@ -173,7 +173,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
                 ret = 0;
             }
         }
-        SET_MAX_FD(evbase, event);
+        //SET_MAX_FD(evbase, event);
         evbase->evlist[event->ev_fd] = event;
 err:
         return ret;
@@ -200,7 +200,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
         kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
         DEBUG_LOGGER(evbase->logger, "del EVFILT_WRITE[%d] on %d", kqev.filter,(int)kqev.ident);
         evbase->evlist[event->ev_fd] = NULL;
-        RESET_MAX_FD(evbase, event);
+        //RESET_MAX_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -217,7 +217,7 @@ int evkqueue_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
     if(evbase)
     {
         if(tv) {TIMEVAL_TO_TIMESPEC(tv, &ts); pts = &ts;}
-        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->maxfd+1, pts);	
+        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->allowed, pts);	
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
