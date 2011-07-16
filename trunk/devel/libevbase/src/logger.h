@@ -49,14 +49,14 @@ typedef struct _LOGGER
     time_t timep;
     time_t uptime;
     time_t x;
-    struct tm *p;
-    char *ps;
-    MUTEX mutex;
     int rflag;
     int n;
 	int fd ;
     int total;
     int level;
+    MUTEX mutex;
+    struct tm *p;
+    char *ps;
 }LOGGER;
 #endif
 #ifdef HAVE_PTHREAD

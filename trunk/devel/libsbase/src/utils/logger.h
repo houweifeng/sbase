@@ -49,15 +49,14 @@ typedef struct _LOGGER
     time_t timep;
     time_t uptime;
     time_t x;
-    struct tm *p;
-    char *ps;
-    MUTEX mutex;
     int rflag;
     int n;
 	int fd ;
     int total;
     int level;
-    int bits;
+    MUTEX mutex;
+    struct tm *p;
+    char *ps;
 }LOGGER;
 #endif
 #ifdef HAVE_PTHREAD
@@ -175,7 +174,7 @@ do                                                                              
 {                                                                                   \
     if((ptr = (LOGGER *)calloc(1, sizeof(LOGGER))))                                 \
     {                                                                               \
-        MUTEX_RESET(PL(ptr)->mutex);                                                \
+        MUTEX_INIT(PL(ptr)->mutex);                                                 \
         PMKDIR(ptr, lp);                                                            \
         strcpy(PLF(ptr), lp);                                                       \
         PL(ptr)->rflag = rotate_flag;                                               \
