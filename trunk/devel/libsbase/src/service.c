@@ -1408,7 +1408,7 @@ void service_stop(SERVICE *service)
         //iodaemons
         if(service->niodaemons > 0)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop iodaemons");
+            WARN_LOGGER(service->logger, "Ready for stop iodaemons");
             for(i = 0; i < service->niodaemons; i++)
             {
                 if(service->iodaemons[i])
@@ -1422,7 +1422,7 @@ void service_stop(SERVICE *service)
         //threads
         if(service->nprocthreads > 0)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop procthreads");
+            WARN_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
             {
                 if(service->procthreads[i])
@@ -1431,12 +1431,11 @@ void service_stop(SERVICE *service)
                     PROCTHREAD_EXIT(service->procthreads[i]->threadid, NULL);
                 }
             }
-            DEBUG_LOGGER(service->logger, "over for stop threads");
         }
         //daemons
         if(service->ndaemons > 0)
         {
-            DEBUG_LOGGER(service->logger, "Ready for stop daemons");
+            WARN_LOGGER(service->logger, "Ready for stop daemons");
             for(i = 0; i < service->ndaemons; i++)
             {
                 if(service->daemons[i])
