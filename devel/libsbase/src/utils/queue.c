@@ -97,7 +97,7 @@ int queue_total(void *queue)
 
     if(q)
     {
-        ret = q->qtotal;
+        ret = q->total;
     }
     return ret;
 }

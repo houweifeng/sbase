@@ -261,6 +261,7 @@ running:
                 sbase->services[i]->stop(sbase->services[i]);
             }
         }
+        if(sbase->cond > 0) close(sbase->cond);
         ret = 0;
     }
     return ret;

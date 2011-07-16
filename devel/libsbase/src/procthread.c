@@ -21,10 +21,10 @@ void procthread_event_handler(int event_fd, int flag, void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg, *parent = NULL;
     char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
-    socklen_t rsa_len = sizeof(struct sockaddr_in);
-    int fd = -1, port = -1, n = 0, opt = 1;
-    SERVICE *service = NULL;
+    int fd = -1, port = -1, n = 0, opt = 1, i = 0;
     struct sockaddr_in rsa;
+    socklen_t rsa_len = sizeof(rsa);
+    SERVICE *service = NULL;
     CONN *conn = NULL;
     void *ssl = NULL;
 
@@ -57,7 +57,7 @@ new_conn:
                                         service->ip, service->port, &(service->session), 
                                         ssl, CONN_STATUS_FREE)))
                         {
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
+                            WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d from service->fd:%d", i++, ip, port, fd, service->fd);
                             continue;
                         }
                         else
@@ -172,7 +172,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0,0};
-    int i = 0;
+    int i = 0, k = 0;
 
     if(pth)
     {
@@ -186,7 +186,7 @@ void procthread_run(void *arg)
             {
                 //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                i = pth->evbase->loop(pth->evbase, 0, NULL);
+                pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -194,7 +194,8 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     i = 1;
                 }
-                //if(i < 1) usleep(pth->usec_sleep);
+                if(i > 0)++k;
+                if(k > 10000000) {usleep(pth->usec_sleep); k = 0;}
                 //if(i < 1)++k;else k = 0;
                 //fprintf(stdout, "%s::%d i:%d\n", __FILE__, __LINE__, i);
                 //if(k  > 10000){usleep(5000); k = 0;}
