@@ -223,12 +223,11 @@ void event_add(EVENT *event, int flags)
 {
 	if(event)
 	{
+        MUTEX_LOCK(event->mutex);
         if((event->ev_flags & flags) != flags)
         {
-            MUTEX_LOCK(event->mutex);
             event->old_ev_flags = event->ev_flags;
             event->ev_flags |= flags;
-            MUTEX_UNLOCK(event->mutex);
             if(event->ev_base && event->ev_base->update)
             {
                 DEBUG_LOGGER(event->ev_base->logger, 
@@ -237,6 +236,7 @@ void event_add(EVENT *event, int flags)
                 event->ev_base->update(event->ev_base, event);
             }
         }
+        MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -246,12 +246,11 @@ void event_del(EVENT *event, int flags)
 {
 	if(event)
 	{
+        MUTEX_LOCK(event->mutex);
 		if(event->ev_flags & flags)
 		{
-            MUTEX_LOCK(event->mutex);
             event->old_ev_flags = event->ev_flags;
 			event->ev_flags ^= flags;
-            MUTEX_UNLOCK(event->mutex);
 			if(event->ev_base)
 			{
                 DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
