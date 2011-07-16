@@ -57,7 +57,7 @@ new_conn:
                                         service->ip, service->port, &(service->session), 
                                         ssl, CONN_STATUS_FREE)))
                         {
-                            WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d from service->fd:%d", i++, ip, port, fd, service->fd);
+                            //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d from service->fd:%d", i++, ip, port, fd, service->fd);
                             continue;
                         }
                         else
@@ -172,7 +172,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0,0};
-    int i = 0, k = 0;
+    int i = 0;
 
     if(pth)
     {
@@ -186,7 +186,7 @@ void procthread_run(void *arg)
             {
                 //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
-                pth->evbase->loop(pth->evbase, 0, NULL);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -453,7 +453,7 @@ void procthread_stop(PROCTHREAD *pth)
             pth->lock       = 1;
             PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
             pth->wakeup(pth);
-            WARN_LOGGER(pth->logger, "Pushed MESSAGE_QUIT to procthreads[%d]", pth->index);
+            //WARN_LOGGER(pth->logger, "Pushed MESSAGE_QUIT to procthreads[%d]", pth->index);
         }
         else
         {
@@ -471,7 +471,7 @@ void procthread_terminate(PROCTHREAD *pth)
 {
     if(pth)
     {
-        WARN_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
+        //WARN_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
         pth->lock       = 1;
         pth->running_status = 0;
         pth->wakeup(pth);
