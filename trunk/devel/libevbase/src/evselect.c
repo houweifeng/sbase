@@ -54,7 +54,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
         if(ev_flags)
         {
             evbase->evlist[event->ev_fd] = event;	
-            SET_MAX_FD(evbase, event);
+            //SET_MAX_FD(evbase, event);
             DEBUG_LOGGER(evbase->logger, "Added event[%p] flags[%d] on fd[%d]", 
                     event, ev_flags, event->ev_fd);
         }
@@ -67,7 +67,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
 int evselect_update(EVBASE *evbase, EVENT *event)
 {
     int ev_flags = 0, add_ev_flags = 0, del_ev_flags = 0;
-    if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
+    if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         ev_flags = (event->ev_flags ^ event->old_ev_flags);
         add_ev_flags = (event->ev_flags & ev_flags);
@@ -95,7 +95,7 @@ int evselect_update(EVBASE *evbase, EVENT *event)
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
             DEBUG_LOGGER(evbase->logger, "Deleted EV_WRITE on fd[%d]", event->ev_fd);
         }
-        SET_MAX_FD(evbase, event);
+        //SET_MAX_FD(evbase, event);
         evbase->evlist[event->ev_fd] = event;
         DEBUG_LOGGER(evbase->logger, "Updated event[%p] flags[%d] on fd[%d]",
                 event, event->ev_flags, event->ev_fd);
@@ -119,7 +119,7 @@ int evselect_del(EVBASE *evbase, EVENT *event)
         DEBUG_LOGGER(evbase->logger, "Deleted event[%p] flags[%d] on fd[%d]",
                 event, event->ev_flags, event->ev_fd);
         evbase->evlist[event->ev_fd] = NULL;	
-        RESET_MAX_FD(evbase, event);
+        //RESET_MAX_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -150,7 +150,7 @@ int evselect_loop(EVBASE *evbase, int loop_flag, struct timeval *tv)
         n = select(evbase->allowed, &rd_fd_set, &wr_fd_set, NULL, tv);
         if(n <= 0) return n;
         DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->allowed);
-        for(i = 0; i <= evbase->maxfd; ++i)
+        for(i = 0; i <= evbase->allowed; ++i)
         {
             if((ev = evbase->evlist[i]))
             {

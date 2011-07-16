@@ -55,7 +55,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             evbase->evlist[event->ev_fd] = event;	
             DEBUG_LOGGER(evbase->logger, "Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
         }
-        SET_MAX_FD(evbase, event);
+        //SET_MAX_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -81,7 +81,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
         ev->revents = 0;
         ev->fd	  = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
-        SET_MAX_FD(evbase, event);
+        //SET_MAX_FD(evbase, event);
         DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
                 event->ev_flags, event->ev_fd);
         return 0;
@@ -95,7 +95,7 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
     {
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
         evbase->evlist[event->ev_fd] = NULL;
-        RESET_MAX_FD(evbase, event);
+        //RESET_MAX_FD(evbase, event);
         return 0;
     }	
     return -1;
@@ -115,7 +115,7 @@ int evpoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
     {	
         if(tv) msec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         else msec = 1;
-        n = poll(evbase->ev_fds, evbase->maxfd+1, msec);	
+        n = poll(evbase->ev_fds, evbase->allowed, msec);	
         if(n == -1)
         {
             FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
@@ -123,7 +123,7 @@ int evpoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
         }
         if(n <= 0) return n;
         DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->allowed);
-        for(i = 0; i < evbase->maxfd+1; i++)
+        for(i = 0; i < evbase->allowed; i++)
         {
             ev = &(((struct pollfd *)evbase->ev_fds)[i]);
             if((event = evbase->evlist[i]) && ev->fd >= 0)
