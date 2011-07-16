@@ -11,7 +11,6 @@
 #include "message.h"
 #include "evtimer.h"
 #include "xmm.h"
-#include "xqueue.h"
 #ifndef UI
 #define UI(_x_) ((unsigned int)(_x_))
 #endif
@@ -146,7 +145,6 @@ void sigpipe_ignore()
     pth->logger = service->logger;                                                          \
     pth->usec_sleep = service->usec_sleep;                                                  \
     pth->use_cond_wait = service->use_cond_wait;                                            \
-    pth->queue = service->queue;                                                  \
 }
 
 /* running */
@@ -1651,7 +1649,6 @@ void service_clean(SERVICE *service)
         {
             LOGGER_CLEAN(service->logger);
         }
-        xqueue_clean(service->queue);
         xmm_free(service, sizeof(SERVICE));
     }
     return ;
@@ -1676,7 +1673,6 @@ SERVICE *service_init()
     if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
         MUTEX_RESET(service->mutex);
-        service->queue              = xqueue_init();
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;

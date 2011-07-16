@@ -1,7 +1,6 @@
 #include "sbase.h"
 #include "service.h"
 #include "procthread.h"
-#include "xqueue.h"
 #include "logger.h"
 #include "message.h"
 #include "evtimer.h"
@@ -370,7 +369,6 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->iodaemon      = pth->iodaemon;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
-        conn->queue         = pth->queue;
         //conn->reset_state(conn);
         if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
         {

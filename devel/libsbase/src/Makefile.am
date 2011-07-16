@@ -14,8 +14,8 @@ utils/chunk.c \
 utils/mmblock.h \
 utils/mmblock.c \
 utils/mutex.h \
-utils/xqueue.h \
-utils/xqueue.c \
+utils/queue.h \
+utils/queue.c \
 utils/logger.h \
 utils/evtimer.h \
 utils/evtimer.c \
