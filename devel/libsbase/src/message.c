@@ -3,14 +3,6 @@
 #include "logger.h"
 #include "mutex.h"
 #include "xmm.h"
-int get_msg_no(int message_id)
-{
-    int msg_no = 0;
-    int n = message_id;
-    while((n /= 2))++msg_no;
-    return msg_no;
-}
-
 /* initialize */
 void *qmessage_init()
 {
@@ -156,17 +148,16 @@ void qmessage_handler(void *qmsg, void *logger)
     {
         while((msg = qmessage_pop(qmsg)))
         {
-            if((msg->msg_id & MESSAGE_ALL) != msg->msg_id) 
+            if(msg->msg_id < 1 || msg->msg_id > MESSAGE_MAX) 
             {
-                FATAL_LOGGER(logger, "Invalid message[%04x:%04x:%04x] handler[%p] parent[%p] fd[%d]",
-                        msg->msg_id, MESSAGE_ALL, (msg->msg_id & MESSAGE_ALL), msg->handler, 
-                        msg->parent, msg->fd);
+                FATAL_LOGGER(logger, "Invalid message[%d/%d] handler[%p] parent[%p] fd[%d]",
+                        msg->msg_id, MESSAGE_MAX, msg->handler, msg->parent, msg->fd);
                 goto next;
             }
             pth = (PROCTHREAD *)(msg->parent);
             if(msg->msg_id == MESSAGE_NEW_CONN)
             {
-                DEBUG_LOGGER(logger, "Got message[%s] fd:%d total[%d/%d] left:%d On service[%s] procthread[%p] ", MESSAGE_DESC(msg->msg_id), msg->fd, q->total, q->qtotal, q->nleft, pth->service->service_name, pth); 
+                DEBUG_LOGGER(logger, "Got message[%s] fd:%d total[%d/%d] left:%d On service[%s] procthread[%p] ", messagelist[msg->msg_id], msg->fd, q->total, q->qtotal, q->nleft, pth->service->service_name, pth); 
                 pth->newconn(pth, msg->fd, msg->handler);
                 goto next;
             }
@@ -196,8 +187,8 @@ void qmessage_handler(void *qmsg, void *logger)
             }
             if(index >= 0 && pth->service->connections[index] != conn) goto next;
             DEBUG_LOGGER(logger, "Got message[%s] total[%d/%d] left:%d On service[%s] procthread[%p] "
-                    "connection[%p][%s:%d] d_state:%d local[%s:%d] via %d", 
-                    MESSAGE_DESC(msg->msg_id), q->total, q->qtotal, q->nleft, pth->service->service_name, pth, 
+                    "connection[%p][%s:%d] d_state:%d local[%s:%d] via %d", messagelist[msg->msg_id],
+                    q->total, q->qtotal, q->nleft, pth->service->service_name, pth, 
                     conn, conn->remote_ip, conn->remote_port, conn->d_state,
                     conn->local_ip, conn->local_port, conn->fd);
             //message  on connection 

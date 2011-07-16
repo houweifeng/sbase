@@ -166,8 +166,8 @@ int service_run(SERVICE *service)
                     service->heartbeat_interval);
         }
         //evbase setting 
-        if(service->service_type == S_SERVICE && service->evbase 
-                && service->working_mode == WORKING_PROC)
+        if(service->service_type == S_SERVICE && service->evbase) 
+                //&& service->working_mode == WORKING_PROC)
         {
             event_set(&(service->event), service->fd, E_READ|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
@@ -224,7 +224,7 @@ running_threads:
         {
             for(i = 0; i < service->niodaemons; i++)
             {
-                if((service->iodaemons[i] = procthread_init(service->cond)))
+                if((service->iodaemons[i] = procthread_init(1)))
                 {
                     PROCTHREAD_SET(service, service->iodaemons[i]);
                     if(service->sbase->evlogfile && service->sbase->evlog_level > 0)
@@ -290,6 +290,7 @@ running_threads:
             return -1;
         }
         /* tracker */ 
+        /*
         if(service->service_type == S_SERVICE && service->evbase && service->fd > 0)
         {
             if((service->tracker = procthread_init(service->fd)))
@@ -307,6 +308,7 @@ running_threads:
                 return -1;
             }
         }
+        */
         /* recover */
         if((service->recover = procthread_init(0)))
         {
@@ -1061,7 +1063,6 @@ int service_pushtoq(SERVICE *service, CONN *conn)
         }
         else 
         {
-            service->nfreeconns++;
             //WARN_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d new:%d free:%d", conn,conn->d_state, service->nnewconns, service->nfreeconns);
             conn->clean(conn);
             service->nconn--;
@@ -1092,7 +1093,6 @@ CONN *service_popfromq(SERVICE *service)
             if((conn = conn_init()))
             {
                 service->nconn++;
-                service->nnewconns++;
                 DEBUG_LOGGER(service->logger, "conn_init(%d) conn[%p]->d_state:%d nconn:%d ", service->nqconns, conn, conn->d_state, service->nconn);
             }
         }
