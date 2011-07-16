@@ -78,12 +78,12 @@ int service_set(SERVICE *service)
             }
 #endif
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
-                    && (flag = fcntl(service->fd, F_GETFL, 0)) != -1
-                    && fcntl(service->fd, F_SETFL, flag|O_NONBLOCK) == 0 
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
+                    && (flag = fcntl(service->fd, F_GETFL, 0)) != -1
+                    && fcntl(service->fd, F_SETFL, flag|O_NONBLOCK) == 0 
                     && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
                             sizeof(service->sa))) == 0)
             {
@@ -1472,7 +1472,7 @@ void service_stop(SERVICE *service)
         EVTIMER_DEL(service->evtimer, service->evid);
             DEBUG_LOGGER(service->logger, "Ready for remove event");
         /*remove event */
-        event_destroy(&service->event);
+        event_destroy(&(service->event));
         DEBUG_LOGGER(service->logger, "over for remove event");
         if(service->fd > 0)close(service->fd);
         DEBUG_LOGGER(service->logger, "over for stop service[%s]", service->service_name);

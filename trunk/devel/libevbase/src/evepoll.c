@@ -89,7 +89,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 int evepoll_update(EVBASE *evbase, EVENT *event)
 {
     struct epoll_event ep_event = {0, {0}};
-    int op = 0, ev_flags = 0, mod = 0, ret = -1;
+    int op = 0, ev_flags = 0, ret = -1;
 
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
@@ -173,7 +173,7 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
             timeout = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
             
         }
-        //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->maxfd);
+        memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->allowed);
         n = epoll_wait(evbase->efd, evbase->evs, evbase->allowed, timeout);
         //n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd+1, timeout);
         if(n == -1)

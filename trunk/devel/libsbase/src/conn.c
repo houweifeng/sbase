@@ -263,16 +263,16 @@ void conn_event_handler(int event_fd, int event, void *arg)
             //fprintf(stdout, "%s::%d event[%d] on fd[%d]\n", __FILE__, __LINE__, event, event_fd);
             if(conn->status == CONN_STATUS_READY)
             {
-                if(getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) < 0 
-                        || error != 0)
+                ret = getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
+                if(ret < 0 || error != 0)
                 {
                     WARN_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
-                            "connectting failed, error:%d %s", conn->fd, conn, conn->remote_ip, 
-                            conn->remote_port, conn->local_ip, conn->local_port, error, strerror(errno));
+                            "connectting failed, error:[%d]{%s}", conn->fd, conn, conn->remote_ip, 
+                            conn->remote_port, conn->local_ip, conn->local_port, error, strerror(error));
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);          
                     return ;
                 }
-                DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
+                WARN_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 //set conn->status
@@ -1393,9 +1393,9 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
         CHK(cp)->left = len;
         queue_push(conn->queue, cp);
         CONN_READY_WRITE(conn);
-        DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d queue "
+        DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d queue[%p] "
                 "total %d on %s:%d via %d", len, CHK(cp)->bsize,conn->remote_ip,conn->remote_port, 
-                queue_total(conn->queue), conn->local_ip, conn->local_port, conn->fd);
+                conn->queue, queue_total(conn->queue), conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
     return ret;
@@ -1636,6 +1636,7 @@ CONN *conn_init()
         conn->index = -1;
         conn->gindex = -1;
         MUTEX_RESET(conn->mutex);
+        conn->queue                 = queue_init();
         conn->set                   = conn_set;
         conn->get_service_id        = conn_get_service_id;
         conn->close                 = conn_close;
