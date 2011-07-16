@@ -93,7 +93,7 @@ err:
 /* Update event in evbase */
 int evkqueue_update(EVBASE *evbase, EVENT *event)
 {
-    short ev_flags = 0, ret = -1, add_ev_flags = 0, del_ev_flags = 0;
+    int ev_flags = 0, ret = -1, add_ev_flags = 0, del_ev_flags = 0;
     struct kevent kqev;
 
     if(evbase && event && evbase->evs && event->ev_fd >= 0 
@@ -214,11 +214,11 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
     return -1;
 }
 /* Loop evbase */
-int evkqueue_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
+int evkqueue_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
 {
     EVENT *ev = NULL;
     int i = 0, n = 0;
-    short ev_flags = 0;	
+    int ev_flags = 0;	
     struct timespec ts = {0}, *pts = NULL;
     struct kevent *kqev = NULL;
 

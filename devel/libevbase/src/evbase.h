@@ -71,7 +71,7 @@ typedef struct _EVBASE
 	int	    (*add)(struct _EVBASE *, struct _EVENT*);
 	int 	(*update)(struct _EVBASE *, struct _EVENT*);
 	int 	(*del)(struct _EVBASE *, struct _EVENT*);
-	int	    (*loop)(struct _EVBASE *, short , struct timeval *tv);
+	int	    (*loop)(struct _EVBASE *, int , struct timeval *tv);
 	void	(*reset)(struct _EVBASE *);
 	void 	(*clean)(struct _EVBASE *);
 }EVBASE;
@@ -89,16 +89,16 @@ typedef struct _EVENT
 	struct timeval tv;
 	void *ev_arg;
 	struct _EVBASE *ev_base;
-	void (*ev_handler)(int fd, short flags, void *arg);	
+	void (*ev_handler)(int fd, int flags, void *arg);	
 }EVENT;
 /* Set event */
-void event_set(EVENT *event, int fd, short flags, void *arg, void *handler);
+void event_set(EVENT *event, int fd, int flags, void *arg, void *handler);
 /* Add event */
-void event_add(EVENT *event, short flags);
+void event_add(EVENT *event, int flags);
 /* Delete event */
-void event_del(EVENT *event, short flags);
+void event_del(EVENT *event, int flags);
 /* Active event */
-void event_active(EVENT *event, short ev_flags);
+void event_active(EVENT *event, int ev_flags);
 /* Destroy event */
 void event_destroy(EVENT *event);
 /* Clean event */

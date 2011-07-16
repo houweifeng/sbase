@@ -248,7 +248,7 @@ void conn_end_handler(CONN *conn)
 }
 
 /* connection event handler */
-void conn_event_handler(int event_fd, short event, void *arg)
+void conn_event_handler(int event_fd, int event, void *arg)
 {
     int len = sizeof(int), error = 0, evid = -1, ret = -1;
     CONN *conn = (CONN *)arg;
@@ -335,7 +335,7 @@ void conn_event_handler(int event_fd, short event, void *arg)
 /* set connection */
 int conn_set(CONN *conn)
 {
-    short flag = 0;
+    int flag = 0;
     if(conn && conn->fd > 0 )
     {
         //timeout

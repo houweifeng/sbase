@@ -40,7 +40,7 @@ typedef struct _EVOPS
     int     (*add)(struct _EVBASE *, struct _EVENT*);
     int     (*update)(struct _EVBASE *, struct _EVENT*);
     int     (*del)(struct _EVBASE *, struct _EVENT*);
-    int     (*loop)(struct _EVBASE *, short , struct timeval *tv);
+    int     (*loop)(struct _EVBASE *, int , struct timeval *tv);
     void    (*reset)(struct _EVBASE *);
     void    (*clean)(struct _EVBASE *);
 }EVOPS;
@@ -202,7 +202,7 @@ EVBASE *evbase_init()
 }
 
 /* Set event */
-void event_set(EVENT *event, int fd, short flags, void *arg, void *handler)
+void event_set(EVENT *event, int fd, int flags, void *arg, void *handler)
 {
 	if(event)
 	{
@@ -219,7 +219,7 @@ void event_set(EVENT *event, int fd, short flags, void *arg, void *handler)
 }
 
 /* Add event flags */
-void event_add(EVENT *event, short flags)
+void event_add(EVENT *event, int flags)
 {
 	if(event)
 	{
@@ -230,7 +230,7 @@ void event_add(EVENT *event, short flags)
             event->ev_flags |= flags;
             if(event->ev_base && event->ev_base->update)
             {
-                WARN_LOGGER(event->ev_base->logger, 
+                DEBUG_LOGGER(event->ev_base->logger, 
                         "Added event[%p] flags[%d] on fd[%d]",
                         event, event->ev_flags, event->ev_fd);
                 event->ev_base->update(event->ev_base, event);
@@ -242,7 +242,7 @@ void event_add(EVENT *event, short flags)
 }
 
 /* Delete event flags */
-void event_del(EVENT *event, short flags)
+void event_del(EVENT *event, int flags)
 {
 	if(event)
 	{
@@ -253,7 +253,7 @@ void event_del(EVENT *event, short flags)
 			event->ev_flags ^= flags;
 			if(event->ev_base)
 			{
-                WARN_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
+                DEBUG_LOGGER(event->ev_base->logger, "Updated event[%p] flags[%d] on fd[%d]",
                             event, event->ev_flags, event->ev_fd);
                 //if(event->ev_flags & (E_READ|E_WRITE))
                 //{
@@ -291,17 +291,17 @@ void event_destroy(EVENT *event)
 }
 
 /* Active event */
-void event_active(EVENT *event, short ev_flags)
+void event_active(EVENT *event, int ev_flags)
 {
-	short e_flags = ev_flags;
+	int e_flags = ev_flags;
 	if(event)
     {
         if(event->ev_handler && event->ev_base && event->ev_flags)
         {
-            //WARN_LOGGER(event->ev_base->logger, 
+            //DEBUG_LOGGER(event->ev_base->logger, 
             //        "Activing event[%p] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
             event->ev_handler(event->ev_fd, e_flags, event->ev_arg);	
-            WARN_LOGGER(event->ev_base->logger, 
+            DEBUG_LOGGER(event->ev_base->logger, 
                     "over Activing event[%p] flags[%d] on fd[%d]", event, e_flags, event->ev_fd);
         }
         if(!(event->ev_flags & E_PERSIST) && event->ev_base)

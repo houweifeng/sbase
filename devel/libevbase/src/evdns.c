@@ -7,7 +7,7 @@
 #include "evdns.h"
 
 int evdns_make_query(char *domain, int dnsclass, int type, 
-        unsigned short id, int rd, unsigned char *buf)
+        unsigned int id, int rd, unsigned char *buf)
 {
     unsigned char *p = NULL, *q = NULL, *s = NULL, *name = NULL;
     int buflen = 0, len = 0;

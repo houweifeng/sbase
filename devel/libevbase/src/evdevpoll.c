@@ -22,7 +22,7 @@ int evdevpoll_del(EVBASE *evbase, EVENT *event)
     return 0;
 }
 /* Loop evbase */
-int evdevpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
+int evdevpoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
 {
     return 0;
 }

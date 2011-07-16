@@ -69,9 +69,9 @@
 #if 0
 /* we cannot use this approach on systems where we can't access 16/32 bit
    data on un-aligned addresses */
-#define DNS__16BIT(p)                   ntohs(*(unsigned short*)(p))
+#define DNS__16BIT(p)                   ntohs(*(unsigned int*)(p))
 #define DNS__32BIT(p)                   ntohl(*(unsigned long*)(p))
-#define DNS__SET16BIT(p, v)             *(unsigned short*)(p) = htons(v)
+#define DNS__SET16BIT(p, v)             *(unsigned int*)(p) = htons(v)
 #define DNS__SET32BIT(p, v)             *(unsigned long*)(p) = htonl(v)
 #endif
 
@@ -150,7 +150,7 @@ typedef struct _HOSTENT
     int  addrs[DNS_MAX_NUM];
 }HOSTENT;
 /* return buffer length*/
-int evdns_make_query(char *hostname, int dnsclass, int type, unsigned short id, int rd, unsigned char *buf);
+int evdns_make_query(char *hostname, int dnsclass, int type, unsigned int id, int rd, unsigned char *buf);
 /* parse reply record */
 int evdns_parse_reply(unsigned char *buf, int nbuf, HOSTENT *hostent);
 #endif /* DNS_H */

@@ -129,5 +129,5 @@ void conn_reset(CONN *conn);
 void conn_clean(CONN *conn);
 
 /* event handler */
-void conn_event_handler(int event_fd, short event, void *arg);
+void conn_event_handler(int event_fd, int event, void *arg);
 #endif

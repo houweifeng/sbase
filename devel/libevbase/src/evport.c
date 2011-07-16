@@ -22,7 +22,7 @@ int evport_del(EVBASE *evbase, EVENT *event)
     return -1;
 }
 /* Loop evbase */
-int evport_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
+int evport_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
 {
     return -1;
 }

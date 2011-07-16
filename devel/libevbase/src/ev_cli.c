@@ -73,7 +73,7 @@ int setrlimiter(char *name, int rlimit, int nset)
     return ret;
 }
 /* sock_dgram /UCP handler */
-void ev_udp_handler(int fd, short ev_flags, void *arg)
+void ev_udp_handler(int fd, int ev_flags, void *arg)
 {
     int n = 0;
     struct sockaddr_in rsa;
@@ -120,7 +120,7 @@ err:
 }
 
 /* sock stream/TCP handler */
-void ev_handler(int fd, short ev_flags, void *arg)
+void ev_handler(int fd, int ev_flags, void *arg)
 {
     int n = 0;
     if(ev_flags & E_READ)

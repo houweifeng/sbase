@@ -23,7 +23,7 @@ int evrtsig_del(EVBASE *evbase, EVENT *event)
     return -1;
 }
 /* Loop evbase */
-int evrtsig_loop(EVBASE *evbase, short flag, struct timeval *tv)
+int evrtsig_loop(EVBASE *evbase, int flag, struct timeval *tv)
 {
     return -1;
 }
