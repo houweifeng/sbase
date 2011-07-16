@@ -194,8 +194,8 @@ void procthread_run(void *arg)
                     //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     i = 1;
                 }
-                if(i > 0)++k;
-                if(k > 10000000) {usleep(pth->usec_sleep); k = 0;}
+                //if(i > 0)++k;
+                //if(k > 10000000) {usleep(pth->usec_sleep); k = 0;}
                 //if(i < 1)++k;else k = 0;
                 //fprintf(stdout, "%s::%d i:%d\n", __FILE__, __LINE__, i);
                 //if(k  > 10000){usleep(5000); k = 0;}

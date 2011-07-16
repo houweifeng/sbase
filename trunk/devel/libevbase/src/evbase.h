@@ -55,7 +55,7 @@ typedef struct _EVBASE
 	int allowed;
 	int state;
     int evopid;
-    //MUTEX mutex;
+    MUTEX mutex;
 
 	void *ev_read_fds;
 	void *ev_write_fds;
@@ -76,6 +76,20 @@ typedef struct _EVBASE
 	void 	(*clean)(struct _EVBASE *);
 }EVBASE;
 EVBASE *evbase_init();
+#define SET_MAX_FD(evbase, event)                                   \
+do                                                                  \
+{                                                                   \
+    MUTEX_LOCK(evbase->mutex);                                      \
+    if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;  \
+    MUTEX_UNLOCK(evbase->mutex);                                    \
+}while(0)
+#define RESET_MAX_FD(evbase, event)                                 \
+do                                                                  \
+{                                                                   \
+    MUTEX_LOCK(evbase->mutex);                                      \
+    if(event->ev_fd == evbase->maxfd)evbase->maxfd = event->ev_fd-1;\
+    MUTEX_UNLOCK(evbase->mutex);                                    \
+}while(0)
 #endif
 #ifndef _TYPEDEF_EVENT
 #define _TYPEDEF_EVENT
