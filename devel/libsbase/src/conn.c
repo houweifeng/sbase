@@ -272,7 +272,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);          
                     return ;
                 }
-                WARN_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
+                DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 //set conn->status
