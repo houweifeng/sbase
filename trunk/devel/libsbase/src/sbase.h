@@ -185,7 +185,7 @@ typedef struct _SBASE
     /* evtimer */
     int evid;
     int ssl_id;
-    long long nheartbeat;
+    int64_t nheartbeat;
 
 	/* timer && logger */
 	void *logger;
@@ -306,7 +306,6 @@ typedef struct _SERVICE
 
     /* message queue for proc mode */
     void *message_queue;
-    void *queue;
 
     //void *chunks_queue;
     CHUNK *qchunks[SB_CHUNKS_MAX];
@@ -381,7 +380,7 @@ typedef struct _PROCTHREAD
     int cond;
     int use_cond_wait;
     int have_evbase;
-    long threadid;
+    int64_t threadid;
     MUTEX mutex;
     EVENT event;
     EVENT evcond;
@@ -392,7 +391,6 @@ typedef struct _PROCTHREAD
     void *iodaemon;
     void *ioqmessage;
     void *message_queue;
-    void *queue;
 
     /* evbase */
     EVBASE *evbase;
@@ -446,8 +444,6 @@ typedef struct _CONN
     int c_id;
     int d_state;
     int evid;
-    int qid;
-    int bits;
     /* conenction */
     int  sock_type;
     int  fd;
@@ -457,13 +453,6 @@ typedef struct _CONN
     int xids[SB_XIDS_MAX];
     EVENT event;
     MUTEX mutex;
-    /* evbase */
-    EVBASE *evbase;
-    void *parent;
-    /* SSL */
-    void *ssl;
-    /* evtimer */
-    void *evtimer;
     /* buffer */
     MMBLOCK buffer;
     MMBLOCK packet;
@@ -471,10 +460,16 @@ typedef struct _CONN
     MMBLOCK oob;
     MMBLOCK exchange;
     CHUNK chunk;
+    /* evbase */
+    EVBASE *evbase;
+    void *parent;
+    void *queue;
+    /* SSL */
+    void *ssl;
+    /* evtimer */
+    void *evtimer;
     /* logger and timer */
     void *logger;
-    /* queue */
-    void *queue;
     /* message queue */
     void *iodaemon;
     void *ioqmessage;
@@ -543,12 +538,12 @@ typedef struct _CONN
     int (*newtask)(struct _CONN *, CALLBACK *);
     int (*get_service_id)(struct _CONN *);
     /* connection bytes stats */
-    long long   recv_oob_total;
-    long long   sent_oob_total;
-    long long   recv_data_total;
-    long long   sent_data_total;
+    int64_t   recv_oob_total;
+    int64_t   sent_oob_total;
+    int64_t   recv_data_total;
+    int64_t   sent_data_total;
     /* xid 64 bit */
-    int64_t xids64[SB_XIDS_MAX];
+    int64_t  xids64[SB_XIDS_MAX];
     char remote_ip[SB_IP_MAX];
     char local_ip[SB_IP_MAX];
     SESSION session;

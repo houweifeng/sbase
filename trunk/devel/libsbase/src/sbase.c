@@ -165,9 +165,9 @@ void sbase_evtimer_handler(void *arg)
 /* running all service */
 int sbase_running(SBASE *sbase, int useconds)
 {
-    int ret = -1, i = -1, k = 0;
     struct timeval tv = {0};
     SERVICE *service = NULL;
+    int ret = -1, i = -1;
     struct ip_mreq mreq;
     pid_t pid = 0;
 

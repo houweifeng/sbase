@@ -64,7 +64,7 @@ libsbase_la_LIBADD =
 am_libsbase_la_OBJECTS = libsbase_la-conn.lo libsbase_la-message.lo \
 	libsbase_la-procthread.lo libsbase_la-sbase.lo \
 	libsbase_la-service.lo libsbase_la-chunk.lo \
-	libsbase_la-mmblock.lo libsbase_la-xqueue.lo \
+	libsbase_la-mmblock.lo libsbase_la-queue.lo \
 	libsbase_la-evtimer.lo libsbase_la-xmm.lo libsbase_la-stime.lo
 libsbase_la_OBJECTS = $(am_libsbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
@@ -219,8 +219,8 @@ utils/chunk.c \
 utils/mmblock.h \
 utils/mmblock.c \
 utils/mutex.h \
-utils/xqueue.h \
-utils/xqueue.c \
+utils/queue.h \
+utils/queue.c \
 utils/logger.h \
 utils/evtimer.h \
 utils/evtimer.c \
@@ -397,11 +397,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-message.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-mmblock.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-procthread.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-queue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-sbase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-service.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-stime.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-xmm.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-xqueue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-http.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-wbenchmark.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xbenchmark-http.Po@am__quote@
@@ -483,12 +483,12 @@ libsbase_la-mmblock.lo: utils/mmblock.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-mmblock.lo `test -f 'utils/mmblock.c' || echo '$(srcdir)/'`utils/mmblock.c
 
-libsbase_la-xqueue.lo: utils/xqueue.c
-@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-xqueue.lo -MD -MP -MF "$(DEPDIR)/libsbase_la-xqueue.Tpo" -c -o libsbase_la-xqueue.lo `test -f 'utils/xqueue.c' || echo '$(srcdir)/'`utils/xqueue.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbase_la-xqueue.Tpo" "$(DEPDIR)/libsbase_la-xqueue.Plo"; else rm -f "$(DEPDIR)/libsbase_la-xqueue.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/xqueue.c' object='libsbase_la-xqueue.lo' libtool=yes @AMDEPBACKSLASH@
+libsbase_la-queue.lo: utils/queue.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-queue.lo -MD -MP -MF "$(DEPDIR)/libsbase_la-queue.Tpo" -c -o libsbase_la-queue.lo `test -f 'utils/queue.c' || echo '$(srcdir)/'`utils/queue.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libsbase_la-queue.Tpo" "$(DEPDIR)/libsbase_la-queue.Plo"; else rm -f "$(DEPDIR)/libsbase_la-queue.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/queue.c' object='libsbase_la-queue.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-xqueue.lo `test -f 'utils/xqueue.c' || echo '$(srcdir)/'`utils/xqueue.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libsbase_la-queue.lo `test -f 'utils/queue.c' || echo '$(srcdir)/'`utils/queue.c
 
 libsbase_la-evtimer.lo: utils/evtimer.c
 @am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libsbase_la-evtimer.lo -MD -MP -MF "$(DEPDIR)/libsbase_la-evtimer.Tpo" -c -o libsbase_la-evtimer.lo `test -f 'utils/evtimer.c' || echo '$(srcdir)/'`utils/evtimer.c; \

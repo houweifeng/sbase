@@ -4,7 +4,7 @@
 #include "mmblock.h"
 #include "chunk.h"
 #include "logger.h"
-#include "xqueue.h"
+#include "queue.h"
 #include "message.h"
 #include "service.h"
 #include "timer.h"
@@ -59,7 +59,7 @@ int conn_read_buffer(CONN *conn)
 }
 #define CONN_READY_WRITE(conn)                                                              \
 {                                                                                           \
-    if(xqueue_total(conn->queue, conn->qid) > 0)                                            \
+    if(queue_total(conn->queue) > 0)                                                        \
         event_add(&(conn->event), E_WRITE);                                                 \
 }                                                                                           
 
@@ -178,7 +178,7 @@ void conn_buffer_handler(CONN *conn)
 
     if(conn)
     {
-        if(xqueue_total(conn->queue, conn->qid) < 1)
+        if(queue_total(conn->queue) < 1)
             event_del(&(conn->event), E_WRITE);
         ret = conn->packet_reader(conn);
     }
@@ -193,7 +193,7 @@ void conn_chunk_handler(CONN *conn)
 
     if(conn)
     {
-        if(xqueue_total(conn->queue, conn->qid) < 1)
+        if(queue_total(conn->queue) < 1)
             event_del(&(conn->event), E_WRITE);
         ret = conn__read__chunk(conn);
     }
@@ -238,7 +238,7 @@ void conn_end_handler(CONN *conn)
 
     if(conn)
     {
-        if(xqueue_total(conn->queue, conn->qid) > 0)
+        if(queue_total(conn->queue) > 0)
             event_add(&(conn->event), E_WRITE);
         else
             event_del(&(conn->event), E_WRITE);
@@ -278,7 +278,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //set conn->status
                 if(PPARENT(conn) && PPARENT(conn)->service)
                     PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
-                if(xqueue_total(conn->queue, conn->qid) < 1) 
+                if(queue_total(conn->queue) < 1) 
                 {
                     event_del(&conn->event, E_WRITE);
                 }
@@ -342,7 +342,6 @@ int conn_set(CONN *conn)
         conn->evid = -1;
         if(conn->parent && conn->session.timeout > 0) 
             conn->set_timeout(conn, conn->session.timeout);
-        conn->qid = xqueue_new(conn->queue);
         if(conn->evbase)
         {
             flag = E_READ|E_PERSIST;
@@ -448,7 +447,7 @@ int conn_terminate(CONN *conn)
         DEBUG_LOGGER(conn->logger, "Ready for terminate-conn[%p] remote[%s:%d] local[%s:%d] via %d "
                 "qtotal:%d d_state:%d i_state:%d c_state:%d s_state:%d e_state:%d", conn, 
                 conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd,
-                xqueue_total(conn->queue, conn->qid), conn->d_state, conn->i_state, 
+                queue_total(conn->queue), conn->d_state, conn->i_state, 
                 conn->c_state, conn->s_state, conn->e_state);
         conn->d_state = D_STATE_CLOSE;
         //continue incompleted data handling 
@@ -471,11 +470,11 @@ int conn_terminate(CONN *conn)
         }
         conn->close_proxy(conn);
         EVTIMER_DEL(conn->evtimer, conn->evid);
-        DEBUG_LOGGER(conn->logger, "terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, xqueue_total(conn->queue, conn->qid), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, queue_total(conn->queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* clean send queue */
-        while(xqueue_total(conn->queue, conn->qid) > 0)
+        while(queue_total(conn->queue) > 0)
         {
-            if((cp = (CHUNK *)xqueue_pop(conn->queue, conn->qid)))
+            if((cp = (CHUNK *)queue_pop(conn->queue)))
             {
                 if(parent && parent->service)
                     parent->service->pushchunk(parent->service, cp);
@@ -486,8 +485,7 @@ int conn_terminate(CONN *conn)
                 cp = NULL;
             }
         }
-        if(conn->queue) xqueue_close(conn->queue, conn->qid);
-        DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, xqueue_total(conn->queue, conn->qid), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, queue_total(conn->queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
 #ifdef HAVE_SSL
         if(conn->ssl)
@@ -635,7 +633,7 @@ int conn_start_cstate(CONN *conn)
                     conn->remote_ip, conn->remote_port, conn->local_ip, 
                     conn->local_port, conn->fd);
             conn->c_state = C_STATE_USING;
-            while((cp = (CHUNK *)xqueue_pop(conn->queue, conn->qid)))
+            while((cp = (CHUNK *)queue_pop(conn->queue)))
             {
                 if(PPARENT(conn) && PPARENT(conn)->service)
                 {
@@ -812,7 +810,7 @@ int conn_read_handler(CONN *conn)
             WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d "
                     "from %s:%d on %s:%d via %d failed, %s",
                     n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), 
-                    xqueue_total(conn->queue, conn->qid), conn->remote_ip, 
+                    queue_total(conn->queue), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
             // Terminate connection 
@@ -825,8 +823,8 @@ int conn_read_handler(CONN *conn)
         }
         DEBUG_LOGGER(conn->logger, "Received %d bytes nbuffer:%d/%d  left:%d data total %lld "
                 "from %s:%d on %s:%d via %d", n, conn->buffer.ndata, MMB_SIZE(conn->buffer),
-                MMB_LEFT(conn->buffer), conn->recv_data_total, conn->remote_ip, conn->remote_port, 
-                conn->local_ip, conn->local_port, conn->fd);
+                MMB_LEFT(conn->buffer), LL(conn->recv_data_total), conn->remote_ip, 
+                conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->session.packet_type & PACKET_PROXY)
         {
             ret = conn->proxy_handler(conn);
@@ -846,13 +844,13 @@ int conn_write_handler(CONN *conn)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE), ret);
 
-    if(conn && conn->queue && xqueue_total(conn->queue, conn->qid) > 0)
+    if(conn && queue_total(conn->queue) > 0)
     {
         DEBUG_LOGGER(conn->logger, "Ready for send-data to %s:%d on %s:%d via %d "
                 "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
-                conn->local_ip, conn->local_port, conn->fd, xqueue_total(conn->queue, conn->qid),
+                conn->local_ip, conn->local_port, conn->fd, queue_total(conn->queue),
                 conn->d_state, conn->i_state);
-        if((cp = (CHUNK *)xqueue_head(conn->queue, conn->qid)))
+        if((cp = (CHUNK *)queue_head(conn->queue)))
         {
             if(CHUNK_STATUS(cp) != CHUNK_STATUS_OVER)
             {
@@ -861,17 +859,17 @@ int conn_write_handler(CONN *conn)
                     conn->sent_data_total += n;
                     DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
                             "to %s:%d on %s:%d via %d leave %lld qtotal:%d", 
-                            n, conn->sent_data_total, conn->remote_ip, conn->remote_port, 
+                            n, LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
                             conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left),
-                            xqueue_total(conn->queue, conn->qid));
+                            queue_total(conn->queue));
                 }
                 else
                 {
                     WARN_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) "
                             "to %s:%d on %s:%d via %d leave %lld qtotal:%d failed, %s", n, 
-                            conn->sent_data_total, conn->remote_ip, conn->remote_port, 
+                            LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
                             conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left), 
-                            xqueue_total(conn->queue, conn->qid), strerror(errno));
+                            queue_total(conn->queue), strerror(errno));
 #ifdef HAVE_SSL
                     if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
@@ -887,12 +885,12 @@ int conn_write_handler(CONN *conn)
             /* CONN TIMER sample */
             if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
             {
-                if((cp = (CHUNK *)xqueue_pop(conn->queue, conn->qid)))
+                if((cp = (CHUNK *)queue_pop(conn->queue)))
                 {
                     DEBUG_LOGGER(conn->logger, "Completed chunk[%p] to %s:%d "
                             "on %s:%d via %d clean it leave %d", PPL(cp), 
                             conn->remote_ip, conn->remote_port, conn->local_ip,
-                            conn->local_port, conn->fd, xqueue_total(conn->queue, conn->qid));
+                            conn->local_port, conn->fd, queue_total(conn->queue));
                     if(cp && PPARENT(conn) && PPARENT(conn)->service)
                     {
                         PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
@@ -900,11 +898,11 @@ int conn_write_handler(CONN *conn)
                     cp  = NULL;
                 }
             }
-            if(xqueue_total(conn->queue, conn->qid) == 1 
-                && (cp = (CHUNK *)xqueue_head(conn->queue, conn->qid))
+            if(queue_total(conn->queue) == 1 
+                && (cp = (CHUNK *)queue_head(conn->queue))
                 && CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
             {
-                if((cp = (CHUNK *)xqueue_pop(conn->queue, conn->qid)))
+                if((cp = (CHUNK *)queue_pop(conn->queue)))
                 {
                     if(cp && PPARENT(conn) && PPARENT(conn)->service)
                         PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
@@ -921,7 +919,7 @@ int conn_write_handler(CONN *conn)
             }
             else
             {
-                if(xqueue_total(conn->queue, conn->qid) < 1) 
+                if(queue_total(conn->queue) < 1) 
                 {
                     //event_del(&(conn->event), E_WRITE);
                     CONN_PUSH_MESSAGE(conn, MESSAGE_END);
@@ -930,7 +928,7 @@ int conn_write_handler(CONN *conn)
             }
             DEBUG_LOGGER(conn->logger, "Over for send-data to %s:%d on %s:%d via %d "
                 "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
-                conn->local_ip, conn->local_port, conn->fd, xqueue_total(conn->queue, conn->qid),
+                conn->local_ip, conn->local_port, conn->fd, queue_total(conn->queue),
                 conn->d_state, conn->i_state);
         }
     }
@@ -1078,7 +1076,7 @@ int conn_data_handler(CONN *conn)
                     PCB(conn->cache), PCB(conn->chunk));
             DEBUG_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", 
                     conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
-            if(xqueue_total(conn->queue, conn->qid) > 0){CONN_EVENT_ADD(conn, E_WRITE);}
+            if(queue_total(conn->queue) > 0){CONN_EVENT_ADD(conn, E_WRITE);}
         }
         //reset session
         if(conn->s_state == S_STATE_DATA_HANDLING)
@@ -1319,11 +1317,11 @@ int conn_push_chunk(CONN *conn, void *data, int size)
         {
             chunk_mem(cp, size);
             chunk_mem_copy(cp, data, size);
-            xqueue_push(conn->queue,conn->qid, cp);
+            queue_push(conn->queue, cp);
             CONN_READY_WRITE(conn);
-            DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d queue[%d] "
+            DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d queue[%p] "
                     "total:%d on %s:%d via %d", size, cp->bsize,conn->remote_ip, 
-                    conn->remote_port, conn->qid, xqueue_total(conn->queue, conn->qid), 
+                    conn->remote_port, conn->queue, queue_total(conn->queue), 
                     conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
         }
@@ -1371,11 +1369,11 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
             chunk_file(cp, filename, offset, size);
-            xqueue_push(conn->queue,conn->qid, cp);
+            queue_push(conn->queue, cp);
             CONN_READY_WRITE(conn);
             DEBUG_LOGGER(conn->logger, "Pushed file[%s] [%lld][%lld] to %s:%d "
                     "queue total %d on %s:%d via %d ", filename, LL(offset), LL(size), 
-                    conn->remote_ip, conn->remote_port, xqueue_total(conn->queue, conn->qid), 
+                    conn->remote_ip, conn->remote_port, queue_total(conn->queue), 
                     conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
         }else return ret;
@@ -1393,11 +1391,11 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
     if(conn && (cp = (CHUNK *)chunk))
     {
         CHK(cp)->left = len;
-        xqueue_push(conn->queue,conn->qid, cp);
+        queue_push(conn->queue, cp);
         CONN_READY_WRITE(conn);
         DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d queue "
                 "total %d on %s:%d via %d", len, CHK(cp)->bsize,conn->remote_ip,conn->remote_port, 
-                xqueue_total(conn->queue, conn->qid), conn->local_ip, conn->local_port, conn->fd);
+                queue_total(conn->queue), conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
     return ret;
@@ -1415,7 +1413,7 @@ int conn_over_chunk(CONN *conn)
         if(PPARENT(conn) && PPARENT(conn)->service 
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
-            xqueue_push(conn->queue,conn->qid, cp);
+            queue_push(conn->queue, cp);
             CONN_READY_WRITE(conn);
             ret = 0;
         }
@@ -1523,7 +1521,6 @@ void conn_reset(CONN *conn)
         conn->groupid = -1;
         conn->index = -1;
         conn->gindex = -1;
-        conn->qid = 0;
         conn->d_state = 0;
         conn->e_state = 0;
         memset(conn->xids, 0, sizeof(int) * SB_XIDS_MAX);
@@ -1557,7 +1554,7 @@ void conn_reset(CONN *conn)
         conn->ioqmessage = NULL;
         if(conn->queue)
         {
-            while((cp = (CHUNK *)xqueue_pop(conn->queue, conn->qid)))
+            while((cp = (CHUNK *)queue_pop(conn->queue)))
             {
                 if(PPARENT(conn) && PPARENT(conn)->service)
                 {
@@ -1571,7 +1568,6 @@ void conn_reset(CONN *conn)
 #ifdef HAVE_SSL
         if(conn->ssl)
         {
-            SSL_shutdown(XSSL(conn->ssl));
             SSL_free(XSSL(conn->ssl));
             conn->ssl = NULL;
         }
@@ -1614,10 +1610,11 @@ void conn_clean(CONN *conn)
         MMB_DESTROY(conn->exchange);
         /* Clean chunk */
         chunk_destroy(&(conn->chunk));
+        /* Clean queue */
+        queue_clean(conn->queue);
 #ifdef HAVE_SSL
         if(conn->ssl)
         {
-            SSL_shutdown(XSSL(conn->ssl));
             SSL_free(XSSL(conn->ssl));
             conn->ssl = NULL;
         }
