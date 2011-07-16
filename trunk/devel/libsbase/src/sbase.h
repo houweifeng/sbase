@@ -23,8 +23,8 @@ extern "C" {
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
-#define SB_QCONN_MAX            256
-#define SB_CHUNKS_MAX           256
+#define SB_QCONN_MAX            1024
+#define SB_CHUNKS_MAX           1024
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -180,8 +180,6 @@ typedef struct _SBASE
     int running_status;
     int running_services;
     int evlog_level;
-    int cond;
-    int bits;
     /* evtimer */
     int evid;
     int ssl_id;
@@ -230,14 +228,11 @@ typedef struct _SERVICE
 {
     /* global */
     int id;
-    int cond;
     int lock;
     int usec_sleep;
     int use_cond_wait;
     int init_conns;
     int nconn;
-    int nnewconns;
-    int nfreeconns;
     int nchunks;
     int connections_limit; 
     int index_max;
@@ -263,11 +258,13 @@ typedef struct _SERVICE
     int evid;
     int is_inside_logger;
     int ntask;
+    int bits;
+    int conns_free[SB_CONN_MAX];
+
     struct  sockaddr_in sa;
     EVENT event;
     MUTEX mutex;
 
-    int conns_free[SB_CONN_MAX];
     /* mutex */
     SBASE *sbase;
 
@@ -377,13 +374,13 @@ typedef struct _PROCTHREAD
     int running_status;
 	int usec_sleep;
     int index;
-    int cond;
     int use_cond_wait;
+    int bits;
     int have_evbase;
     int64_t threadid;
     MUTEX mutex;
-    EVENT event;
-    EVENT evcond;
+
+
     void *evtimer;
     SERVICE *service;
 

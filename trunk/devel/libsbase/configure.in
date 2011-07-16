@@ -28,12 +28,12 @@ if test "$havesemaphore" = "yes" ; then
 fi
 
 #ssl
-havessl=no
-AC_CHECK_LIB(ssl, SSL_read, havessl=yes)
-if test "$havessl" = "yes" ; then
-    CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
-    LDFLAGS="${LDFLAGS} -lssl -lcrypto"
-fi
+#havessl=no
+#AC_CHECK_LIB(ssl, SSL_read, havessl=yes)
+#if test "$havessl" = "yes" ; then
+#    CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
+#    LDFLAGS="${LDFLAGS} -lssl -lcrypto"
+#fi
 #zlib
 havezlib=no
 AC_CHECK_LIB(z, compress, havezlib=yes)

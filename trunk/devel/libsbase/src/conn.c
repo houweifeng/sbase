@@ -272,7 +272,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);          
                     return ;
                 }
-                DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
+                WARN_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 //set conn->status
@@ -347,12 +347,11 @@ int conn_set(CONN *conn)
             flag = E_READ|E_PERSIST;
             if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
             event_set(&(conn->event), conn->fd, flag, (void *)conn, &conn_event_handler);
-            conn->evbase->add(conn->evbase, &conn->event);
-            IOWAKEUP(conn);
             DEBUG_LOGGER(conn->logger, "setting conn[%p]->evbase->nfd[%d][%p] remote[%s:%d]"
                     " d_state:%d local[%s:%d] via %d", conn, conn->evbase->nfd, &conn->event, 
                     conn->remote_ip, conn->remote_port, conn->d_state,
                     conn->local_ip, conn->local_port, conn->fd);
+            conn->evbase->add(conn->evbase, &conn->event);
             return 0;
         }
         else
@@ -706,13 +705,13 @@ int conn__push__message(CONN *conn, int message_id)
     PROCTHREAD *parent = NULL;
     int ret = -1;
 
-    if(conn && conn->message_queue && (message_id & MESSAGE_ALL) )
+    if(conn && conn->message_queue && message_id > 0 && (message_id <= MESSAGE_MAX) )
     {
         if((parent = (PROCTHREAD *)conn->parent))
         {
             DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to ioqmessage[%p] "
                     "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
-                    MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
+                    messagelist[message_id], PPL(conn->message_queue), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, QMTOTAL(conn->message_queue),
                     PPL(conn), parent);
@@ -732,14 +731,14 @@ int conn_push_message(CONN *conn, int message_id)
 
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
 
-    if(conn && conn->message_queue && (message_id & MESSAGE_ALL) )
+    if(conn && conn->message_queue && message_id > 0 && message_id <= MESSAGE_MAX )
     {
         if((parent = (PROCTHREAD *)conn->parent))
         {
             /*
             DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to message_queue[%p] "
                     "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p][%p]",
-                    MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
+                    messagelist[message_id), PPL(conn->message_queue], conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, QMTOTAL(conn->message_queue),
                     PPL(conn), parent, (void *)(parent->threadid));
@@ -750,7 +749,7 @@ int conn_push_message(CONN *conn, int message_id)
             /*
             DEBUG_LOGGER(conn->logger, "over for pushing message[%s] to message_queue[%p] "
                     "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p][%p]",
-                    MESSAGE_DESC(message_id), PPL(conn->message_queue), conn->remote_ip, 
+                    messagelist[message_id), PPL(conn->message_queue], conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, conn->fd, 
                     QMTOTAL(conn->message_queue), PPL(conn), parent, (void *)(parent->threadid));
             */
