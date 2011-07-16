@@ -1452,7 +1452,10 @@ void service_stop(SERVICE *service)
         {
             WARN_LOGGER(service->logger, "Ready for stop threads[daemon]");
             service->daemon->terminate(service->daemon);
-            PROCTHREAD_EXIT(service->daemon->threadid, NULL);
+            if(service->working_mode == WORKING_THREAD)
+            {
+                PROCTHREAD_EXIT(service->daemon->threadid, NULL);
+            }
         }
         //tracker
         if(service->tracker)
@@ -1470,7 +1473,7 @@ void service_stop(SERVICE *service)
         }
         /* delete evtimer */
         EVTIMER_DEL(service->evtimer, service->evid);
-            DEBUG_LOGGER(service->logger, "Ready for remove event");
+        DEBUG_LOGGER(service->logger, "Ready for remove event");
         /*remove event */
         event_destroy(&(service->event));
         DEBUG_LOGGER(service->logger, "over for remove event");
