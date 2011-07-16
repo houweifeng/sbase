@@ -33,7 +33,7 @@ int evpoll_init(EVBASE *evbase)
 int evpoll_add(EVBASE *evbase, EVENT *event)
 {
     struct pollfd *ev = NULL;
-    short ev_flags = 0;
+    int ev_flags = 0;
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed
             && evbase->ev_fds && evbase->evlist)
     {
@@ -67,7 +67,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
 int evpoll_update(EVBASE *evbase, EVENT *event)
 {
     struct pollfd *ev = NULL;
-    short ev_flags = 0;
+    int ev_flags = 0;
     if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         //MUTEX_LOCK(evbase->mutex);
@@ -110,11 +110,11 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
 }
 
 /* Loop evbase */
-int evpoll_loop(EVBASE *evbase, short loop_flags, struct timeval *tv)
+int evpoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
 {
     struct pollfd *ev = NULL;
     EVENT *event = NULL;
-    short ev_flags = 0;
+    int ev_flags = 0;
     int n = 0, i = 0;
     int msec = -1;
 

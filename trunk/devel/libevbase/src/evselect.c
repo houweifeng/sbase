@@ -37,7 +37,7 @@ int evselect_init(EVBASE *evbase)
 /* Add new event to evbase */
 int evselect_add(EVBASE *evbase, EVENT *event)
 {
-    short ev_flags = 0;
+    int ev_flags = 0;
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         //MUTEX_LOCK(evbase->mutex);
@@ -69,7 +69,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
 /* Update event in evbase */
 int evselect_update(EVBASE *evbase, EVENT *event)
 {
-    short ev_flags = 0, add_ev_flags = 0, del_ev_flags = 0;
+    int ev_flags = 0, add_ev_flags = 0, del_ev_flags = 0;
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd <= evbase->maxfd)
     {
         //MUTEX_LOCK(evbase->mutex);
@@ -134,10 +134,10 @@ int evselect_del(EVBASE *evbase, EVENT *event)
 }
 
 /* Loop evbase */
-int evselect_loop(EVBASE *evbase, short loop_flag, struct timeval *tv)
+int evselect_loop(EVBASE *evbase, int loop_flag, struct timeval *tv)
 {
     int i = 0, n = 0;
-    short ev_flags = 0;
+    int ev_flags = 0;
     fd_set rd_fd_set, wr_fd_set ;
     EVENT *ev = NULL;
     struct timeval timeout = {0};

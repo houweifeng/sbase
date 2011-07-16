@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/resource.h>
+#include <sys/types.h>
 #include <string.h>
 #include <errno.h>
 #include "sbase.h"
@@ -91,7 +92,6 @@ int sbase_set_evlog_level(SBASE *sbase, int level)
     return ret;
 }
 
-
 /* add service to sbase */
 int sbase_add_service(SBASE *sbase, SERVICE  *service)
 {
@@ -168,6 +168,7 @@ int sbase_running(SBASE *sbase, int useconds)
     int ret = -1, i = -1, k = 0;
     struct timeval tv = {0};
     SERVICE *service = NULL;
+    struct ip_mreq mreq;
     pid_t pid = 0;
 
     if(sbase)
@@ -203,6 +204,16 @@ int sbase_running(SBASE *sbase, int useconds)
         }
 running:
         //evbase 
+        memset(&mreq, 0, sizeof(struct ip_mreq));
+        mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");
+        mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
+        if((sbase->cond = socket(AF_INET, SOCK_DGRAM, 0)) < 0
+            || setsockopt(sbase->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
+                        sizeof(struct ip_mreq)) != 0)
+        {
+            FATAL_LOGGER(sbase->logger, "new cond socket() failed, %s", strerror(errno));
+            _exit(-1);
+        }
         sbase->evbase   = evbase_init(0);
         if(sbase->evlogfile && sbase->evlog_level > 0) 
         {
@@ -217,31 +228,27 @@ running:
                 if((service = sbase->services[i]))
                 {
                     service->evbase = sbase->evbase;
+                    service->cond = sbase->cond;
                     service->run(service);
                 }
             }
         }
         //running sbase 
         sbase->running_status = 1;
-        //if(sbase->usec_sleep > 1000000) tv.tv_sec = sbase->usec_sleep/1000000;
-        //tv.tv_usec = sbase->usec_sleep % 1000000;
+        if(sbase->usec_sleep > 1000000) tv.tv_sec = sbase->usec_sleep/1000000;
+        tv.tv_usec = sbase->usec_sleep % 1000000;
         do
         {
             //running evbase 
             i = sbase->evbase->loop(sbase->evbase, 0, &tv);
-            //sbase->evbase->loop(sbase->evbase, 0, &tv);
-            //sbase->nheartbeat++;
             //check evtimer for heartbeat and timeout
             EVTIMER_CHECK(sbase->evtimer);
-            //EVTIMER_LIST(sbase->evtimer, stdout);
             //running message queue
             if(QMTOTAL(sbase->message_queue) > 0)
             {
                 qmessage_handler(sbase->message_queue, sbase->logger);
                 i = 1;
             }
-            //if(i < 1) ++k;
-            if(i < 1){usleep(sbase->usec_sleep); k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)

@@ -86,7 +86,7 @@ int setrlimiter(char *name, int rlimit, int nset)
     return ret;
 }
 
-void ev_udp_handler(int fd, short ev_flags, void *arg)
+void ev_udp_handler(int fd, int ev_flags, void *arg)
 {
     int rfd = 0 ;
     struct 	sockaddr_in  rsa;
@@ -208,7 +208,7 @@ err:
     }
 }
 
-void ev_handler(int fd, short ev_flags, void *arg)
+void ev_handler(int fd, int ev_flags, void *arg)
 {
     int rfd = 0 ;
     struct 	sockaddr_in rsa;

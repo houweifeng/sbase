@@ -58,7 +58,7 @@ int setrlimiter(char *name, int rlimit, int nset)
     return ret;
 }
 /* sock_dgram /UCP handler */
-void ev_udp_handler(int fd, short ev_flags, void *arg)
+void ev_udp_handler(int fd, int ev_flags, void *arg)
 {
     int i = 0, n = 0, nevdnsbuf = 0, reqfd = -1, respfd = -1;
     unsigned char evdnsbuf[EVDNS_BUF_SIZE], *p = NULL;
@@ -143,7 +143,7 @@ err:
 }
 
 /* sock stream/TCP handler */
-void ev_handler(int fd, short ev_flags, void *arg)
+void ev_handler(int fd, int ev_flags, void *arg)
 {
     int n = 0, nevdnsbuf = 0, reqfd = -1, respfd = -1;
     unsigned char evdnsbuf[EVDNS_BUF_SIZE];

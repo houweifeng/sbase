@@ -9,6 +9,7 @@
 #include "stime.h"
 #include "mutex.h"
 #include "xmm.h"
+#include "mmblock.h"
 #define PUSH_TASK_MESSAGE(pth, msgid, index, fd, tid, handler, arg)                         \
 do                                                                                          \
 {                                                                                           \
@@ -16,14 +17,114 @@ do                                                                              
     MUTEX_SIGNAL(pth->mutex);                                                               \
 }while(0)
 
-/* event */
-void procthread_event_handler(int event_fd, short event, void *arg)
+/* event handler */
+void procthread_event_handler(int event_fd, int flag, void *arg)
 {
-    PROCTHREAD *pth = (PROCTHREAD *)arg;
+    PROCTHREAD *pth = (PROCTHREAD *)arg, *parent = NULL;
+    char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
+    socklen_t rsa_len = sizeof(struct sockaddr_in);
+    int fd = -1, port = -1, n = 0, opt = 1;
+    SERVICE *service = NULL;
+    struct sockaddr_in rsa;
+    CONN *conn = NULL;
+    void *ssl = NULL;
 
-    if(pth)
+    if(pth && (service = pth->service))
     {
-        if(pth->have_evbase && pth->evbase) 
+        if(event_fd == service->fd)
+        {
+            if(E_READ & flag)
+            {
+                if(service->sock_type == SOCK_STREAM)
+                {
+                    //WARN_LOGGER(service->logger, "new-connection via %d", service->fd);
+                    while((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                    {
+                        ip = inet_ntoa(rsa.sin_addr);
+                        port = ntohs(rsa.sin_port);
+#ifdef HAVE_SSL
+                        if(service->is_use_SSL && service->s_ctx)
+                        {
+                            if((ssl = SSL_new(XSSL_CTX(service->s_ctx))) && SSL_set_fd((SSL *)ssl, fd) > 0 
+                                    && SSL_accept((SSL *)ssl) > 0)                                                   
+                            {
+                                goto new_conn;
+                            }
+                            else goto err_conn; 
+                        }
+#endif
+new_conn:
+                        if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
+                                        service->ip, service->port, &(service->session), 
+                                        ssl, CONN_STATUS_FREE)))
+                        {
+                            WARN_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
+                            continue;
+                        }
+                        else
+                        {
+                            WARN_LOGGER(service->logger, "accept newconnection[%s:%d]  via %d failed, %s", ip, port, fd, strerror(errno));
+                        }
+err_conn:               
+#ifdef HAVE_SSL
+                        if(ssl)
+                        {
+                            SSL_shutdown((SSL *)ssl);
+                            SSL_free((SSL *)ssl);
+                            ssl = NULL;
+                        }
+#endif
+                        if(fd > 0)
+                        {
+                            shutdown(fd, SHUT_RDWR);
+                            close(fd);
+                        }
+                    }
+                }
+                else if(service->sock_type == SOCK_DGRAM)
+                {
+                    while((n = recvfrom(event_fd, buf, SB_BUF_SIZE, 
+                                    0, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                    {
+                        ip = inet_ntoa(rsa.sin_addr);
+                        port = ntohs(rsa.sin_port);
+                        if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
+                                && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+#ifdef SO_REUSEPORT
+                                && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+#endif
+                                && bind(fd, (struct sockaddr *)&(service->sa), 
+                                    sizeof(struct sockaddr_in)) == 0
+                                && connect(fd, (struct sockaddr *)&rsa, 
+                                    sizeof(struct sockaddr_in)) == 0
+                                && (conn = service_addconn(service, service->sock_type, fd, 
+                                        ip, port, service->ip, service->port, 
+                                        &(service->session), NULL, CONN_STATUS_FREE)))
+                        {
+                            p = buf;
+                            MMB_PUSH(conn->buffer, p, n);
+                            parent = (PROCTHREAD *)(conn->parent);
+                            if(parent)
+                            {
+                                qmessage_push(parent->message_queue, 
+                                        MESSAGE_INPUT, -1, conn->fd, -1, conn, parent, NULL);
+                                MUTEX_SIGNAL(parent->mutex);
+                            }
+                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
+                                    " buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
+                        }
+                        else
+                        {
+                            shutdown(fd, SHUT_RDWR);
+                            close(fd);
+                            FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
+                                    strerror(errno));
+                        }
+                    }
+                }
+            }
+        }
+        if(flag & E_WRITE)
         {
             event_del(&(pth->event), E_WRITE);
         }
@@ -38,7 +139,16 @@ void procthread_wakeup(PROCTHREAD *pth)
     {
         if(pth->have_evbase && pth->evbase) 
         {
-            event_add(&(pth->event), E_WRITE);
+            if(pth->cond == pth->service->fd)
+            {
+                event_set(&(pth->evcond), pth->service->cond, E_PERSIST|E_READ|E_WRITE, (void *)pth, 
+                        &procthread_event_handler);
+                pth->evbase->add(pth->evbase, &(pth->evcond));
+            }
+            else
+            {
+                event_add(&(pth->event), E_WRITE);
+            }
         }
         MUTEX_SIGNAL(pth->mutex);
     }
@@ -63,7 +173,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     struct timeval tv = {0,0};
-    int i = 0, k = 0;
+    int i = 0;
 
     if(pth)
     {
@@ -73,11 +183,9 @@ void procthread_run(void *arg)
         tv.tv_usec = pth->usec_sleep % 1000000;
         if(pth->have_evbase)
         {
-            tv.tv_usec = 0;
-            tv.tv_sec = 0;
             do
             {
-                if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
+                //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                 //DEBUG_LOGGER(pth->logger, "starting evbase->loop(%d)", pth->evbase->efd);
                 i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
@@ -101,7 +209,7 @@ void procthread_run(void *arg)
                 do
                 {
                     //DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
-                    if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
+                    //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
@@ -205,9 +313,8 @@ int procthread_newconn(PROCTHREAD *pth, int fd, void *ssl)
         if(getpeername(fd, (struct sockaddr *)&rsa, &rsa_len) == 0
                 && (ip = inet_ntoa(rsa.sin_addr)) && (port = ntohs(rsa.sin_port)) > 0 
                 && (conn = service_addconn(service, service->sock_type, fd, ip, port, 
-                    service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
+                    service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
         {
-            conn->ssl = ssl;
             DEBUG_LOGGER(pth->logger, "adding new-connection[%p][%s:%d] via %d", conn, ip, port, fd);
             ret = 0;
         }
@@ -347,7 +454,7 @@ void procthread_stop(PROCTHREAD *pth)
             pth->lock       = 1;
             PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
             pth->wakeup(pth);
-            DEBUG_LOGGER(pth->logger, "Pushed MESSAGE_QUIT to procthreads[%d]", pth->index);
+            WARN_LOGGER(pth->logger, "Pushed MESSAGE_QUIT to procthreads[%d]", pth->index);
         }
         else
         {
@@ -365,7 +472,7 @@ void procthread_terminate(PROCTHREAD *pth)
 {
     if(pth)
     {
-        DEBUG_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
+        WARN_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
         pth->lock       = 1;
         pth->running_status = 0;
         pth->wakeup(pth);
@@ -407,6 +514,7 @@ void procthread_clean(PROCTHREAD *pth)
             if(pth->have_evbase)
             {
                 event_clean(&(pth->event));
+                event_clean(&(pth->evcond));
                 if(pth->evbase) pth->evbase->clean(pth->evbase);
             }
             qmessage_clean(pth->message_queue);

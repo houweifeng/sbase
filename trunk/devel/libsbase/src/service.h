@@ -20,7 +20,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
 /* add new connection */
 CONN *service_addconn(SERVICE *service, int sock_type, int fd, 
         char *remote_ip, int remote_port, char *local_ip, int local_port, 
-        SESSION *session, int status);
+        SESSION *session, void *ssl, int status);
 /* push connection to connections pool */
 int service_pushconn(SERVICE *service, CONN *conn);
 /* set connection status ok */
@@ -66,7 +66,7 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid);
 /* set log */
 int service_set_log(SERVICE *service, char *logfile);
 /* event handler */
-void service_event_handler(int, short, void *);
+void service_event_handler(int, int, void *);
 /* heartbeat handler */
 void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, void *arg);
 /* state check */

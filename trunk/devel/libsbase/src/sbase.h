@@ -151,6 +151,8 @@ typedef struct _SESSION
     int  packet_delimiter_length;
     int  buffer_size;
     int  id;
+
+
     void *child;
     void *ctx;
     void *parent;
@@ -177,7 +179,9 @@ typedef struct _SBASE
 	int usec_sleep;
     int running_status;
     int running_services;
-    int  evlog_level;
+    int evlog_level;
+    int cond;
+    int bits;
     /* evtimer */
     int evid;
     int ssl_id;
@@ -188,10 +192,9 @@ typedef struct _SBASE
 	EVBASE *evbase;
     char *evlogfile;
     void *evtimer;
-    struct _SERVICE *services[SB_SERVICE_MAX];
-
     /* message queue for proc mode */
     void *message_queue;
+    struct _SERVICE *services[SB_SERVICE_MAX];
 
 	int  (*set_log)(struct _SBASE *, char *);
     int  (*set_log_level)(struct _SBASE *sbase, int level);
@@ -277,6 +280,7 @@ typedef struct _SERVICE
     /* working mode */
     struct _PROCTHREAD *daemon;
     struct _PROCTHREAD *tracker;
+    struct _PROCTHREAD *recover;
     struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
     struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
     struct _PROCTHREAD *daemons[SB_THREADS_MAX];
@@ -321,7 +325,7 @@ typedef struct _SERVICE
             char *ip, int port, SESSION *session);
     struct _CONN *(*addconn)(struct _SERVICE *service, int sock_type, int fd, 
             char *remote_ip, int remote_port, char *local_ip, int local_port, 
-            SESSION *, int status);
+            SESSION *, void *ssl, int status);
     struct _CONN *(*getconn)(struct _SERVICE *service, int groupid);
     int     (*freeconn)(struct _SERVICE *service, struct _CONN *);
     int     (*pushconn)(struct _SERVICE *service, struct _CONN *conn);
@@ -380,6 +384,7 @@ typedef struct _PROCTHREAD
     long threadid;
     MUTEX mutex;
     EVENT event;
+    EVENT evcond;
     void *evtimer;
     SERVICE *service;
 

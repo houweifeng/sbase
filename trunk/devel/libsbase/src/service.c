@@ -35,7 +35,7 @@ do                                                                              
 /* set service */
 int service_set(SERVICE *service)
 {
-    int ret = -1, opt = 1;
+    int ret = -1, opt = 1, flag = 0;
     char *p = NULL;
 
     if(service)
@@ -79,6 +79,8 @@ int service_set(SERVICE *service)
             }
 #endif
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
+                    && (flag = fcntl(service->fd, F_GETFL, 0)) != -1
+                    && fcntl(service->fd, F_SETFL, flag|O_NONBLOCK) == 0 
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
@@ -166,7 +168,8 @@ int service_run(SERVICE *service)
                     service->heartbeat_interval);
         }
         //evbase setting 
-        if(service->service_type == S_SERVICE && service->evbase)
+        if(service->service_type == S_SERVICE && service->evbase 
+                && service->working_mode == WORKING_PROC)
         {
             event_set(&(service->event), service->fd, E_READ|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
@@ -216,17 +219,6 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         sigpipe_ignore();
-        struct ip_mreq mreq;
-        memset(&mreq, 0, sizeof(struct ip_mreq));
-        mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");
-        mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
-        if((service->cond = socket(AF_INET, SOCK_DGRAM, 0)) < 0
-            || setsockopt(service->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, 
-                        sizeof(struct ip_mreq)) != 0)
-        {
-            FATAL_LOGGER(service->logger, "new cond socket() failed, %s", strerror(errno));
-            _exit(-1);
-        }
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
         if(service->niodaemons < 1) service->niodaemons = 1;
@@ -300,12 +292,29 @@ running_threads:
             return -1;
         }
         /* tracker */ 
-        if((service->tracker = procthread_init(0)))
+        if(service->service_type == S_SERVICE && service->evbase && service->fd > 0)
         {
-            service->tracker->evtimer = service->etimer;
-            PROCTHREAD_SET(service, service->tracker);
-            service->tracker->use_cond_wait = 0;
-            NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger);
+            if((service->tracker = procthread_init(service->fd)))
+            {
+                PROCTHREAD_SET(service, service->tracker);
+                service->tracker->use_cond_wait = 1;
+                NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger);
+                ret = 0;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
+                        service->working_mode, strerror(errno));
+                exit(EXIT_FAILURE);
+                return -1;
+            }
+        }
+        /* recover */
+        if((service->recover = procthread_init(0)))
+        {
+            PROCTHREAD_SET(service, service->recover);
+            service->recover->use_cond_wait = 1;
+            NEW_PROCTHREAD("recover", 0, service->recover->threadid, service->recover, service->logger);
             ret = 0;
         }
         else
@@ -374,7 +383,7 @@ int service_set_log_level(SERVICE *service, int level)
 
 
 /* event handler */
-void service_event_handler(int event_fd, short flag, void *arg)
+void service_event_handler(int event_fd, int flag, void *arg)
 {
     char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
     socklen_t rsa_len = sizeof(struct sockaddr_in);
@@ -394,7 +403,7 @@ void service_event_handler(int event_fd, short flag, void *arg)
                 if(service->sock_type == SOCK_STREAM)
                 {
                     //WARN_LOGGER(service->logger, "new-connection via %d", service->fd);
-                    if((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+                    while((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
                     {
                         ip = inet_ntoa(rsa.sin_addr);
                         port = ntohs(rsa.sin_port);
@@ -411,13 +420,10 @@ void service_event_handler(int event_fd, short flag, void *arg)
 #endif
 new_conn:
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
-                                service->ip, service->port, &(service->session), CONN_STATUS_FREE)))
+                            service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                         {
                             DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
-#ifdef HAVE_SSL
-                            conn->ssl = ssl;
-#endif
-                            return ;
+                            continue;
                         }
                         else
                         {
@@ -440,13 +446,6 @@ err_conn:
                         }
                     }
                     return ;
-                    /*
-                    else
-                    {
-                        FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
-                                strerror(errno));
-                    }
-                    */
                 }
                 else if(service->sock_type == SOCK_DGRAM)
                 {
@@ -466,7 +465,7 @@ err_conn:
                                 sizeof(struct sockaddr_in)) == 0
                             && (conn = service_addconn(service, service->sock_type, fd, 
                                 ip, port, service->ip, service->port, 
-                                &(service->session), CONN_STATUS_FREE)))
+                                &(service->session), NULL, CONN_STATUS_FREE)))
                         {
                             p = buf;
                             MMB_PUSH(conn->buffer, p, n);
@@ -575,11 +574,8 @@ new_conn:
             status = CONN_STATUS_FREE;
             if(flag != 0) status = CONN_STATUS_READY; 
             if((conn = service_addconn(service, sock_type, fd, remote_ip, 
-                    remote_port, local_ip, local_port, sess, status)))
+                    remote_port, local_ip, local_port, sess, ssl, status)))
             {
-#ifdef HAVE_SSL
-                conn->ssl = (SSL *)ssl;
-#endif
                 return conn;
             }
             else
@@ -661,7 +657,7 @@ new_conn:
             local_ip    = inet_ntoa(lsa.sin_addr);
             local_port  = ntohs(lsa.sin_port);
             if((conn = service_addconn(service, sock_type, fd, remote_ip, remote_port, 
-                            local_ip, local_port, sess, CONN_STATUS_FREE)))
+                            local_ip, local_port, sess, ssl, CONN_STATUS_FREE)))
             {
                 if(conn->session.timeout == 0)
                     conn->session.timeout = SB_PROXY_TIMEOUT;
@@ -671,9 +667,6 @@ new_conn:
                 conn->session.packet_type |= PACKET_PROXY;
                 conn->session.parent = parent;
                 conn->session.parentid = parent->index;
-#ifdef HAVE_SSL
-                conn->ssl = (SSL *)ssl;
-#endif
                 return conn;
             }
 err_conn:
@@ -704,7 +697,7 @@ err_conn:
 
 /* add new connection */
 CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, int remote_port, 
-        char *local_ip, int local_port, SESSION *session, int status)
+        char *local_ip, int local_port, SESSION *session, void *ssl, int status)
 {
     PROCTHREAD *procthread = NULL;
     CONN *conn = NULL;
@@ -717,6 +710,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
         {
             //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
             conn->fd = fd;
+            conn->ssl = ssl;
             conn->status = status;
             strcpy(conn->remote_ip, remote_ip);
             conn->remote_port = remote_port;
@@ -1013,13 +1007,13 @@ CONN *service_findconn(SERVICE *service, int index)
 /* service over conn */
 void service_overconn(SERVICE *service, CONN *conn)
 {
-    PROCTHREAD *tracker = NULL;
+    PROCTHREAD *recover = NULL;
 
-    if(service && conn && (tracker = service->tracker))
+    if(service && conn && (recover = service->recover))
     {
-        qmessage_push(tracker->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
-                -1, tracker, conn, NULL);
-        MUTEX_SIGNAL(tracker->mutex);
+        qmessage_push(recover->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
+                -1, recover, conn, NULL);
+        MUTEX_SIGNAL(recover->mutex);
     }
     return ;
 }
@@ -1458,14 +1452,23 @@ void service_stop(SERVICE *service)
         //daemon
         if(service->daemon)
         {
+            WARN_LOGGER(service->logger, "Ready for stop threads[daemon]");
             service->daemon->terminate(service->daemon);
             PROCTHREAD_EXIT(service->daemon->threadid, NULL);
         }
         //tracker
         if(service->tracker)
         {
+            WARN_LOGGER(service->logger, "Ready for stop threads[tracker]");
             service->tracker->terminate(service->tracker);
             PROCTHREAD_EXIT(service->tracker->threadid, NULL);
+        }
+        //recover
+        if(service->recover)
+        {
+            WARN_LOGGER(service->logger, "Ready for stop threads[recover]");
+            service->recover->stop(service->recover);
+            PROCTHREAD_EXIT(service->recover->threadid, NULL);
         }
         /* delete evtimer */
         EVTIMER_DEL(service->evtimer, service->evid);
@@ -1474,7 +1477,6 @@ void service_stop(SERVICE *service)
         event_destroy(&service->event);
         DEBUG_LOGGER(service->logger, "over for remove event");
         if(service->fd > 0)close(service->fd);
-        if(service->cond > 0)close(service->cond);
         DEBUG_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
     return ;
@@ -1581,6 +1583,7 @@ void service_clean(SERVICE *service)
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
         if(service->tracker) service->tracker->clean(service->tracker);
+        if(service->recover) service->recover->clean(service->recover);
         if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
         //if(service->iodaemon) service->iodaemon->clean(service->iodaemon);
         //clean procthreads
