@@ -153,6 +153,7 @@ int service_run(SERVICE *service)
     int ret = -1, i = 0, x = 0;
     char logfile[1024];
     CONN *conn = NULL;
+    struct ip_mreq mreq;        
 
     if(service)
     {
@@ -171,7 +172,7 @@ int service_run(SERVICE *service)
         {
             event_set(&(service->event), service->fd, E_READ|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
-            ret = service->evbase->add(service->evbase, &service->event);
+            ret = service->evbase->add(service->evbase, &(service->event));
         }
         //initliaze conns
         for(i = 0; i < service->init_conns; i++)
@@ -217,6 +218,15 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         sigpipe_ignore();
+        memset(&mreq, 0, sizeof(struct ip_mreq));        
+        mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");        
+        mreq.imr_interface.s_addr = inet_addr("127.0.0.1");      
+        if((service->cond = socket(AF_INET, SOCK_DGRAM, 0)) < 0
+            || setsockopt(service->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq,        
+                sizeof(struct ip_mreq)) != 0)        
+        {        
+            FATAL_LOGGER(service->logger, "new cond socket() failed, %s", strerror(errno));      
+        }
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
         if(service->niodaemons < 1) service->niodaemons = 1;
@@ -224,7 +234,7 @@ running_threads:
         {
             for(i = 0; i < service->niodaemons; i++)
             {
-                if((service->iodaemons[i] = procthread_init(1)))
+                if((service->iodaemons[i] = procthread_init(service->cond)))
                 {
                     PROCTHREAD_SET(service, service->iodaemons[i]);
                     if(service->sbase->evlogfile && service->sbase->evlog_level > 0)
@@ -289,26 +299,6 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        /* tracker */ 
-        /*
-        if(service->service_type == S_SERVICE && service->evbase && service->fd > 0)
-        {
-            if((service->tracker = procthread_init(service->fd)))
-            {
-                PROCTHREAD_SET(service, service->tracker);
-                service->tracker->use_cond_wait = 1;
-                NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger);
-                ret = 0;
-            }
-            else
-            {
-                FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
-                        service->working_mode, strerror(errno));
-                exit(EXIT_FAILURE);
-                return -1;
-            }
-        }
-        */
         /* recover */
         if((service->recover = procthread_init(0)))
         {
@@ -1456,13 +1446,6 @@ void service_stop(SERVICE *service)
                 PROCTHREAD_EXIT(service->daemon->threadid, NULL);
             }
         }
-        //tracker
-        if(service->tracker)
-        {
-            WARN_LOGGER(service->logger, "Ready for stop threads[tracker]");
-            service->tracker->terminate(service->tracker);
-            PROCTHREAD_EXIT(service->tracker->threadid, NULL);
-        }
         //recover
         if(service->recover)
         {
@@ -1582,7 +1565,6 @@ void service_clean(SERVICE *service)
         
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
-        if(service->tracker) service->tracker->clean(service->tracker);
         if(service->recover) service->recover->clean(service->recover);
         if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
         //if(service->iodaemon) service->iodaemon->clean(service->iodaemon);
@@ -1676,37 +1658,37 @@ SERVICE *service_init()
     {
         MUTEX_RESET(service->mutex);
         service->etimer             = EVTIMER_INIT();
-        service->set                = service_set;
-        service->run                = service_run;
-        service->set_log            = service_set_log;
-        service->set_log_level      = service_set_log_level;
-        service->stop               = service_stop;
-        service->newproxy           = service_newproxy;
-        service->newconn            = service_newconn;
-        service->okconn             = service_okconn;
-        service->addconn            = service_addconn;
-        service->pushconn           = service_pushconn;
-        service->popconn            = service_popconn;
-        service->getconn            = service_getconn;
-        service->freeconn           = service_freeconn;
-        service->findconn           = service_findconn;
-        service->overconn           = service_overconn;
-        service->popchunk           = service_popchunk;
-        service->pushchunk          = service_pushchunk;
-        service->newchunk           = service_newchunk;
-        service->set_session        = service_set_session;
-        service->add_multicast      = service_add_multicast;
-        service->drop_multicast     = service_drop_multicast;
-        service->broadcast          = service_broadcast;
-        service->addgroup           = service_addgroup;
-        service->closegroup         = service_closegroup;
-        service->castgroup          = service_castgroup;
-        service->stategroup         = service_stategroup;
-        service->newtask            = service_newtask;
-        service->newtransaction     = service_newtransaction;
-        service->set_heartbeat      = service_set_heartbeat;
-        service->clean              = service_clean;
-        service->close              = service_close;
+        service->set                = &service_set;
+        service->run                = &service_run;
+        service->set_log            = &service_set_log;
+        service->set_log_level      = &service_set_log_level;
+        service->stop               = &service_stop;
+        service->newproxy           = &service_newproxy;
+        service->newconn            = &service_newconn;
+        service->okconn             = &service_okconn;
+        service->addconn            = &service_addconn;
+        service->pushconn           = &service_pushconn;
+        service->popconn            = &service_popconn;
+        service->getconn            = &service_getconn;
+        service->freeconn           = &service_freeconn;
+        service->findconn           = &service_findconn;
+        service->overconn           = &service_overconn;
+        service->popchunk           = &service_popchunk;
+        service->pushchunk          = &service_pushchunk;
+        service->newchunk           = &service_newchunk;
+        service->set_session        = &service_set_session;
+        service->add_multicast      = &service_add_multicast;
+        service->drop_multicast     = &service_drop_multicast;
+        service->broadcast          = &service_broadcast;
+        service->addgroup           = &service_addgroup;
+        service->closegroup         = &service_closegroup;
+        service->castgroup          = &service_castgroup;
+        service->stategroup         = &service_stategroup;
+        service->newtask            = &service_newtask;
+        service->newtransaction     = &service_newtransaction;
+        service->set_heartbeat      = &service_set_heartbeat;
+        service->clean              = &service_clean;
+        service->close              = &service_close;
     }
     return service;
 }

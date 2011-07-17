@@ -23,8 +23,8 @@ extern "C" {
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
-#define SB_QCONN_MAX            1024
-#define SB_CHUNKS_MAX           1024
+#define SB_QCONN_MAX            256
+#define SB_CHUNKS_MAX           256
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -258,7 +258,7 @@ typedef struct _SERVICE
     int evid;
     int is_inside_logger;
     int ntask;
-    int bits;
+    int cond;
     int conns_free[SB_CONN_MAX];
 
     struct  sockaddr_in sa;
@@ -276,7 +276,6 @@ typedef struct _SERVICE
 
     /* working mode */
     struct _PROCTHREAD *daemon;
-    struct _PROCTHREAD *tracker;
     struct _PROCTHREAD *recover;
     struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
     struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
@@ -375,10 +374,11 @@ typedef struct _PROCTHREAD
 	int usec_sleep;
     int index;
     int use_cond_wait;
-    int bits;
+    int cond;
     int have_evbase;
     int64_t threadid;
     MUTEX mutex;
+    EVENT event;
 
 
     void *evtimer;

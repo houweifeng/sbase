@@ -165,7 +165,7 @@ void sbase_evtimer_handler(void *arg)
 /* running all service */
 int sbase_running(SBASE *sbase, int useconds)
 {
-    int ret = -1, i = -1, sec = 0, usec = 0;
+    int ret = -1, i = -1, k = 0, sec = 0, usec = 0;
     struct timeval tv = {0, 0};
     SERVICE *service = NULL;
     pid_t pid = 0;
@@ -202,7 +202,12 @@ int sbase_running(SBASE *sbase, int useconds)
             return 0;
         }
 running:
-        sbase->evbase   = evbase_init();
+        if((sbase->evbase   = evbase_init()) == NULL)
+        {
+            fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
+            _exit(-1);
+        }
+        //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
         if(sbase->evlogfile && sbase->evlog_level > 0) 
         {
             sbase->evbase->set_logfile(sbase->evbase, sbase->evlogfile);
@@ -236,8 +241,8 @@ running:
                 qmessage_handler(sbase->message_queue, sbase->logger);
                 i = 1;
             }
-            if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;}
-            else {tv.tv_sec = 0;tv.tv_usec = 0;}
+            if(i < 1){if(++k > 10000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+            else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)
@@ -296,19 +301,18 @@ SBASE *sbase_init()
     {
         sbase->evtimer          = EVTIMER_INIT();
         sbase->message_queue    = qmessage_init();
-        sbase->set_log		    = sbase_set_log;
-        sbase->set_log_level	= sbase_set_log_level;
-        sbase->set_evlog	    = sbase_set_evlog;
-        sbase->set_evlog_level	= sbase_set_evlog_level;
-        sbase->add_service	    = sbase_add_service;
-        sbase->remove_service	= sbase_remove_service;
-        sbase->running 		    = sbase_running;
-        sbase->stop 		    = sbase_stop;
-        sbase->clean 		    = sbase_clean;
+        sbase->set_log		    = &sbase_set_log;
+        sbase->set_log_level	= &sbase_set_log_level;
+        sbase->set_evlog	    = &sbase_set_evlog;
+        sbase->set_evlog_level	= &sbase_set_evlog_level;
+        sbase->add_service	    = &sbase_add_service;
+        sbase->remove_service	= &sbase_remove_service;
+        sbase->running 		    = &sbase_running;
+        sbase->stop 		    = &sbase_stop;
+        sbase->clean 		    = &sbase_clean;
 #ifdef HAVE_SSL
         sbase->ssl_id           = SSL_library_init();
 #endif
-        //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
     }
     return sbase;
 }

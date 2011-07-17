@@ -1,5 +1,4 @@
 #include "evpoll.h"
-#include "logger.h"
 #include <errno.h>
 #ifdef HAVE_EVPOLL
 #include <stdlib.h>
@@ -9,7 +8,7 @@
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
 #endif
-#include "xmm.h"
+#include "mutex.h"
 /* Initialize evpoll  */
 int evpoll_init(EVBASE *evbase)
 {
@@ -53,9 +52,8 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             ev->revents = 0;
             ev->fd	  = event->ev_fd;
             evbase->evlist[event->ev_fd] = event;	
-            DEBUG_LOGGER(evbase->logger, "Added POLL event:%d on %d", event->ev_flags, event->ev_fd);
         }
-        //SET_MAX_FD(evbase, event);
+        SET_MAX_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -81,9 +79,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
         ev->revents = 0;
         ev->fd	  = event->ev_fd;
         evbase->evlist[event->ev_fd] = event;
-        //SET_MAX_FD(evbase, event);
-        DEBUG_LOGGER(evbase->logger, "Updated POLL event:%d on %d", 
-                event->ev_flags, event->ev_fd);
+        SET_MAX_FD(evbase, event);
         return 0;
     }	
     return -1;
@@ -95,7 +91,7 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
     {
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
         evbase->evlist[event->ev_fd] = NULL;
-        //RESET_MAX_FD(evbase, event);
+        RESET_MAX_FD(evbase, event);
         return 0;
     }	
     return -1;
@@ -110,20 +106,13 @@ int evpoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
     int n = 0, i = 0;
     int msec = -1;
 
-    //if(evbase && evbase->ev_fds && evbase->nfd > 0)
     if(evbase && evbase->ev_fds)
     {	
         if(tv) msec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         else msec = 1;
         n = poll(evbase->ev_fds, evbase->allowed, msec);	
-        if(n == -1)
-        {
-            FATAL_LOGGER(evbase->logger, "Looping evbase[%p] error[%d], %s", 
-                    evbase, errno, strerror(errno));
-        }
         if(n <= 0) return n;
-        DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->allowed);
-        for(i = 0; i < evbase->allowed; i++)
+        for(i = 0; i <= evbase->maxfd; i++)
         {
             ev = &(((struct pollfd *)evbase->ev_fds)[i]);
             if((event = evbase->evlist[i]) && ev->fd >= 0)
@@ -157,12 +146,9 @@ void evpoll_reset(EVBASE *evbase)
 {
     if(evbase)
     {
-        evbase->nfd = 0;
         evbase->maxfd = 0;
-        evbase->nevent = 0;
         memset(evbase->ev_fds, 0, evbase->allowed * sizeof(struct pollfd));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
-        DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
     return ;
 }
@@ -173,12 +159,11 @@ void evpoll_clean(EVBASE *evbase)
     if(evbase)
     {
         MUTEX_DESTROY(evbase->mutex);
-        if(evbase->logger){LOGGER_CLEAN(evbase->logger);}
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);
         if(evbase->ev_write_fds)free(evbase->ev_write_fds);
-        xmm_free(evbase, sizeof(EVBASE));
+        free(evbase);
     }
     return ;
 }
