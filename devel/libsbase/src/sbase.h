@@ -124,6 +124,7 @@ typedef struct _SESSION
     /* SSL/timeout */
     int  flag;
     int  is_use_SSL;
+    int  is_use_OOB;
     int  timeout;
     int  childid;
     int  parentid;
@@ -131,7 +132,6 @@ typedef struct _SESSION
     int  packet_length;
     int  packet_delimiter_length;
     int  buffer_size;
-    int  id;
 
 
     void *child;
@@ -258,6 +258,7 @@ typedef struct _SERVICE
 
     /* working mode */
     struct _PROCTHREAD *daemon;
+    struct _PROCTHREAD *acceptor;
     struct _PROCTHREAD *recover;
     struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
     struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
@@ -358,8 +359,11 @@ typedef struct _PROCTHREAD
     int use_cond_wait;
     int cond;
     int have_evbase;
+    int listenfd;
+    int bits;
     int64_t threadid;
     EVENT event;
+    EVENT acceptor;
 
     void *mutex;
     void *evtimer;
@@ -396,8 +400,8 @@ typedef struct _PROCTHREAD
 
     /* normal */
     void (*run)(void *arg);
+    void (*set_acceptor)(struct _PROCTHREAD *procthread, int fd);
     void (*wakeup)(struct _PROCTHREAD *procthread);
-    void (*active)(struct _PROCTHREAD *procthread);
     void (*stop)(struct _PROCTHREAD *procthread);
     void (*terminate)(struct _PROCTHREAD *procthread);
     void (*clean)(struct _PROCTHREAD *procthread);

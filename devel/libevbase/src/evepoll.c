@@ -46,6 +46,11 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
                 ev_flags |= EPOLLOUT;
                 add = 1;
             }
+            if(event->ev_flags & E_EPOLL_ET)
+            {
+                ev_flags |= EPOLLET;
+                add = 1;
+            }
             if(add)
             {
                 op = EPOLL_CTL_ADD; 
@@ -76,6 +81,10 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         if(event->ev_flags & E_WRITE)
         {
             ev_flags |= EPOLLOUT;
+        }
+        if(event->ev_flags & E_EPOLL_ET)
+        {
+            ev_flags |= EPOLLET;
         }
         op = EPOLL_CTL_MOD;
         if(evbase->evlist[event->ev_fd] == NULL) op = EPOLL_CTL_ADD;
