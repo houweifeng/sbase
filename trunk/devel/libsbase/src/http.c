@@ -216,7 +216,7 @@ int http_argv_parse(char *p, char *end, HTTP_REQ *http_req)
                 ++s;
             }
             else if(*s == '&' && argv->k && argv->v)
-                    //|| *s == 0x20 || *s == '\t')
+                //|| *s == 0x20 || *s == '\t')
             {
                 argv->nv = pp - http_req->line - argv->v;
                 if(pp >= epp) break;
@@ -240,16 +240,17 @@ int http_argv_parse(char *p, char *end, HTTP_REQ *http_req)
                 *pp++ = *s++;
             }
             else ++s;
-            if(s == end && argv < eargv && argv->k && argv->v)
-            {
-                argv->nv = pp - http_req->line - argv->v;
-                if(pp >= epp) break;
-                *pp++ = '\0';
-                http_req->nline = pp - http_req->line;
-                http_req->nargvs++;
-                argv++;
-            }
         }
+        if(argv < eargv && argv->k && argv->v)
+        {
+            argv->nv = pp - http_req->line - argv->v;
+            if(pp >= epp) goto end;
+            *pp++ = '\0';
+            http_req->nline = pp - http_req->line;
+            http_req->nargvs++;
+            argv++;
+        }
+end:
         n = s - p;
     }
     return n;

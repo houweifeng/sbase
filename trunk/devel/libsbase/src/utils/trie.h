@@ -104,8 +104,9 @@ typedef struct _TIRETAB
     int   n ;
     int min;
     int max;
-    MUTEX mutex;
+    int bits;
     unsigned int ps;
+    MUTEX *mutex;
 }TRIETAB;
 void trietab_view(void *ptr);
 void trietab_clean(void *ptr);
@@ -126,7 +127,7 @@ do                                                                              
 {                                                                                           \
     if((ptr = calloc(1, sizeof(TRIETAB))))                                                  \
     {                                                                                       \
-        MUTEX_RESET(PRT(ptr)->mutex);                                                       \
+        MUTEX_INIT(PRT(ptr)->mutex);                                                       \
     }                                                                                       \
 }while(0)
 

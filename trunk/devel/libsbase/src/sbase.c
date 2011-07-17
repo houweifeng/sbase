@@ -208,11 +208,6 @@ running:
             _exit(-1);
         }
         //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
-        if(sbase->evlogfile && sbase->evlog_level > 0) 
-        {
-            sbase->evbase->set_logfile(sbase->evbase, sbase->evlogfile);
-            sbase->evbase->set_log_level(sbase->evbase, sbase->evlog_level);
-        }
         //running services
         if(sbase->services)
         {
@@ -241,7 +236,7 @@ running:
                 qmessage_handler(sbase->message_queue, sbase->logger);
                 i = 1;
             }
-            if(i < 1){if(++k > 10000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+            if(i < 1){if(++k > 50000){usleep(usec);k = 0;}}
             else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
         }while(sbase->running_status);
         /* handler left message */

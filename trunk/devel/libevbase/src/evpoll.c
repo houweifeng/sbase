@@ -5,10 +5,6 @@
 #include <string.h>
 #include <poll.h>
 #include <sys/resource.h>
-#ifdef HAVE_MMAP
-#include <sys/mman.h>
-#endif
-#include "mutex.h"
 /* Initialize evpoll  */
 int evpoll_init(EVBASE *evbase)
 {
@@ -158,7 +154,6 @@ void evpoll_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);

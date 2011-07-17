@@ -19,7 +19,7 @@ typedef struct _XQROOT
 {
     int total;
     int status;
-    MUTEX mutex;
+    MUTEX *mutex;
     XQNODE *first;
     XQNODE *last;
 }XQROOT;
@@ -31,7 +31,7 @@ typedef struct _XQUEUE
     int total;
     int nlist;
     int bits;
-    MUTEX mutex;
+    MUTEX *mutex;
     XQNODE *left;
     int waits[XQ_ROOTS_MAX];
     XQNODE *list[XQ_LINE_MAX];

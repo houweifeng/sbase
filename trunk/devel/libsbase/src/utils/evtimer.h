@@ -18,12 +18,12 @@ typedef struct _EVTIMER
 {
    int nevlist;
    int ntimeout;
-   MUTEX mutex;
    EVTNODE *evlist[EVTNODE_LINE_MAX];
    EVTNODE *timeouts[EVTNODE_LINE_MAX];
    EVTNODE *left;
    EVTNODE *head;
    EVTNODE *tail;
+   MUTEX *mutex;
 }EVTIMER;
 
 /* initialize evtimer */

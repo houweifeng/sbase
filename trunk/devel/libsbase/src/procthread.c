@@ -21,7 +21,7 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     if(pth)
     {
-        event_del(&(pth->event), E_WRITE);
+        //event_del(&(pth->event), E_WRITE);
     }
     return ;
 }
@@ -30,7 +30,7 @@ void procthread_wakeup(PROCTHREAD *pth)
 {
     if(pth)
     {
-        if(pth->evbase)
+        if(pth->have_evbase && pth->evbase)
         {
             event_add(&(pth->event), E_WRITE);
         }
@@ -56,15 +56,17 @@ void procthread_run(void *arg)
         {
             do
             {
-                i = pth->evbase->loop(pth->evbase, 0, NULL);
+                i = pth->evbase->loop(pth->evbase, 0, &tv);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     qmessage_handler(pth->message_queue, pth->logger);
                     i++;
                 }
-                //if(i < 1){if(++k > 10000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+                if(i < 1){if(++k > 50000){usleep(usec);k = 0;}}
+                //if(i < 1){if(++k > 100000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
                 //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
             }while(pth->running_status);
+            WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
         }
         else
         {
@@ -85,9 +87,8 @@ void procthread_run(void *arg)
 
                         if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
                     }
-                    //DEBUG_LOGGER(pth->logger, "over cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
                 }while(pth->running_status);
-                DEBUG_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
+                WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
             else
             {
@@ -107,12 +108,12 @@ void procthread_run(void *arg)
                     //if(i > 1000) select(0, NULL, NULL, NULL, &tv);
                     //DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                 }while(pth->running_status);
-                DEBUG_LOGGER(pth->logger, "ready to exit daemon");
+                WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
         }
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 qmessage_handler(pth->message_queue, pth->logger);
-        //WARN_LOGGER(pth->logger, "terminate threads[%d][%p] evbase[%p] qmessage[%p] ioqmessage[%p] qtotal:%d", pth->index, (void *)(pth->threadid), pth->evbase, pth->message_queue, pth->ioqmessage, QMTOTAL(pth->message_queue));
+        WARN_LOGGER(pth->logger, "terminate threads[%d][%p] evbase[%p] qmessage[%p] ioqmessage[%p] qtotal:%d", pth->index, (void *)(pth->threadid), pth->evbase, pth->message_queue, pth->ioqmessage, QMTOTAL(pth->message_queue));
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);
@@ -311,16 +312,18 @@ void procthread_stop(PROCTHREAD *pth)
         if(pth->message_queue)
         {
             pth->lock       = 1;
+            pth->running_status = 0;
             PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
-            //WARN_LOGGER(pth->logger, "Pushed MESSAGE_QUIT to procthreads[%d]", pth->index);
+            pth->wakeup(pth);
+            WARN_LOGGER(pth->logger, "Pushed MESSAGE_QUIT to procthreads[%d]", pth->index);
         }
         else
         {
             pth->lock       = 1;
             pth->running_status = 0;
-            MUTEX_SIGNAL(pth->mutex);
+            WARN_LOGGER(pth->logger, "Ready for stopping procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
+            pth->wakeup(pth);
         }
-        //WARN_LOGGER(pth->logger, "Ready for stopping procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
 }
@@ -330,12 +333,10 @@ void procthread_terminate(PROCTHREAD *pth)
 {
     if(pth)
     {
-        //WARN_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
+        WARN_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
         pth->lock       = 1;
         pth->running_status = 0;
-        pth->wakeup(pth);
-        MUTEX_SIGNAL(pth->mutex);
-        //WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
+        WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
 }
@@ -403,7 +404,7 @@ PROCTHREAD *procthread_init(int cond)
                     (void *)pth, (void *)&procthread_event_handler);
             pth->evbase->add(pth->evbase, &(pth->event));
         }
-        MUTEX_RESET(pth->mutex);
+        MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
         pth->run                    = &procthread_run;
         pth->pushconn               = &procthread_pushconn;

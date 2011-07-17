@@ -17,7 +17,7 @@ evselect.c \
 evselect.h \
 evwin32.c \
 evwin32.h \
-mutex.h 
+mutex.h
 
 libevbase_la_CPPFLAGS = -Wall
 include_HEADERS = evbase.h

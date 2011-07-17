@@ -12,11 +12,11 @@
 #define HTTP_IP_MAX 		    16
 #define HTTP_VHOST_MAX     	    256
 #define HTTP_INDEX_MAX     	    32
-#define HTTP_INDEXES_MAX   	    131072
+#define HTTP_INDEXES_MAX   	    1048576
 #define HTTP_URL_PATH_MAX  	    1024
 #define HTTP_PATH_MAX      	    1024
 #define HTTP_BUF_SIZE      	    65536
-#define HTTP_ARGV_LINE_MAX 	    4096
+#define HTTP_ARGV_LINE_MAX 	    10240
 #define HTTP_HEAD_MAX 	        4096
 #define HTTP_COOKIES_MAX   	    32
 #define HTTP_ARGVS_MAX     	    1024
@@ -27,7 +27,7 @@
 #define HTTP_BYTE_G        	    1073741824
 #define HTTP_MMAP_MAX           157810688
 #define HTTP_ENCODING_DEFLATE  	0x01
-#define HTTP_ENCODING_GZIP 	0x02
+#define HTTP_ENCODING_GZIP 	    0x02
 #define HTTP_ENCODING_BZIP2  	0x04
 #define HTTP_ENCODING_COMPRESS  0x08
 #define HTTP_ENCODING_NUM       4

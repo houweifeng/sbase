@@ -5,10 +5,6 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
-#ifdef HAVE_MMAP
-#include <sys/mman.h>
-#endif
-#include "mutex.h"
 /* Initialize evepoll  */
 int evepoll_init(EVBASE *evbase)
 {
@@ -58,7 +54,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
                 ep_event.data.ptr = (void *)event;
                 epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
                 evbase->evlist[event->ev_fd] = event;
-                //SET_MAX_FD(evbase, event);
+                SET_MAX_FD(evbase, event);
             }
         }
     }
@@ -93,7 +89,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         else
         {
             evbase->evlist[event->ev_fd] = event;
-            //SET_MAX_FD(evbase, event);
+            SET_MAX_FD(evbase, event);
         }
         return 0;
     }
@@ -103,7 +99,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
 /* Delete event from evbase */
 int evepoll_del(EVBASE *evbase, EVENT *event)
 {
-    struct epoll_event ep_event = {0, {0}};
+    struct epoll_event ep_event;
 
     if(evbase && event)
     {
@@ -189,7 +185,6 @@ void evepoll_clean(EVBASE *evbase)
     if(evbase)
     {
         close(evbase->efd);
-        MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);

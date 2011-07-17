@@ -30,7 +30,7 @@ do                                                                              
 #else 
 #define SERVICE_CHECK_SSL_CLIENT(service)
 #endif
- 
+
 /* set service */
 int service_set(SERVICE *service)
 {
@@ -151,7 +151,6 @@ void sigpipe_ignore()
 int service_run(SERVICE *service)
 {
     int ret = -1, i = 0, x = 0;
-    char logfile[1024];
     CONN *conn = NULL;
     struct ip_mreq mreq;        
 
@@ -226,6 +225,7 @@ running_threads:
                 sizeof(struct ip_mreq)) != 0)        
         {        
             FATAL_LOGGER(service->logger, "new cond socket() failed, %s", strerror(errno));      
+            _exit(-1);
         }
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
@@ -237,12 +237,6 @@ running_threads:
                 if((service->iodaemons[i] = procthread_init(service->cond)))
                 {
                     PROCTHREAD_SET(service, service->iodaemons[i]);
-                    if(service->sbase->evlogfile && service->sbase->evlog_level > 0)
-                    {
-                        sprintf(logfile, "%s_%s_iodemon%d", service->sbase->evlogfile, service->service_name, i);
-                        service->iodaemons[i]->evbase->set_logfile(service->iodaemons[i]->evbase, logfile);
-                        service->iodaemons[i]->evbase->set_log_level(service->iodaemons[i]->evbase, service->sbase->evlog_level);
-                    }
                     ret = 0;
                 }
                 else
@@ -377,7 +371,7 @@ void service_event_handler(int event_fd, int flag, void *arg)
 {
     char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
     socklen_t rsa_len = sizeof(struct sockaddr_in);
-    int fd = -1, port = -1, n = 0, opt = 1;
+    int fd = -1, port = -1, n = 0, opt = 1, i = 0;
     SERVICE *service = (SERVICE *)arg;
     PROCTHREAD *pth = NULL;
     struct sockaddr_in rsa;
@@ -412,7 +406,7 @@ new_conn:
                         if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                             service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                         {
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d]  via %d", ip, port, fd);
+                            DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i++, ip, port, fd);
                             continue;
                         }
                         else
@@ -695,7 +689,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
-        DEBUG_LOGGER(service->logger, "Ready for add-conn remote[%s:%d] local[%s:%d] via %d", remote_ip, remote_port, local_ip, local_port, fd);
+        //WARN_LOGGER(service->logger, "Ready for add-conn remote[%s:%d] local[%s:%d] via %d", remote_ip, remote_port, local_ip, local_port, fd);
         if((conn = service_popfromq(service)))
         {
             //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
@@ -730,6 +724,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             }
             else if(service->working_mode == WORKING_THREAD && service->nprocthreads > 0)
             {
+                //WARN_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 index = fd % service->nprocthreads;
                 if(service->procthreads && (procthread = service->procthreads[index])) 
                 {
@@ -744,7 +739,6 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                     {
                         procthread->addconn(procthread, conn);
                     }
-                    DEBUG_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 }
                 else
                 {
@@ -772,7 +766,6 @@ int service_pushconn(SERVICE *service, CONN *conn)
     if(service && service->lock == 0 && conn && service->connections)
     {
         MUTEX_LOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "start pushconn()");
         for(i = 1; i < service->connections_limit; i++)
         {
             if(service->connections[i] == NULL)
@@ -813,7 +806,6 @@ int service_pushconn(SERVICE *service, CONN *conn)
         {
             parent->bind_proxy(parent, conn);
         }
-        DEBUG_LOGGER(service->logger, "over pushconn()");
         MUTEX_UNLOCK(service->mutex);
     }
     return ret;
@@ -827,7 +819,6 @@ int service_popconn(SERVICE *service, CONN *conn)
     if(service && service->lock == 0 && service->connections && conn)
     {
         MUTEX_LOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "start popconn()");
         if(conn->index > 0 && conn->index <= service->index_max
                 && service->connections[conn->index] == conn)
         {
@@ -862,7 +853,6 @@ int service_popconn(SERVICE *service, CONN *conn)
                     conn->local_ip, conn->local_port, conn->fd, 
                     conn->index, service->running_connections);
         }
-        DEBUG_LOGGER(service->logger, "over popconn()");
         MUTEX_UNLOCK(service->mutex);
         //return service_pushtoq(service, conn);
     }
@@ -894,9 +884,9 @@ CONN *service_getconn(SERVICE *service, int groupid)
 
     if(service && service->lock == 0)
     {
-        MUTEX_LOCK(service->mutex);
         if(groupid > 0 && groupid <= service->ngroups)
         {
+            MUTEX_LOCK(service->groups[groupid].mutex);
             x = 0;
             while(x < SB_GROUP_CONN_MAX && service->groups[groupid].nconns_free > 0)
             {
@@ -909,21 +899,21 @@ CONN *service_getconn(SERVICE *service, int groupid)
                         conn->gindex = -1;
                         service->groups[groupid].conns_free[x] = 0;
                         --(service->groups[groupid].nconns_free);
-                        DEBUG_LOGGER(service->logger, "get conn[%s:%d] from conns_free[%d]", conn->local_ip, conn->local_port, x);
                         conn->start_cstate(conn);
                         break;
                     }
                     else 
                     {
-                        DEBUG_LOGGER(service->logger, "non-free conn[%s::%d] status:%d c_state:%d d_state:%d on conns_free[%d]", conn->local_ip, conn->local_port, conn->status, conn->c_state, conn->d_state, x);
                         conn = NULL;
                     }
                 }
                 ++x;
             }
+            MUTEX_UNLOCK(service->groups[groupid].mutex);
         }
         else
         {
+            MUTEX_LOCK(service->mutex);
             while(service->nconns_free > 0)
             {
                 x = --(service->nconns_free);
@@ -934,8 +924,8 @@ CONN *service_getconn(SERVICE *service, int groupid)
                     break;
                 }
             }
+            MUTEX_UNLOCK(service->mutex);
         }
-        MUTEX_UNLOCK(service->mutex);
     }
     return conn;
 }
@@ -965,7 +955,6 @@ int service_freeconn(SERVICE *service, CONN *conn)
                         ++(service->groups[id].nconns_free);
                         conn->gindex = x;
                         conn->over_cstate(conn);
-                        DEBUG_LOGGER(service->logger, "free conn[%s:%d] to conns_free[%d]", conn->local_ip, conn->local_port, x);
                         break;
                     }
                     ++x;
@@ -1021,18 +1010,14 @@ CHUNK *service_popchunk(SERVICE *service)
                 && (cp = service->qchunks[x]))
         {
             service->qchunks[x] = NULL;
-            DEBUG_LOGGER(service->logger, "popchunk(%p) nchunks:%d", cp, service->nchunks);
         }
         else
         {
-            if((cp = chunk_init()))
-            {
-                service->nchunks++;
-                DEBUG_LOGGER(service->logger, "popchunk(%p) nchunks:%d", cp, service->nchunks);
-            }
-
+            x = -1;
+            service->nchunks++;
         }
         MUTEX_UNLOCK(service->mutex);
+        if(x == -1) cp = chunk_init();
     }
     return cp;
 }
@@ -1042,23 +1027,20 @@ int service_pushtoq(SERVICE *service, CONN *conn)
 {
     int x = 0;
 
-    if(service && service->lock == 0 && conn)
+    if(service && conn)
     {
         MUTEX_LOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "starting pushq(%d) running_conns:%d conn[%p]->d_state:%d", service->nqconns, service->running_connections, conn, conn->d_state);
-        if(SB_QCONN_MAX > 0 && service->nqconns < SB_QCONN_MAX)
+        if((x = service->nqconns) < SB_QCONN_MAX)
         {
-            x = service->nqconns++;
-            service->qconns[x] = conn;
+            service->qconns[service->nqconns++] = conn;
         }
         else 
         {
-            //WARN_LOGGER(service->logger, "Ready for clean conn[%p]->d_state:%d new:%d free:%d", conn,conn->d_state, service->nnewconns, service->nfreeconns);
-            conn->clean(conn);
+            x = -1;
             service->nconn--;
         }
-        DEBUG_LOGGER(service->logger, "over pushq(%d) conn[%p] nconn:%d", service->nqconns, conn, service->nconn);
         MUTEX_UNLOCK(service->mutex);
+        if(x == -1) conn->clean(conn);
     }
     return x;
 }
@@ -1069,10 +1051,9 @@ CONN *service_popfromq(SERVICE *service)
     CONN *conn = NULL;
     int x = 0;
 
-    if(service && service->lock == 0)
+    if(service)
     {
         MUTEX_LOCK(service->mutex);
-        DEBUG_LOGGER(service->logger, "starting popfromq(%d)", service->nqconns);
         if(service->nqconns > 0 && (x = --(service->nqconns)) >= 0 
                 && (conn = service->qconns[x]))
         {
@@ -1080,18 +1061,11 @@ CONN *service_popfromq(SERVICE *service)
         }
         else
         {
-            if((conn = conn_init()))
-            {
-                service->nconn++;
-                DEBUG_LOGGER(service->logger, "conn_init(%d) conn[%p]->d_state:%d nconn:%d ", service->nqconns, conn, conn->d_state, service->nconn);
-            }
-        }
-        //fprintf(stdout, "nqconns:%d\n", service->nqconns);
-        if(conn)
-        {
-            DEBUG_LOGGER(service->logger, "over popfromq(%d) conn[%p]->d_state:%d nconn:%d", service->nqconns, conn, conn->d_state, service->nconn);
+            x = -1;
+            service->nconn++;
         }
         MUTEX_UNLOCK(service->mutex);
+        if(x == -1)conn = conn_init();
     }
     return conn;
 }
@@ -1103,19 +1077,20 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
 
     if(service && service->lock == 0 && service->qchunks && cp)
     {
+        chunk_reset(cp);
         MUTEX_LOCK(service->mutex);
         if(service->nqchunks < SB_CHUNKS_MAX)
         {
-            chunk_reset(cp);
             x = service->nqchunks++;
             service->qchunks[x] = cp;
         }
         else 
         {
-            chunk_clean(cp);
+            x = -1;
             service->nchunks--;
         }
         MUTEX_UNLOCK(service->mutex);
+        if(x == -1) chunk_clean(cp);
         ret = 0;
     }
     return ret;
@@ -1195,7 +1170,6 @@ int service_broadcast(SERVICE *service, char *data, int len)
 
     if(service && service->lock == 0 && service->running_connections > 0)
     {
-        MUTEX_LOCK(service->mutex);
         for(i = 0; i < service->index_max; i++)
         {
             if((conn = service->connections[i]))
@@ -1203,7 +1177,6 @@ int service_broadcast(SERVICE *service, char *data, int len)
                 conn->push_chunk(conn, data, len);
             }
         }
-        MUTEX_UNLOCK(service->mutex);
         ret = 0;
     }
     return ret;
@@ -1215,14 +1188,13 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
     int id = -1;
     if(service && service->lock == 0 && service->ngroups < SB_GROUPS_MAX)
     {
-        MUTEX_LOCK(service->mutex);
         id = ++service->ngroups;
         strcpy(service->groups[id].ip, ip);
         service->groups[id].port = port;
         service->groups[id].limit = limit;
+        MUTEX_INIT(service->groups[id].mutex);
         memcpy(&(service->groups[id].session), session, sizeof(SESSION));
         //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, id, service->groups[id].session.data_handler);
-        MUTEX_UNLOCK(service->mutex);
     }
     return id;
 }
@@ -1235,7 +1207,7 @@ int service_closegroup(SERVICE *service, int groupid)
 
     if(service && groupid < SB_GROUPS_MAX)
     {
-        MUTEX_LOCK(service->mutex);
+        MUTEX_LOCK(service->groups[groupid].mutex);
         service->groups[groupid].limit = 0;
         while((i = --(service->groups[groupid].nconns_free)) >= 0)
         {
@@ -1245,7 +1217,7 @@ int service_closegroup(SERVICE *service, int groupid)
                 conn->close(conn);
             }
         }
-        MUTEX_UNLOCK(service->mutex);
+        MUTEX_UNLOCK(service->groups[groupid].mutex);
     }
     return id;
 }
@@ -1383,18 +1355,6 @@ void service_stop(SERVICE *service)
                 }
             }
         }
-        //iodaemon
-        /*
-        if(service->iodaemon)
-        {
-            DEBUG_LOGGER(service->logger, "Ready for stop daemon");
-            service->iodaemon->terminate(service->iodaemon);
-            DEBUG_LOGGER(service->logger, "Ready for joinning daemon thread");
-            PROCTHREAD_EXIT(service->iodaemon->threadid, NULL);
-            DEBUG_LOGGER(service->logger, "Joinning daemon thread");
-            DEBUG_LOGGER(service->logger, "over for stop daemon");
-        }
-        */
         //iodaemons
         if(service->niodaemons > 0)
         {
@@ -1440,7 +1400,7 @@ void service_stop(SERVICE *service)
         if(service->daemon)
         {
             WARN_LOGGER(service->logger, "Ready for stop threads[daemon]");
-            service->daemon->terminate(service->daemon);
+            service->daemon->stop(service->daemon);
             if(service->working_mode == WORKING_THREAD)
             {
                 PROCTHREAD_EXIT(service->daemon->threadid, NULL);
@@ -1562,12 +1522,15 @@ void service_clean(SERVICE *service)
 
     if(service)
     {
-        
+        if(service->cond) close(service->cond);    
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
         if(service->recover) service->recover->clean(service->recover);
         if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
-        //if(service->iodaemon) service->iodaemon->clean(service->iodaemon);
+        for(i = 0;i < service->ngroups; i++)
+        {
+            MUTEX_DESTROY(service->groups[i].mutex);
+        }
         //clean procthreads
         if(service->nprocthreads > 0)
         {
@@ -1578,8 +1541,6 @@ void service_clean(SERVICE *service)
                 if(service->procthreads[i])
                     service->procthreads[i]->clean(service->procthreads[i]);
             }
-            //xmm_free(service->iodaemons, sizeof(PROCTHREAD *) * service->nprocthreads);
-            //xmm_free(service->procthreads, sizeof(PROCTHREAD *) * service->nprocthreads);
         }
         //clean daemons
         if(service->ndaemons > 0)
@@ -1591,7 +1552,6 @@ void service_clean(SERVICE *service)
                     service->daemons[i]->clean(service->daemons[i]);
                 }
             }
-            //xmm_free(service->daemons, sizeof(PROCTHREAD *) * service->ndaemons);
         }
         //clean connection_queue
         DEBUG_LOGGER(service->logger, "Ready for clean connection_chunk:%d", service->nqconns);
@@ -1656,7 +1616,7 @@ SERVICE *service_init()
     SERVICE *service = NULL;
     if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
-        MUTEX_RESET(service->mutex);
+        MUTEX_INIT(service->mutex);
         service->etimer             = EVTIMER_INIT();
         service->set                = &service_set;
         service->run                = &service_run;

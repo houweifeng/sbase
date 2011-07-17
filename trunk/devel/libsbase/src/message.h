@@ -79,7 +79,7 @@ typedef struct _QMESSAGE
     MESSAGE *left;
     MESSAGE *first;
     MESSAGE *last;
-    MUTEX mutex;
+    MUTEX *mutex;
 }QMESSAGE;
 void *qmessage_init();
 void qmessage_handler(void *q, void *logger);

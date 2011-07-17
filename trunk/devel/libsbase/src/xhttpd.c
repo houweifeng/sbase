@@ -590,7 +590,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         }
         if(http_req.reqid == HTTP_GET)
         {
-            REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
+            //REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
             //get vhost
             if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
             {
