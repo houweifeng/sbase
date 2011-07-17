@@ -62,9 +62,9 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                     i++;
                 }
-                if(i < 1){if(++k > 50000){usleep(usec);k = 0;}}
-                //if(i < 1){if(++k > 100000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
-                //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
+                //if(i < 1){if(++k > 50000){usleep(usec);k = 0;}}
+                if(i < 1){if(++k > 100000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+                else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
             }while(pth->running_status);
             WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
         }
