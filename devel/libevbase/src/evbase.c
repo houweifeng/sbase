@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/mman.h>
@@ -44,22 +45,6 @@ typedef struct _EVOPS
 }EVOPS;
 static EVOPS evops[EOP_LIMIT];
 static int evops_default =      -1;
-/* set logfile */
-void evbase_set_logfile(EVBASE *evbase, char *file)
-{
-    if(evbase)
-    {
-    }
-    return ;
-}
-/* set logger level */
-void evbase_set_log_level(EVBASE *evbase, int level)
-{
-    if(evbase)
-    {
-    }
-    return ;
-}
 /* set event operating */
 int evbase_set_evops(EVBASE *evbase, int evopid)
 {
@@ -92,7 +77,6 @@ EVBASE *evbase_init()
 
     if((evbase = (EVBASE *)calloc(1, sizeof(EVBASE))))
     {
-        MUTEX_RESET(evbase->mutex);
 #ifdef HAVE_EVPORT
         evops_default_v = EOP_PORT;
         evops[EOP_PORT].name = "PORT";
@@ -181,8 +165,6 @@ EVBASE *evbase_init()
         evops[EOP_WIN32].reset    = &evwin32_reset;
         evops[EOP_WIN32].clean    = &evwin32_clean;
 #endif
-        evbase->set_logfile = &evbase_set_logfile;
-        evbase->set_log_level = &evbase_set_log_level;
         evbase->set_evops   = &evbase_set_evops;
         //evbase->clean 	=  evbase_clean;
         evops_default = evops_default_v;
@@ -204,7 +186,7 @@ void event_set(EVENT *event, int fd, int flags, void *arg, void *handler)
 	{
 		if(fd > 0 && handler)
 		{
-            MUTEX_RESET(event->mutex);
+            MUTEX_INIT(event->mutex);
 			event->ev_fd		= 	fd;
 			event->ev_flags		=	flags;
 			event->ev_arg		=	arg;
@@ -219,7 +201,7 @@ void event_add(EVENT *event, int flags)
 {
 	if(event)
 	{
-        //MUTEX_LOCK(event->mutex);
+        MUTEX_LOCK(event->mutex);
         if((event->ev_flags & flags) != flags)
         {
             event->old_ev_flags = event->ev_flags;
@@ -229,7 +211,7 @@ void event_add(EVENT *event, int flags)
                 event->ev_base->update(event->ev_base, event);
             }
         }
-        //MUTEX_UNLOCK(event->mutex);
+        MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -239,7 +221,7 @@ void event_del(EVENT *event, int flags)
 {
 	if(event)
 	{
-        //MUTEX_LOCK(event->mutex);
+        MUTEX_LOCK(event->mutex);
 		if(event->ev_flags & flags)
 		{
             event->old_ev_flags = event->ev_flags;
@@ -249,7 +231,7 @@ void event_del(EVENT *event, int flags)
                 event->ev_base->update(event->ev_base, event);
 			}
 		}
-        //MUTEX_UNLOCK(event->mutex);
+        MUTEX_UNLOCK(event->mutex);
 	}	
     return ;
 }

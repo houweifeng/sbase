@@ -7,10 +7,6 @@
 #include <sys/event.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#ifdef HAVE_MMAP
-#include <sys/mman.h>
-#endif
-#include "mutex.h"
 
 /* Initialize evkqueue  */
 int evkqueue_init(EVBASE *evbase)
@@ -235,7 +231,6 @@ void evkqueue_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);

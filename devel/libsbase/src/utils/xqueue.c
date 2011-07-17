@@ -18,7 +18,7 @@ void *xqueue_init()
             q->waits[j++] = i;
             q->nwaits++;
         }
-        MUTEX_RESET(q->mutex);
+        MUTEX_INIT(q->mutex);
     }
     return q;
 }
@@ -38,7 +38,7 @@ int xqueue_new(void *xqueue)
             q->roots[qid].status = 1;
         }
         MUTEX_UNLOCK(q->mutex);
-        MUTEX_RESET(q->roots[qid].mutex);
+        MUTEX_INIT(q->roots[qid].mutex);
     }
     return qid;
 }

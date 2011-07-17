@@ -54,7 +54,8 @@ typedef struct _LOGGER
 	int fd ;
     int total;
     int level;
-    MUTEX mutex;
+    int bits;
+    MUTEX *mutex;
     struct tm *p;
     char *ps;
 }LOGGER;
@@ -161,7 +162,7 @@ do                                                                              
 {                                                                                   \
     if((ptr = (LOGGER *)calloc(1, sizeof(LOGGER))))                                 \
     {                                                                               \
-        MUTEX_RESET(PL(ptr)->mutex);                                                \
+        MUTEX_INIT(PL(ptr)->mutex);                                                \
         strcpy(PLF(ptr), lp);                                                       \
         PMKDIR(ptr, lp);                                                            \
         LOGGER_ROTATE_CHECK(ptr);                                                   \

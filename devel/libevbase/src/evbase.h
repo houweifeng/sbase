@@ -22,26 +22,6 @@ extern "C" {
 #define EOP_WIN32       0x07
 #define EOP_LIMIT       8
 struct _EVENT;
-#ifndef __TYPEDEF__MUTEX
-#define __TYPEDEF__MUTEX
-#ifdef HAVE_SEMAPHORE
-#include <semaphore.h>
-typedef struct _MUTEX
-{
-    sem_t sem;
-}MUTEX;
-#else
-#include <pthread.h>
-typedef struct _MUTEX
-{
-    pthread_mutex_t mutex;
-    pthread_cond_t  cond;
-    int nowait;
-    int bits;
-}MUTEX;
-#endif
-#endif
-
 #ifndef _TYPEDEF_EVBASE
 #define _TYPEDEF_EVBASE
 typedef struct _EVBASE
@@ -50,7 +30,6 @@ typedef struct _EVBASE
     int maxfd;
 	int allowed;
     int evopid;
-    MUTEX mutex;
 
 	void *ev_read_fds;
 	void *ev_write_fds;
@@ -65,22 +44,16 @@ typedef struct _EVBASE
 	int	    (*loop)(struct _EVBASE *, int , struct timeval *tv);
 	void	(*reset)(struct _EVBASE *);
 	void 	(*clean)(struct _EVBASE *);
-    void    (*set_logfile)(struct _EVBASE *, char *logfile);
-    void    (*set_log_level)(struct _EVBASE *, int level);
     int     (*set_evops)(struct _EVBASE *, int evopid);
 }EVBASE;
 EVBASE *evbase_init();
 #define SET_MAX_FD(evbase, event)                                       \
-do                                                                      \
-{MUTEX_LOCK(evbase->mutex);                                             \
+do{                                                                      \
     if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
-    MUTEX_UNLOCK(evbase->mutex);                                        \
 }while(0)
 #define RESET_MAX_FD(evbase, event)                                     \
-do                                                                      \
-{MUTEX_LOCK(evbase->mutex);                                             \
+do{                                                                      \
     if(event->ev_fd == evbase->maxfd) evbase->maxfd = event->ev_fd -1;  \
-    MUTEX_UNLOCK(evbase->mutex);                                        \
 }while(0)
 #endif
 #ifndef _TYPEDEF_EVENT
@@ -92,8 +65,8 @@ typedef struct _EVENT
 	int ev_fd;
     int bits;
 	struct timeval tv;
-    MUTEX mutex;
 
+    void *mutex;
 	struct _EVBASE *ev_base;
 	void *ev_arg;
 	void (*ev_handler)(int fd, int flags, void *arg);	

@@ -1,13 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
-#ifdef HAVE_PTHREAD
-#include <pthread.h>
-#endif
 #ifndef _LOG_H
 #define _LOG_H
 static char *_ymonths[]= {
@@ -15,21 +13,6 @@ static char *_ymonths[]= {
 	"Apr", "May", "Jun",
 	"Jul", "Aug", "Sep",
 	"Oct", "Nov", "Dec"};
-#ifdef HAVE_PTHREAD
-#define LOG_HEADER(out)									\
-{											\
-	struct timeval tv;								\
-	time_t timep;  									\
-	struct tm *p = NULL;								\
-	gettimeofday(&tv, NULL);							\
-	time(&timep); 									\
-	p = localtime(&timep);								\
-	fprintf(out, "[%02d/%s/%04d:%02d:%02d:%02d +%06u] #%u/%p# %s::%d ",		\
-			p->tm_mday, _ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,	\
-			p->tm_min, p->tm_sec, (unsigned int)tv.tv_usec, 			\
-			(unsigned int)getpid(), (void *)pthread_self(), __FILE__, __LINE__);\
-}
-#else
 #define LOG_HEADER(out)									\
 {											\
 	struct timeval tv;								\
@@ -40,10 +23,9 @@ static char *_ymonths[]= {
 	p = localtime(&timep);								\
 	fprintf(out, "[%02d/%s/%04d:%02d:%02d:%02d +%06u] #%u# %s::%d ",		\
 			p->tm_mday, _ymonths[p->tm_mon], (1900+p->tm_year), p->tm_hour,	\
-			p->tm_min, p->tm_sec, (size_t)tv.tv_usec, 			\
-			(size_t)getpid(), __FILE__, __LINE__);				\
+			p->tm_min, p->tm_sec, (unsigned int)tv.tv_usec, 			\
+			(unsigned int)getpid(), __FILE__, __LINE__);\
 }
-#endif
 #ifndef DEBUG_LOG
 #ifdef _DEBUG										
 #define DEBUG_LOG(format...)								\

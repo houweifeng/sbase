@@ -1634,7 +1634,7 @@ CONN *conn_init()
         conn->groupid = -1;
         conn->index = -1;
         conn->gindex = -1;
-        MUTEX_RESET(conn->mutex);
+        MUTEX_INIT(conn->mutex);
         conn->queue                 = queue_init();
         conn->set                   = &conn_set;
         conn->get_service_id        = &conn_get_service_id;

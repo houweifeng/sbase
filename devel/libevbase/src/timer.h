@@ -4,8 +4,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "mutex.h"
-
 #ifndef _TIMER_H
 #define _TIMER_H
 #ifdef __cplusplus
@@ -26,7 +24,6 @@ typedef struct _TIMER
 	long long last_usec;
     long long last_usec_used;
     long long now;
-	MUTEX mutex;
 }TIMER;
 #define PT(ptr) ((TIMER *)ptr)
 #define PT_SEC_U(ptr) ((PT(ptr))?PT(ptr)->sec_used:0)
@@ -48,14 +45,12 @@ do{                                                                             
             + PT(ptr)->tv.tv_usec * 1ll;                                        \
         PT(ptr)->last_sec     = PT(ptr)->start_sec;                             \
         PT(ptr)->last_usec    = PT(ptr)->start_usec;                            \
-        MUTEX_RESET(PT(ptr)->mutex);                                            \
     }                                                                           \
 }while(0)                                                                      
 #define TIMER_SAMPLE(ptr)                                                       \
 do{                                                                               \
     if(ptr)                                                                     \
     {                                                                           \
-        MUTEX_LOCK(PT(ptr)->mutex);                                             \
         gettimeofday(&(PT(ptr)->tv), NULL);                                     \
         PT(ptr)->last_sec_used    = PT(ptr)->tv.tv_sec - PT(ptr)->last_sec;     \
         PT(ptr)->last_usec_used   = PT(ptr)->tv.tv_sec * 1000000ll              \
@@ -65,14 +60,12 @@ do{                                                                             
             + PT(ptr)->tv.tv_usec;                                              \
         PT(ptr)->sec_used     = PT(ptr)->tv.tv_sec - PT(ptr)->start_sec;        \
         PT(ptr)->usec_used    = PT(ptr)->last_usec - PT(ptr)->start_usec;       \
-        MUTEX_UNLOCK(PT(ptr)->mutex);                                           \
     }                                                                           \
 }while(0)
 #define TIMER_RESET(ptr)                                                        \
 do{                                                                               \
     if(ptr)                                                                     \
     {                                                                           \
-        MUTEX_LOCK(PT(ptr)->mutex);                                             \
         gettimeofday(&(PT(ptr)->tv), NULL);                                     \
         PT(ptr)->start_sec    = PT(ptr)->tv.tv_sec;                             \
         PT(ptr)->start_usec   = PT(ptr)->tv.tv_sec * 1000000ll                  \
@@ -81,7 +74,6 @@ do{                                                                             
         PT(ptr)->last_usec    = PT(ptr)->start_usec;                            \
         PT(ptr)->last_sec_used     = 0ll;                                       \
         PT(ptr)->last_usec_used    = 0ll;                                       \
-        MUTEX_UNLOCK(PT(ptr)->mutex);                                           \
     }                                                                           \
 }while(0)
 
@@ -93,7 +85,6 @@ do{                                                                             
 do{                                                                               \
     if(ptr)                                                                     \
     {                                                                           \
-        MUTEX_DESTROY(PT(ptr)->mutex);                                          \
         free(ptr);                                                              \
         ptr = NULL;                                                             \
     }                                                                           \
