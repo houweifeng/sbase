@@ -272,7 +272,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);          
                     return ;
                 }
-                WARN_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
+                DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd, event);
                 //set conn->status
@@ -770,11 +770,12 @@ int conn_read_handler(CONN *conn)
     {
         /*
         DEBUG_LOGGER(conn->logger, "Ready for reading conn[%p] buffer[%d/%d] packet[%d/%d] oob[%d/%d] cache[%d/%d] exchange[%d/%d] chunk[%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer), MMB_LEFT(conn->packet), MMB_SIZE(conn->packet), MMB_LEFT(conn->oob), MMB_SIZE(conn->oob), MMB_LEFT(conn->cache), MMB_SIZE(conn->cache), MMB_LEFT(conn->exchange), MMB_SIZE(conn->exchange), LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        if((n = MMB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
+        */
+        if(conn->session.is_use_OOB && (n = MMB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
             conn->recv_oob_total += n;
             DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld "
-                    "from %s:%d on %s:%d via %d", n, conn->recv_oob_total, 
+                    "from %s:%d on %s:%d via %d", n, LL(conn->recv_oob_total), 
                     conn->remote_ip, conn->remote_port, conn->local_ip, 
                     conn->local_port, conn->fd);
             if((n = conn->oob_handler(conn)) > 0)
@@ -784,7 +785,6 @@ int conn_read_handler(CONN *conn)
             // CONN TIMER sample 
             return ret = 0;
         }
-        */
         /* Receive to chunk with chunk_read_state before reading to buffer */
         if(conn->s_state == S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
@@ -864,7 +864,7 @@ int conn_write_handler(CONN *conn)
                 }
                 else
                 {
-                    WARN_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) "
+                    DEBUG_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) "
                             "to %s:%d on %s:%d via %d leave %lld qtotal:%d failed, %s", n, 
                             LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
                             conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left), 

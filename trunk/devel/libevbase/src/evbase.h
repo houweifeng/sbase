@@ -10,6 +10,7 @@ extern "C" {
 #define E_WRITE		0x02
 #define E_CLOSE		0x04
 #define E_PERSIST	0x08
+#define E_EPOLL_ET  0x10
 #define EV_MAX_FD	1024
 /*event operating */
 #define EOP_PORT        0x00
@@ -66,7 +67,6 @@ typedef struct _EVENT
     int bits;
 	struct timeval tv;
 
-    void *mutex;
 	struct _EVBASE *ev_base;
 	void *ev_arg;
 	void (*ev_handler)(int fd, int flags, void *arg);	

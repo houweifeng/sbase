@@ -224,6 +224,8 @@ running:
         sbase->running_status = 1;
         if(sbase->usec_sleep > 1000000) sec = sbase->usec_sleep/1000000;
         usec = sbase->usec_sleep % 1000000;
+        tv.tv_sec = sec;
+        tv.tv_usec = usec;
         do
         {
             //running evbase 
@@ -236,8 +238,9 @@ running:
                 qmessage_handler(sbase->message_queue, sbase->logger);
                 i = 1;
             }
-            if(i < 1){if(++k > 100000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
-            else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
+            //if(i < 1){if(++k > 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+            //if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}
+            //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)

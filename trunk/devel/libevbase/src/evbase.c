@@ -31,7 +31,7 @@
 #ifdef WIN32
 #include "evwin32.h"
 #endif
-#include "mutex.h"
+//#include "mutex.h"
 typedef struct _EVOPS
 {
     char    *name ;
@@ -186,7 +186,7 @@ void event_set(EVENT *event, int fd, int flags, void *arg, void *handler)
 	{
 		if(fd > 0 && handler)
 		{
-            MUTEX_INIT(event->mutex);
+            //MUTEX_INIT(event->mutex);
 			event->ev_fd		= 	fd;
 			event->ev_flags		=	flags;
 			event->ev_arg		=	arg;
@@ -201,7 +201,7 @@ void event_add(EVENT *event, int flags)
 {
 	if(event)
 	{
-        MUTEX_LOCK(event->mutex);
+        //MUTEX_LOCK(event->mutex);
         if((event->ev_flags & flags) != flags)
         {
             event->old_ev_flags = event->ev_flags;
@@ -211,7 +211,7 @@ void event_add(EVENT *event, int flags)
                 event->ev_base->update(event->ev_base, event);
             }
         }
-        MUTEX_UNLOCK(event->mutex);
+        //MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -221,7 +221,7 @@ void event_del(EVENT *event, int flags)
 {
 	if(event)
 	{
-        MUTEX_LOCK(event->mutex);
+        //MUTEX_LOCK(event->mutex);
 		if(event->ev_flags & flags)
 		{
             event->old_ev_flags = event->ev_flags;
@@ -231,7 +231,7 @@ void event_del(EVENT *event, int flags)
                 event->ev_base->update(event->ev_base, event);
 			}
 		}
-        MUTEX_UNLOCK(event->mutex);
+        //MUTEX_UNLOCK(event->mutex);
 	}	
     return ;
 }
@@ -274,7 +274,7 @@ void event_clean(EVENT *event)
 {
 	if(event)
 	{
-        MUTEX_DESTROY(event->mutex);
+        //MUTEX_DESTROY(event->mutex);
 	}
     return ;
 }

@@ -166,10 +166,10 @@ int service_run(SERVICE *service)
                     service->heartbeat_interval);
         }
         //evbase setting 
-        if(service->service_type == S_SERVICE && service->evbase) 
-                //&& service->working_mode == WORKING_PROC)
+        if(service->service_type == S_SERVICE && service->evbase 
+                && service->working_mode == WORKING_PROC)
         {
-            event_set(&(service->event), service->fd, E_READ|E_PERSIST,
+            event_set(&(service->event), service->fd, E_READ|E_EPOLL_ET|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
             ret = service->evbase->add(service->evbase, &(service->event));
         }
@@ -252,7 +252,7 @@ running_threads:
         }
         /* initialize threads  */
         if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
-        if(service->nprocthreads < 1) service->nprocthreads = 2;
+        if(service->nprocthreads < 1) service->nprocthreads = 1;
         if(service->nprocthreads > 0)
         {
             for(i = 0; i < service->nprocthreads; i++)
@@ -282,8 +282,22 @@ running_threads:
         {
             service->daemon->evtimer = service->etimer;
             PROCTHREAD_SET(service, service->daemon);
-            service->daemon->use_cond_wait = 0;
             NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
+            ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
+                    service->working_mode, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
+        /* acceptor */
+        if((service->acceptor = procthread_init(service->cond)))
+        {
+            PROCTHREAD_SET(service, service->acceptor);
+            service->acceptor->set_acceptor(service->acceptor, service->fd);
+            NEW_PROCTHREAD("acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger);
             ret = 0;
         }
         else
@@ -317,6 +331,7 @@ running_threads:
                 if((service->daemons[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
+                    service->daemons[i]->use_cond_wait = 1;
                     ret = 0;
                 }
                 else
@@ -1342,6 +1357,13 @@ void service_stop(SERVICE *service)
     {
         service->lock = 1;
         DEBUG_LOGGER(service->logger, "ready for stop service:%s running_connections:%d nconn:%d nqconns:%d nchunks:%d nqchunk:%d\n", service->service_name, service->running_connections, service->nconn, service->nqconns, service->nchunks, service->nqchunks);
+        //acceptor
+        if(service->acceptor)
+        {
+            WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
+            service->acceptor->stop(service->acceptor);
+            PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
+        }
         //stop all connections 
         if(service->connections && service->index_max >= 0)
         {
@@ -1418,7 +1440,7 @@ void service_stop(SERVICE *service)
         DEBUG_LOGGER(service->logger, "Ready for remove event");
         /*remove event */
         event_destroy(&(service->event));
-        DEBUG_LOGGER(service->logger, "over for remove event");
+        if(service->cond > 0 ) close(service->cond);    
         if(service->fd > 0)close(service->fd);
         DEBUG_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
@@ -1522,7 +1544,6 @@ void service_clean(SERVICE *service)
 
     if(service)
     {
-        if(service->cond) close(service->cond);    
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
         if(service->recover) service->recover->clean(service->recover);
