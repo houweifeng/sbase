@@ -236,7 +236,7 @@ running:
                 qmessage_handler(sbase->message_queue, sbase->logger);
                 i = 1;
             }
-            if(i < 1){if(++k > 50000){usleep(usec);k = 0;}}
+            if(i < 1){if(++k > 100000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
             else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
         }while(sbase->running_status);
         /* handler left message */
