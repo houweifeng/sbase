@@ -162,9 +162,10 @@ void procthread_run(void *arg)
             {
                 do
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, NULL);
-                    //if(i < 1){if(++k > 10000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
-                    //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
+                    i = pth->evbase->loop(pth->evbase, 0, &tv);
+                    //if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}
+                    if(i < 1){if(++k > 1024){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+                    else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads[acceptor]");
             }
@@ -192,15 +193,9 @@ void procthread_run(void *arg)
                     //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
-                        //DEBUG_LOGGER(pth->logger, "starting qmessage_handler()");
                         qmessage_handler(pth->message_queue, pth->logger);
-                        //DEBUG_LOGGER(pth->logger, "over qmessage_handler()");
                     }
-                    else
-                    {
-
-                        if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
-                    }
+                    if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
@@ -209,7 +204,7 @@ void procthread_run(void *arg)
                 do
                 {
                     //DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
-                    if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
+                    //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
@@ -468,7 +463,7 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
     if(pth && pth->message_queue)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_HEARTBEAT, -1, -1, -1, handler, arg);
-        //DEBUG_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
+        //WARN_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
     }
     return ;
 

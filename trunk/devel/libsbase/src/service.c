@@ -161,9 +161,9 @@ int service_run(SERVICE *service)
         {
             service->evid = EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
                     &service_evtimer_handler, (void *)service);
-            DEBUG_LOGGER(service->logger, "Added service[%s] to evtimer[%p][%d] interval:%d",
-                    service->service_name, service->evtimer, service->evid, 
-                    service->heartbeat_interval);
+            //WARN_LOGGER(service->logger, "Added service[%s] to evtimer[%p][%d] interval:%d",
+            //       service->service_name, service->evtimer, service->evid, 
+            //        service->heartbeat_interval);
         }
         //evbase setting 
         if(service->service_type == S_SERVICE && service->evbase 
@@ -311,7 +311,6 @@ running_threads:
         if((service->recover = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->recover);
-            service->recover->use_cond_wait = 1;
             NEW_PROCTHREAD("recover", 0, service->recover->threadid, service->recover, service->logger);
             ret = 0;
         }
@@ -331,7 +330,6 @@ running_threads:
                 if((service->daemons[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
-                    service->daemons[i]->use_cond_wait = 1;
                     ret = 0;
                 }
                 else
@@ -1360,7 +1358,7 @@ void service_stop(SERVICE *service)
         //acceptor
         if(service->acceptor)
         {
-            WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
+            //WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
             service->acceptor->stop(service->acceptor);
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
@@ -1380,7 +1378,7 @@ void service_stop(SERVICE *service)
         //iodaemons
         if(service->niodaemons > 0)
         {
-            WARN_LOGGER(service->logger, "Ready for stop iodaemons");
+            //WARN_LOGGER(service->logger, "Ready for stop iodaemons");
             for(i = 0; i < service->niodaemons; i++)
             {
                 if(service->iodaemons[i])
@@ -1394,7 +1392,7 @@ void service_stop(SERVICE *service)
         //threads
         if(service->nprocthreads > 0)
         {
-            WARN_LOGGER(service->logger, "Ready for stop procthreads");
+            //WARN_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
             {
                 if(service->procthreads[i])
@@ -1407,7 +1405,7 @@ void service_stop(SERVICE *service)
         //daemons
         if(service->ndaemons > 0)
         {
-            WARN_LOGGER(service->logger, "Ready for stop daemons");
+            //WARN_LOGGER(service->logger, "Ready for stop daemons");
             for(i = 0; i < service->ndaemons; i++)
             {
                 if(service->daemons[i])
@@ -1421,7 +1419,7 @@ void service_stop(SERVICE *service)
         //daemon
         if(service->daemon)
         {
-            WARN_LOGGER(service->logger, "Ready for stop threads[daemon]");
+            //WARN_LOGGER(service->logger, "Ready for stop threads[daemon]");
             service->daemon->stop(service->daemon);
             if(service->working_mode == WORKING_THREAD)
             {
@@ -1431,7 +1429,7 @@ void service_stop(SERVICE *service)
         //recover
         if(service->recover)
         {
-            WARN_LOGGER(service->logger, "Ready for stop threads[recover]");
+            //WARN_LOGGER(service->logger, "Ready for stop threads[recover]");
             service->recover->stop(service->recover);
             PROCTHREAD_EXIT(service->recover->threadid, NULL);
         }
@@ -1527,10 +1525,8 @@ void service_evtimer_handler(void *arg)
 
     if(service && service->daemon)
     {
-        //DEBUG_LOGGER(service->logger, "Ready for activing evtimer[%p][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
         service->daemon->active_heartbeat(service->daemon, 
                 &service_active_heartbeat, (void *)service);
-        //DEBUG_LOGGER(service->logger, "Over for activing evtimer[%p][%d] count[%d] q[%d]", service->evtimer, service->evid, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
     }
     return ;
 }
