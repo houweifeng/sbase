@@ -223,7 +223,7 @@ void conn_shut_handler(CONN *conn)
                     conn->index, conn->fd, -1, conn->parent, conn, NULL);
         }
         /*
-        event_destroy(&conn->event);
+        event_destroy(&(conn->event));
         qmessage_push(conn->message_queue, MESSAGE_OVER, 
             conn->index, conn->fd, -1, conn->parent, conn, NULL);
         */
@@ -280,7 +280,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                     PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
                 if(queue_total(conn->queue) < 1) 
                 {
-                    event_del(&conn->event, E_WRITE);
+                    event_del(&(conn->event), E_WRITE);
                 }
                 if(conn->session.ok_handler) conn->session.ok_handler(conn);
                 return ;
@@ -347,11 +347,11 @@ int conn_set(CONN *conn)
             flag = E_READ|E_PERSIST;
             if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
             event_set(&(conn->event), conn->fd, flag, (void *)conn, &conn_event_handler);
-            DEBUG_LOGGER(conn->logger, "setting conn[%p]->evbase->nfd[%d][%p] remote[%s:%d]"
-                    " d_state:%d local[%s:%d] via %d", conn, conn->evbase->nfd, &conn->event, 
+            DEBUG_LOGGER(conn->logger, "setting conn[%p]->evbase[%p] remote[%s:%d]"
+                    " d_state:%d local[%s:%d] via %d", conn, conn->evbase,
                     conn->remote_ip, conn->remote_port, conn->d_state,
                     conn->local_ip, conn->local_port, conn->fd);
-            conn->evbase->add(conn->evbase, &conn->event);
+            conn->evbase->add(conn->evbase, &(conn->event));
             return 0;
         }
         else
@@ -1636,51 +1636,51 @@ CONN *conn_init()
         conn->gindex = -1;
         MUTEX_RESET(conn->mutex);
         conn->queue                 = queue_init();
-        conn->set                   = conn_set;
-        conn->get_service_id        = conn_get_service_id;
-        conn->close                 = conn_close;
-        conn->over                  = conn_over;
-        conn->terminate             = conn_terminate;
-        conn->start_cstate          = conn_start_cstate;
-        conn->over_cstate           = conn_over_cstate;
-        conn->wait_estate          = conn_wait_estate;
-        conn->over_estate           = conn_over_estate;
-        conn->set_timeout           = conn_set_timeout;
-        conn->over_timeout          = conn_over_timeout;
-        conn->timeout_handler       = conn_timeout_handler;
-        conn->wait_evstate          = conn_wait_evstate;
-        conn->over_evstate          = conn_over_evstate;
-        conn->push_message          = conn_push_message;
-        conn->read_handler          = conn_read_handler;
-        conn->write_handler         = conn_write_handler;
-        conn->packet_reader         = conn_packet_reader;
-        conn->packet_handler        = conn_packet_handler;
-        conn->oob_handler           = conn_oob_handler;
-        conn->data_handler          = conn_data_handler;
-        conn->bind_proxy            = conn_bind_proxy;
-        conn->proxy_handler         = conn_proxy_handler;
-        conn->close_proxy           = conn_close_proxy;
-        conn->push_exchange         = conn_push_exchange;
-        conn->transaction_handler   = conn_transaction_handler;
-        conn->save_cache            = conn_save_cache;
-        conn->chunk_reader          = conn_chunk_reader;
-        conn->recv_chunk            = conn_recv_chunk;
-        conn->push_chunk            = conn_push_chunk;
-        conn->recv_file             = conn_recv_file;
-        conn->push_file             = conn_push_file;
-        conn->send_chunk            = conn_send_chunk;
-        conn->over_chunk            = conn_over_chunk;
-        conn->buffer_handler        = conn_buffer_handler;
-        conn->chunk_handler         = conn_chunk_handler;
-        conn->end_handler           = conn_end_handler;
-        conn->shut_handler          = conn_shut_handler;
-        conn->set_session           = conn_set_session;
-        conn->over_session          = conn_over_session;
-        conn->newtask               = conn_newtask;
-        conn->reset_xids            = conn_reset_xids;
-        conn->reset_state           = conn_reset_state;
-        conn->reset                 = conn_reset;
-        conn->clean                 = conn_clean;
+        conn->set                   = &conn_set;
+        conn->get_service_id        = &conn_get_service_id;
+        conn->close                 = &conn_close;
+        conn->over                  = &conn_over;
+        conn->terminate             = &conn_terminate;
+        conn->start_cstate          = &conn_start_cstate;
+        conn->over_cstate           = &conn_over_cstate;
+        conn->wait_estate           = &conn_wait_estate;
+        conn->over_estate           = &conn_over_estate;
+        conn->set_timeout           = &conn_set_timeout;
+        conn->over_timeout          = &conn_over_timeout;
+        conn->timeout_handler       = &conn_timeout_handler;
+        conn->wait_evstate          = &conn_wait_evstate;
+        conn->over_evstate          = &conn_over_evstate;
+        conn->push_message          = &conn_push_message;
+        conn->read_handler          = &conn_read_handler;
+        conn->write_handler         = &conn_write_handler;
+        conn->packet_reader         = &conn_packet_reader;
+        conn->packet_handler        = &conn_packet_handler;
+        conn->oob_handler           = &conn_oob_handler;
+        conn->data_handler          = &conn_data_handler;
+        conn->bind_proxy            = &conn_bind_proxy;
+        conn->proxy_handler         = &conn_proxy_handler;
+        conn->close_proxy           = &conn_close_proxy;
+        conn->push_exchange         = &conn_push_exchange;
+        conn->transaction_handler   = &conn_transaction_handler;
+        conn->save_cache            = &conn_save_cache;
+        conn->chunk_reader          = &conn_chunk_reader;
+        conn->recv_chunk            = &conn_recv_chunk;
+        conn->push_chunk            = &conn_push_chunk;
+        conn->recv_file             = &conn_recv_file;
+        conn->push_file             = &conn_push_file;
+        conn->send_chunk            = &conn_send_chunk;
+        conn->over_chunk            = &conn_over_chunk;
+        conn->buffer_handler        = &conn_buffer_handler;
+        conn->chunk_handler         = &conn_chunk_handler;
+        conn->end_handler           = &conn_end_handler;
+        conn->shut_handler          = &conn_shut_handler;
+        conn->set_session           = &conn_set_session;
+        conn->over_session          = &conn_over_session;
+        conn->newtask               = &conn_newtask;
+        conn->reset_xids            = &conn_reset_xids;
+        conn->reset_state           = &conn_reset_state;
+        conn->reset                 = &conn_reset;
+        conn->clean                 = &conn_clean;
     }
     return conn;
 }

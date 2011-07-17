@@ -17,7 +17,6 @@
 #include <openssl/crypto.h>
 #endif
 #include "evbase.h"
-#include "logger.h"
 #include "log.h"
 #ifdef HAVE_EVKQUEUE
 #define CONN_MAX 1024
@@ -165,12 +164,17 @@ err_end:
         if(ev_flags & E_READ)
         {
             //if( ( n = recvfrom(fd, conns[fd].buffer, EV_BUF_SIZE, 0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
-            if((n = conns[fd].n = read(fd, conns[fd].buffer, EV_BUF_SIZE - 1)) > 0)
+            if((n = read(fd, conns[fd].buffer+conns[fd].n, EV_BUF_SIZE - 1)) > 0)
             {
-                SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
-                SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
-                event_add(&conns[fd].event, E_WRITE);	
-                SHOW_LOG("Updated event[%p] on %d ", &conns[fd].event, fd);
+                conns[fd].n += n;
+                conns[fd].buffer[conns[fd].n] = 0;
+                if(strstr(conns[fd].buffer, "\r\n\r\n"))
+                {
+                    SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
+                    SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
+                    event_add(&conns[fd].event, E_WRITE);	
+                    SHOW_LOG("Updated event[%p] on %d ", &conns[fd].event, fd);
+                }
             }	
             else
             {
@@ -210,10 +214,9 @@ err:
 
 void ev_handler(int fd, int ev_flags, void *arg)
 {
-    int rfd = 0 ;
+    int rfd = 0, n = 0, keepalive = 0;
     struct 	sockaddr_in rsa;
     socklen_t rsa_len = sizeof(struct sockaddr_in);
-    int n = 0;
     if(fd == lfd )
     {
         if((ev_flags & E_READ))
@@ -277,21 +280,23 @@ void ev_handler(int fd, int ev_flags, void *arg)
             {
 #ifdef USE_SSL
                 n = SSL_read(conns[fd].ssl, conns[fd].buffer, EV_BUF_SIZE - 1);
-#else
-                n = read(fd, conns[fd].buffer, EV_BUF_SIZE - 1);
 #endif
             }
             else
             {
-                n = read(fd, conns[fd].buffer, EV_BUF_SIZE - 1);
+                n = read(fd, conns[fd].buffer+conns[fd].n, EV_BUF_SIZE - 1);
             }
             if(n > 0)
             {
-                conns[fd].n = n;
-                SHOW_LOG("Read %d bytes from %d", n, fd);
-                conns[fd].buffer[n] = 0;
-                SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
+                conns[fd].n += n;
+                conns[fd].buffer[conns[fd].n] = 0;
+                if(strstr(conns[fd].buffer, "\r\n\r\n"))
+                {
+                    SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
+                    SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
                     event_add(&conns[fd].event, E_WRITE);	
+                    SHOW_LOG("Updated event[%p] on %d ", &conns[fd].event, fd);
+                }
             }		
             else
             {
@@ -306,18 +311,18 @@ void ev_handler(int fd, int ev_flags, void *arg)
             {
 #ifdef USE_SSL
                 n = SSL_write(conns[fd].ssl, conns[fd].buffer, conns[fd].n);
-#else
-                char *s = "daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
-                conns[fd].n = sprintf(conns[fd].buffer, 
-                        "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(s), s);
-                n = write(fd, conns[fd].buffer, conns[fd].n);
 #endif
             }
             else
             {
-                n = read(fd, conns[fd].buffer, conns[fd].n);
+                if(strstr(conns[fd].buffer, "Keep-Alive")) keepalive = 1;
+                char *s = "daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
+                conns[fd].n = sprintf(conns[fd].buffer, 
+                        "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(s), s);
+                n = write(fd, conns[fd].buffer, conns[fd].n);
+                conns[fd].n = 0;
+                if(keepalive == 0) goto err;
             }
-
             if(n > 0 )
             {
                 SHOW_LOG("Echo %d bytes to %d", n, fd);
@@ -352,7 +357,7 @@ err:
 
 int main(int argc, char **argv)
 {
-    int port = 0, connection_limit = 0, fd = 0, opt = 1, i = 0, nprocess = 0;
+    int port = 0, connection_limit = 0, fd = 0, n = 0, opt = 1, i = 0, nprocess = 0;
     char *multicast_ip = NULL;
 
     if(argc < 5)
@@ -504,9 +509,9 @@ int main(int argc, char **argv)
 running:
         */
         /* set evbase */
-        if((evbase = evbase_init(0)))
+        if((evbase = evbase_init()))
         {
-            evbase->set_logfile(evbase, "/tmp/ev_server.log");
+            //evbase->set_logfile(evbase, "/tmp/ev_server.log");
             //evbase->set_evops(evbase, EOP_POLL);
             SHOW_LOG("Initialized event ");
             if(ev_sock_list[ev_sock_type] == SOCK_STREAM)
@@ -517,10 +522,23 @@ running:
                         (void *)&conns[lfd].event, &ev_udp_handler);
             evbase->add(evbase, &conns[lfd].event);
             struct timeval tv = {0};
-            tv.tv_usec = 1000;
+            tv.tv_sec = 0;
+            tv.tv_usec = 0;
             while(1)
             {
+                /*
                 evbase->loop(evbase, 0, &tv);
+                */
+                if((n = evbase->loop(evbase, 0, &tv)) > 0)
+                {
+                    tv.tv_usec = 0;
+                    i = 0;
+                }
+                else
+                {
+                    i++;
+                    if(i > 1000) tv.tv_usec = 1000;
+                }
                 //usleep(1000);
             }
         }

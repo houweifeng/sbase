@@ -1,5 +1,4 @@
 #include "evselect.h"
-#include "logger.h"
 #include <errno.h>
 #ifdef HAVE_EVSELECT
 #include <stdlib.h>
@@ -9,7 +8,7 @@
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
 #endif
-#include "xmm.h"
+#include "mutex.h"
 /* Initialize evselect  */
 int evselect_init(EVBASE *evbase)
 {
@@ -54,9 +53,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
         if(ev_flags)
         {
             evbase->evlist[event->ev_fd] = event;	
-            //SET_MAX_FD(evbase, event);
-            DEBUG_LOGGER(evbase->logger, "Added event[%p] flags[%d] on fd[%d]", 
-                    event, ev_flags, event->ev_fd);
+            SET_MAX_FD(evbase, event);
         }
         return 0;
     }	
@@ -77,28 +74,22 @@ int evselect_update(EVBASE *evbase, EVENT *event)
         {
             FD_SET(event->ev_fd, (fd_set *)evbase->ev_read_fds);
             ev_flags |= E_READ;
-            DEBUG_LOGGER(evbase->logger, "Added EV_READ on fd[%d]", event->ev_fd);
         }
         if(del_ev_flags & E_READ)
         {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
-            DEBUG_LOGGER(evbase->logger, "Deleted EV_READ on fd[%d]", event->ev_fd);
         }
         if(add_ev_flags & E_WRITE)
         {
             FD_SET(event->ev_fd, (fd_set *)evbase->ev_write_fds);
             ev_flags |= E_WRITE;
-            DEBUG_LOGGER(evbase->logger, "Added EV_WRITE on fd[%d]", event->ev_fd);
         }
         if(del_ev_flags & E_WRITE)
         {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
-            DEBUG_LOGGER(evbase->logger, "Deleted EV_WRITE on fd[%d]", event->ev_fd);
         }
-        //SET_MAX_FD(evbase, event);
+        SET_MAX_FD(evbase, event);
         evbase->evlist[event->ev_fd] = event;
-        DEBUG_LOGGER(evbase->logger, "Updated event[%p] flags[%d] on fd[%d]",
-                event, event->ev_flags, event->ev_fd);
         return 0;
     }
     return -1;
@@ -116,10 +107,8 @@ int evselect_del(EVBASE *evbase, EVENT *event)
         {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
         }
-        DEBUG_LOGGER(evbase->logger, "Deleted event[%p] flags[%d] on fd[%d]",
-                event, event->ev_flags, event->ev_fd);
         evbase->evlist[event->ev_fd] = NULL;	
-        //RESET_MAX_FD(evbase, event);
+        RESET_MAX_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -149,8 +138,7 @@ int evselect_loop(EVBASE *evbase, int loop_flag, struct timeval *tv)
         }
         n = select(evbase->allowed, &rd_fd_set, &wr_fd_set, NULL, tv);
         if(n <= 0) return n;
-        DEBUG_LOGGER(evbase->logger, "Actived %d event in %d", n,  evbase->allowed);
-        for(i = 0; i <= evbase->allowed; ++i)
+        for(i = 0; i <= evbase->maxfd; ++i)
         {
             if((ev = evbase->evlist[i]))
             {
@@ -179,12 +167,9 @@ void evselect_reset(EVBASE *evbase)
 {
     if(evbase)
     {
-        evbase->nfd = 0;
         evbase->maxfd = 0;
-        evbase->nevent = 0;
         FD_ZERO((fd_set *)evbase->ev_read_fds);
         FD_ZERO((fd_set *)evbase->ev_write_fds);
-        DEBUG_LOGGER(evbase->logger, "Reset evbase[%p]", evbase);
     }
     return ;
 }
@@ -195,13 +180,12 @@ void evselect_clean(EVBASE *evbase)
     if(evbase)
     {
         MUTEX_DESTROY(evbase->mutex);
-        if(evbase->logger)LOGGER_CLEAN(evbase->logger);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);
         if(evbase->ev_write_fds)free(evbase->ev_write_fds);
-        xmm_free(evbase, sizeof(EVBASE));
+        free(evbase);
     }
     return ;
 }

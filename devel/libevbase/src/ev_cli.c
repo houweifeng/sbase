@@ -19,7 +19,6 @@
 #endif
 #include "evbase.h"
 #include "log.h"
-#include "logger.h"
 #ifdef HAVE_EVKQUEUE
 #define CONN_MAX 10240
 #else
@@ -239,7 +238,6 @@ int main(int argc, char **argv)
         /* set evbase */
         if((evbase = evbase_init(0)))
         {
-            LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
 #ifdef USE_SSL
             SSL_library_init();
             OpenSSL_add_all_algorithms();

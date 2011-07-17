@@ -15,12 +15,25 @@ do                                                                              
     qmessage_push(pth->message_queue, msgid, index, fd, tid, pth, handler, arg);            \
     MUTEX_SIGNAL(pth->mutex);                                                               \
 }while(0)
-
+/* event handler */
+void procthread_event_handler(int event_fd, int flags, void *arg)
+{
+    PROCTHREAD *pth = (PROCTHREAD *)arg;
+    if(pth)
+    {
+        event_del(&(pth->event), E_WRITE);
+    }
+    return ;
+}
 /* wakeup */
 void procthread_wakeup(PROCTHREAD *pth)
 {
     if(pth)
     {
+        if(pth->evbase)
+        {
+            event_add(&(pth->event), E_WRITE);
+        }
         MUTEX_SIGNAL(pth->mutex);
     }
     return ;
@@ -43,14 +56,14 @@ void procthread_run(void *arg)
         {
             do
             {
-                i = pth->evbase->loop(pth->evbase, 0, &tv);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     qmessage_handler(pth->message_queue, pth->logger);
                     i++;
                 }
-                if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;}
-                else{tv.tv_sec = 0; tv.tv_usec = 0;}
+                //if(i < 1){if(++k > 10000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+                //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
             }while(pth->running_status);
         }
         else
@@ -305,6 +318,7 @@ void procthread_stop(PROCTHREAD *pth)
         {
             pth->lock       = 1;
             pth->running_status = 0;
+            MUTEX_SIGNAL(pth->mutex);
         }
         //WARN_LOGGER(pth->logger, "Ready for stopping procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
@@ -319,6 +333,8 @@ void procthread_terminate(PROCTHREAD *pth)
         //WARN_LOGGER(pth->logger, "Ready for closing procthread[%d]", pth->index);
         pth->lock       = 1;
         pth->running_status = 0;
+        pth->wakeup(pth);
+        MUTEX_SIGNAL(pth->mutex);
         //WARN_LOGGER(pth->logger, "Ready for closing procthreads[%d] evbase[%p] iodaemon[%p] ioqmessage[%p] qmessage[%p]", pth->index, pth->evbase, pth->iodaemon, pth->ioqmessage, pth->message_queue);
     }
     return ;
@@ -357,6 +373,7 @@ void procthread_clean(PROCTHREAD *pth)
             if(pth->have_evbase)
             {
                 if(pth->evbase) pth->evbase->clean(pth->evbase);
+                event_destroy(&(pth->event));
             }
             qmessage_clean(pth->message_queue);
         }
@@ -367,35 +384,43 @@ void procthread_clean(PROCTHREAD *pth)
 }
 
 /* Initialize procthread */
-PROCTHREAD *procthread_init(int have_evbase)
+PROCTHREAD *procthread_init(int cond)
 {
     PROCTHREAD *pth = NULL;
 
     if((pth = (PROCTHREAD *)xmm_mnew(sizeof(PROCTHREAD))))
     {
-        if(have_evbase  > 0)
+        if(cond  > 0)
         {
             pth->have_evbase = 1;
-            pth->evbase = evbase_init();
+            if((pth->evbase   = evbase_init()) == NULL)
+            {
+                fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
+                _exit(-1);
+            }
+            pth->cond = cond;
+            event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
+                    (void *)pth, (void *)&procthread_event_handler);
+            pth->evbase->add(pth->evbase, &(pth->event));
         }
         MUTEX_RESET(pth->mutex);
         pth->message_queue          = qmessage_init();
-        pth->run                    = procthread_run;
-        pth->pushconn               = procthread_pushconn;
-        pth->newconn                = procthread_newconn;
-        pth->addconn                = procthread_addconn;
-        pth->add_connection         = procthread_add_connection;
-        pth->newtask                = procthread_newtask;
-        pth->newtransaction         = procthread_newtransaction;
-        pth->shut_connection        = procthread_shut_connection;
-        pth->over_connection        = procthread_over_connection;
-        pth->terminate_connection   = procthread_terminate_connection;
-        pth->stop                   = procthread_stop;
-        pth->wakeup                 = procthread_wakeup;
-        pth->terminate              = procthread_terminate;
-        pth->state                  = procthread_state;
-        pth->active_heartbeat       = procthread_active_heartbeat;
-        pth->clean                  = procthread_clean;
+        pth->run                    = &procthread_run;
+        pth->pushconn               = &procthread_pushconn;
+        pth->newconn                = &procthread_newconn;
+        pth->addconn                = &procthread_addconn;
+        pth->add_connection         = &procthread_add_connection;
+        pth->newtask                = &procthread_newtask;
+        pth->newtransaction         = &procthread_newtransaction;
+        pth->shut_connection        = &procthread_shut_connection;
+        pth->over_connection        = &procthread_over_connection;
+        pth->terminate_connection   = &procthread_terminate_connection;
+        pth->stop                   = &procthread_stop;
+        pth->wakeup                 = &procthread_wakeup;
+        pth->terminate              = &procthread_terminate;
+        pth->state                  = &procthread_state;
+        pth->active_heartbeat       = &procthread_active_heartbeat;
+        pth->clean                  = &procthread_clean;
     }
     return pth;
 }

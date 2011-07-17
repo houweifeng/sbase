@@ -13,7 +13,6 @@
 #include <netdb.h>
 #include "evbase.h"
 #include "log.h"
-#include "logger.h"
 #include "evdns.h"
 #include "timer.h"
 #ifdef HAVE_EVKQUEUE
@@ -242,7 +241,6 @@ int main(int argc, char **argv)
     /* set evbase */
     if((evbase = evbase_init(0)))
     {
-        LOGGER_INIT(evbase->logger, "/tmp/ev_client.log");
         TIMER_INIT(timer);
         //evbase->set_evops(evbase, EOP_POLL);
         if((fd = socket(AF_INET, sock_type, 0)) > 0)
@@ -280,7 +278,7 @@ int main(int argc, char **argv)
             evbase->loop(evbase, 0, NULL);
             usleep(10);
         }
-        TIMER_CLEAN(timer);
+        //TIMER_CLEAN(timer);
     }
     return -1;
 }
