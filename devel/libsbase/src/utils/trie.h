@@ -10,13 +10,13 @@ extern "C" {
 typedef struct _HWORD
 {
     int n;
-    unsigned char ps;
+    unsigned int ps;
     unsigned char buf[WORD_MAX_SIZE];
 }HWORD;
 typedef struct _HNODE
 {
-    short count;
-    short chr;
+    int count;
+    int chr;
     void *dptr;
     struct _HNODE *list;
 }HNODE;
@@ -100,8 +100,8 @@ typedef struct _TIRETAB
     HNODE *newlist;
     int count;
     int size;
-    int  i ;
-    int   n ;
+    int i ;
+    int n ;
     int min;
     int max;
     int bits;
