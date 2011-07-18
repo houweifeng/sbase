@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/resource.h>
+#include "mutex.h"
 /* Initialize evselect  */
 int evselect_init(EVBASE *evbase)
 {
@@ -46,11 +47,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
             ev_flags |= E_WRITE;
             FD_SET(event->ev_fd, (fd_set *)evbase->ev_write_fds);	
         }
-        if(ev_flags)
-        {
-            evbase->evlist[event->ev_fd] = event;	
-            SET_MAX_FD(evbase, event);
-        }
+        NEW_EVENT_FD(evbase, event);
         return 0;
     }	
     return -1;
@@ -84,7 +81,6 @@ int evselect_update(EVBASE *evbase, EVENT *event)
         {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
         }
-        SET_MAX_FD(evbase, event);
         evbase->evlist[event->ev_fd] = event;
         return 0;
     }
@@ -103,8 +99,7 @@ int evselect_del(EVBASE *evbase, EVENT *event)
         {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
         }
-        evbase->evlist[event->ev_fd] = NULL;	
-        RESET_MAX_FD(evbase, event);
+        REMOVE_EVENT_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -132,7 +127,7 @@ int evselect_loop(EVBASE *evbase, int loop_flag, struct timeval *tv)
             timeout.tv_usec = 1000;
             tv = &timeout;
         }
-        n = select(evbase->allowed, &rd_fd_set, &wr_fd_set, NULL, tv);
+        n = select(evbase->maxfd+1, &rd_fd_set, &wr_fd_set, NULL, tv);
         if(n <= 0) return n;
         for(i = 0; i <= evbase->maxfd; ++i)
         {
@@ -164,6 +159,7 @@ void evselect_reset(EVBASE *evbase)
     if(evbase)
     {
         evbase->maxfd = 0;
+        evbase->nevents = 0;
         FD_ZERO((fd_set *)evbase->ev_read_fds);
         FD_ZERO((fd_set *)evbase->ev_write_fds);
     }
@@ -175,6 +171,7 @@ void evselect_clean(EVBASE *evbase)
 {
     if(evbase)
     {
+        MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <poll.h>
 #include <sys/resource.h>
+#include "mutex.h"
 /* Initialize evpoll  */
 int evpoll_init(EVBASE *evbase)
 {
@@ -47,9 +48,8 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             ev->events = ev_flags;
             ev->revents = 0;
             ev->fd	  = event->ev_fd;
-            evbase->evlist[event->ev_fd] = event;	
         }
-        SET_MAX_FD(evbase, event);
+        NEW_EVENT_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -74,8 +74,6 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
         ev->events = ev_flags;
         ev->revents = 0;
         ev->fd	  = event->ev_fd;
-        evbase->evlist[event->ev_fd] = event;
-        SET_MAX_FD(evbase, event);
         return 0;
     }	
     return -1;
@@ -86,8 +84,7 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
     if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
-        evbase->evlist[event->ev_fd] = NULL;
-        RESET_MAX_FD(evbase, event);
+        REMOVE_EVENT_FD(evbase, event);
         return 0;
     }	
     return -1;
@@ -106,7 +103,7 @@ int evpoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
     {	
         if(tv) msec = tv->tv_sec * 1000 + (tv->tv_usec + 999) / 1000;
         else msec = 1;
-        n = poll(evbase->ev_fds, evbase->allowed, msec);	
+        n = poll(evbase->ev_fds, evbase->maxfd+1, msec);	
         if(n <= 0) return n;
         for(i = 0; i <= evbase->maxfd; i++)
         {
@@ -143,6 +140,7 @@ void evpoll_reset(EVBASE *evbase)
     if(evbase)
     {
         evbase->maxfd = 0;
+        evbase->nevents = 0;
         memset(evbase->ev_fds, 0, evbase->allowed * sizeof(struct pollfd));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
     }
@@ -154,6 +152,7 @@ void evpoll_clean(EVBASE *evbase)
 {
     if(evbase)
     {
+        MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);
