@@ -145,7 +145,7 @@ typedef struct _SESSION
     int (*packet_reader)(struct _CONN *, CB_DATA *buffer);
     int (*packet_handler)(struct _CONN *, CB_DATA *packet);
     int (*data_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
-    int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache);
+    int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, char *file);
     int (*oob_handler)(struct _CONN *, CB_DATA *oob);
     int (*timeout_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*transaction_handler)(struct _CONN *, int tid);
@@ -199,14 +199,14 @@ SBASE *sbase_init();
 /* group */
 typedef struct _CNGROUP
 {
-  short status;
-  short nconnected;
-  short port;
-  short limit;
+  int   status;
+  int   nconnected;
+  int   port;
+  int   limit;
   int   total;
   int   nconns_free;
-  void *mutex;
   int   conns_free[SB_GROUP_CONN_MAX];
+  void  *mutex;
   char  ip[SB_IP_MAX];
   SESSION session;
 }CNGROUP;

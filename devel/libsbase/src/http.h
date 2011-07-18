@@ -39,9 +39,9 @@ typedef struct _HTTP_VHOST
 }HTTP_VHOST;
 typedef struct _HTTP_ELEMENT
 {
-	int id;
-	char *e;
+	int  id;
 	int  elen;
+	char *e;
 	char *s;
 }HTTP_ELEMENT;
 
@@ -97,85 +97,85 @@ typedef struct _HTTP_ELEMENT
 static const HTTP_ELEMENT response_status[] = 
 {
 #define RESP_CONTINUE		0
-	{0, "100", 3, "Continue"},
+	{0, 3, "100", "Continue"},
 #define RESP_SWITCH		1
-	{1, "101", 3, "Switching Protocols"},
+	{1, 3, "101", "Switching Protocols"},
 #define RESP_OK			2
-	{2, "200", 3, "OK"},
+	{2, 3, "200", "OK"},
 #define RESP_CREATED		3
-	{3, "201", 3, "Created"},
+	{3, 3, "201", "Created"},
 #define RESP_ACCEPTED		4
-	{4, "202", 3, "Accepted"},
+	{4, 3, "202", "Accepted"},
 #define RESP_NONAUTHINFO	5
-	{5, "203", 3, "Non-Authoritative Information"},
+	{5, 3, "203", "Non-Authoritative Information"},
 #define RESP_NOCONTENT		6
-	{6, "204", 3, "No Content"},
+	{6, 3, "204", "No Content"},
 #define RESP_RESETCONTENT	7
-	{7, "205", 3, "Reset Content"},
+	{7, 3, "205", "Reset Content"},
 #define RESP_PARTIALCONTENT	8
-	{8, "206", 3, "Partial Content"},
+	{8, 3, "206", "Partial Content"},
 #define RESP_MULTCHOICES	9
-	{9, "300", 3, "Multiple Choices"},
+	{9, 3, "300", "Multiple Choices"},
 #define RESP_MOVEDPERMANENTLY	10
-	{10, "301", 3, "Moved Permanently"},
+	{10, 3, "301", "Moved Permanently"},
 #define RESP_FOUND		11
-	{11, "302", 3, "Found"},
+	{11, 3, "302", "Found"},
 #define RESP_SEEOTHER		12
-	{12, "303", 3, "See Other"},
+	{12, 3, "303", "See Other"},
 #define RESP_NOTMODIFIED	13
-	{13, "304", 3, "Not Modified"},
+	{13, 3, "304", "Not Modified"},
 #define RESP_USEPROXY		14
-	{14, "305", 3, "Use Proxy"},
+	{14, 3, "305", "Use Proxy"},
 #define RESP_TEMPREDIRECORDT	15
-	{15, "307", 3, "Temporary Redirect"},
+	{15, 3, "307", "Temporary Redirect"},
 #define RESP_BADREQUEST		16
-	{16, "400", 3, "Bad Request"},
+	{16, 3, "400", "Bad Request"},
 #define RESP_UNAUTHORIZED	17
-	{17, "401", 3, "Unauthorized"},
+	{17, 3, "401", "Unauthorized"},
 #define RESP_PAYMENTREQUIRED	18
-	{18, "402", 3, "Payment Required"},
+	{18, 3, "402", "Payment Required"},
 #define RESP_FORBIDDEN		19
-	{19, "403", 3, "Forbidden"},
+	{19, 3, "403", "Forbidden"},
 #define RESP_NOTFOUND		20
-	{20, "404", 3, "Not Found"},
+	{20, 3, "404", "Not Found"},
 #define RESP_METHODNOTALLOWED	21
-	{21, "405", 3, "Method Not Allowed"},
+	{21, 3, "405", "Method Not Allowed"},
 #define RESP_NOTACCEPTABLE	22
-	{22, "406", 3, "Not Acceptable"},
+	{22, 3, "406", "Not Acceptable"},
 #define RESP_PROXYAUTHREQ	23
-	{23, "407", 3, "Proxy Authentication Required"},
+	{23, 3, "407", "Proxy Authentication Required"},
 #define RESP_REQUESTTIMEOUT	24
-	{24, "408", 3, "Request Time-out"},
+	{24, 3, "408", "Request Time-out"},
 #define RESP_CONFLICT		25
-	{25, "409", 3, "Conflict"},
+	{25, 3, "409", "Conflict"},
 #define RESP_GONE		26
-	{26, "410", 3, "Gone"},
+	{26, 3, "410", "Gone"},
 #define RESP_LENGTHREQUIRED	27
-	{27, "411", 3, "Length Required"},
+	{27, 3, "411", "Length Required"},
 #define RESP_PREFAILED		28
-	{28, "412", 3, "Precondition Failed"},
+	{28, 3, "412", "Precondition Failed"},
 #define RESP_REQENTTOOLARGE	29
-	{29, "413", 3, "Request Entity Too Large"},
+	{29, 3, "413", "Request Entity Too Large"},
 #define RESP_REQURLTOOLARGE	30
-	{30, "414", 3, "Request-URI Too Large"},
+	{30, 3, "414", "Request-URI Too Large"},
 #define RESP_UNSUPPORTEDMEDIA	31
-	{31, "415", 3, "Unsupported Media Type"},
+	{31, 3, "415", "Unsupported Media Type"},
 #define RESP_REQRANGENOTSAT	32
-	{32, "416", 3, "Requested range not satisfiable"},
+	{32, 3, "416", "Requested range not satisfiable"},
 #define RESP_EXPECTFAILED	33
-	{33, "417", 3, "Expectation Failed"},
+	{33, 3, "417", "Expectation Failed"},
 #define RESP_INTERNALSERVERERROR	34
-	{34, "500", 3, "Internal Server Error"},
+	{34, 3, "500", "Internal Server Error"},
 #define RESP_NOTIMPLEMENT	35
-	{35, "501", 3, "Not Implemented"},
+	{35, 3, "501", "Not Implemented"},
 #define RESP_BADGATEWAY		36
-	{36, "502", 3, "Bad Gateway"},
+	{36, 3, "502", "Bad Gateway"},
 #define RESP_SERVICEUNAVAILABLE	37
-	{37, "503", 3, "Service Unavailable"},
+	{37, 3, "503", "Service Unavailable"},
 #define RESP_GATEWAYTIMEOUT	38
-	{38, "504", 3, "Gateway Time-out"},
+	{38, 3, "504", "Gateway Time-out"},
 #define RESP_HTTPVERNOTSUPPORT	39
-	{39, "505", 3, "HTTP Version not supported"}
+	{39, 3, "505", "HTTP Version not supported"}
 };
 
 /* HTTP/1.1 REQUEST HEADERS FROM RFC2616 
@@ -247,113 +247,113 @@ static const HTTP_ELEMENT response_status[] =
 static const HTTP_ELEMENT http_headers[] = 
 {
 #define HEAD_REQ_ACCEPT 0
-	{0, "Accept:", 7, NULL},
+	{0, 7, "Accept:", NULL},
 #define HEAD_REQ_ACCEPT_CHARSET 1
-	{1, "Accept-Charset:", 15, NULL},
+	{1, 15, "Accept-Charset:", NULL},
 #define HEAD_REQ_ACCEPT_ENCODING 2
-	{2, "Accept-Encoding:", 16, NULL},
+	{2, 16, "Accept-Encoding:", NULL},
 #define HEAD_REQ_ACCEPT_LANGUAGE 3
-	{3, "Accept-Language:", 16, NULL},
+	{3, 16, "Accept-Language:", NULL},
 #define HEAD_RESP_ACCEPT_RANGE 4
-	{4, "Accept-Ranges:", 14, NULL},
+	{4, 14, "Accept-Ranges:", NULL},
 #define HEAD_RESP_AGE 5
-	{5, "Age:", 4, NULL},
+	{5, 4, "Age:", NULL},
 #define HEAD_ENT_ALLOW 6
-	{6, "Allow:", 6, NULL},
+	{6, 6, "Allow:", NULL},
 #define HEAD_REQ_AUTHORIZATION 7
-	{7, "Authorization:", 14, NULL},
+	{7, 14, "Authorization:", NULL},
 #define HEAD_GEN_CACHE_CONTROL 8
-	{8, "Cache-Control:", 14, NULL},
+	{8, 14, "Cache-Control:", NULL},
 #define HEAD_GEN_CONNECTION 9
-	{9, "Connection:", 11, NULL},
+	{9, 11, "Connection:", NULL},
 #define HEAD_ENT_CONTENT_ENCODING 10
-	{10, "Content-Encoding:", 17, NULL},
+	{10, 17, "Content-Encoding:", NULL},
 #define HEAD_ENT_CONTENT_LANGUAGE 11
-	{11, "Content-Language:", 17, NULL},
+	{11, 17, "Content-Language:", NULL},
 #define HEAD_ENT_CONTENT_LENGTH 12
-	{12, "Content-Length:", 15, NULL},
+	{12, 15, "Content-Length:", NULL},
 #define HEAD_ENT_CONTENT_LOCATION 13
-	{13, "Content-Location:", 17, NULL},
+	{13, 17, "Content-Location:", NULL},
 #define HEAD_ENT_CONTENT_MD5 14
-	{14, "Content-MD5:", 12, NULL},
+	{14, 12, "Content-MD5:", NULL},
 #define HEAD_ENT_CONTENT_RANGE 15
-	{15, "Content-Range:", 14, NULL},
+	{15, 14, "Content-Range:", NULL},
 #define HEAD_ENT_CONTENT_TYPE 16
-	{16, "Content-Type:", 13, NULL},
+	{16, 13, "Content-Type:", NULL},
 #define HEAD_GEN_DATE 17
-	{17, "Date:", 5, NULL},
+	{17, 5, "Date:", NULL},
 #define HEAD_RESP_ETAG 18
-	{18, "ETag:", 5, NULL},
+	{18, 5, "ETag:", NULL},
 #define HEAD_REQ_EXPECT 19
-	{19, "Expect:", 7, NULL},
+	{19, 7, "Expect:", NULL},
 #define HEAD_ENT_EXPIRES 20
-	{20, "Expires:", 8, NULL},
+	{20, 8, "Expires:", NULL},
 #define HEAD_REQ_FROM 21
-	{21, "From:", 5, NULL},
+	{21, 5, "From:", NULL},
 #define HEAD_REQ_HOST 22 
-	{22, "Host:", 5, NULL},
+	{22, 5, "Host:", NULL},
 #define HEAD_REQ_IF_MATCH 23 
-	{23, "If-Match:", 9, NULL},
+	{23, 9, "If-Match:", NULL},
 #define HEAD_REQ_IF_MODIFIED_SINCE 24 
-	{24, "If-Modified-Since:", 18, NULL},
+	{24, 18, "If-Modified-Since:", NULL},
 #define HEAD_REQ_IF_NONE_MATCH 25
-	{25, "If-None-Match:", 14, NULL},
+	{25, 14, "If-None-Match:", NULL},
 #define HEAD_REQ_IF_RANGE 26 
-	{26, "If-Range:", 9, NULL},
+	{26, 9, "If-Range:", NULL},
 #define HEAD_REQ_IF_UNMODIFIED_SINCE 27 
-	{27, "If-Unmodified-Since:", 20, NULL},
+	{27, 20, "If-Unmodified-Since:", NULL},
 #define HEAD_ENT_LAST_MODIFIED 28
-	{28, "Last-Modified:", 14, NULL},
+	{28, 14, "Last-Modified:", NULL},
 #define HEAD_RESP_LOCATION 29 
-	{29, "Location:", 9, NULL},
+	{29, 9, "Location:", NULL},
 #define HEAD_REQ_MAX_FORWARDS 30 
-	{30, "Max-Forwards:", 13, NULL},
+	{30, 13, "Max-Forwards:", NULL},
 #define HEAD_GEN_PRAGMA 31 
-	{31, "Pragma:", 7, NULL},
+	{31, 7, "Pragma:", NULL},
 #define HEAD_RESP_PROXY_AUTHENTICATE 32 
-	{32, "Proxy-Authenticate:", 19, NULL},
+	{32, 19, "Proxy-Authenticate:", NULL},
 #define HEAD_REQ_PROXY_AUTHORIZATION 33
-	{33, "Proxy-Authorization:", 20, NULL},
+	{33, 20, "Proxy-Authorization:", NULL},
 #define HEAD_REQ_RANGE 34 
-	{34, "Range:", 6, NULL},
+	{34, 6, "Range:", NULL},
 #define HEAD_REQ_REFERER 35
-	{35, "Referer:", 8, NULL},
+	{35, 8, "Referer:", NULL},
 #define HEAD_RESP_RETRY_AFTER 36
-	{36, "Retry-After:", 12, NULL},
+	{36, 12, "Retry-After:", NULL},
 #define HEAD_RESP_SERVER 37
-	{37, "Server:", 7, NULL},
+	{37, 7, "Server:", NULL},
 #define HEAD_REQ_TE 38
-	{38, "TE:", 3, NULL},
+	{38, 3, "TE:", NULL},
 #define HEAD_GEN_TRAILER 39
-	{39, "Trailer:", 8, NULL},
+	{39, 8, "Trailer:", NULL},
 #define HEAD_GEN_TRANSFER_ENCODING 40 
-	{40, "Transfer-Encoding:", 18, NULL},
+	{40, 18, "Transfer-Encoding:", NULL},
 #define HEAD_GEN_UPGRADE 41 
-	{41, "Upgrade:", 8, NULL},
+	{41, 8, "Upgrade:", NULL},
 #define HEAD_REQ_USER_AGENT 42
-	{42, "User-Agent:", 11, NULL},
+	{42, 11, "User-Agent:", NULL},
 #define HEAD_RESP_VARY 43 
-	{43, "Vary:", 5, NULL},
+	{43, 5, "Vary:", NULL},
 #define HEAD_GEN_VIA 44 
-	{44, "Via:", 4, NULL},
+	{44, 4, "Via:", NULL},
 #define HEAD_GEN_WARNING 45
-	{45, "Warning:", 8, NULL},
+	{45, 8, "Warning:", NULL},
 #define HEAD_RESP_WWW_AUTHENTICATE 46 
-	{46, "WWW-Authenticate:", 17, NULL},
+	{46, 17, "WWW-Authenticate:", NULL},
 #define HEAD_REQ_COOKIE 47
-    {47, "Cookie:", 7, NULL},
+    {47, 7, "Cookie:", NULL},
 #define HEAD_RESP_SET_COOKIE 48
-    {48, "Set-Cookie:", 11, NULL},
+    {48, 11, "Set-Cookie:", NULL},
 #define HEAD_GEN_USERID     49
-    {49, "UserID:", 7, NULL},
+    {49, 7, "UserID:", NULL},
 #define HEAD_GEN_UUID     50
-    {50, "UUID:", 5, NULL},
+    {50, 5, "UUID:", NULL},
 #define HEAD_GEN_RAW_LENGTH   51
-    {51, "Raw-Length:", 11, NULL},
+    {51, 11, "Raw-Length:", NULL},
 #define HEAD_GEN_TASK_TYPE   52
-    {52, "Task-Type:", 10, NULL},
+    {52, 10, "Task-Type:", NULL},
 #define HEAD_GEN_DOWNLOAD_LENGTH   53
-    {53, "Download-Length:", 16, NULL}
+    {53, 16, "Download-Length:", NULL}
 };
 #define HTTP_HEADER_NUM	54
 
@@ -374,121 +374,121 @@ static const HTTP_ELEMENT http_headers[] =
 static const HTTP_ELEMENT http_methods[] = 
 {
 #define HTTP_OPTIONS	0
-	{0, "OPTIONS", 7, NULL},
+	{0, 7, "OPTIONS", NULL},
 #define HTTP_GET	1
-	{1, "GET", 3, NULL},
+	{1, 3, "GET", NULL},
 #define HTTP_HEAD	2
-	{2, "HEAD", 4, NULL},
+	{2, 4, "HEAD", NULL},
 #define HTTP_POST	3
-	{3, "POST", 4, NULL},
+	{3, 4, "POST", NULL},
 #define HTTP_PUT	4
-	{4, "PUT", 3, NULL},
+	{4, 3, "PUT", NULL},
 #define HTTP_DELETE	5
-	{5, "DELETE", 6, NULL},
+	{5, 6, "DELETE", NULL},
 #define HTTP_TRACE	6
-	{6, "TRACE", 5, NULL},
+	{6, 5, "TRACE", NULL},
 #define HTTP_CONNECT	7
-	{7, "CONNECT", 7, NULL},
+	{7, 7, "CONNECT", NULL},
 #define HTTP_TASK   8
-    {8, "TASK", 4, NULL},
+    {8, 4, "TASK", NULL},
 #define HTTP_DOWNLOAD 9
-    {9, "DOWNLOAD", 8, NULL},
+    {9, 8, "DOWNLOAD", NULL},
 #define HTTP_EXTRACT 10
-    {9, "EXTRACT", 7, NULL}
+    {9, 7, "EXTRACT", NULL}
 };
 
 /* file ext support list */
 #define HTTP_MIME_NUM 88
 static const HTTP_ELEMENT http_mime_types[]=
 {
-    {0, "html", 4, "text/html"},
-    {1, "htm", 3, "text/html"},
-    {2, "shtml", 5, "text/html"},
-    {3, "css", 3, "text/css"},
-    {4, "xml", 3, "text/xml"},
-    {5, "gif", 3, "image/gif"},
-    {6, "jpeg", 4, "image/jpeg"},
-    {7, "jpg", 3, "image/jpeg"},
-    {8, "js", 2, "application/x-javascript"},
-    {9, "atom", 4, "application/atom+xml"},
-    {10, "rss", 3, "application/rss+xml"},
-    {11, "mml", 3, "text/mathml"},
-    {12, "txt", 3, "text/plain"},
-    {13, "jad", 3, "text/vnd.sun.j2me.app-descriptor"},
-    {14, "wml", 3, "text/vnd.wap.wml"},
-    {15, "htc", 3, "text/x-component"},
-    {16, "png", 3, "image/png"},
-    {17, "tif", 3, "image/tiff"},
-    {18, "tiff", 4, "image/tiff"},
-    {19, "wbmp", 4, "image/vnd.wap.wbmp"},
-    {20, "ico", 3, "image/x-icon"},
-    {21, "jng", 3, "image/x-jng"},
-    {22, "bmp", 3, "image/x-ms-bmp"},
-    {23, "svg", 3, "image/svg+xml"},
-    {24, "jar", 3, "application/java-archive"},
-    {25, "war", 3, "application/java-archive"},
-    {26, "ear", 3, "application/java-archive"},
-    {27, "hqx", 3, "application/mac-binhex40"},
-    {28, "doc", 3, "application/msterm"},
-    {29, "pdf", 3, "application/pdf"},
-    {30, "ps", 2, "application/postscript"},
-    {31, "eps", 3, "application/postscript"},
-    {32, "ai", 2, "application/postscript"},
-    {33, "rtf", 3, "application/rtf"},
-    {34, "xls", 3, "application/vnd.ms-excel"},
-    {35, "ppt", 3, "application/vnd.ms-powerpoint"},
-    {36, "wmlc", 4, "application/vnd.wap.wmlc"},
-    {37, "xhtml", 5, "application/vnd.wap.xhtml+xml"},
-    {38, "kml", 3, "application/vnd.google-earth.kml+xml"},
-    {39, "kmz", 3, "application/vnd.google-earth.kmz"},
-    {40, "cco", 3, "application/x-cocoa"},
-    {41, "jardiff", 7, "application/x-java-archive-diff"},
-    {42, "jnlp", 4, "application/x-java-jnlp-file"},
-    {43, "run", 3, "application/x-makeself"},
-    {44, "pl", 2, "application/x-perl"},
-    {45, "pm", 2, "application/x-perl"},
-    {46, "prc", 3, "application/x-pilot"},
-    {47, "pdb", 3, "application/x-pilot"},
-    {48, "rar", 3, "application/x-rar-compressed"},
-    {49, "rpm", 3, "application/x-redhat-package-manager"},
-    {50, "sea", 3, "application/x-sea"},
-    {51, "swf", 3, "application/x-shockwave-flash"},
-    {52, "sit", 3, "application/x-stuffit"},
-    {53, "tcl", 3, "application/x-tcl"},
-    {54, "tk", 2, "application/x-tcl"},
-    {55, "der", 3, "application/x-x509-ca-cert"},
-    {56, "pem", 3, "application/x-x509-ca-cert"},
-    {57, "crt", 3, "application/x-x509-ca-cert"},
-    {58, "xpi", 3, "application/x-xpinstall"},
-    {59, "zip", 3, "application/zip"},
-    {60, "bin", 3, "application/octet-stream"},
-    {61, "exe", 3, "application/octet-stream"},
-    {62, "dll", 3, "application/octet-stream"},
-    {63, "deb", 3, "application/octet-stream"},
-    {64, "dmg", 3, "application/octet-stream"},
-    {65, "eot", 3, "application/octet-stream"},
-    {66, "img", 3, "application/octet-stream"},
-    {67, "iso", 3, "application/octet-stream"},
-    {68, "msi", 3, "application/octet-stream"},
-    {69, "msp", 3, "application/octet-stream"},
-    {70, "msm", 3, "application/octet-stream"},
-    {71, "mid", 3, "audio/midi"},
-    {72, "midi", 4, "audio/midi"},
-    {73, "kar", 3, "audio/midi"},
-    {74, "mp3", 3, "audio/mpeg"},
-    {75, "ra", 2, "audio/x-realaudio"},
-    {76, "3gpp", 4, "video/3gpp"},
-    {77, "3gp", 3, "video/3gpp"},
-    {78, "mpeg", 4, "video/mpeg"},
-    {79, "mpg", 3, "video/mpeg"},
-    {80, "mov", 3, "video/quicktime"},
-    {81, "flv", 3, "video/x-flv"},
-    {82, "mng", 3, "video/x-mng"},
-    {83, "asx", 3, "video/x-ms-asf"},
-    {84, "asf", 3, "video/x-ms-asf"},
-    {85, "wmv", 3, "video/x-ms-wmv"},
-    {86, "avi", 3, "video/x-msvideo"},
-    {87, "dmg", 3, "application/octet-stream"}
+    {0, 4, "html", "text/html"},
+    {1, 3, "htm", "text/html"},
+    {2, 5, "shtml", "text/html"},
+    {3, 3, "css", "text/css"},
+    {4, 3, "xml", "text/xml"},
+    {5, 3, "gif", "image/gif"},
+    {6, 4, "jpeg", "image/jpeg"},
+    {7, 3, "jpg", "image/jpeg"},
+    {8, 2, "js", "application/x-javascript"},
+    {9, 4, "atom", "application/atom+xml"},
+    {10, 3, "rss", "application/rss+xml"},
+    {11, 3, "mml", "text/mathml"},
+    {12, 3, "txt", "text/plain"},
+    {13, 3, "jad", "text/vnd.sun.j2me.app-descriptor"},
+    {14, 3, "wml", "text/vnd.wap.wml"},
+    {15, 3, "htc", "text/x-component"},
+    {16, 3, "png", "image/png"},
+    {17, 3, "tif", "image/tiff"},
+    {18, 4, "tiff", "image/tiff"},
+    {19, 4, "wbmp", "image/vnd.wap.wbmp"},
+    {20, 3, "ico", "image/x-icon"},
+    {21, 3, "jng", "image/x-jng"},
+    {22, 3, "bmp", "image/x-ms-bmp"},
+    {23, 3, "svg", "image/svg+xml"},
+    {24, 3, "jar", "application/java-archive"},
+    {25, 3, "war", "application/java-archive"},
+    {26, 3, "ear", "application/java-archive"},
+    {27, 3, "hqx", "application/mac-binhex40"},
+    {28, 3, "doc", "application/msterm"},
+    {29, 3, "pdf", "application/pdf"},
+    {30, 2, "ps", "application/postscript"},
+    {31, 3, "eps", "application/postscript"},
+    {32, 2, "ai", "application/postscript"},
+    {33, 3, "rtf", "application/rtf"},
+    {34, 3, "xls", "application/vnd.ms-excel"},
+    {35, 3, "ppt", "application/vnd.ms-powerpoint"},
+    {36, 4, "wmlc", "application/vnd.wap.wmlc"},
+    {37, 5, "xhtml", "application/vnd.wap.xhtml+xml"},
+    {38, 3, "kml", "application/vnd.google-earth.kml+xml"},
+    {39, 3, "kmz", "application/vnd.google-earth.kmz"},
+    {40, 3, "cco", "application/x-cocoa"},
+    {41, 7, "jardiff", "application/x-java-archive-diff"},
+    {42, 4, "jnlp", "application/x-java-jnlp-file"},
+    {43, 3, "run", "application/x-makeself"},
+    {44, 2, "pl", "application/x-perl"},
+    {45, 2, "pm", "application/x-perl"},
+    {46, 3, "prc", "application/x-pilot"},
+    {47, 3, "pdb", "application/x-pilot"},
+    {48, 3, "rar", "application/x-rar-compressed"},
+    {49, 3, "rpm", "application/x-redhat-package-manager"},
+    {50, 3, "sea", "application/x-sea"},
+    {51, 3, "swf", "application/x-shockwave-flash"},
+    {52, 3, "sit", "application/x-stuffit"},
+    {53, 3, "tcl", "application/x-tcl"},
+    {54, 2, "tk", "application/x-tcl"},
+    {55, 3, "der", "application/x-x509-ca-cert"},
+    {56, 3, "pem", "application/x-x509-ca-cert"},
+    {57, 3, "crt", "application/x-x509-ca-cert"},
+    {58, 3, "xpi", "application/x-xpinstall"},
+    {59, 3, "zip", "application/zip"},
+    {60, 3, "bin", "application/octet-stream"},
+    {61, 3, "exe", "application/octet-stream"},
+    {62, 3, "dll", "application/octet-stream"},
+    {63, 3, "deb", "application/octet-stream"},
+    {64, 3, "dmg", "application/octet-stream"},
+    {65, 3, "eot", "application/octet-stream"},
+    {66, 3, "img", "application/octet-stream"},
+    {67, 3, "iso", "application/octet-stream"},
+    {68, 3, "msi", "application/octet-stream"},
+    {69, 3, "msp", "application/octet-stream"},
+    {70, 3, "msm", "application/octet-stream"},
+    {71, 3, "mid", "audio/midi"},
+    {72, 4, "midi", "audio/midi"},
+    {73, 3, "kar", "audio/midi"},
+    {74, 3, "mp3", "audio/mpeg"},
+    {75, 2, "ra", "audio/x-realaudio"},
+    {76, 4, "3gpp", "video/3gpp"},
+    {77, 3, "3gp", "video/3gpp"},
+    {78, 4, "mpeg", "video/mpeg"},
+    {79, 3, "mpg", "video/mpeg"},
+    {80, 3, "mov", "video/quicktime"},
+    {81, 3, "flv", "video/x-flv"},
+    {82, 3, "mng", "video/x-mng"},
+    {83, 3, "asx", "video/x-ms-asf"},
+    {84, 3, "asf", "video/x-ms-asf"},
+    {85, 3, "wmv", "video/x-ms-wmv"},
+    {86, 3, "avi", "video/x-msvideo"},
+    {87, 3, "dmg", "application/octet-stream"}
 };
 /*
 static const char *ftypes[] = {
@@ -511,33 +511,33 @@ static const char *ftypes[] = {
 */
 typedef struct _HTTP_KV
 {
-    short nk;
-    short nv;
+    int nk;
+    int nv;
     int k;
     int v;
 }HTTP_KV;
 typedef struct _HTTP_RESPONSE
 {
-    short respid;
-    short ncookies;
+    int respid;
+    int ncookies;
     int header_size;
     int nhline;
-    char hlines[HTTP_HEADER_MAX];
     int headers[HTTP_HEADER_NUM];
+    char hlines[HTTP_HEADER_MAX];
     HTTP_KV cookies[HTTP_COOKIES_MAX];
 }HTTP_RESPONSE;
 typedef struct _HTTP_REQ
 {
-    short reqid;
-    short nargvs;
-    short nline;
-    short ncookies;
-    int   argv_off;
-    int   argv_len;
-    int   header_size;
-    int  nhline;
-    char hlines[HTTP_HEADER_MAX];
+    int reqid;
+    int nargvs;
+    int nline;
+    int ncookies;
+    int argv_off;
+    int argv_len;
+    int header_size;
+    int nhline;
     int  headers[HTTP_HEADER_NUM];
+    char hlines[HTTP_HEADER_MAX];
     char path[HTTP_URL_PATH_MAX];
     char line[HTTP_ARGV_LINE_MAX];
     HTTP_KV argvs[HTTP_ARGVS_MAX];

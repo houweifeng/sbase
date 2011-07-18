@@ -33,8 +33,8 @@ static char *ymonths[]= {
 #define LOG_ROTATE_MONTH            0x08
 #define LOG_ROTATE_SIZE             0x10
 #define ROTATE_LOG_SIZE             268435456
-#define LOGGER_FILENAME_LIMIT  	1024
-#define LOGGER_LINE_LIMIT  	    1048576
+#define LOGGER_FILENAME_LIMIT  	    1024
+#define LOGGER_LINE_LIMIT  	        1048576
 #define __DEBUG__		0
 #define	__WARN__ 		1
 #define	__ERROR__ 		2
