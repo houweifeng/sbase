@@ -17,6 +17,7 @@ utils/mutex.h \
 utils/queue.h \
 utils/queue.c \
 utils/logger.h \
+utils/logger.c \
 utils/evtimer.h \
 utils/evtimer.c \
 utils/xssl.h 	\
