@@ -53,8 +53,8 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     int i = 0, usec = 0, sec = 0;
-    //struct timeval tv = {0,0}, *ptv = NULL;
-    //int k = 0;
+    struct timeval tv = {0,0}, *ptv = NULL;
+    int k = 0;
 
     if(pth)
     {
@@ -70,12 +70,12 @@ void procthread_run(void *arg)
                 //service_accept_handler(service);
                 do
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, NULL);
+                    i = pth->evbase->loop(pth->evbase, 0, &tv);
                     //if(i > 0)++k;
                     //if(i < 1 || k > 2000000){usleep(pth->usec_sleep); k = 0;}
-                    //if(i < 1){if(++k > 100000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
                     //if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}
-                    //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
+                    if(i < 1){if(++k > 10000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+                    else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads[acceptor]");
                 /*
