@@ -145,16 +145,19 @@ int logger_header(LOGGER *logger, char *buf, int level, char *_file_, int _line_
     {
 
         s += sprintf(s,"[%02d/%s/%04d:%02d:%02d:%02d +%06u] ", PTM(logger)->tm_mday, 
-                ymonths[PTM(ptr)->tm_mon], (1900+PTM(ptr)->tm_year), PTM(ptr)->tm_hour, 
-                PTM(ptr)->tm_min, PTM(ptr)->tm_sec, (unsigned int)(PTV(ptr).tv_usec));
+                ymonths[PTM(logger)->tm_mon], (1900+PTM(logger)->tm_year), 
+                PTM(logger)->tm_hour, PTM(logger)->tm_min, PTM(logger)->tm_sec, 
+                (unsigned int)(PTV(logger).tv_usec));
         if(level >= 0)                                                          
         {                                                                           
-            PLOG(ptr)->s += sprintf(PLOG(ptr)->s, "[%u/%p] #%s::%d# %s:",           
-                    (unsigned int)getpid(), ((char *)THREADID()), _file_, _line_,
-                    _logger_level_s[__level__]);                                    
-        }                                        
+            s += sprintf(s, "[%u/%p] #%s::%d# %s:", (unsigned int)getpid(), 
+                    ((char *)THREADID()), _file_, _line_, _logger_level_s[level]); 
+        }
+        n = s - buf;
     }
+    return n;
 }
+
 void logger_clean(void *ptr)
 {
     LOGGER *logger = (LOGGER *)ptr;
