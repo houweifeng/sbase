@@ -52,8 +52,9 @@ void procthread_wakeup(PROCTHREAD *pth)
 void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
-    int i = 0, k = 0, usec = 0, sec = 0;
-    struct timeval tv = {0,0}, *ptv = NULL;
+    int i = 0, usec = 0, sec = 0;
+    //struct timeval tv = {0,0}, *ptv = NULL;
+    //int k = 0;
 
     if(pth)
     {
