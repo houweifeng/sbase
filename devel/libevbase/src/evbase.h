@@ -30,12 +30,15 @@ typedef struct _EVBASE
 	int efd;
     int maxfd;
 	int allowed;
+    int nevents;
+    int bits;
     int evopid;
 
 	void *ev_read_fds;
 	void *ev_write_fds;
 	void *ev_fds;
 	void *evs;
+    void *mutex;
     struct _EVENT **evlist;
 
 	int	    (*init)(struct _EVBASE *);
@@ -48,13 +51,19 @@ typedef struct _EVBASE
     int     (*set_evops)(struct _EVBASE *, int evopid);
 }EVBASE;
 EVBASE *evbase_init();
-#define SET_MAX_FD(evbase, event)                                       \
-do{                                                                      \
+#define NEW_EVENT_FD(evbase, event)                                     \
+do{MUTEX_LOCK(evbase->mutex);                                           \
     if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
+    evbase->nevents++;                                                  \
+    evbase->evlist[event->ev_fd] = event;                               \
+    MUTEX_UNLOCK(evbase->mutex);                                        \
 }while(0)
-#define RESET_MAX_FD(evbase, event)                                     \
-do{                                                                      \
+#define REMOVE_EVENT_FD(evbase, event)                                  \
+do{MUTEX_LOCK(evbase->mutex);                                           \
     if(event->ev_fd == evbase->maxfd) evbase->maxfd = event->ev_fd -1;  \
+    evbase->nevents--;                                                  \
+    evbase->evlist[event->ev_fd] = NULL;                                \
+    MUTEX_UNLOCK(evbase->mutex);                                        \
 }while(0)
 #endif
 #ifndef _TYPEDEF_EVENT
@@ -67,6 +76,7 @@ typedef struct _EVENT
     int bits;
 	struct timeval tv;
 
+    void *mutex;
 	struct _EVBASE *ev_base;
 	void *ev_arg;
 	void (*ev_handler)(int fd, int flags, void *arg);	

@@ -7,7 +7,7 @@
 #include <sys/event.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-
+#include "mutex.h"
 /* Initialize evkqueue  */
 int evkqueue_init(EVBASE *evbase)
 {
@@ -70,8 +70,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) goto err;
         }
-        evbase->evlist[event->ev_fd] = event;
-        //SET_MAX_FD(evbase, event);
+        NEW_EVENT_FD(evbase, event);
 err:
         return 0;
     }
@@ -148,8 +147,6 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
                 ret = 0;
             }
         }
-        //SET_MAX_FD(evbase, event);
-        evbase->evlist[event->ev_fd] = event;
 err:
         return ret;
     }
@@ -172,8 +169,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
         kqev.filter = EVFILT_WRITE;
         kqev.flags  = EV_DELETE;
         kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
-        evbase->evlist[event->ev_fd] = NULL;
-        //RESET_MAX_FD(evbase, event);
+        REMOVE_EVENT_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -220,6 +216,7 @@ void evkqueue_reset(EVBASE *evbase)
         close(evbase->efd);
         evbase->efd = kqueue();
         evbase->maxfd = 0;
+        evbase->nevents = 0;
         memset(evbase->evs, 0, evbase->allowed * sizeof(struct kevent));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
     }
@@ -231,6 +228,7 @@ void evkqueue_clean(EVBASE *evbase)
 {
     if(evbase)
     {
+        MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);

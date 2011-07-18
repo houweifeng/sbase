@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
+#include "mutex.h"
 /* Initialize evepoll  */
 int evepoll_init(EVBASE *evbase)
 {
@@ -49,17 +50,26 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
             if(event->ev_flags & E_EPOLL_ET)
             {
                 ev_flags |= EPOLLET;
-                add = 1;
             }
             if(add)
             {
                 op = EPOLL_CTL_ADD; 
+                memset(&ep_event, 0, sizeof(struct epoll_event));
                 ep_event.data.fd = event->ev_fd;
                 ep_event.events = ev_flags;
                 ep_event.data.ptr = (void *)event;
-                epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event);
-                evbase->evlist[event->ev_fd] = event;
-                SET_MAX_FD(evbase, event);
+                if(epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event) < 0)
+                {
+                    if(errno == ENOENT)
+                        epoll_ctl(evbase->efd, EPOLL_CTL_ADD, event->ev_fd, &ep_event);
+                    else if(errno == EEXIST)
+                        epoll_ctl(evbase->efd, EPOLL_CTL_MOD, event->ev_fd, &ep_event);
+                    else
+                    {
+                        ret = -1;
+                    }
+                }
+                NEW_EVENT_FD(evbase, event);
             }
         }
     }
@@ -88,17 +98,23 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         }
         op = EPOLL_CTL_MOD;
         if(evbase->evlist[event->ev_fd] == NULL) op = EPOLL_CTL_ADD;
+        memset(&ep_event, 0, sizeof(struct epoll_event));
         ep_event.data.fd = event->ev_fd;
         ep_event.events = ev_flags;
         ep_event.data.ptr = (void *)event;
         if(epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event) < 0)
         {
-            ret = -1;
-        }
-        else
-        {
-            evbase->evlist[event->ev_fd] = event;
-            SET_MAX_FD(evbase, event);
+            if(errno == ENOENT)
+            {
+                epoll_ctl(evbase->efd, EPOLL_CTL_ADD, event->ev_fd, &ep_event);
+                NEW_EVENT_FD(evbase, event);
+            }
+            else if(errno == EEXIST)
+                epoll_ctl(evbase->efd, EPOLL_CTL_MOD, event->ev_fd, &ep_event);
+            else
+            {
+                ret = -1;
+            }
         }
         return 0;
     }
@@ -119,8 +135,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
                 ep_event.data.fd = event->ev_fd;
                 ep_event.data.ptr = event;
                 epoll_ctl(evbase->efd, EPOLL_CTL_DEL, event->ev_fd, &ep_event);
-                evbase->evlist[event->ev_fd] = NULL;
-                //RESET_MAX_FD(evbase, event);
+                REMOVE_EVENT_FD(evbase, event);
             }
         }
         return 0;
@@ -144,7 +159,7 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
         }
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->allowed);
         //n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd+1, timeout);
-        n = epoll_wait(evbase->efd, evbase->evs, evbase->allowed, timeout);
+        n = epoll_wait(evbase->efd, evbase->evs, evbase->nevents, timeout);
         if(n <= 0) return n;
         for(i = 0; i < n; i++)
         {
@@ -159,7 +174,7 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                 ev_flags = 0;
                 if(flags & (EPOLLHUP|EPOLLERR))
                 {
-                    ev_flags |= E_READ|E_WRITE;
+                    ev_flags = E_READ|E_WRITE;
                 }
                 if(flags & (EPOLLIN|EPOLLPRI)) ev_flags |= E_READ;
                 if(flags & EPOLLOUT) ev_flags |= E_WRITE;
@@ -182,6 +197,7 @@ void evepoll_reset(EVBASE *evbase)
         close(evbase->efd);
         evbase->efd = epoll_create(evbase->allowed);
         evbase->maxfd = 0;
+        evbase->nevents = 0;
         memset(evbase->evs, 0, evbase->allowed * sizeof(struct epoll_event));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
     }
@@ -193,6 +209,7 @@ void evepoll_clean(EVBASE *evbase)
 {
     if(evbase)
     {
+        MUTEX_DESTROY(evbase->mutex);
         close(evbase->efd);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
