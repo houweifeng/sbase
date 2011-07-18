@@ -16,111 +16,16 @@ do                                                                              
     MUTEX_SIGNAL(pth->mutex);                                                               \
 }while(0)
 /* event handler */
-void procthread_event_handler(int event_fd, int flag, void *arg)
+void procthread_event_handler(int event_fd, int flags, void *arg)
 {
-    PROCTHREAD *pth = (PROCTHREAD *)arg, *parent = NULL;
-    char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
-    socklen_t rsa_len = sizeof(struct sockaddr_in);
-    int fd = -1, port = -1, n = 0, opt = 1, i = 0;
+    PROCTHREAD *pth = (PROCTHREAD *)arg;
     SERVICE *service = NULL;
-    struct sockaddr_in rsa;
-    CONN *conn = NULL;
-    void *ssl = NULL;
 
     if(pth && (service = pth->service))
     {
         if(event_fd == service->fd)
         {
-            if(E_READ & flag)
-            {
-                if(service->sock_type == SOCK_STREAM)
-                {
-                    //WARN_LOGGER(service->logger, "new-connection via %d", service->fd);
-                    while((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
-                    {
-                        ip = inet_ntoa(rsa.sin_addr);
-                        port = ntohs(rsa.sin_port);
-#ifdef HAVE_SSL
-                        if(service->is_use_SSL && service->s_ctx)
-                        {
-                            if((ssl = SSL_new(XSSL_CTX(service->s_ctx))) && SSL_set_fd((SSL *)ssl, fd) > 0 
-                                    && SSL_accept((SSL *)ssl) > 0)                                                   
-                            {
-                                goto new_conn;
-                            }
-                            else goto err_conn; 
-                        }
-#endif
-new_conn:
-                        if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
-                                        service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
-                        {
-                            DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i++, ip, port, fd);
-                            continue;
-                        }
-                        else
-                        {
-                            WARN_LOGGER(service->logger, "accept newconnection[%s:%d]  via %d failed, %s", ip, port, fd, strerror(errno));
-
-                        }
-err_conn:               
-#ifdef HAVE_SSL
-                        if(ssl)
-                        {
-                            SSL_shutdown((SSL *)ssl);
-                            SSL_free((SSL *)ssl);
-                            ssl = NULL;
-                        }
-#endif
-                        if(fd > 0)
-                        {
-                            shutdown(fd, SHUT_RDWR);
-                            close(fd);
-                        }
-                    }
-                    return ;
-                }
-                else if(service->sock_type == SOCK_DGRAM)
-                {
-                    while((n = recvfrom(event_fd, buf, SB_BUF_SIZE, 
-                                    0, (struct sockaddr *)&rsa, &rsa_len)) > 0)
-                    {
-                        ip = inet_ntoa(rsa.sin_addr);
-                        port = ntohs(rsa.sin_port);
-                        if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
-                                && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
-#ifdef SO_REUSEPORT
-                                && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
-#endif
-                                && bind(fd, (struct sockaddr *)&(service->sa), 
-                                    sizeof(struct sockaddr_in)) == 0
-                                && connect(fd, (struct sockaddr *)&rsa, 
-                                    sizeof(struct sockaddr_in)) == 0
-                                && (conn = service_addconn(service, service->sock_type, fd, 
-                                        ip, port, service->ip, service->port, 
-                                        &(service->session), NULL, CONN_STATUS_FREE)))
-                        {
-                            p = buf;
-                            MMB_PUSH(conn->buffer, p, n);
-                            if((parent = (PROCTHREAD *)(conn->parent)))
-                            {
-                                qmessage_push(pth->message_queue, 
-                                        MESSAGE_INPUT, -1, conn->fd, -1, conn, parent, NULL);
-                                MUTEX_SIGNAL(parent->mutex);
-                            }
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
-                                    " buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
-                        }
-                        else
-                        {
-                            shutdown(fd, SHUT_RDWR);
-                            close(fd);
-                            FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
-                                    strerror(errno));
-                        }
-                    }
-                }
-            }
+            service_accept_handler(service);
         }
         else
         {
@@ -148,7 +53,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     int i = 0, k = 0, usec = 0, sec = 0;
-    struct timeval tv = {0,0};
+    struct timeval tv = {0,0}, *ptv = NULL;
 
     if(pth)
     {
@@ -160,14 +65,20 @@ void procthread_run(void *arg)
         {
             if(pth->listenfd > 0)
             {
+                //SERVICE *service = pth->service;
+                //service_accept_handler(service);
                 do
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, &tv);
-                    if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}
-                    //if(i < 1){if(++k > 1024){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
-                    else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
+                    i = pth->evbase->loop(pth->evbase, 0, NULL);
+                    //if(i > 0)++k;
+                    //if(i < 1 || k > 2000000){usleep(pth->usec_sleep); k = 0;}
+                    //if(i < 1){if(++k > 100000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
+                    //if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}
+                    //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads[acceptor]");
+                /*
+                */
             }
             else
             {
@@ -474,7 +385,7 @@ void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
 {
     if(pth && (pth->listenfd = listenfd) > 0)
     {
-        event_set(&(pth->acceptor), listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
+        event_set(&(pth->acceptor), listenfd, E_READ|E_PERSIST,
                 (void *)pth, (void *)&procthread_event_handler);
         pth->evbase->add(pth->evbase, &(pth->acceptor));
     }

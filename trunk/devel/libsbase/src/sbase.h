@@ -15,6 +15,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#pragma pack(4)
 #define SB_CONN_MAX             65536
 #define SB_GROUP_CONN_MAX       1024
 #define SB_IP_MAX               16
@@ -23,8 +24,8 @@ extern "C" {
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
-#define SB_QCONN_MAX            256
-#define SB_CHUNKS_MAX           256
+#define SB_QCONN_MAX            4096
+#define SB_CHUNKS_MAX           4096
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -161,10 +162,15 @@ typedef struct _SBASE
     int running_status;
     int running_services;
     int evlog_level;
+    int cond;
+    int bits;
     /* evtimer */
     int evid;
     int ssl_id;
     int64_t nheartbeat;
+
+    /* event */
+    EVENT event;
 
 	/* timer && logger */
 	void *logger;

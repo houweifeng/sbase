@@ -948,9 +948,9 @@ int conn_packet_reader(CONN *conn)
     {
         data = PCB(conn->buffer);
         packet_type = conn->session.packet_type;
-        DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%d]", 
-                packet_type, MMB_NDATA(conn->buffer));
-        //int x = 0, n = 0; char buf[1024], *s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n", x);conn->push_chunk(conn, buf, n);conn->push_chunk(conn, s, x);return 0;
+
+        //DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%d]", 
+        //        packet_type, MMB_NDATA(conn->buffer));
         /* Remove invalid packet type */
         if(!(packet_type & PACKET_ALL))
         {

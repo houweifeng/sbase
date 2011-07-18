@@ -43,6 +43,12 @@ int setrlimiter(char *name, int rlimit, int nset)
     return ret;
 }
 
+/* event handler */
+void sbase_event_handler(int event_fd, int flags, void *arg)
+{
+    return ;
+}
+
 /* set sbase log */
 int sbase_set_log(SBASE *sbase, char *logfile)
 {
@@ -159,7 +165,6 @@ void sbase_evtimer_handler(void *arg)
     SBASE *sbase = NULL;
     if((sbase = (SBASE *)arg))
     {
-        fprintf(stdout, "%s::%d::Ready for stop sbase\n", __FILE__, __LINE__);
         sbase->running_status = 0;
     }
     return ;
@@ -170,6 +175,7 @@ int sbase_running(SBASE *sbase, int useconds)
 {
     int ret = -1, i = -1, sec = 0, usec = 0;
     struct timeval tv = {0, 0};
+    struct ip_mreq mreq;        
     SERVICE *service = NULL;
     pid_t pid = 0;
 
@@ -210,6 +216,19 @@ running:
             fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
             _exit(-1);
         }
+        memset(&mreq, 0, sizeof(struct ip_mreq));        
+        mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");        
+        mreq.imr_interface.s_addr = inet_addr("127.0.0.1");      
+        if((sbase->cond = socket(AF_INET, SOCK_DGRAM, 0)) < 0
+            || setsockopt(sbase->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq,        
+                sizeof(struct ip_mreq)) != 0)        
+        {        
+            FATAL_LOGGER(sbase->logger, "new cond socket() failed, %s", strerror(errno));      
+            _exit(-1);
+        }
+        event_set(&(sbase->event), sbase->cond, E_READ|E_EPOLL_ET|E_PERSIST,
+                    (void *)sbase, (void *)&sbase_event_handler);
+        ret = sbase->evbase->add(sbase->evbase, &(sbase->event));
         //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
         //running services
         if(sbase->services)
@@ -219,6 +238,7 @@ running:
                 if((service = sbase->services[i]))
                 {
                     service->evbase = sbase->evbase;
+                    service->cond = sbase->cond;
                     service->run(service);
                 }
             }
@@ -262,6 +282,7 @@ void sbase_stop(SBASE *sbase)
 {
     if(sbase && sbase->running_status)
     {
+        event_add(&(sbase->event), E_WRITE);
         sbase->running_status = 0;
         return ;
     }
@@ -279,6 +300,8 @@ void sbase_clean(SBASE *sbase)
             if(sbase->services[i])
                 sbase->services[i]->clean(sbase->services[i]);
         }
+        event_destroy(&(sbase->event));
+        if(sbase->cond) close(sbase->cond);
         if(sbase->evtimer){EVTIMER_CLEAN(sbase->evtimer);}
         if(sbase->logger){LOGGER_CLEAN(sbase->logger);}
         if(sbase->evbase){sbase->evbase->clean(sbase->evbase);}

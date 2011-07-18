@@ -65,6 +65,8 @@ int service_newtask(SERVICE *service, CALLBACK *callback, void *arg);
 int service_newtransaction(SERVICE *service, CONN *conn, int tid);
 /* set log */
 int service_set_log(SERVICE *service, char *logfile);
+/* accept handler */
+int service_accept_handler(SERVICE *service);
 /* event handler */
 void service_event_handler(int, int, void *);
 /* heartbeat handler */

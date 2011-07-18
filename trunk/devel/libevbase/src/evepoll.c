@@ -51,6 +51,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
             {
                 ev_flags |= EPOLLET;
             }
+            ev_flags |= EPOLLERR | EPOLLHUP;
             if(add)
             {
                 op = EPOLL_CTL_ADD; 
@@ -96,6 +97,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         {
             ev_flags |= EPOLLET;
         }
+        ev_flags |= EPOLLERR | EPOLLHUP;
         op = EPOLL_CTL_MOD;
         if(evbase->evlist[event->ev_fd] == NULL) op = EPOLL_CTL_ADD;
         memset(&ep_event, 0, sizeof(struct epoll_event));
@@ -159,8 +161,13 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
         }
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->allowed);
         //n = epoll_wait(evbase->efd, evbase->evs, evbase->maxfd+1, timeout);
-        n = epoll_wait(evbase->efd, evbase->evs, evbase->nevents, timeout);
-        if(n <= 0) return n;
+        n = epoll_wait(evbase->efd, (struct epoll_event *)evbase->evs, evbase->maxfd+1, timeout);
+        if(n <= 0)
+        {
+            if(n < 0){fprintf(stderr, "epoll_wait(%d, %p, %d, %d) failed, %s\n", evbase->efd, evbase->evs, evbase->nevents, timeout, strerror(errno));}
+            return n;
+        }
+        //else fprintf(stdout, "epoll_wait(%d, %p, %d, %d) => %d\n", evbase->efd, evbase->evs, evbase->nevents, timeout, n);
         for(i = 0; i < n; i++)
         {
             evp = &(((struct epoll_event *)evbase->evs)[i]);
