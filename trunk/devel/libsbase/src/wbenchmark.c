@@ -20,7 +20,7 @@ static int concurrency = 1;
 static int ncurrent = 0;
 static int ntasks = 1024;
 static int nrequests = 0;
-static int ntimeout = 0;
+static int ntimeouts = 0;
 static int nerrors = 0;
 static int ncompleted = 0;
 static int is_quiet = 0;
@@ -128,14 +128,14 @@ int http_show_state(int n)
 {
     int nok = 0;
     TIMER_SAMPLE(timer);
-    nok = n - ntimeout;
+    nok = n - ntimeouts;
     if(PT_USEC_U(timer) > 0 && nok  > 0)
     {
         if(is_quiet)
         {
             REALLOG(logger, "timeout:%d error:%d ok:%d total:%d "
                     "time used:%lld request per sec:%lld avg_time:%lld", 
-                    ntimeout, nerrors, nok, n, PT_USEC_U(timer), 
+                    ntimeouts, nerrors, nok, n, PT_USEC_U(timer), 
                     ((long long int)nok * 1000000ll/PT_USEC_U(timer)),
                     (PT_USEC_U(timer)/nok));
         }
@@ -143,7 +143,7 @@ int http_show_state(int n)
         {
             fprintf(stdout, "timeout:%d error:%d ok:%d total:%d\n"
                     "time used:%lld request per sec:%lld avg_time:%lld\n", 
-                    ntimeout, nerrors, nok, n, PT_USEC_U(timer), 
+                    ntimeouts, nerrors, nok, n, PT_USEC_U(timer), 
                     ((long long int)nok * 1000000ll/PT_USEC_U(timer)),
                     (PT_USEC_U(timer)/nok));
         }
@@ -155,22 +155,22 @@ int http_show_state(int n)
 /* http over */
 int http_over(CONN *conn, int respcode)
 {
-    int id = 0, n = 0, m = 0;
+    int id = 0, n = 0, m = 0, nerror = 0, ntimeout = 0;
 
     if(conn)
     {
-        MUTEX_LOCK(mutex);n = ++ncompleted; m = nrequests;MUTEX_UNLOCK(mutex);
+        MUTEX_LOCK(mutex);n = ++ncompleted; m = nrequests;nerror = nerrors; ntimeout = ntimeouts;MUTEX_UNLOCK(mutex);
         //WARN_LOGGER(logger, "complete %d conn[%s:%d] via %d", n, conn->local_ip, conn->local_port, conn->fd);
         id = conn->c_id;
         if(n > 0 && n <= ntasks && (n%1000) == 0)
         {
             if(is_quiet)
             {
-                REALLOG(logger, "requests:%d completed %d concurrecy:%d", m, n, ncurrent);
+                REALLOG(logger, "requests:%d completed:%d error:%d timeout:%d concurrecy:%d", m, n, nerror, ntimeout, ncurrent);
             }
             else 
             {
-                fprintf(stdout, "requests:%d completed %d concurrecy:%d\n", m, n, ncurrent);
+                fprintf(stdout, "requests:%d completed:%d error:%d timeout:%d concurrecy:%d\n", m, n, nerror, ntimeout, ncurrent);
             }
         }
         if(m < ntasks)
@@ -323,7 +323,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
         {
             WARN_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
         }
-        ntimeout++;
+        ntimeouts++;
         conn->over_timeout(conn);
         conn->close(conn);
         return http_over(conn, 0);
