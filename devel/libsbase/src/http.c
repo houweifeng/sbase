@@ -207,7 +207,7 @@ int http_argv_parse(char *p, char *end, HTTP_REQ *http_req)
             high = 0;low = 0;
             //if(*s == '?'){argv->k = pp - http_req->line; ++s;}
             if(*s == '+'){*pp++ = 0x20; ++s;}
-            else if(*s == '=')
+            else if(*s == '=' && argv->k && !argv->v)
             {
                 if(argv->k > 0) argv->nk = pp - http_req->line - argv->k;
                 if(pp >= epp) break;

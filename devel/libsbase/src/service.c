@@ -152,7 +152,6 @@ int service_run(SERVICE *service)
 {
     int ret = -1, i = 0, x = 0;
     CONN *conn = NULL;
-    struct ip_mreq mreq;        
 
     if(service)
     {
@@ -217,16 +216,6 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         sigpipe_ignore();
-        memset(&mreq, 0, sizeof(struct ip_mreq));        
-        mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");        
-        mreq.imr_interface.s_addr = inet_addr("127.0.0.1");      
-        if((service->cond = socket(AF_INET, SOCK_DGRAM, 0)) < 0
-            || setsockopt(service->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq,        
-                sizeof(struct ip_mreq)) != 0)        
-        {        
-            FATAL_LOGGER(service->logger, "new cond socket() failed, %s", strerror(errno));      
-            _exit(-1);
-        }
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
         if(service->niodaemons < 1) service->niodaemons = 1;
@@ -377,127 +366,125 @@ int service_set_log_level(SERVICE *service, int level)
     return -1;
 }
 
-
-
-/* event handler */
-void service_event_handler(int event_fd, int flag, void *arg)
+/* accept handler */
+int service_accept_handler(SERVICE *service)
 {
     char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
     socklen_t rsa_len = sizeof(struct sockaddr_in);
     int fd = -1, port = -1, n = 0, opt = 1, i = 0;
-    SERVICE *service = (SERVICE *)arg;
-    PROCTHREAD *pth = NULL;
+    PROCTHREAD *parent = NULL;
     struct sockaddr_in rsa;
     CONN *conn = NULL;
     void *ssl = NULL;
 
     if(service)
     {
-        if(event_fd == service->fd)
+        if(service->sock_type == SOCK_STREAM)
         {
-            if(E_READ & flag)
+            //WARN_LOGGER(service->logger, "new-connection via %d", service->fd);
+            while((fd = accept(service->fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
             {
-                if(service->sock_type == SOCK_STREAM)
-                {
-                    //WARN_LOGGER(service->logger, "new-connection via %d", service->fd);
-                    while((fd = accept(event_fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
-                    {
-                        ip = inet_ntoa(rsa.sin_addr);
-                        port = ntohs(rsa.sin_port);
+                ip = inet_ntoa(rsa.sin_addr);
+                port = ntohs(rsa.sin_port);
 #ifdef HAVE_SSL
-                        if(service->is_use_SSL && service->s_ctx)
-                        {
-                            if((ssl = SSL_new(XSSL_CTX(service->s_ctx))) && SSL_set_fd((SSL *)ssl, fd) > 0 
-                                    && SSL_accept((SSL *)ssl) > 0)                                                   
-                            {
-                                goto new_conn;
-                            }
-                            else goto err_conn; 
-                        }
+                if(service->is_use_SSL && service->s_ctx)
+                {
+                    if((ssl = SSL_new(XSSL_CTX(service->s_ctx))) && SSL_set_fd((SSL *)ssl, fd) > 0 
+                            && SSL_accept((SSL *)ssl) > 0)                                                   
+                    {
+                        goto new_conn;
+                    }
+                    else goto err_conn; 
+                }
 #endif
 new_conn:
-                        if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
-                            service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
-                        {
-                            DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i++, ip, port, fd);
-                            continue;
-                        }
-                        else
-                        {
-                            WARN_LOGGER(service->logger, "accept newconnection[%s:%d]  via %d failed, %s", ip, port, fd, strerror(errno));
+                if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
+                                service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
+                {
+                    WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    i++;
+                    continue;
+                }
+                else
+                {
+                    WARN_LOGGER(service->logger, "accept newconnection[%s:%d]  via %d failed, %s", ip, port, fd, strerror(errno));
 
-                        }
+                }
 err_conn:               
 #ifdef HAVE_SSL
-                        if(ssl)
-                        {
-                            SSL_shutdown((SSL *)ssl);
-                            SSL_free((SSL *)ssl);
-                            ssl = NULL;
-                        }
-#endif
-                        if(fd > 0)
-                        {
-                            shutdown(fd, SHUT_RDWR);
-                            close(fd);
-                        }
-                    }
-                    return ;
-                }
-                else if(service->sock_type == SOCK_DGRAM)
+                if(ssl)
                 {
-                    while((n = recvfrom(event_fd, buf, SB_BUF_SIZE, 
-                            0, (struct sockaddr *)&rsa, &rsa_len)) > 0)
-                    {
-                        ip = inet_ntoa(rsa.sin_addr);
-                        port = ntohs(rsa.sin_port);
-                        if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
-                            && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
-#ifdef SO_REUSEPORT
-                            && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+                    SSL_shutdown((SSL *)ssl);
+                    SSL_free((SSL *)ssl);
+                    ssl = NULL;
+                }
 #endif
-                            && bind(fd, (struct sockaddr *)&(service->sa), 
-                                sizeof(struct sockaddr_in)) == 0
-                            && connect(fd, (struct sockaddr *)&rsa, 
-                                sizeof(struct sockaddr_in)) == 0
-                            && (conn = service_addconn(service, service->sock_type, fd, 
+                if(fd > 0)
+                {
+                    shutdown(fd, SHUT_RDWR);
+                    close(fd);
+                }
+            }
+        }
+        else if(service->sock_type == SOCK_DGRAM)
+        {
+            while((n = recvfrom(service->fd, buf, SB_BUF_SIZE, 
+                            0, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+            {
+                ip = inet_ntoa(rsa.sin_addr);
+                port = ntohs(rsa.sin_port);
+                if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
+                        && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+#ifdef SO_REUSEPORT
+                        && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+#endif
+                        && bind(fd, (struct sockaddr *)&(service->sa), 
+                            sizeof(struct sockaddr_in)) == 0
+                        && connect(fd, (struct sockaddr *)&rsa, 
+                            sizeof(struct sockaddr_in)) == 0
+                        && (conn = service_addconn(service, service->sock_type, fd, 
                                 ip, port, service->ip, service->port, 
                                 &(service->session), NULL, CONN_STATUS_FREE)))
-                        {
-                            p = buf;
-                            MMB_PUSH(conn->buffer, p, n);
-                            pth = (PROCTHREAD *)(conn->parent);
-                            if(pth)
-                            {
-                                qmessage_push(pth->message_queue, 
-                                    MESSAGE_INPUT, -1, conn->fd, -1, conn, pth, NULL);
-                                MUTEX_SIGNAL(pth->mutex);
-                            }
-                            DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
-                                    " buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
-                        }
-                        else
-                        {
-                            shutdown(fd, SHUT_RDWR);
-                            close(fd);
-                            FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
-                                    strerror(errno));
-                        }
-                    }
-                    /*
-                    else
+                {
+                    i++;
+                    p = buf;
+                    MMB_PUSH(conn->buffer, p, n);
+                    if((parent = (PROCTHREAD *)(conn->parent)))
                     {
-                        FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
-                                strerror(errno));
+                        qmessage_push(parent->message_queue, 
+                                MESSAGE_INPUT, -1, conn->fd, -1, conn, parent, NULL);
+                        MUTEX_SIGNAL(parent->mutex);
                     }
-                    */
+                    DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
+                            " buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
+                }
+                else
+                {
+                    shutdown(fd, SHUT_RDWR);
+                    close(fd);
+                    FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
+                            strerror(errno));
                 }
             }
         }
     }
-    return ;
+    return i;
 }
 
+
+/* event handler */
+void service_event_handler(int event_fd, int flag, void *arg)
+{
+    SERVICE *service = (SERVICE *)arg;
+    if(service)
+    {
+        if(event_fd == service->fd && (flag & E_READ))
+        {
+            service_accept_handler(service);
+        }
+    }
+    return ;
+}
 /* new connection */
 CONN *service_newconn(SERVICE *service, int inet_family, int socket_type, 
         char *inet_ip, int inet_port, SESSION *session)
@@ -1438,7 +1425,6 @@ void service_stop(SERVICE *service)
         DEBUG_LOGGER(service->logger, "Ready for remove event");
         /*remove event */
         event_destroy(&(service->event));
-        if(service->cond > 0 ) close(service->cond);    
         if(service->fd > 0)close(service->fd);
         DEBUG_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
