@@ -33,8 +33,9 @@ include_HEADERS = sbase.h
 
 sbin_PROGRAMS = xhttpd lechod
 
-xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c utils/mutex.h \
-				 utils/trie.h utils/trie.c utils/stime.h utils/stime.c utils/logger.h
+xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c \
+				 utils/mutex.h utils/mtrie.h utils/mtrie.c utils/stime.h utils/stime.c \
+				utils/logger.h utils/logger.c utils/xmm.h utils/xmm.c 
 xhttpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 xhttpd_LDADD = libsbase.la
 xhttpd_LDFLAGS = -static
@@ -44,13 +45,9 @@ lechod_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
 
-bin_PROGRAMS = wbenchmark xbenchmark
-wbenchmark_SOURCES = wbenchmark.c http.c http.h utils/mutex.h
+bin_PROGRAMS = wbenchmark
+wbenchmark_SOURCES = wbenchmark.c http.c http.h utils/mutex.h utils/mtrie.c utils/mtrie.h \
+					 utils/logger.h utils/logger.c utils/xmm.h utils/xmm.c utils/timer.h
 wbenchmark_CPPFLAGS = -I utils/ -Wall 
 wbenchmark_LDADD = libsbase.la
 wbenchmark_LDFLAGS = -static
-
-xbenchmark_SOURCES = xbenchmark.c http.c http.h utils/mutex.h
-xbenchmark_CPPFLAGS = -I utils/ -Wall 
-xbenchmark_LDADD = libsbase.la
-xbenchmark_LDFLAGS = -static

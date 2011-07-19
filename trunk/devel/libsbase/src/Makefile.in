@@ -39,7 +39,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 sbin_PROGRAMS = xhttpd$(EXEEXT) lechod$(EXEEXT)
-bin_PROGRAMS = wbenchmark$(EXEEXT) xbenchmark$(EXEEXT)
+bin_PROGRAMS = wbenchmark$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -75,16 +75,14 @@ am_lechod_OBJECTS = lechod-lechod.$(OBJEXT) lechod-iniparser.$(OBJEXT)
 lechod_OBJECTS = $(am_lechod_OBJECTS)
 lechod_DEPENDENCIES = libsbase.la
 am_wbenchmark_OBJECTS = wbenchmark-wbenchmark.$(OBJEXT) \
-	wbenchmark-http.$(OBJEXT)
+	wbenchmark-http.$(OBJEXT) wbenchmark-mtrie.$(OBJEXT) \
+	wbenchmark-logger.$(OBJEXT) wbenchmark-xmm.$(OBJEXT)
 wbenchmark_OBJECTS = $(am_wbenchmark_OBJECTS)
 wbenchmark_DEPENDENCIES = libsbase.la
-am_xbenchmark_OBJECTS = xbenchmark-xbenchmark.$(OBJEXT) \
-	xbenchmark-http.$(OBJEXT)
-xbenchmark_OBJECTS = $(am_xbenchmark_OBJECTS)
-xbenchmark_DEPENDENCIES = libsbase.la
 am_xhttpd_OBJECTS = xhttpd-xhttpd.$(OBJEXT) xhttpd-mime.$(OBJEXT) \
 	xhttpd-http.$(OBJEXT) xhttpd-iniparser.$(OBJEXT) \
-	xhttpd-trie.$(OBJEXT) xhttpd-stime.$(OBJEXT)
+	xhttpd-mtrie.$(OBJEXT) xhttpd-stime.$(OBJEXT) \
+	xhttpd-logger.$(OBJEXT) xhttpd-xmm.$(OBJEXT)
 xhttpd_OBJECTS = $(am_xhttpd_OBJECTS)
 xhttpd_DEPENDENCIES = libsbase.la
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
@@ -99,9 +97,9 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
-	$(wbenchmark_SOURCES) $(xbenchmark_SOURCES) $(xhttpd_SOURCES)
+	$(wbenchmark_SOURCES) $(xhttpd_SOURCES)
 DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
-	$(wbenchmark_SOURCES) $(xbenchmark_SOURCES) $(xhttpd_SOURCES)
+	$(wbenchmark_SOURCES) $(xhttpd_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -236,8 +234,9 @@ utils/timer.h
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
 libsbase_la_LDFLAGS = -levbase
 include_HEADERS = sbase.h
-xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c utils/mutex.h \
-				 utils/trie.h utils/trie.c utils/stime.h utils/stime.c utils/logger.h
+xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c \
+				 utils/mutex.h utils/mtrie.h utils/mtrie.c utils/stime.h utils/stime.c \
+				utils/logger.h utils/logger.c utils/xmm.h utils/xmm.c 
 
 xhttpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 xhttpd_LDADD = libsbase.la
@@ -246,14 +245,12 @@ lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
-wbenchmark_SOURCES = wbenchmark.c http.c http.h utils/mutex.h
+wbenchmark_SOURCES = wbenchmark.c http.c http.h utils/mutex.h utils/mtrie.c utils/mtrie.h \
+					 utils/logger.h utils/logger.c utils/xmm.h utils/xmm.c utils/timer.h
+
 wbenchmark_CPPFLAGS = -I utils/ -Wall 
 wbenchmark_LDADD = libsbase.la
 wbenchmark_LDFLAGS = -static
-xbenchmark_SOURCES = xbenchmark.c http.c http.h utils/mutex.h
-xbenchmark_CPPFLAGS = -I utils/ -Wall 
-xbenchmark_LDADD = libsbase.la
-xbenchmark_LDFLAGS = -static
 all: all-am
 
 .SUFFIXES:
@@ -378,9 +375,6 @@ lechod$(EXEEXT): $(lechod_OBJECTS) $(lechod_DEPENDENCIES)
 wbenchmark$(EXEEXT): $(wbenchmark_OBJECTS) $(wbenchmark_DEPENDENCIES) 
 	@rm -f wbenchmark$(EXEEXT)
 	$(LINK) $(wbenchmark_LDFLAGS) $(wbenchmark_OBJECTS) $(wbenchmark_LDADD) $(LIBS)
-xbenchmark$(EXEEXT): $(xbenchmark_OBJECTS) $(xbenchmark_DEPENDENCIES) 
-	@rm -f xbenchmark$(EXEEXT)
-	$(LINK) $(xbenchmark_LDFLAGS) $(xbenchmark_OBJECTS) $(xbenchmark_LDADD) $(LIBS)
 xhttpd$(EXEEXT): $(xhttpd_OBJECTS) $(xhttpd_DEPENDENCIES) 
 	@rm -f xhttpd$(EXEEXT)
 	$(LINK) $(xhttpd_LDFLAGS) $(xhttpd_OBJECTS) $(xhttpd_LDADD) $(LIBS)
@@ -406,15 +400,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-stime.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-xmm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-http.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-logger.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-mtrie.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-wbenchmark.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xbenchmark-http.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xbenchmark-xbenchmark.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wbenchmark-xmm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-http.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-iniparser.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-logger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-mime.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-mtrie.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-stime.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-trie.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-xhttpd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xhttpd-xmm.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -577,33 +574,47 @@ wbenchmark-http.obj: http.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-http.obj `if test -f 'http.c'; then $(CYGPATH_W) 'http.c'; else $(CYGPATH_W) '$(srcdir)/http.c'; fi`
 
-xbenchmark-xbenchmark.o: xbenchmark.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xbenchmark-xbenchmark.o -MD -MP -MF "$(DEPDIR)/xbenchmark-xbenchmark.Tpo" -c -o xbenchmark-xbenchmark.o `test -f 'xbenchmark.c' || echo '$(srcdir)/'`xbenchmark.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xbenchmark-xbenchmark.Tpo" "$(DEPDIR)/xbenchmark-xbenchmark.Po"; else rm -f "$(DEPDIR)/xbenchmark-xbenchmark.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='xbenchmark.c' object='xbenchmark-xbenchmark.o' libtool=no @AMDEPBACKSLASH@
+wbenchmark-mtrie.o: utils/mtrie.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-mtrie.o -MD -MP -MF "$(DEPDIR)/wbenchmark-mtrie.Tpo" -c -o wbenchmark-mtrie.o `test -f 'utils/mtrie.c' || echo '$(srcdir)/'`utils/mtrie.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/wbenchmark-mtrie.Tpo" "$(DEPDIR)/wbenchmark-mtrie.Po"; else rm -f "$(DEPDIR)/wbenchmark-mtrie.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/mtrie.c' object='wbenchmark-mtrie.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xbenchmark-xbenchmark.o `test -f 'xbenchmark.c' || echo '$(srcdir)/'`xbenchmark.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-mtrie.o `test -f 'utils/mtrie.c' || echo '$(srcdir)/'`utils/mtrie.c
 
-xbenchmark-xbenchmark.obj: xbenchmark.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xbenchmark-xbenchmark.obj -MD -MP -MF "$(DEPDIR)/xbenchmark-xbenchmark.Tpo" -c -o xbenchmark-xbenchmark.obj `if test -f 'xbenchmark.c'; then $(CYGPATH_W) 'xbenchmark.c'; else $(CYGPATH_W) '$(srcdir)/xbenchmark.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xbenchmark-xbenchmark.Tpo" "$(DEPDIR)/xbenchmark-xbenchmark.Po"; else rm -f "$(DEPDIR)/xbenchmark-xbenchmark.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='xbenchmark.c' object='xbenchmark-xbenchmark.obj' libtool=no @AMDEPBACKSLASH@
+wbenchmark-mtrie.obj: utils/mtrie.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-mtrie.obj -MD -MP -MF "$(DEPDIR)/wbenchmark-mtrie.Tpo" -c -o wbenchmark-mtrie.obj `if test -f 'utils/mtrie.c'; then $(CYGPATH_W) 'utils/mtrie.c'; else $(CYGPATH_W) '$(srcdir)/utils/mtrie.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/wbenchmark-mtrie.Tpo" "$(DEPDIR)/wbenchmark-mtrie.Po"; else rm -f "$(DEPDIR)/wbenchmark-mtrie.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/mtrie.c' object='wbenchmark-mtrie.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xbenchmark-xbenchmark.obj `if test -f 'xbenchmark.c'; then $(CYGPATH_W) 'xbenchmark.c'; else $(CYGPATH_W) '$(srcdir)/xbenchmark.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-mtrie.obj `if test -f 'utils/mtrie.c'; then $(CYGPATH_W) 'utils/mtrie.c'; else $(CYGPATH_W) '$(srcdir)/utils/mtrie.c'; fi`
 
-xbenchmark-http.o: http.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xbenchmark-http.o -MD -MP -MF "$(DEPDIR)/xbenchmark-http.Tpo" -c -o xbenchmark-http.o `test -f 'http.c' || echo '$(srcdir)/'`http.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xbenchmark-http.Tpo" "$(DEPDIR)/xbenchmark-http.Po"; else rm -f "$(DEPDIR)/xbenchmark-http.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='http.c' object='xbenchmark-http.o' libtool=no @AMDEPBACKSLASH@
+wbenchmark-logger.o: utils/logger.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-logger.o -MD -MP -MF "$(DEPDIR)/wbenchmark-logger.Tpo" -c -o wbenchmark-logger.o `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/wbenchmark-logger.Tpo" "$(DEPDIR)/wbenchmark-logger.Po"; else rm -f "$(DEPDIR)/wbenchmark-logger.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='wbenchmark-logger.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xbenchmark-http.o `test -f 'http.c' || echo '$(srcdir)/'`http.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-logger.o `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c
 
-xbenchmark-http.obj: http.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xbenchmark-http.obj -MD -MP -MF "$(DEPDIR)/xbenchmark-http.Tpo" -c -o xbenchmark-http.obj `if test -f 'http.c'; then $(CYGPATH_W) 'http.c'; else $(CYGPATH_W) '$(srcdir)/http.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xbenchmark-http.Tpo" "$(DEPDIR)/xbenchmark-http.Po"; else rm -f "$(DEPDIR)/xbenchmark-http.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='http.c' object='xbenchmark-http.obj' libtool=no @AMDEPBACKSLASH@
+wbenchmark-logger.obj: utils/logger.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-logger.obj -MD -MP -MF "$(DEPDIR)/wbenchmark-logger.Tpo" -c -o wbenchmark-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/wbenchmark-logger.Tpo" "$(DEPDIR)/wbenchmark-logger.Po"; else rm -f "$(DEPDIR)/wbenchmark-logger.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='wbenchmark-logger.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xbenchmark-http.obj `if test -f 'http.c'; then $(CYGPATH_W) 'http.c'; else $(CYGPATH_W) '$(srcdir)/http.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`
+
+wbenchmark-xmm.o: utils/xmm.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-xmm.o -MD -MP -MF "$(DEPDIR)/wbenchmark-xmm.Tpo" -c -o wbenchmark-xmm.o `test -f 'utils/xmm.c' || echo '$(srcdir)/'`utils/xmm.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/wbenchmark-xmm.Tpo" "$(DEPDIR)/wbenchmark-xmm.Po"; else rm -f "$(DEPDIR)/wbenchmark-xmm.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/xmm.c' object='wbenchmark-xmm.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-xmm.o `test -f 'utils/xmm.c' || echo '$(srcdir)/'`utils/xmm.c
+
+wbenchmark-xmm.obj: utils/xmm.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-xmm.obj -MD -MP -MF "$(DEPDIR)/wbenchmark-xmm.Tpo" -c -o wbenchmark-xmm.obj `if test -f 'utils/xmm.c'; then $(CYGPATH_W) 'utils/xmm.c'; else $(CYGPATH_W) '$(srcdir)/utils/xmm.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/wbenchmark-xmm.Tpo" "$(DEPDIR)/wbenchmark-xmm.Po"; else rm -f "$(DEPDIR)/wbenchmark-xmm.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/xmm.c' object='wbenchmark-xmm.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o wbenchmark-xmm.obj `if test -f 'utils/xmm.c'; then $(CYGPATH_W) 'utils/xmm.c'; else $(CYGPATH_W) '$(srcdir)/utils/xmm.c'; fi`
 
 xhttpd-xhttpd.o: xhttpd.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-xhttpd.o -MD -MP -MF "$(DEPDIR)/xhttpd-xhttpd.Tpo" -c -o xhttpd-xhttpd.o `test -f 'xhttpd.c' || echo '$(srcdir)/'`xhttpd.c; \
@@ -661,19 +672,19 @@ xhttpd-iniparser.obj: iniparser.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-iniparser.obj `if test -f 'iniparser.c'; then $(CYGPATH_W) 'iniparser.c'; else $(CYGPATH_W) '$(srcdir)/iniparser.c'; fi`
 
-xhttpd-trie.o: utils/trie.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-trie.o -MD -MP -MF "$(DEPDIR)/xhttpd-trie.Tpo" -c -o xhttpd-trie.o `test -f 'utils/trie.c' || echo '$(srcdir)/'`utils/trie.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xhttpd-trie.Tpo" "$(DEPDIR)/xhttpd-trie.Po"; else rm -f "$(DEPDIR)/xhttpd-trie.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/trie.c' object='xhttpd-trie.o' libtool=no @AMDEPBACKSLASH@
+xhttpd-mtrie.o: utils/mtrie.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-mtrie.o -MD -MP -MF "$(DEPDIR)/xhttpd-mtrie.Tpo" -c -o xhttpd-mtrie.o `test -f 'utils/mtrie.c' || echo '$(srcdir)/'`utils/mtrie.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xhttpd-mtrie.Tpo" "$(DEPDIR)/xhttpd-mtrie.Po"; else rm -f "$(DEPDIR)/xhttpd-mtrie.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/mtrie.c' object='xhttpd-mtrie.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-trie.o `test -f 'utils/trie.c' || echo '$(srcdir)/'`utils/trie.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-mtrie.o `test -f 'utils/mtrie.c' || echo '$(srcdir)/'`utils/mtrie.c
 
-xhttpd-trie.obj: utils/trie.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-trie.obj -MD -MP -MF "$(DEPDIR)/xhttpd-trie.Tpo" -c -o xhttpd-trie.obj `if test -f 'utils/trie.c'; then $(CYGPATH_W) 'utils/trie.c'; else $(CYGPATH_W) '$(srcdir)/utils/trie.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xhttpd-trie.Tpo" "$(DEPDIR)/xhttpd-trie.Po"; else rm -f "$(DEPDIR)/xhttpd-trie.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/trie.c' object='xhttpd-trie.obj' libtool=no @AMDEPBACKSLASH@
+xhttpd-mtrie.obj: utils/mtrie.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-mtrie.obj -MD -MP -MF "$(DEPDIR)/xhttpd-mtrie.Tpo" -c -o xhttpd-mtrie.obj `if test -f 'utils/mtrie.c'; then $(CYGPATH_W) 'utils/mtrie.c'; else $(CYGPATH_W) '$(srcdir)/utils/mtrie.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xhttpd-mtrie.Tpo" "$(DEPDIR)/xhttpd-mtrie.Po"; else rm -f "$(DEPDIR)/xhttpd-mtrie.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/mtrie.c' object='xhttpd-mtrie.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-trie.obj `if test -f 'utils/trie.c'; then $(CYGPATH_W) 'utils/trie.c'; else $(CYGPATH_W) '$(srcdir)/utils/trie.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-mtrie.obj `if test -f 'utils/mtrie.c'; then $(CYGPATH_W) 'utils/mtrie.c'; else $(CYGPATH_W) '$(srcdir)/utils/mtrie.c'; fi`
 
 xhttpd-stime.o: utils/stime.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-stime.o -MD -MP -MF "$(DEPDIR)/xhttpd-stime.Tpo" -c -o xhttpd-stime.o `test -f 'utils/stime.c' || echo '$(srcdir)/'`utils/stime.c; \
@@ -688,6 +699,34 @@ xhttpd-stime.obj: utils/stime.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/stime.c' object='xhttpd-stime.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-stime.obj `if test -f 'utils/stime.c'; then $(CYGPATH_W) 'utils/stime.c'; else $(CYGPATH_W) '$(srcdir)/utils/stime.c'; fi`
+
+xhttpd-logger.o: utils/logger.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-logger.o -MD -MP -MF "$(DEPDIR)/xhttpd-logger.Tpo" -c -o xhttpd-logger.o `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xhttpd-logger.Tpo" "$(DEPDIR)/xhttpd-logger.Po"; else rm -f "$(DEPDIR)/xhttpd-logger.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='xhttpd-logger.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-logger.o `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c
+
+xhttpd-logger.obj: utils/logger.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-logger.obj -MD -MP -MF "$(DEPDIR)/xhttpd-logger.Tpo" -c -o xhttpd-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xhttpd-logger.Tpo" "$(DEPDIR)/xhttpd-logger.Po"; else rm -f "$(DEPDIR)/xhttpd-logger.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='xhttpd-logger.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`
+
+xhttpd-xmm.o: utils/xmm.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-xmm.o -MD -MP -MF "$(DEPDIR)/xhttpd-xmm.Tpo" -c -o xhttpd-xmm.o `test -f 'utils/xmm.c' || echo '$(srcdir)/'`utils/xmm.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xhttpd-xmm.Tpo" "$(DEPDIR)/xhttpd-xmm.Po"; else rm -f "$(DEPDIR)/xhttpd-xmm.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/xmm.c' object='xhttpd-xmm.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-xmm.o `test -f 'utils/xmm.c' || echo '$(srcdir)/'`utils/xmm.c
+
+xhttpd-xmm.obj: utils/xmm.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xhttpd-xmm.obj -MD -MP -MF "$(DEPDIR)/xhttpd-xmm.Tpo" -c -o xhttpd-xmm.obj `if test -f 'utils/xmm.c'; then $(CYGPATH_W) 'utils/xmm.c'; else $(CYGPATH_W) '$(srcdir)/utils/xmm.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/xhttpd-xmm.Tpo" "$(DEPDIR)/xhttpd-xmm.Po"; else rm -f "$(DEPDIR)/xhttpd-xmm.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/xmm.c' object='xhttpd-xmm.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(xhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xhttpd-xmm.obj `if test -f 'utils/xmm.c'; then $(CYGPATH_W) 'utils/xmm.c'; else $(CYGPATH_W) '$(srcdir)/utils/xmm.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

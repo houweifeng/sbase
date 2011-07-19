@@ -5,6 +5,7 @@ typedef struct _MIME_MAP
 {
     void *map;
     int num;
+    int bits;
 }MIME_MAP;
 /* initialize mime */
 int mime_map_init(MIME_MAP *mime_map);
