@@ -53,16 +53,16 @@ int logger_mkdir(char *path)
 void logger_rotate_check(LOGGER *logger)
 {
     char line[LOGGER_LINE_SIZE];
-    time_t timep = 0 , x = 0;
     struct tm *ptm = NULL;
     struct stat st = {0};
+    time_t x = 0;
 
 
     if(logger)
     {
         gettimeofday(&(logger->tv), NULL);
-        time(&timep);
-        ptm = logger->ptm = localtime(&timep);
+        time(&(logger->timep));
+        ptm = logger->ptm = localtime(&(logger->timep));
         if(logger->rflag == LOG_ROTATE_HOUR)
         {
             x = ((1900+ptm->tm_year) * 1000000)
@@ -97,7 +97,7 @@ void logger_rotate_check(LOGGER *logger)
         {
             if(logger->fd > 0)
             {
-                if(fstat(logger->fd, &st) == 0 && st.st_size > ROTATE_LOG_SIZE)
+                if(fstat(logger->fd, &st) == 0 && st.st_size > (off_t)ROTATE_LOG_SIZE)
                     x = ++(logger->total);
                 else 
                     x = 0;
@@ -105,15 +105,15 @@ void logger_rotate_check(LOGGER *logger)
             else
             {
                 while(sprintf(line, "%s.%u", logger->file, logger->total) > 0
-                        && lstat(line, &st) == 0 && st.st_size > ROTATE_LOG_SIZE)
-                    x = ++(logger->total);
+                        && lstat(line, &st) == 0 && st.st_size > (off_t)ROTATE_LOG_SIZE)
+                     ++(logger->total);
                 if(logger->total == 0) ++(logger->total);
                 x = logger->total;
             }
         }
         if(x > 0)
         {
-            if(logger->fd > 0){close(logger->fd);}
+            if(logger->fd > 0){close(logger->fd);logger->fd = -1;}
             sprintf(line, "%s.%u", logger->file, (unsigned int)x);
             logger->fd = open(line, O_CREAT|O_WRONLY|O_APPEND, 0644);
         }
@@ -141,7 +141,7 @@ int logger_header(LOGGER *logger, char *buf, int level, char *_file_, int _line_
     char *s = NULL;
     int n = 0;
 
-    if((s = buf))
+    if(logger && (s = buf) && _file_ && level < __LEVEL__)
     {
 
         s += sprintf(s,"[%02d/%s/%04d:%02d:%02d:%02d +%06u] ", PTM(logger)->tm_mday, 

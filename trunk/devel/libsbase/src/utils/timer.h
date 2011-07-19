@@ -19,13 +19,13 @@ typedef struct _TIMER
 	struct timeval tv;
 	time_t start_sec;
 	time_t sec_used;
-	time_t  last_sec;
+	time_t last_sec;
 	time_t last_sec_used;
-	long long start_usec;
-	long long usec_used;
-	long long last_usec;
-    long long last_usec_used;
-    long long now;
+	off_t  start_usec;
+	off_t  usec_used;
+	off_t  last_usec;
+    off_t  last_usec_used;
+    off_t  now;
 	MUTEX *mutex;
 }TIMER;
 #define PT(ptr) ((TIMER *)ptr)
