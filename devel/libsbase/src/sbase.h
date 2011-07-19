@@ -15,7 +15,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#pragma pack(4)
 #define SB_CONN_MAX             65536
 #define SB_GROUP_CONN_MAX       1024
 #define SB_IP_MAX               16

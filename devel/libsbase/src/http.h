@@ -15,10 +15,10 @@
 #define HTTP_INDEXES_MAX   	    1048576
 #define HTTP_URL_PATH_MAX  	    1024
 #define HTTP_PATH_MAX      	    1024
-#define HTTP_BUF_SIZE      	    65536
+#define HTTP_BUF_SIZE      	    8192
 #define HTTP_ARGV_LINE_MAX 	    10240
 #define HTTP_HEAD_MAX 	        4096
-#define HTTP_COOKIES_MAX   	    32
+#define HTTP_COOKIES_MAX   	    64
 #define HTTP_ARGVS_MAX     	    1024
 #define HTTP_BUFFER_SIZE   	    65536
 #define HTTP_HEADER_MAX    	    65536
@@ -511,10 +511,10 @@ static const char *ftypes[] = {
 */
 typedef struct _HTTP_KV
 {
-    int nk;
-    int nv;
-    int k;
-    int v;
+    unsigned short nk;
+    unsigned short nv;
+    unsigned short k;
+    unsigned short v;
 }HTTP_KV;
 typedef struct _HTTP_RESPONSE
 {
@@ -537,12 +537,12 @@ typedef struct _HTTP_REQ
     int header_size;
     int nhline;
     int  headers[HTTP_HEADER_NUM];
-    char hlines[HTTP_HEADER_MAX];
-    char path[HTTP_URL_PATH_MAX];
-    char line[HTTP_ARGV_LINE_MAX];
+    HTTP_KV auth;
     HTTP_KV argvs[HTTP_ARGVS_MAX];
     HTTP_KV cookies[HTTP_COOKIES_MAX];
-    HTTP_KV auth;
+    char path[HTTP_URL_PATH_MAX];
+    char hlines[HTTP_HEADER_MAX];
+    char line[HTTP_ARGV_LINE_MAX];
 }HTTP_REQ;
 /* HTTP request HEADER parser */
 int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map);

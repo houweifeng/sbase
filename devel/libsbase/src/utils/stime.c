@@ -10,8 +10,8 @@ static char *_ymonths_[]= {"Jan", "Feb", "Mar","Apr", "May", "Jun",
 //convert str datetime to time
 time_t str2time(char *datestr)
 {
-    struct tm tp = {0};
     char month[16], wday[16];
+    struct tm tp = {0};
     int i = 0, day = -1, mon = -1;
     time_t time = 0;
     //Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 822, updated by RFC 1123
@@ -60,20 +60,26 @@ time_t str2time(char *datestr)
 int GMTstrdate(time_t times, char *date)
 {
     struct tm *tp = NULL;
-    time_t timep;
+    time_t timep = 0;
     int n = 0;
 
     if(date)
     {
-        if(times > 0) tp = gmtime(&times);
+        if(times > 0) 
+        {
+            tp = gmtime(&times);
+        }
         else
         {
             time(&timep);
             tp = gmtime(&timep);
         }
-        n = sprintf(date, "%s, %02d %s %d %02d:%02d:%02d GMT", _wdays_[tp->tm_wday],
-                tp->tm_mday, _ymonths_[tp->tm_mon], 1900+tp->tm_year, tp->tm_hour,
-                tp->tm_min, tp->tm_sec);
+        if(tp)
+        {
+            n = sprintf(date, "%s, %02d %s %d %02d:%02d:%02d GMT", _wdays_[tp->tm_wday],
+                    tp->tm_mday, _ymonths_[tp->tm_mon], 1900+tp->tm_year, tp->tm_hour,
+                    tp->tm_min, tp->tm_sec);
+        }
     }
     return n;
 }
@@ -93,8 +99,11 @@ int strdate(time_t times, char *date)
             time(&timep);
             tp = gmtime(&timep);
         }
-        n = sprintf(date, "%04d-%02d-%02d %02d:%02d:%02d", 1900+tp->tm_year, 
-		tp->tm_mon+1, tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);
+        if(tp)
+        {
+            n = sprintf(date, "%04d-%02d-%02d %02d:%02d:%02d", 1900+tp->tm_year, 
+                    tp->tm_mon+1, tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);
+        }
     }
     return n;
 }

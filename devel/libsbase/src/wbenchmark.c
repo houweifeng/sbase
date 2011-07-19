@@ -185,6 +185,7 @@ int http_over(CONN *conn, int respcode)
                 if(respcode != 0 && respcode != 200)nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 {
+                    fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
                     if(ncurrent > 0)--ncurrent;
                 }
             }
@@ -324,6 +325,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
             WARN_LOGGER(logger, "timeout on conn[%s:%d] via %d status:%d", conn->local_ip, conn->local_port, conn->fd, conn->status);
         }
         ntimeouts++;
+        conn->over_estate(conn);
         conn->over_timeout(conn);
         conn->close(conn);
         return http_over(conn, 0);
