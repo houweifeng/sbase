@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include "trie.h"
+#include "mtrie.h"
 #include "mime.h"
 
 /* doc_type_add */
@@ -15,8 +15,7 @@ int mime_add(MIME_MAP *mime_map, char *mime, int len)
     if(mime_map && mime)
     {
         id = mime_map->num;
-        dp = (void *)((long)++(mime_map->num));
-        TRIETAB_ADD(mime_map->map, mime, len, dp);
+        mtrie_add(mime_map->map, mime, len, ++(mime_map->num));
     }
     return id;
 }
@@ -49,12 +48,10 @@ int mime_add_line(MIME_MAP *mime_map, char *p, char *end)
 int mime_id(MIME_MAP *mime_map, char *mime, int len)
 {
     int id = -1;
-    void *dp = NULL;
 
     if(mime_map && mime)
     {
-        TRIETAB_GET(mime_map->map, mime, len, dp);
-        id = (long) dp - 1;
+        id = mtrie_get(mime_map->map, mime, len) - 1;
     }
     return id;
 }
@@ -64,7 +61,7 @@ int mime_map_init(MIME_MAP *mime_map)
 {
     if(mime_map && mime_map->map == NULL)
     {
-        TRIETAB_INIT(mime_map->map);
+        mime_map->map = mtrie_init();
         return 0;
     }
     return -1;
@@ -75,7 +72,7 @@ void mime_map_clean(MIME_MAP *mime_map)
 {
     if(mime_map)
     {
-        TRIETAB_CLEAN(mime_map->map);
+        mtrie_clean(mime_map->map);
     }
 }
 #ifdef _DEBUG_MIME

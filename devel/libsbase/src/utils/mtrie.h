@@ -36,58 +36,58 @@ typedef struct _MTRIE
     MTRSTATE    *state;
     MTRNODE     *nodes;
     void        *map;
-    void        *oldmap;
-    off_t       size;
-    off_t       file_size;
+    void        *old_map;
     void        *mutex;
+    off_t       map_size;
+    off_t       size;
 
-    int  (*add)(struct _MTRIE *, char *key, int nkey, int data);
-    int  (*xadd)(struct _MTRIE *, char *key, int nkey);
-    int  (*get)(struct _MTRIE *, char *key, int nkey);
-    int  (*del)(struct _MTRIE *, char *key, int nkey);
-    int  (*find)(struct _MTRIE *, char *key, int nkey, int *len);
-    int  (*maxfind)(struct _MTRIE *, char *key, int nkey, int *len);
-    int  (*radd)(struct _MTRIE *, char *key, int nkey, int data);
-    int  (*rxadd)(struct _MTRIE *, char *key, int nkey);
-    int  (*rget)(struct _MTRIE *, char *key, int nkey);
-    int  (*rdel)(struct _MTRIE *, char *key, int nkey);
-    int  (*rfind)(struct _MTRIE *, char *key, int nkey, int *len);
-    int  (*rmaxfind)(struct _MTRIE *, char *key, int nkey, int *len);
-    int  (*import)(struct _MTRIE *, char *dictfile, int direction);
-    void (*clean)(struct _MTRIE *);
+    int  (*add)(void *, char *key, int nkey, int data);
+    int  (*xadd)(void *, char *key, int nkey);
+    int  (*get)(void *, char *key, int nkey);
+    int  (*del)(void *, char *key, int nkey);
+    int  (*find)(void *, char *key, int nkey, int *len);
+    int  (*maxfind)(void *, char *key, int nkey, int *len);
+    int  (*radd)(void *, char *key, int nkey, int data);
+    int  (*rxadd)(void *, char *key, int nkey);
+    int  (*rget)(void *, char *key, int nkey);
+    int  (*rdel)(void *, char *key, int nkey);
+    int  (*rfind)(void *, char *key, int nkey, int *len);
+    int  (*rmaxfind)(void *, char *key, int nkey, int *len);
+    int  (*import)(void *, char *dictfile, int direction);
+    void (*clean)(void *);
 }MTRIE;
 /* initialize */
-MTRIE   *mtrie_init(char *file);
+MTRIE   *mtrie_init();
 /* add */
-int   mtrie_add(struct _MTRIE *, char *key, int nkey, int data);
+int   mtrie_add(void *, char *key, int nkey, int data);
 /* add return auto_increment_id */
-int   mtrie_xadd(struct _MTRIE *, char *key, int nkey);
+int   mtrie_xadd(void *, char *key, int nkey);
 /* get */
-int   mtrie_get(struct _MTRIE *, char *key, int nkey);
+int   mtrie_get(void *, char *key, int nkey);
 /* delete */
-int   mtrie_del(struct _MTRIE *, char *key, int nkey);
+int   mtrie_del(void *, char *key, int nkey);
 /* find/min */
-int   mtrie_find(struct _MTRIE *, char *key, int nkey, int *len);
+int   mtrie_find(void *, char *key, int nkey, int *len);
 /* find/max */
-int   mtrie_maxfind(struct _MTRIE *, char *key, int nkey, int *len);
+int   mtrie_maxfind(void *, char *key, int nkey, int *len);
 /* add/reverse */
-int   mtrie_radd(struct _MTRIE *, char *key, int nkey, int data);
+int   mtrie_radd(void *, char *key, int nkey, int data);
 /* add/reverse return auto_increment_id */
-int   mtrie_rxadd(struct _MTRIE *, char *key, int nkey);
+int   mtrie_rxadd(void *, char *key, int nkey);
 /* get/reverse */
-int   mtrie_rget(struct _MTRIE *, char *key, int nkey);
+int   mtrie_rget(void *, char *key, int nkey);
 /* del/reverse */
-int   mtrie_rdel(struct _MTRIE *, char *key, int nkey);
+int   mtrie_rdel(void *, char *key, int nkey);
 /* find/min/reverse */
-int   mtrie_rfind(struct _MTRIE *, char *key, int nkey, int *len);
+int   mtrie_rfind(void *, char *key, int nkey, int *len);
 /* find/max/reverse */
-int   mtrie_rmaxfind(struct _MTRIE *, char *key, int nkey, int *len);
+int   mtrie_rmaxfind(void *, char *key, int nkey, int *len);
 /* import dict if direction value is -1, add word reverse */
-int   mtrie_import(struct _MTRIE *, char *dictfile, int direction);
+int   mtrie_import(void *, char *dictfile, int direction);
 /* destroy */
-void mtrie_destroy(struct _MTRIE *);
+void mtrie_destroy(void *);
 /* clean/reverse */
-void  mtrie_clean(struct _MTRIE *);
+void  mtrie_clean(void *);
 #define MTR(x) ((MTRIE *)x)
 #ifdef __cplusplus
      }

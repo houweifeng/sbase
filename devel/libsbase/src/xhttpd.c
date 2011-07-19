@@ -18,7 +18,7 @@
 #include "iniparser.h"
 #include "http.h"
 #include "mime.h"
-#include "trie.h"
+#include "mtrie.h"
 #include "stime.h"
 #include "logger.h"
 #include "queue.h"
@@ -575,7 +575,6 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     off_t from = 0, to = 0, len = 0;
     HTTP_REQ http_req = {0};
     struct stat st = {0};
-    void *dp = NULL;
 
     if(conn && packet)
     {
@@ -600,8 +599,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 while(*p != ':' && *p != '\0')++p;
                 *p = '\0';
                 n = p - host;
-                TRIETAB_GET(namemap, host, n, dp);
-                if((i = ((long)dp - 1)) >= 0) home = httpd_vhosts[i].home;
+                if((i = mtrie_get(namemap, host, n) - 1) >= 0) 
+                    home = httpd_vhosts[i].home;
             }
             if(home == NULL) home = httpd_home;
             if(home == NULL) goto err;
@@ -696,8 +695,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     //mime 
                     if(mime && nmime > 0)
                     {
-                        TRIETAB_GET(namemap, mime, nmime, dp);
-                        if((mimeid = ((long)dp - 1)) >= 0 
+                        if((mimeid = mtrie_get(namemap, mime, nmime) - 1) >= 0
                                 && (n = http_req.headers[HEAD_REQ_ACCEPT_ENCODING]) > 0 
                                 && strstr(http_mime_types[mimeid].s, "text"))
                         {
@@ -845,7 +843,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
     char line[HTTP_HEAD_MAX], *s = NULL, *p = NULL, 
          *cacert_file = NULL, *privkey_file = NULL;
     int n = 0, i = 0;
-    void *dp = NULL;
 
     if((dict = iniparser_new(conf)) == NULL)
     {
@@ -917,8 +914,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
         httpd->privkey_file = privkey_file;
     }
     //httpd home
-    TRIETAB_INIT(http_headers_map);
-    if(http_headers_map)
+    if((http_headers_map = mtrie_init()))
     {
         for(i = 0; i < HTTP_HEADER_NUM; i++)
         {
@@ -933,9 +929,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
                 else *s++ = *p++;
             }
             *s = '\0';
-            dp = (void *)((long)(i + 1));
             s = line;
-            TRIETAB_ADD(http_headers_map, s, http_headers[i].elen, dp);
+            mtrie_add(http_headers_map, s, http_headers[i].elen, i+1);
         }
     }
     if((p = iniparser_getstr(dict, "XHTTPD:httpd_home")))
@@ -971,15 +966,13 @@ int sbase_initialize(SBASE *sbase, char *conf)
         }
     }
     //name map
-    TRIETAB_INIT(namemap);
-    if(namemap)
+    if((namemap = mtrie_init()))
     {
         for(i = 0; i < HTTP_MIME_NUM; i++)
         {
-            dp = (void *)((long)(i + 1));
             p = http_mime_types[i].e;
             n = http_mime_types[i].elen;
-            TRIETAB_ADD(namemap, p, n, dp);
+            mtrie_add(namemap, p, n, i+1);
         }
         if((p = iniparser_getstr(dict, "XHTTPD:httpd_vhosts")))
         {
@@ -995,8 +988,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
                 *p = '\0';
                 if((n = (p - httpd_vhosts[nvhosts].name)) > 0)
                 {
-                    dp = (void *)((long)(nvhosts + 1));
-                    TRIETAB_ADD(namemap, httpd_vhosts[nvhosts].name, n, dp);
+                    mtrie_add(namemap, httpd_vhosts[nvhosts].name, n, nvhosts + 1);
                 }
                 ++p;
                 while(*p == 0x20 || *p == '\t' || *p == ',' || *p == ';')++p;
@@ -1008,8 +1000,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
         }
     }
     //host map
-    TRIETAB_INIT(hostmap);
-    TRIETAB_INIT(urlmap);
+    hostmap = mtrie_init();
+    urlmap = mtrie_init();
     if((p = iniparser_getstr(dict, "XHTTPD:access_log")))
     {
         LOGGER_INIT(logger, p);
@@ -1108,10 +1100,10 @@ int main(int argc, char **argv)
     sbase->running(sbase, 0);
     //sbase->running(sbase, 300000000);sbase->stop(sbase);
     sbase->clean(sbase);
-    if(namemap) TRIETAB_CLEAN(namemap);
-    if(hostmap) TRIETAB_CLEAN(hostmap);
-    if(urlmap) TRIETAB_CLEAN(urlmap);
-    if(http_headers_map) TRIETAB_CLEAN(http_headers_map);
+    if(namemap) mtrie_clean(namemap);
+    if(hostmap) mtrie_clean(hostmap);
+    if(urlmap) mtrie_clean(urlmap);
+    if(http_headers_map) mtrie_clean(http_headers_map);
     LOGGER_CLEAN(logger);
     if(dict)iniparser_free(dict);
     return 0;

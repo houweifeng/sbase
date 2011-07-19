@@ -28,16 +28,17 @@ typedef struct _TIMER
     off_t  now;
 	MUTEX *mutex;
 }TIMER;
+#define PTLL(xxxxx) ((long long int)xxxxx)
 #define PT(ptr) ((TIMER *)ptr)
-#define PT_SEC_U(ptr) ((PT(ptr))?PT(ptr)->sec_used:0)
-#define PT_USEC_U(ptr) ((PT(ptr))?PT(ptr)->usec_used:0)
-#define PT_L_SEC(ptr) ((PT(ptr))?PT(ptr)->last_sec:0)
-#define PT_LU_SEC(ptr) ((PT(ptr))?PT(ptr)->last_sec_used:0)
-#define PT_L_USEC(ptr) ((PT(ptr))?PT(ptr)->last_usec:0)
-#define PT_LU_USEC(ptr) ((PT(ptr))?PT(ptr)->last_usec_used:0)
-#define PT_NOW(ptr) (PT(ptr)->now)
+#define PT_SEC_U(ptr) ((PT(ptr))?PTLL(PT(ptr)->sec_used):0ll)
+#define PT_USEC_U(ptr) ((PT(ptr))?PTLL(PT(ptr)->usec_used):0ll)
+#define PT_L_SEC(ptr) ((PT(ptr))?PTLL(PT(ptr)->last_sec):0ll)
+#define PT_LU_SEC(ptr) ((PT(ptr))?PTLL(PT(ptr)->last_sec_used):0ll)
+#define PT_L_USEC(ptr) ((PT(ptr))?PTLL(PT(ptr)->last_usec):0ll)
+#define PT_LU_USEC(ptr) ((PT(ptr))?PTLL(PT(ptr)->last_usec_used):0ll)
+#define PT_NOW(ptr) (PTLL(PT(ptr)->now))
 #define TIMER_NOW(ptr) ((ptr && gettimeofday(&(PT(ptr)->tv), NULL) == 0)?                   \
-        (PT_NOW(ptr) = PT(ptr)->tv.tv_sec * 1000000ll + PT(ptr)->tv.tv_usec * 1ll) : -1)
+        (PT_NOW(ptr) = PTLL(PT(ptr)->tv.tv_sec) * 1000000ll + PTLL(PT(ptr)->tv.tv_usec) * 1ll) : -1)
 #define TIMER_INIT(ptr)                                                         \
 do{                                                                             \
     if((ptr = (calloc(1, sizeof(TIMER)))))                                      \

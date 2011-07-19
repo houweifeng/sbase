@@ -127,12 +127,13 @@ do                                                                              
 
         //memset(&(x->nodes[pos]), 0, sizeof(MTRNODE) * num);                                
 /* add */
-int mtrie_add(MTRIE *mtrie, char *key, int nkey, int data)
+int mtrie_add(void *mtr, char *key, int nkey, int data)
 {
     int ret = -1, x = 0, i = 0,j = 0, k = 0, n = 0, pos = 0, 
         z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
     MTRNODE *nodes = NULL, *childs = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
 
     if(mtrie && key && nkey > 0)
     {
@@ -250,12 +251,13 @@ end:
 }
 
 /* add /return auto increment id*/
-int mtrie_xadd(MTRIE *mtrie, char *key, int nkey)
+int mtrie_xadd(void *mtr, char *key, int nkey)
 {
     int ret = -1, x = 0, i = 0,j = 0, k = 0, n = 0, pos = 0, 
         z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
     MTRNODE *nodes = NULL, *childs = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
 
     if(mtrie && key && nkey > 0)
     {
@@ -376,10 +378,11 @@ end:
 }
 
 /* get */
-int  mtrie_get(MTRIE *mtrie, char *key, int nkey)
+int  mtrie_get(void *mtr, char *key, int nkey)
 {
     int ret = 0, x = 0, i = 0, z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
     MTRNODE *nodes = NULL;
 
     if(mtrie && key && nkey > 0)
@@ -434,10 +437,11 @@ end:
 }
 
 /* delete */
-int  mtrie_del(MTRIE *mtrie, char *key, int nkey)
+int  mtrie_del(void *mtr, char *key, int nkey)
 {
     int ret = 0, x = 0, i = 0, z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
     MTRNODE *nodes = NULL;
 
     if(mtrie && key && nkey > 0)
@@ -497,10 +501,11 @@ end:
 }
 
 /* find/min */
-int  mtrie_find(MTRIE *mtrie, char *key, int nkey, int *to)
+int  mtrie_find(void *mtr, char *key, int nkey, int *to)
 {
     int ret = 0, x = 0, i = 0, z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
     MTRNODE *nodes = NULL;
 
     if(mtrie && key && nkey > 0)
@@ -553,10 +558,11 @@ end:
 }
 
 /* find/max */
-int   mtrie_maxfind(MTRIE *mtrie, char *key, int nkey, int *to)
+int   mtrie_maxfind(void *mtr, char *key, int nkey, int *to)
 {
     int ret = 0, x = 0, i = 0, z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
     MTRNODE *nodes = NULL;
 
     if(mtrie && key && nkey > 0)
@@ -611,12 +617,13 @@ end:
     return ret;
 }
 /* add/reverse */
-int   mtrie_radd(MTRIE *mtrie, char *key, int nkey, int data)
+int   mtrie_radd(void *mtr, char *key, int nkey, int data)
 {
     int ret = -1, x = 0, i = 0, k = 0, j = 0, n = 0, pos = 0, 
         z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
     MTRNODE *nodes = NULL, *childs = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
 
     if(mtrie && key && nkey > 0)
     {
@@ -725,12 +732,13 @@ end:
 }
 
 /* add/reverse /return auto increment id */
-int   mtrie_rxadd(MTRIE *mtrie, char *key, int nkey)
+int   mtrie_rxadd(void *mtr, char *key, int nkey)
 {
     int ret = -1, x = 0, i = 0,j = 0, k = 0, n = 0, pos = 0, 
         z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
     MTRNODE *nodes = NULL, *childs = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
 
     if(mtrie && key && nkey > 0)
     {
@@ -839,10 +847,11 @@ end:
 }
 
 /* get/reverse */
-int   mtrie_rget(MTRIE *mtrie, char *key, int nkey)
+int   mtrie_rget(void *mtr, char *key, int nkey)
 {
     int ret = 0, x = 0, i = 0, z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
     MTRNODE *nodes = NULL;
 
     if(mtrie && key && nkey > 0)
@@ -897,10 +906,11 @@ end:
 }
 
 /* delete/reverse */
-int   mtrie_rdel(MTRIE *mtrie, char *key, int nkey)
+int   mtrie_rdel(void *mtr, char *key, int nkey)
 {
     int ret = 0, x = 0, i = 0, z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
     MTRNODE *nodes = NULL;
 
     if(mtrie && key && nkey > 0)
@@ -959,10 +969,11 @@ end:
 }
 
 /* find/min/reverse */
-int   mtrie_rfind(MTRIE *mtrie, char *key, int nkey, int *to)
+int   mtrie_rfind(void *mtr, char *key, int nkey, int *to)
 {
     int ret = 0, x = 0, i = 0, z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
+    MTRIE *mtrie = (MTRIE *)mtr;
     MTRNODE *nodes = NULL;
 
     if(mtrie && key && nkey > 0)
@@ -1022,8 +1033,9 @@ end:
 }
 
 /* find/max/reverse */
-int   mtrie_rmaxfind(MTRIE *mtrie, char *key, int nkey, int *to)
+int   mtrie_rmaxfind(void *mtr, char *key, int nkey, int *to)
 {
+    MTRIE *mtrie = (MTRIE *)mtr;
     int ret = 0, x = 0, i = 0, z = 0, min = 0, max = 0;
     unsigned char *p = NULL, *ep = NULL;
     MTRNODE *nodes = NULL;
@@ -1081,8 +1093,9 @@ end:
 }
 
 /* import dict */
-int mtrie_import(MTRIE *mtrie, char *dictfile, int direction)
+int mtrie_import(void *mtr, char *dictfile, int direction)
 {
+    MTRIE *mtrie = (MTRIE *)mtr;
     char word[MTRIE_WORD_MAX];
     FILE *fp = NULL;
     int n = 0, id = 0;
@@ -1113,8 +1126,9 @@ int mtrie_import(MTRIE *mtrie, char *dictfile, int direction)
 }
 
 /* destroy */
-void mtrie_destroy(MTRIE *mtrie)
+void mtrie_destroy(void *mtr)
 {
+    MTRIE *mtrie = (MTRIE *)mtr;
     if(mtrie)
     {
         MUTEX_LOCK(mtrie->mutex);
@@ -1131,8 +1145,9 @@ void mtrie_destroy(MTRIE *mtrie)
 }
 
 /* clean/reverse */
-void  mtrie_clean(MTRIE *mtrie)
+void  mtrie_clean(void *mtr)
 {
+    MTRIE *mtrie = (MTRIE *)mtr;
     if(mtrie)
     {
         MUTEX_DESTROY(mtrie->mutex);

@@ -1,5 +1,5 @@
 #include "http.h"
-#include "trie.h"
+#include "mtrie.h"
 #ifdef _HTTP_CHARSET_CONVERT
 #include <iconv.h>
 #include "chardet.h"
@@ -324,10 +324,9 @@ int http_cookie_parse(char *p, char *end, HTTP_REQ *http_req)
 /* HTTP HEADER parser */
 int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
 {
-    char line[HTTP_HEAD_MAX], *s = p, *es = NULL, *ps = NULL, *xp = line, 
+    char line[HTTP_HEAD_MAX], *s = p, *es = NULL, *ps = NULL,
          *eps = NULL, *pp = NULL, *epp = NULL, *sp = NULL;
     int i  = 0, high = 0, low = 0, ret = -1, n = 0;
-    void *dp = NULL;
 
     if(p && end)
     {
@@ -379,9 +378,7 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
             }
             *es = '\0';
             n = es - line;
-            xp = line;
-            TRIETAB_GET(map, xp, n, dp);
-            if((i = ((long)dp - 1)) >= 0)
+            if((i = mtrie_get(map, line, n)) >= 0)
             {
                 http_req->headers[i] = pp - http_req->hlines;
                 ret++;
@@ -444,10 +441,9 @@ end:
 /* HTTP response parser */
 int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
 {
-    char line[HTTP_HEAD_MAX], *s = p, *xp = line, *es = NULL, *pp = NULL, *epp = NULL;
+    char line[HTTP_HEAD_MAX], *s = p, *es = NULL, *pp = NULL, *epp = NULL;
     int i  = 0, ret = -1, high = 0, low = 0, n = 0;
     HTTP_KV *cookie = NULL, *ecookie = NULL;
-    void *dp = NULL;
 
     if(p && end)
     {
@@ -484,9 +480,7 @@ int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
             }
             *es = '\0';
             n = es - line;
-            xp = line;
-            TRIETAB_GET(map, xp, n, dp);
-            if((i = ((long)dp - 1)) >= 0)
+            if((i = mtrie_get(map, line, n)) >= 0)
             {
                 http_resp->headers[i] = pp - http_resp->hlines;
                 ret++;
