@@ -275,7 +275,7 @@ int http_cookie_parse(char *p, char *end, HTTP_REQ *http_req)
         {
             high = 0;low = 0;
             if(*s == '+'){*pp++ = 0x20; ++s;}
-            else if(*s == '=')
+            else if(*s == '=' && cookie->k && !cookie->v)
             {
                 if(cookie->k > 0) cookie->nk = pp - http_req->hlines - cookie->k;
                 if(pp >= epp) break;
