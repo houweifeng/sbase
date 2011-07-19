@@ -186,7 +186,7 @@ int evkqueue_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
     if(evbase)
     {
         if(tv) {TIMEVAL_TO_TIMESPEC(tv, &ts); pts = &ts;}
-        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->allowed, pts);	
+        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->maxfd*2, pts);	
         if(n <= 0 )return n;
         for(i = 0; i < n; i++)
         {

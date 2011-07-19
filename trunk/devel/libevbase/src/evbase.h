@@ -6,7 +6,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#pragma pack(4)
 #define E_READ		0x01
 #define E_WRITE		0x02
 #define E_CLOSE		0x04
