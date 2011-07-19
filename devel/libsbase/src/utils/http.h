@@ -6,9 +6,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
-
-#ifndef _HTTP_H
-#define _HTTP_H
+#ifndef __HTTP_H__
+#define __HTTP_H__
 #define HTTP_IP_MAX 		    16
 #define HTTP_VHOST_MAX     	    256
 #define HTTP_INDEX_MAX     	    32

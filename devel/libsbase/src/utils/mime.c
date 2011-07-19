@@ -10,7 +10,6 @@
 int mime_add(MIME_MAP *mime_map, char *mime, int len)
 {
     int id = -1;
-    void *dp = NULL;
 
     if(mime_map && mime)
     {
