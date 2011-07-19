@@ -28,8 +28,8 @@
 #define HTTP_NOT_FOUND          "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
 #define HTTP_NOT_MODIFIED       "HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NO_CONTENT         "HTTP/1.1 206 No Content\r\nContent-Length: 0\r\n\r\n"
-#define HTTP_LINE_SIZE      65536
-#define HTTP_VIEW_SIZE      131072
+#define HTTP_LINE_SIZE          65536
+#define HTTP_VIEW_SIZE          1048576 
 #define LL(x) ((long long)x)
 #define UL(x) ((unsigned long int)x)
 static SBASE *sbase = NULL;
@@ -581,13 +581,13 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     {
         p = packet->data;
         end = packet->data + packet->ndata;
-        //int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n%s", x, s);conn->push_chunk(conn, buf, n); conn->over(conn); return 0;
         //fprintf(stdout, "%s", p);
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
             //fprintf(stdout, "%s::%d REQUEST:%s path:%s\n", __FILE__, __LINE__, packet->data, http_req.path);
             goto err;
         }
+        //int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n%s", x, s);conn->push_chunk(conn, buf, n); conn->over(conn); return 0;
         if(http_req.reqid == HTTP_GET)
         {
             //REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);

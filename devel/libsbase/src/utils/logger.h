@@ -16,7 +16,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define LOGGER_PATH_MAX  1024
 #ifndef _TYPEDEF_LOGGER
 #define _TYPEDEF_LOGGER
 #define LOG_ROTATE_HOUR             0x01
@@ -25,15 +24,16 @@ extern "C" {
 #define LOG_ROTATE_MONTH            0x08
 #define LOG_ROTATE_SIZE             0x10
 #define ROTATE_LOG_SIZE             268435456
-#define LOGGER_FILENAME_LIMIT  	    1024
 #define LOGGER_LINE_SIZE            1024
 #define LOGGER_LINE_LIMIT  	        1048576
+#define LOGGER_PATH_MAX             1024
 #define __REAL__		-1
 #define __DEBUG__		0
 #define	__WARN__ 		1
 #define	__ERROR__ 		2
 #define	__FATAL__ 		3
 #define	__ACCESS__ 		4
+#define __LEVEL__       5
 typedef struct _LOGGER
 {
     int rflag;
@@ -43,6 +43,7 @@ typedef struct _LOGGER
     int level;
     int bits;
     struct timeval tv;
+    time_t timep;
     time_t uptime;
     MUTEX *mutex;
     struct tm *ptm;
@@ -71,15 +72,15 @@ do                                                                              
     {                                                                                   \
         MUTEX_LOCK(PLOG(ptr)->mutex);                                                   \
         logger_rotate_check(PLOG(ptr));                                                 \
-        if(PTM(ptr))                                                                    \
+        if(PTM(ptr) && PLOG(ptr)->fd > 0)                                               \
         {                                                                               \
             PLOG(ptr)->s = PLOG(ptr)->buf;                                              \
             PLOG(ptr)->s += logger_header(PLOG(ptr), PLOG(ptr)->s,                      \
                     __level__, __FILE__, __LINE__);                                     \
             PLOG(ptr)->s += sprintf(PLOG(ptr)->s, format);                              \
             *(PLOG(ptr)->s)++ = '\n';                                                   \
-            PLOG(ptr)->n = pwrite(PLOG(ptr)->fd, PLOG(ptr)->buf,                        \
-                    PLOG(ptr)->s - PLOG(ptr)->buf, 0);                                  \
+            PLOG(ptr)->n = write(PLOG(ptr)->fd, PLOG(ptr)->buf,                         \
+                    PLOG(ptr)->s - PLOG(ptr)->buf);                                     \
         }                                                                               \
         MUTEX_UNLOCK(PLOG(ptr)->mutex);                                                 \
     }                                                                                   \
@@ -93,7 +94,7 @@ do                                                                              
 #define ERROR_LOGGER(ptr, format...) {if(ptr){LOGGER_ADD(ptr, __ERROR__, format);}}
 #define FATAL_LOGGER(ptr, format...) {if(ptr){LOGGER_ADD(ptr, __FATAL__, format);}}
 #define REALLOG(ptr, format...) {if(ptr){LOGGER_ADD(ptr, __REAL__, format);}}
-#define LOGGER_CLEAN(ptr) {if(ptr)logger_clean(PLOG(ptr));}
+#define LOGGER_CLEAN(ptr) {if(ptr){logger_clean(PLOG(ptr));}}
 #ifdef __cplusplus
  }
 #endif
