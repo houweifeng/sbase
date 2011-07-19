@@ -933,10 +933,9 @@ int conn_write_handler(CONN *conn)
 /* packet reader */
 int conn_packet_reader(CONN *conn)
 {
-    int len = -1, i = 0;
-    CB_DATA *data = NULL;
+    int packet_type = 0, len = -1;
     char *p = NULL, *e = NULL;
-    int packet_type = 0;
+    CB_DATA *data = NULL;
 
     CONN_CHECK_RET(conn, (D_STATE_CLOSE), -1);
 
@@ -982,7 +981,13 @@ int conn_packet_reader(CONN *conn)
                 && conn->session.packet_delimiter_length > 0)
         {
             p = MMB_DATA(conn->buffer);
-            e = MMB_END(conn->buffer);
+            e = MMB_END(conn->buffer);e = '\0';
+            if((p = strstr(p, conn->session.packet_delimiter)))
+            {
+                len = p + conn->session.packet_delimiter_length - MMB_DATA(conn->buffer);
+            }
+            /*
+            if(MMB_END(conn->buffer))
             while(p < e && i < conn->session.packet_delimiter_length )
             {
                 if(((char *)conn->session.packet_delimiter)[i++] != *p++) i = 0;
@@ -996,6 +1001,7 @@ int conn_packet_reader(CONN *conn)
                     break;
                 }
             }
+            */
             goto end;
         }
         return len;

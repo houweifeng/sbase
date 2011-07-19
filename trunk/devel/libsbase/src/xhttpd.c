@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -379,6 +380,29 @@ int xhttpd_bzip2(unsigned char **zstream, unsigned char *in, int inlen)
 }
 #endif
 
+int xhttpd_resp_handler(CONN *conn, CB_DATA *packet)
+{
+    char *p = NULL,  buf[4096], *s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";
+    int x = 0, n = 0, keepalive = 0;
+
+    if(conn && packet)
+    {
+        p = packet->data + packet->ndata; p = '\0';
+        if(strcasestr(packet->data, "Keep-Alive")) keepalive = 1;
+        x = strlen(s);
+        if(keepalive)
+        {
+            n = sprintf(buf, "HTTP/1.0 200 OK\r\nConnection: Keep-Alive\r\nContent-Length:%d\r\n\r\n%s", x, s);conn->push_chunk(conn, buf, n); 
+        }
+        else
+        {
+            n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n%s", x, s);conn->push_chunk(conn, buf, n); 
+
+        }
+        if(keepalive == 0) conn->over(conn); 
+    }
+    return 0;
+}
 /* httpd file compress */
 int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, char *host, int is_need_compress, int mimeid,
         char *file, char *root, off_t from, off_t to, struct stat *st)
@@ -578,15 +602,14 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
     if(conn && packet)
     {
-        p = packet->data;
-        end = packet->data + packet->ndata;
+        p = packet->data;end = packet->data + packet->ndata;*end = '\0';
         //fprintf(stdout, "%s", p);
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
             //fprintf(stdout, "%s::%d REQUEST:%s path:%s\n", __FILE__, __LINE__, packet->data, http_req.path);
             goto err;
         }
-        //int x = 0; s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n%s", x, s);conn->push_chunk(conn, buf, n); conn->over(conn); return 0;
+        //return xhttpd_resp_handler(conn, packet);
         if(http_req.reqid == HTTP_GET)
         {
             //REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
@@ -931,6 +954,26 @@ int sbase_initialize(SBASE *sbase, char *conf)
             *s = '\0';
             s = line;
             mtrie_add(http_headers_map, s, http_headers[i].elen, i+1);
+        }
+        for(i = 0; i < HTTP_METHOD_NUM; i++)
+        {
+            p = http_methods[i].e;
+            s = line;
+            while(*p != '\0')
+            {
+                if(*p >= 'A' && *p <= 'Z')
+                {
+                    *s++ = *p++ - ('A' - 'a'); 
+                }
+                else *s++ = *p++;
+            }
+            *s = '\0';
+            s = line;
+            mtrie_add(http_headers_map, s, http_methods[i].elen, i+1);
+        }
+        for(i = 0; i < HTTP_RESPONSE_NUM; i++)
+        {
+            mtrie_add(http_headers_map, response_status[i].e, response_status[i].elen, i+1);
         }
     }
     if((p = iniparser_getstr(dict, "XHTTPD:httpd_home")))
