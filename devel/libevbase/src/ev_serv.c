@@ -43,9 +43,12 @@ static const char *priv_file = "privkey.pem";
 typedef struct _CONN
 {
     int fd;
-    EVENT event;
-    char buffer[EV_BUF_SIZE];
+    int x;
+    int nout;
     int n;
+    EVENT event;
+    char out[EV_BUF_SIZE];
+    char buffer[EV_BUF_SIZE];
 #ifdef USE_SSL
     SSL *ssl;
 #endif
@@ -264,6 +267,9 @@ void ev_handler(int fd, int ev_flags, void *arg)
 #endif
             }
             /* set FD NON-BLOCK */
+            char *s = "daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
+            conns[fd].nout = sprintf(conns[fd].buffer, 
+                    "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(s), s);
             conns[rfd].n = 0;
             fcntl(rfd, F_SETFL, O_NONBLOCK);
             event_set(&(conns[rfd].event), rfd, E_READ|E_PERSIST,
@@ -297,6 +303,8 @@ void ev_handler(int fd, int ev_flags, void *arg)
                 if(strstr(conns[fd].buffer, "\r\n\r\n"))
                 {
                     SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
+                    conns[fd].x = 0;
+                    conns[fd].n = 0;
                     event_add(&conns[fd].event, E_WRITE);	
                     SHOW_LOG("Updated event[%p] on %d ", &conns[fd].event, fd);
                 }
@@ -319,15 +327,12 @@ void ev_handler(int fd, int ev_flags, void *arg)
             else
             {
                 if(strstr(conns[fd].buffer, "Keep-Alive")) keepalive = 1;
-                char *s = "daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
-                conns[fd].n = sprintf(conns[fd].buffer, 
-                        "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(s), s);
-                n = write(fd, conns[fd].buffer, conns[fd].n);
-                conns[fd].n = 0;
-                if(keepalive == 0) goto err;
+                n = write(fd, conns[fd].buffer+conns[fd].x, conns[fd].nout - conns[fd].x);
             }
             if(n > 0 )
             {
+                conns[fd].x += n;
+                if(conns[fd].x  == conns[fd].nout && keepalive == 0) goto err;
                 SHOW_LOG("Echo %d bytes to %d", n, fd);
             }
             else

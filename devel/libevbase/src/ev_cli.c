@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,9 +24,10 @@
 #ifdef HAVE_EVKQUEUE
 #define CONN_MAX 10240
 #else
-#define CONN_MAX 65536
+#define CONN_MAX 40960
 #endif
-#define EV_BUF_SIZE 65536
+#define EV_BUF_SIZE 8192
+static running_status = 0;
 static EVBASE *evbase = NULL;
 static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
@@ -150,13 +152,17 @@ int new_request()
         evbase->add(evbase, &(conns[fd].event));
         conns[fd].nresp = 0;
         if(keepalive)
-            conns[fd].nreq = sprintf(conns[fd].request, "GET / HTTP/1.0\r\nConnection: Keep-Alive\r\n");
+            conns[fd].nreq = sprintf(conns[fd].request, "GET / HTTP/1.0\r\nConnection: Keep-Alive\r\n\r\n");
         else
             conns[fd].nreq = sprintf(conns[fd].request, "GET / HTTP/1.0\r\n\r\n");
         lsa_len = sizeof(struct sockaddr);
         memset(&lsa, 0, lsa_len);
         getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
         SHOW_LOG("Connected to %s:%d via %d port:%d", ip, port, fd, ntohs(lsa.sin_port));
+    }
+    else
+    {
+        if(ncompleted >= limit) running_status = 0;
     }
     return 0;
 }
@@ -211,7 +217,7 @@ err:
 /* sock stream/TCP handler */
 void ev_handler(int fd, int ev_flags, void *arg)
 {
-    char *p = NULL, *s = NULL;
+    char *p = NULL, *s = NULL, *ks = "Content-Length:";
     int n = 0, x = 0;
 
     if(ev_flags & E_READ)
@@ -232,17 +238,20 @@ void ev_handler(int fd, int ev_flags, void *arg)
         {
             SHOW_LOG("Read %d bytes from %d", n, fd);
             conns[fd].response[conns[fd].nresp] = 0;
+            conns[fd].nresp += n;
             if(keepalive && (s = strstr(conns[fd].response, "\r\n\r\n")))
             {
+                fprintf(stdout, "%s::%d n:%d x:%d\n", __FILE__, __LINE__, n, x);
                 s += 4;
                 x = conns[fd].nresp - (s  - conns[fd].response);
-                if((p = strcasestr(conns[fd].response, "Content-Length:")))
+                if((p = strcasestr(conns[fd].response, ks)))
                 {
-                    p += strlen("Content-Length:");
+                    p += strlen(ks);
                     while(*p != 0 && *p == 0x20)++p;
                     n = atoi(p);
                 }
-                if(x == n) event_add(&(conns[fd].event), E_WRITE);
+                if(x == n)
+                    event_add(&(conns[fd].event), E_WRITE);
             }
         }	
         else
@@ -340,26 +349,30 @@ int main(int argc, char **argv)
         /* set evbase */
         if((evbase = evbase_init()))
         {
-#ifdef USE_SSL
-            SSL_library_init();
-            OpenSSL_add_all_algorithms();
-            SSL_load_error_strings();
-            if((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL)
+            if(is_use_ssl)
             {
-                ERR_print_errors_fp(stdout);
-                _exit(-1);
-            }
+#ifdef USE_SSL
+                SSL_library_init();
+                OpenSSL_add_all_algorithms();
+                SSL_load_error_strings();
+                if((ctx = SSL_CTX_new(SSLv23_client_method())) == NULL)
+                {
+                    ERR_print_errors_fp(stdout);
+                    _exit(-1);
+                }
 #endif
+            }
             for(i = 0; i < conn_num; i++)
             {
                 new_request();
                 i++;
             }
-            while(1)
+            running_status = 1;
+            do
             {
                 evbase->loop(evbase, 0, NULL);
                 //usleep(1000);
-            }
+            }while(running_status);
             for(i = 0; i < CONN_MAX; i++)
             {
                 if(conns[i].fd > 0)
