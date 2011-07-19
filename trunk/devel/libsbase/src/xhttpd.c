@@ -589,8 +589,17 @@ int xhttpd_bind_proxy(CONN *conn, char *host, int port)
     return -1;
 }
 
-/* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
+{
+    if(conn && packet)
+    {
+        return xhttpd_resp_handler(conn, packet);
+    }
+    return -1;
+}
+
+/* packet handler */
+int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
 {
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = NULL,
          *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
@@ -602,14 +611,12 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
     if(conn && packet)
     {
+        //return xhttpd_resp_handler(conn, packet);
         p = packet->data;end = packet->data + packet->ndata;*end = '\0';
-        //fprintf(stdout, "%s", p);
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
-            //fprintf(stdout, "%s::%d REQUEST:%s path:%s\n", __FILE__, __LINE__, packet->data, http_req.path);
             goto err;
         }
-        //return xhttpd_resp_handler(conn, packet);
         if(http_req.reqid == HTTP_GET)
         {
             //REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
@@ -771,7 +778,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                     {
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
-                        if((strncasecmp(http_req.hlines + n, "close", 5)) !=0 )
+                        if(strstr(http_req.hlines + n, "close") == NULL)
                             keepalive = 1;
                     }
                     else
@@ -799,7 +806,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         }
         else if(http_req.reqid == HTTP_POST)
         {
-            REALLOG(logger, "[%s:%d] POST %s", conn->remote_ip, conn->remote_port, http_req.path);
+            //REALLOG(logger, "[%s:%d] POST %s", conn->remote_ip, conn->remote_port, http_req.path);
             if((n = http_req.headers[HEAD_ENT_CONTENT_LENGTH]) > 0 
                     && (p = (http_req.hlines + n)) && (n = atoi(p)) > 0)
             {
