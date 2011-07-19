@@ -589,7 +589,7 @@ int xhttpd_bind_proxy(CONN *conn, char *host, int port)
     return -1;
 }
 
-int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
+int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
 {
     if(conn && packet)
     {
@@ -599,7 +599,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 }
 
 /* packet handler */
-int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
+int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = NULL,
          *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
