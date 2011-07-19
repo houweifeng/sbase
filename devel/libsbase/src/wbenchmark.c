@@ -228,9 +228,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
 	if(conn)
     {
         conn->over_timeout(conn);
-        p = packet->data;
-        end = packet->data + packet->ndata;
-        *end = '\0';
+        p = packet->data;end = packet->data + packet->ndata;*end = '\0';
         //check response code 
         if((s = strstr(p, "HTTP/")))
         {
@@ -588,9 +586,9 @@ invalid_url:
     if(log_level > 0) sbase->set_evlog_level(sbase, log_level);
     if((service = service_init()))
     {
-        service->working_mode = 1;
+        service->working_mode = 0;
         service->nprocthreads = workers;
-        service->niodaemons = 2;
+        service->niodaemons = 1;
         service->ndaemons = 0;
         service->use_cond_wait = 1;
         service->service_type = C_SERVICE;

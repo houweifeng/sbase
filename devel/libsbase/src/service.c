@@ -166,7 +166,7 @@ int service_run(SERVICE *service)
         }
         //evbase setting 
         if(service->service_type == S_SERVICE && service->evbase 
-                && service->working_mode == WORKING_PROC)
+            && service->working_mode == WORKING_PROC)
         {
             event_set(&(service->event), service->fd, E_READ|E_EPOLL_ET|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
@@ -296,7 +296,7 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        /* recover */
+        //recover 
         if((service->recover = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->recover);
@@ -401,7 +401,7 @@ new_conn:
                 if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
-                    //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
@@ -986,13 +986,17 @@ CONN *service_findconn(SERVICE *service, int index)
 /* service over conn */
 void service_overconn(SERVICE *service, CONN *conn)
 {
-    PROCTHREAD *recover = NULL;
+    PROCTHREAD *daemon = NULL;
 
-    if(service && conn && (recover = service->recover))
+    if(service && conn)
     {
-        qmessage_push(recover->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
-                -1, recover, conn, NULL);
-        MUTEX_SIGNAL(recover->mutex);
+        if((daemon = service->recover) == NULL) daemon = service->daemon;
+        if(daemon)
+        {
+            qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
+                    -1, daemon, conn, NULL);
+            MUTEX_SIGNAL(daemon->mutex);
+        }
     }
     return ;
 }

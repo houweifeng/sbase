@@ -15,10 +15,10 @@
 #define HTTP_URL_PATH_MAX  	    1024
 #define HTTP_PATH_MAX      	    1024
 #define HTTP_BUF_SIZE      	    8192
-#define HTTP_ARGV_LINE_MAX 	    16384
+#define HTTP_ARGV_LINE_MAX 	    32768
 #define HTTP_HEAD_MAX 	        4096
 #define HTTP_COOKIES_MAX   	    64
-#define HTTP_ARGVS_MAX     	    1024
+#define HTTP_ARGVS_MAX     	    256
 #define HTTP_BUFFER_SIZE   	    32768
 #define HTTP_HEADER_MAX    	    32768
 #define HTTP_BYTE_K        	    1024
