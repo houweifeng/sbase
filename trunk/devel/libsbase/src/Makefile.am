@@ -33,9 +33,10 @@ include_HEADERS = sbase.h
 
 sbin_PROGRAMS = xhttpd lechod
 
-xhttpd_SOURCES = xhttpd.c mime.h mime.c http.h http.c iniparser.h iniparser.c \
+xhttpd_SOURCES = xhttpd.c iniparser.h iniparser.c utils/http.h utils/http.c \
 				 utils/mutex.h utils/mtrie.h utils/mtrie.c utils/stime.h utils/stime.c \
-				utils/logger.h utils/logger.c utils/xmm.h utils/xmm.c 
+				utils/logger.h utils/logger.c utils/xmm.h utils/xmm.c \
+				utils/mime.h utils/mime.c 
 xhttpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 xhttpd_LDADD = libsbase.la
 xhttpd_LDFLAGS = -static
@@ -46,8 +47,8 @@ lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
 
 bin_PROGRAMS = wbenchmark
-wbenchmark_SOURCES = wbenchmark.c http.c http.h utils/mutex.h utils/mtrie.c utils/mtrie.h \
-					 utils/logger.h utils/logger.c utils/xmm.h utils/xmm.c utils/timer.h
+wbenchmark_SOURCES = wbenchmark.c utils/mutex.h utils/logger.h utils/logger.c \
+					utils/xmm.h utils/xmm.c utils/timer.h
 wbenchmark_CPPFLAGS = -I utils/ -Wall 
 wbenchmark_LDADD = libsbase.la
 wbenchmark_LDFLAGS = -static
