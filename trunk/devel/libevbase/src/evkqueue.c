@@ -95,7 +95,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         kqev.udata      = (void *)event;
         if(del_ev_flags & E_READ)
         {
-            kqev.flags      = EV_DELETE;
+            kqev.flags      = EV_DISABLE;
             kqev.filter     = EVFILT_READ;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
@@ -108,7 +108,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         }
         if(del_ev_flags & E_WRITE)
         {
-            kqev.flags      = EV_DELETE;
+            kqev.flags      = EV_DISABLE;
             kqev.filter     = EVFILT_WRITE;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
@@ -121,7 +121,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         }
         if(add_ev_flags & E_READ)
         {
-            kqev.flags      = EV_ADD;
+            kqev.flags      = EV_ADD|EV_ENABLE;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             kqev.filter     = EVFILT_READ;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
@@ -135,11 +135,12 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
         }
         if(add_ev_flags & E_WRITE)
         {
-            kqev.flags      = EV_ADD;
+            kqev.flags      = EV_ADD|EV_ENABLE;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             kqev.filter     = EVFILT_WRITE;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
+                //fprintf(stderr, "kevent(%d,ev_fd:%d, ev_flags:%d)\n", evbase->efd, event->ev_fd, event->ev_flags);
                 goto err;
             }
             else
@@ -147,6 +148,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
                 ret = 0;
             }
         }
+        UPDATE_EVENT_FD(evbase, event);
 err:
         return ret;
     }
@@ -186,7 +188,7 @@ int evkqueue_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
     if(evbase)
     {
         if(tv) {TIMEVAL_TO_TIMESPEC(tv, &ts); pts = &ts;}
-        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->maxfd*2, pts);	
+        n = kevent(evbase->efd, NULL, 0, (struct kevent *)evbase->evs, evbase->allowed, pts);	
         if(n <= 0 )return n;
         for(i = 0; i < n; i++)
         {

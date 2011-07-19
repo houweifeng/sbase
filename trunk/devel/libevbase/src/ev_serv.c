@@ -33,7 +33,7 @@ static EVBASE *evbase = NULL;
 static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
 static int ev_sock_count = 2;
-static int is_use_ssl = 1;
+static int is_use_ssl = 0;
 static in_addr_t multicast_addr = INADDR_NONE;
 #ifdef USE_SSL
 static SSL_CTX *ctx = NULL;
@@ -264,10 +264,12 @@ void ev_handler(int fd, int ev_flags, void *arg)
 #endif
             }
             /* set FD NON-BLOCK */
+            conns[rfd].n = 0;
             fcntl(rfd, F_SETFL, O_NONBLOCK);
-                event_set(&conns[rfd].event, rfd, E_READ|E_PERSIST,
-                        (void *)&conns[rfd].event, &ev_handler);
-                evbase->add(evbase, &conns[rfd].event);
+            event_set(&(conns[rfd].event), rfd, E_READ|E_PERSIST,
+                        (void *)&(conns[rfd].event), &ev_handler);
+            evbase->add(evbase, &(conns[rfd].event));
+            SHOW_LOG("add event_fd:%d E_READ\n", rfd);
             return ;
         }
     }
@@ -279,20 +281,21 @@ void ev_handler(int fd, int ev_flags, void *arg)
             if(is_use_ssl)
             {
 #ifdef USE_SSL
-                n = SSL_read(conns[fd].ssl, conns[fd].buffer, EV_BUF_SIZE - 1);
+                n = SSL_read(conns[fd].ssl, conns[fd].buffer, EV_BUF_SIZE - conns[fd].n);
 #endif
             }
             else
             {
-                n = read(fd, conns[fd].buffer+conns[fd].n, EV_BUF_SIZE - 1);
+                n = read(fd, conns[fd].buffer+conns[fd].n, EV_BUF_SIZE - conns[fd].n);
+                //SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
             }
             if(n > 0)
             {
                 conns[fd].n += n;
                 conns[fd].buffer[conns[fd].n] = 0;
+                SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
                 if(strstr(conns[fd].buffer, "\r\n\r\n"))
                 {
-                    SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
                     SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
                     event_add(&conns[fd].event, E_WRITE);	
                     SHOW_LOG("Updated event[%p] on %d ", &conns[fd].event, fd);
@@ -357,7 +360,7 @@ err:
 
 int main(int argc, char **argv)
 {
-    int port = 0, connection_limit = 0, fd = 0, n = 0, opt = 1, i = 0, nprocess = 0;
+    int port = 0, connection_limit = 0, fd = 0, opt = 1, i = 0, nprocess = 0;
     char *multicast_ip = NULL;
 
     if(argc < 5)
@@ -523,12 +526,11 @@ running:
             evbase->add(evbase, &conns[lfd].event);
             struct timeval tv = {0};
             tv.tv_sec = 0;
-            tv.tv_usec = 0;
+            tv.tv_usec = 1000;
             while(1)
             {
+                evbase->loop(evbase, 0, NULL);
                 /*
-                evbase->loop(evbase, 0, &tv);
-                */
                 if((n = evbase->loop(evbase, 0, &tv)) > 0)
                 {
                     tv.tv_usec = 0;
@@ -539,6 +541,7 @@ running:
                     i++;
                     if(i > 1000) tv.tv_usec = 1000;
                 }
+                */
                 //usleep(1000);
             }
         }
