@@ -58,6 +58,12 @@ do{MUTEX_LOCK(evbase->mutex);                                           \
     evbase->evlist[event->ev_fd] = event;                               \
     MUTEX_UNLOCK(evbase->mutex);                                        \
 }while(0)
+#define UPDATE_EVENT_FD(evbase, event)                                  \
+do{MUTEX_LOCK(evbase->mutex);                                           \
+    if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
+    evbase->evlist[event->ev_fd] = event;                               \
+    MUTEX_UNLOCK(evbase->mutex);                                        \
+}while(0)
 #define REMOVE_EVENT_FD(evbase, event)                                  \
 do{MUTEX_LOCK(evbase->mutex);                                           \
     if(event->ev_fd == evbase->maxfd) evbase->maxfd = event->ev_fd -1;  \
