@@ -118,6 +118,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
                 ret = -1;
             }
         }
+        UPDATE_EVENT_FD(evbase, event);
         return 0;
     }
     return -1;	
@@ -161,7 +162,7 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
         }
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->allowed);
         //n = epoll_wait(evbase->efd, (struct epoll_event *)evbase->evs, evbase->nevents, timeout);
-        n = epoll_wait(evbase->efd, (struct epoll_event *)evbase->evs, evbase->maxfd+1, timeout);
+        n = epoll_wait(evbase->efd, (struct epoll_event *)evbase->evs, evbase->allowed, timeout);
         if(n <= 0)
         {
             if(n < 0){fprintf(stderr, "epoll_wait(%d, %p, %d, %d) failed, %s\n", evbase->efd, evbase->evs, evbase->nevents, timeout, strerror(errno));}
