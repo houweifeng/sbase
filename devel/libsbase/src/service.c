@@ -401,7 +401,7 @@ new_conn:
                 if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
-                    WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }

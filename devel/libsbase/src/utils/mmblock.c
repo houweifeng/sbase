@@ -33,7 +33,7 @@ int mmblock_incre(MMBLOCK *mmblock, int incre_size)
 		if((mmblock->data = (char *)xmm_resize(mmblock->data, mmblock->size, size)))
 		{
 			mmblock->end = mmblock->data + mmblock->ndata;
-			mmblock->left = size - mmblock->ndata;
+			mmblock->left = size - mmblock->ndata - 1;
 			mmblock->size = size;
 			return 0;
 		}

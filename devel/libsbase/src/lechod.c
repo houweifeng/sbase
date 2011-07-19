@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -18,9 +19,28 @@ int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
 
 int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 {
-	if(conn && conn->push_chunk)
+    int keepalive = 0;
+    char *p = NULL;
+
+	if(conn)
     {
-		return conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
+        p = packet->data + packet->ndata;
+        p = '\0';
+        if(strcasestr(packet->data, "Keep-Alive")) keepalive = 1;
+
+        int x = 0, n = 0; char buf[4096], *s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);
+        if(keepalive)
+        {
+            n = sprintf(buf, "HTTP/1.0 200 OK\r\nConnection: Keep-Alive\r\nContent-Length:%d\r\n\r\n%s", x, s);conn->push_chunk(conn, buf, n); 
+        }
+        else
+        {
+            n = sprintf(buf, "HTTP/1.0 200 OK\r\nContent-Length:%d\r\n\r\n%s", x, s);conn->push_chunk(conn, buf, n); 
+
+        }
+        if(keepalive == 0) conn->over(conn); 
+        return 0;
+		//return conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
     }
     return -1;
 }
@@ -81,6 +101,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->service_type = iniparser_getint(dict, "LECHOD:service_type", C_SERVICE);
 	service->service_name = iniparser_getstr(dict, "LECHOD:service_name");
 	service->nprocthreads = iniparser_getint(dict, "LECHOD:nprocthreads", 1);
+	service->niodaemons = iniparser_getint(dict, "LECHOD:niodaemons", 1);
 	service->ndaemons = iniparser_getint(dict, "LECHOD:ndaemons", 0);
     service->session.packet_type=iniparser_getint(dict, "LECHOD:packet_type",PACKET_DELIMITER);
     if((service->session.packet_delimiter = iniparser_getstr(dict, "LECHOD:packet_delimiter")))
@@ -209,8 +230,8 @@ int main(int argc, char **argv)
         }
 
     }
-    //sbase->running(sbase, 0);
-    sbase->running(sbase, 60000000); sbase->stop(sbase);
+    sbase->running(sbase, 0);
+    //sbase->running(sbase, 60000000); sbase->stop(sbase);
     //sbase->running(sbase, 90000000);sbase->stop(sbase);
     sbase->clean(sbase);
     if(dict)iniparser_free(dict);
