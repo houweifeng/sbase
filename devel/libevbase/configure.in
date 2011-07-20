@@ -12,18 +12,18 @@ AC_PROG_LIBTOOL
 
 # Checks for libraries.
 #pthread
-havepthread=no
-AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
-if test "$havepthread" = "yes" ; then
-    CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
-    LDFLAGS="${LDFLAGS} -lpthread"
-fi
-#semaphore
-#havesemaphore=no
-#AC_CHECK_LIB(c, sem_timedwait, havesemaphore=yes)
-#if test "$havesemaphore" = "yes" ; then
-#    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+#havepthread=no
+#AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
+#if test "$havepthread" = "yes" ; then
+#    CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
+#    LDFLAGS="${LDFLAGS} -lpthread"
 #fi
+#semaphore
+havesemaphore=no
+AC_CHECK_LIB(c, sem_timedwait, havesemaphore=yes)
+if test "$havesemaphore" = "yes" ; then
+    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+fi
 
 #check port
 haveevport=no
