@@ -16,25 +16,26 @@ static char *_logger_level_s[] = {"DEBUG", "WARN", "ERROR", "FATAL", ""};
 #define _STATIS_YMON
 static char *ymonths[]= {"Jan", "Feb", "Mar", "Apr", "May", "Jun","Jul", "Aug", "Sep","Oct", "Nov", "Dec"};
 #endif
+/* mkdir force */
 int logger_mkdir(char *path)
 {
     char fullpath[LOGGER_PATH_MAX];
     int level = -1, ret = -1;
-    struct stat st = {0};
     char *p = NULL;
+    struct stat st;
 
     if(path)
     {
         strcpy(fullpath, path);
         p = fullpath;
-        while(*p != '0')
+        while(*p != '\0')
         {
             if(*p == '/' )
             {
-                while(*p != '0' && *p == '/' && *(p+1) == '/')++p;
+                while(*p != '\0' && *p == '/' && *(p+1) == '/')++p;
                 if(level > 0)
                 {
-                    *p = '0';
+                    *p = '\0';
                     memset(&st, 0, sizeof(struct stat));
                     ret = stat(fullpath, &st);
                     if(ret == 0 && !S_ISDIR(st.st_mode)) return -1;
