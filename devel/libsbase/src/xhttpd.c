@@ -577,6 +577,7 @@ int xhttpd_bind_proxy(CONN *conn, char *host, int port)
     {
         if(ip)
         {
+            memset(&session, 0, sizeof(SESSION));
             session.packet_type = PACKET_PROXY;
             session.timeout = httpd_proxy_timeout;
             if((new_conn = httpd->newproxy(httpd, conn, -1, -1, ip, port, &session)))
@@ -613,6 +614,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     {
         //return xhttpd_resp_handler(conn, packet);
         p = packet->data;end = packet->data + packet->ndata;
+        memset(&http_req, 0, sizeof(HTTP_REQ));
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
             goto err;
@@ -870,8 +872,7 @@ static void xhttpd_sigpipe(int sig)
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-    char line[HTTP_HEAD_MAX], *s = NULL, *p = NULL, 
-         *cacert_file = NULL, *privkey_file = NULL;
+    char *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
     int n = 0, i = 0;
 
     if((dict = iniparser_new(conf)) == NULL)
@@ -944,44 +945,10 @@ int sbase_initialize(SBASE *sbase, char *conf)
         httpd->privkey_file = privkey_file;
     }
     //httpd home
-    if((http_headers_map = mtrie_init()))
+    if((http_headers_map = http_headers_map_init()) == NULL)
     {
-        for(i = 0; i < HTTP_HEADER_NUM; i++)
-        {
-            p = http_headers[i].e;
-            s = line;
-            while(*p != '\0')
-            {
-                if(*p >= 'A' && *p <= 'Z')
-                {
-                    *s++ = *p++ - ('A' - 'a'); 
-                }
-                else *s++ = *p++;
-            }
-            *s = '\0';
-            s = line;
-            mtrie_add(http_headers_map, s, http_headers[i].elen, i+1);
-        }
-        for(i = 0; i < HTTP_METHOD_NUM; i++)
-        {
-            p = http_methods[i].e;
-            s = line;
-            while(*p != '\0')
-            {
-                if(*p >= 'A' && *p <= 'Z')
-                {
-                    *s++ = *p++ - ('A' - 'a'); 
-                }
-                else *s++ = *p++;
-            }
-            *s = '\0';
-            s = line;
-            mtrie_add(http_headers_map, s, http_methods[i].elen, i+1);
-        }
-        for(i = 0; i < HTTP_RESPONSE_NUM; i++)
-        {
-            mtrie_add(http_headers_map, response_status[i].e, response_status[i].elen, i+1);
-        }
+        fprintf(stderr, "Initialize http_headers_map failed,%s", strerror(errno));
+        _exit(-1);
     }
     if((p = iniparser_getstr(dict, "XHTTPD:httpd_home")))
         httpd_home = p;
@@ -1153,7 +1120,7 @@ int main(int argc, char **argv)
     if(namemap) mtrie_clean(namemap);
     if(hostmap) mtrie_clean(hostmap);
     if(urlmap) mtrie_clean(urlmap);
-    if(http_headers_map) mtrie_clean(http_headers_map);
+    if(http_headers_map) http_headers_map_clean(http_headers_map);
     LOGGER_CLEAN(logger);
     if(dict)iniparser_free(dict);
     return 0;

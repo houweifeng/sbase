@@ -186,7 +186,56 @@ int http_base64decode(unsigned char *src, int src_len, unsigned char *dst)
     dst[j] = '\0';
     return j;
 }
+void *http_headers_map_init()
+{
+    char *p = NULL, *s = NULL, line[HTTP_HEAD_MAX];
+    void *map = NULL;
+    int i = 0;
 
+    if((map = mtrie_init()))
+    {
+        for(i = 0; i < HTTP_HEADER_NUM; i++)
+        {
+            p = http_headers[i].e;
+            s = line;
+            while(*p != '\0')
+            {
+                if(*p >= 'A' && *p <= 'Z')
+                {
+                    *s++ = *p++ - ('A' - 'a'); 
+                }
+                else *s++ = *p++;
+            }
+            *s = '\0';
+            mtrie_add(map, line, http_headers[i].elen, i+1);
+        }
+        for(i = 0; i < HTTP_METHOD_NUM; i++)
+        {
+            p = http_methods[i].e;
+            s = line;
+            while(*p != '\0')
+            {
+                if(*p >= 'A' && *p <= 'Z')
+                {
+                    *s++ = *p++ - ('A' - 'a'); 
+                }
+                else *s++ = *p++;
+            }
+            *s = '\0';
+            mtrie_add(map, line, http_methods[i].elen, i+1);
+        }
+        for(i = 0; i < HTTP_RESPONSE_NUM; i++)
+        {
+            mtrie_add(map, response_status[i].e, response_status[i].elen, i+1);
+        }
+    }
+    return map;
+}
+
+void http_headers_map_clean(void *map)
+{
+    if(map) mtrie_clean(map);
+}
 /* parse argv line */
 int http_argv_parse(char *p, char *end, HTTP_REQ *http_req)
 {
