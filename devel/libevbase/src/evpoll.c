@@ -33,6 +33,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed
             && evbase->ev_fds && evbase->evlist)
     {
+        UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
         if(event->ev_flags & E_READ)
@@ -49,7 +50,6 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             ev->revents = 0;
             ev->fd	  = event->ev_fd;
         }
-        NEW_EVENT_FD(evbase, event);
         return 0;
     }
     return -1;
@@ -61,6 +61,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
     int ev_flags = 0;
     if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
+        UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
         if(event->ev_flags & E_READ)
