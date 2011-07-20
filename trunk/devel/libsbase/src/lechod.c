@@ -144,14 +144,15 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
 int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 {
     HTTP_REQ http_req = {0};
-    int keepalive = 0;
-    char *p = NULL;
+    char *p = NULL, *end = NULL;
 
 	if(conn)
     {
-        return xhttpd_index_view(conn, &http_req, "/data/", "/");
+        p = packet->data;
+        end = packet->data + packet->ndata;
+        //if(http_request_parse())
+        return xhttpd_index_view(conn, &http_req, "/", "/");
         /*
-        p = packet->data + packet->ndata;
         p = '\0';
         if(strcasestr(packet->data, "Keep-Alive")) keepalive = 1;
 
