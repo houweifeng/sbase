@@ -69,6 +69,7 @@ int mmblock_recv(MMBLOCK *mmblock, int fd, int flag)
 		&& (n = recv(fd, mmblock->end, mmblock->left, flag)) > 0)
 		{
 			mmblock->end += n;
+            *(mmblock->end) = 0;
 			mmblock->ndata += n;
 			mmblock->left -= n;		
 		}	
@@ -89,6 +90,7 @@ int mmblock_read(MMBLOCK *mmblock, int fd)
 		{
 			mmblock->ndata += n;
 			mmblock->end += n;
+            *(mmblock->end) = 0;
 			mmblock->left -= n;
 		}
 	}
@@ -108,6 +110,7 @@ int mmblock_read_SSL(MMBLOCK *mmblock, void *ssl)
 		{
 			mmblock->ndata += n;
 			mmblock->end += n;
+            *(mmblock->end) = 0;
 			mmblock->left -= n;
 		}
 #endif
@@ -126,6 +129,7 @@ int mmblock_push(MMBLOCK *mmblock, char *data, int ndata)
 			memcpy(mmblock->end, data, ndata);
 			mmblock->ndata += ndata;
 			mmblock->end += ndata;
+            *(mmblock->end) = 0;
 			mmblock->left -= ndata;
 			return ndata;
 		}
@@ -152,6 +156,7 @@ int mmblock_del(MMBLOCK *mmblock, int ndata)
 			s = mmblock->data + ndata;
 			while(s < mmblock->end) *p++ = *s++;
 			mmblock->end = p;
+            *(mmblock->end) = 0;
 			mmblock->left += ndata;
 			mmblock->ndata -= ndata;
 		}

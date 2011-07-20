@@ -188,7 +188,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
             if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
             {
                 p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
-                if((strncasecmp(http_req->hlines + n, "close", 5)) !=0 )
+                if(strcasestr(http_req->hlines + n, "close") == NULL )
                     keepalive = 1;
             }
             else 
@@ -612,7 +612,6 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
     if(conn && packet)
     {
-        //return xhttpd_resp_handler(conn, packet);
         p = packet->data;end = packet->data + packet->ndata;
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
@@ -779,7 +778,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                     {
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
-                        if(strstr(http_req.hlines + n, "close") == NULL)
+                        if(strcasestr(http_req.hlines + n, "close") == NULL)
                             keepalive = 1;
                     }
                     else
