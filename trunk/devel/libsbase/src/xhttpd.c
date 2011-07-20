@@ -612,7 +612,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     if(conn && packet)
     {
         //return xhttpd_resp_handler(conn, packet);
-        p = packet->data;end = packet->data + packet->ndata;*end = '\0';
+        p = packet->data;end = packet->data + packet->ndata;
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
             goto err;

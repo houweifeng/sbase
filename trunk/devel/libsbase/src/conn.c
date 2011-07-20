@@ -942,6 +942,7 @@ int conn_packet_reader(CONN *conn)
     if(conn && conn->s_state == 0)
     {
         data = PCB(conn->buffer);
+        e = MMB_END(conn->buffer);e = '\0';
         packet_type = conn->session.packet_type;
 
         //DEBUG_LOGGER(conn->logger, "Reading packet type[%d] buffer[%d]", 
@@ -981,7 +982,6 @@ int conn_packet_reader(CONN *conn)
                 && conn->session.packet_delimiter_length > 0)
         {
             p = MMB_DATA(conn->buffer);
-            e = MMB_END(conn->buffer);e = '\0';
             if((p = strstr(p, conn->session.packet_delimiter)))
             {
                 len = p + conn->session.packet_delimiter_length - MMB_DATA(conn->buffer);
@@ -1011,6 +1011,7 @@ end:
         {
             MMB_RESET(conn->packet);
             MMB_PUSH(conn->packet, MMB_DATA(conn->buffer), len);
+            *(MMB_END(conn->packet)) = '\0';
             MMB_DELETE(conn->buffer, len);
             /* For packet handling */
             conn->s_state = S_STATE_PACKET_HANDLING;

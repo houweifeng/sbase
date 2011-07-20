@@ -5,8 +5,8 @@ extern "C" {
 #endif
 #define MTRIE_PATH_MAX             256
 #define MTRIE_LINE_MAX             256
-#define MTRIE_INCREMENT_NUM        5000000
-#define MTRIE_NODES_MAX            20000000
+#define MTRIE_INCREMENT_NUM        100000
+#define MTRIE_NODES_MAX            1000000
 #define MTRIE_WORD_MAX             4096
 typedef struct _MTRLIST
 {
