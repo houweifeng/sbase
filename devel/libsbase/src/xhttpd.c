@@ -37,8 +37,8 @@ static SBASE *sbase = NULL;
 static SERVICE *httpd = NULL;
 static dictionary *dict = NULL;
 static char *httpd_home = "/tmp/xhttpd/html";
-static char *http_indexes[HTTP_INDEX_MAX];
 static int http_indexes_view = 0;
+static char *http_indexes[HTTP_INDEX_MAX];
 static int nindexes = 0;
 static char *http_default_charset = "UTF-8";
 static int httpd_compress = 1;
@@ -99,36 +99,24 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 }
 
 /* xhttpd index view */
-int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, char *end)
+int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
 {
     char buf[HTTP_BUF_SIZE], url[HTTP_PATH_MAX], *p = NULL, *e = NULL, *pp = NULL;
     int len = 0, n = 0, keepalive = 0;
     struct dirent *ent = NULL;
     unsigned char *s = NULL;
     CB_DATA *block = NULL;
-    struct stat st = {0};
     DIR *dirp = NULL;
 
-    if(conn && file && root && end && (dirp = opendir(file)))
+    if(conn && dir && path && (dirp = opendir(dir)))
     {
         if((block = httpd->newchunk(httpd, HTTP_VIEW_SIZE)))
         {
             p = pp = block->data;
             p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
-                    "<head><body><h1 align=center>xhttpd</h1>", root);
-            if(*end == '/') --end;
-            while(end > root && *end != '/')--end;
-            if(end == root)
-                p += sprintf(p, "<a href='/' >/</a><br>");
-            else if(end > root)
-            {
-                *end = '\0';
-                p += sprintf(p, "<a href='%s/' >..</a><br>", root);
-            }
+                    "<head><body><h1 align=center>xhttpd</h1>", path);
             p += sprintf(p, "<hr noshade><table><tr align=left>"
-                    "<th width=500>Name</th><th width=200>Size</th>"
-                    "<th>Last-Modified</th></tr>");
-            end = p;
+                    "<th width=500>Name</th></tr>");
             while((ent = readdir(dirp)) != NULL)
             {
                 if(ent->d_name[0] != '.' && ent->d_reclen > 0)
@@ -154,31 +142,11 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
                         p += sprintf(p, "<td><a href='%s' >%s</a></td>", 
                                 url, ent->d_name);
                     }
-                    sprintf(url, "%s/%s", file, ent->d_name);
-                    if(ent->d_type != DT_DIR && lstat(url, &st) == 0)
-                    {
-                        if(st.st_size >= (off_t)HTTP_BYTE_G)
-                            p += sprintf(p, "<td> %.1fG </td>", 
-                                    (double)st.st_size/(double) HTTP_BYTE_G);
-                        else if(st.st_size >= (off_t)HTTP_BYTE_M)
-                            p += sprintf(p, "<td> %lldM </td>", 
-                                    LL(st.st_size/(off_t)HTTP_BYTE_M));
-                        else if(st.st_size >= (off_t)HTTP_BYTE_K)
-                            p += sprintf(p, "<td> %lldK </td>", 
-                                    LL(st.st_size/(off_t)HTTP_BYTE_K));
-                        else 
-                            p += sprintf(p, "<td> %lldB </td>", LL(st.st_size));
-
-                    }
-                    else p += sprintf(p, "<td> - </td>");
-                    p += sprintf(p, "<td>");
-                    p += strdate(st.st_mtime, p);
-                    p += sprintf(p, "</td>");
                     p += sprintf(p, "</tr>");
                 }
             }
             p += sprintf(p, "</table>");
-            if(end != p) p += sprintf(p, "<hr noshade>");
+            p += sprintf(p, "<hr noshade>");
             p += sprintf(p, "<em></body></html>");
             len = (p - pp);
             p = buf;
@@ -205,10 +173,6 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *file, char *root, ch
         }
         closedir(dirp);
         return 0;
-    }
-    else
-    {
-        FATAL_LOGGER(logger, "open dir:%s file:%p root:%p end:%p failed, %s", file, file, root, end, strerror(errno));
     }
     return -1;
 }
@@ -612,7 +576,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
     if(conn && packet)
     {
-        p = packet->data;end = packet->data + packet->ndata;
+        p = packet->data;end = packet->data + packet->ndata; *end = NULL;
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
             goto err;
@@ -644,8 +608,9 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
             //fprintf(stdout, "outfile:%s\r\n", file);
             if((n = (p - file)) > 0 && lstat(file, &st) == 0)
             {
-                if((S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode)) && !S_ISREG(st.st_mode))
+                if(S_ISDIR(st.st_mode))
                 {
+                    /*
                     i = 0;
                     found = 0;
                     if(p > file && *(p-1) != '/') *p++ = '/';
@@ -653,7 +618,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     {
                         pp = p;
                         pp += sprintf(pp, "%s", http_indexes[i]);
-                        if(access(file, F_OK) == 0 && lstat(file, &st) == 0)
+                        //if(access(file, F_OK) == 0 && lstat(file, &st) == 0)
+                        if(lstat(file, &st) == 0)
                         {
                             found = 1;
                             p = pp;
@@ -661,11 +627,12 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         }
                         ++i;
                     }
+                    */
                     //index view
                     if(found == 0 && http_indexes_view && (*p = '\0') >= 0)
                     {
                         end = --p;
-                        if(xhttpd_index_view(conn, &http_req, file, root, end) == 0) return 0; 
+                        if(xhttpd_index_view(conn, &http_req, file, root) == 0) return 0; 
                         else goto err;
                     }
                 }

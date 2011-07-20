@@ -152,7 +152,7 @@ void evpoll_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        MUTEX_DESTROY(evbase->mutex);
+        //MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);

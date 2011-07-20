@@ -69,9 +69,9 @@ int mmblock_recv(MMBLOCK *mmblock, int fd, int flag)
 		&& (n = recv(fd, mmblock->end, mmblock->left, flag)) > 0)
 		{
 			mmblock->end += n;
-            *(mmblock->end) = 0;
 			mmblock->ndata += n;
 			mmblock->left -= n;		
+            *(mmblock->end) = 0;
 		}	
 	}
 	return n;
@@ -90,8 +90,8 @@ int mmblock_read(MMBLOCK *mmblock, int fd)
 		{
 			mmblock->ndata += n;
 			mmblock->end += n;
-            *(mmblock->end) = 0;
 			mmblock->left -= n;
+            *(mmblock->end) = 0;
 		}
 	}
 	return n;
@@ -110,8 +110,8 @@ int mmblock_read_SSL(MMBLOCK *mmblock, void *ssl)
 		{
 			mmblock->ndata += n;
 			mmblock->end += n;
-            *(mmblock->end) = 0;
 			mmblock->left -= n;
+            *(mmblock->end) = 0;
 		}
 #endif
 	}
@@ -123,14 +123,14 @@ int mmblock_push(MMBLOCK *mmblock, char *data, int ndata)
 {
 	if(mmblock && data && ndata > 0)
 	{
-		if(mmblock->left < ndata) mmblock_incre(mmblock, ndata);
+		if(mmblock->left < ndata) mmblock_incre(mmblock, ndata+1);
 		if(mmblock->left > ndata && mmblock->data && mmblock->end)
 		{
 			memcpy(mmblock->end, data, ndata);
 			mmblock->ndata += ndata;
 			mmblock->end += ndata;
-            *(mmblock->end) = 0;
 			mmblock->left -= ndata;
+            *(mmblock->end) = 0;
 			return ndata;
 		}
 	}
@@ -179,7 +179,7 @@ void mmblock_reset(MMBLOCK *mmblock)
         }
 		else
 		{
-            if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
+            //if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
 			mmblock->end = mmblock->data;
 			mmblock->left = mmblock->size - 1;
 			mmblock->ndata = 0;

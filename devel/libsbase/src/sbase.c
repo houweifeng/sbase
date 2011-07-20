@@ -223,7 +223,7 @@ running:
             || setsockopt(sbase->cond, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq,        
                 sizeof(struct ip_mreq)) != 0)        
         {        
-            FATAL_LOGGER(sbase->logger, "new cond socket() failed, %s", strerror(errno));      
+            //FATAL_LOGGER(sbase->logger, "new cond socket() failed, %s", strerror(errno));      
             _exit(-1);
         }
         event_set(&(sbase->event), sbase->cond, E_READ|E_EPOLL_ET|E_PERSIST,
