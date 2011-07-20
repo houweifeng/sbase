@@ -30,8 +30,6 @@ typedef struct _EVBASE
 	int efd;
     int maxfd;
 	int allowed;
-    int nevents;
-    int bits;
     int evopid;
 
 	void *ev_read_fds;
@@ -54,7 +52,6 @@ EVBASE *evbase_init();
 #define NEW_EVENT_FD(evbase, event)                                     \
 do{                                                                     \
     if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
-    evbase->nevents++;                                                  \
     evbase->evlist[event->ev_fd] = event;                               \
 }while(0)
 #define UPDATE_EVENT_FD(evbase, event)                                  \
@@ -66,7 +63,6 @@ do{                                                                     \
 do                                                                      \
 {                                                                       \
     if(event->ev_fd == evbase->maxfd) evbase->maxfd = event->ev_fd -1;  \
-    evbase->nevents--;                                                  \
     evbase->evlist[event->ev_fd] = NULL;                                \
 }while(0)
 #endif

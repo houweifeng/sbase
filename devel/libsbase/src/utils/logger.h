@@ -88,7 +88,7 @@ do                                                                              
 #define LOGGER_INIT(ptr, file) (ptr = logger_init(file, 0))
 #define LOGGER_ROTATE_INIT(ptr, file, flag) (ptr = logger_init(file, flag))
 #define LOGGER_SET_LEVEL(ptr, num) {if(ptr){PLOG(ptr)->level = num;}}
-#ifdef _DEBUG
+#ifndef _DEBUG
 #define DEBUG_LOGGER(ptr, format...) {if(ptr && PLOG(ptr)->level>1){LOGGER_ADD(ptr, __DEBUG__, format);}}
 #define ACCESS_LOGGER(ptr, format...) {if(ptr && PLOG(ptr)->level>0){LOGGER_ADD(ptr, __ACCESS__, format);}}
 #define WARN_LOGGER(ptr, format...) {if(ptr){LOGGER_ADD(ptr, __WARN__, format);}}

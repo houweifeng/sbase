@@ -159,7 +159,6 @@ void evselect_reset(EVBASE *evbase)
     if(evbase)
     {
         evbase->maxfd = 0;
-        evbase->nevents = 0;
         FD_ZERO((fd_set *)evbase->ev_read_fds);
         FD_ZERO((fd_set *)evbase->ev_write_fds);
     }
