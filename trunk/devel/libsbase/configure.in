@@ -18,7 +18,7 @@ havepthread=no
 AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
 if test "$havepthread" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
-    #LDFLAGS="${LDFLAGS} -lpthread"
+    LDFLAGS="${LDFLAGS} -lpthread"
 fi
 #semaphore
 havesemaphore=no
