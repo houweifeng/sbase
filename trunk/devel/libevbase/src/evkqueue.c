@@ -218,7 +218,6 @@ void evkqueue_reset(EVBASE *evbase)
         close(evbase->efd);
         evbase->efd = kqueue();
         evbase->maxfd = 0;
-        evbase->nevents = 0;
         memset(evbase->evs, 0, evbase->allowed * sizeof(struct kevent));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
     }

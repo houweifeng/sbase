@@ -140,7 +140,6 @@ void evpoll_reset(EVBASE *evbase)
     if(evbase)
     {
         evbase->maxfd = 0;
-        evbase->nevents = 0;
         memset(evbase->ev_fds, 0, evbase->allowed * sizeof(struct pollfd));
         memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
     }
