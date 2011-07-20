@@ -230,7 +230,7 @@ void evkqueue_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        MUTEX_DESTROY(evbase->mutex);
+        //MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);

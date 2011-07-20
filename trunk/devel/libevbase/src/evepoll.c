@@ -217,7 +217,7 @@ void evepoll_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        MUTEX_DESTROY(evbase->mutex);
+        //MUTEX_DESTROY(evbase->mutex);
         close(evbase->efd);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);

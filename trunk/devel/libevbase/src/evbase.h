@@ -38,7 +38,7 @@ typedef struct _EVBASE
 	void *ev_write_fds;
 	void *ev_fds;
 	void *evs;
-    void *mutex;
+    //void *mutex;
     struct _EVENT **evlist;
 
 	int	    (*init)(struct _EVBASE *);
@@ -52,24 +52,22 @@ typedef struct _EVBASE
 }EVBASE;
 EVBASE *evbase_init();
 #define NEW_EVENT_FD(evbase, event)                                     \
-do{MUTEX_LOCK(evbase->mutex);                                           \
+do{                                                                     \
     if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
     evbase->nevents++;                                                  \
     evbase->evlist[event->ev_fd] = event;                               \
-    MUTEX_UNLOCK(evbase->mutex);                                        \
 }while(0)
 #define UPDATE_EVENT_FD(evbase, event)                                  \
-do{MUTEX_LOCK(evbase->mutex);                                           \
+do{                                                                     \
     if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
     evbase->evlist[event->ev_fd] = event;                               \
-    MUTEX_UNLOCK(evbase->mutex);                                        \
 }while(0)
 #define REMOVE_EVENT_FD(evbase, event)                                  \
-do{MUTEX_LOCK(evbase->mutex);                                           \
+do                                                                      \
+{                                                                       \
     if(event->ev_fd == evbase->maxfd) evbase->maxfd = event->ev_fd -1;  \
     evbase->nevents--;                                                  \
     evbase->evlist[event->ev_fd] = NULL;                                \
-    MUTEX_UNLOCK(evbase->mutex);                                        \
 }while(0)
 #endif
 #ifndef _TYPEDEF_EVENT
@@ -82,7 +80,7 @@ typedef struct _EVENT
     int bits;
 	struct timeval tv;
 
-    void *mutex;
+    //void *mutex;
 	struct _EVBASE *ev_base;
 	void *ev_arg;
 	void (*ev_handler)(int fd, int flags, void *arg);	

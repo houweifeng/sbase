@@ -123,14 +123,13 @@ void sigpipe_ignore()
 {                                                                                           \
     if(pthread_create((pthread_t *)&pthid, NULL, (void *)(pth->run), (void *)pth) == 0)     \
     {                                                                                       \
-        DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        \
     }                                                                                       \
     else                                                                                    \
     {                                                                                       \
-        FATAL_LOGGER(logger, "Create %s[%d] failed, %s", ns, id, strerror(errno));          \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
 }
+        //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
 #define NEW_PROCTHREAD(ns, id, pthid, pth, logger)
 #endif
@@ -201,16 +200,13 @@ running_proc:
                 service->daemon->ioqmessage = service->message_queue;
                 service->daemon->evbase = service->evbase;
             }
-            DEBUG_LOGGER(service->logger, "sbase->q[%p] service->q[%p] daemon->q[%p]",
-                    service->sbase->message_queue, service->message_queue, 
-                    service->daemon->message_queue);
+            //DEBUG_LOGGER(service->logger, "sbase->q[%p] service->q[%p] daemon->q[%p]", service->sbase->message_queue, service->message_queue, service->daemon->message_queue);
             service->daemon->service = service;
             ret = 0;
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
-                    service->working_mode, strerror(errno));
+            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",service->working_mode, strerror(errno));
         }
         return ret;
 running_threads:
@@ -230,8 +226,7 @@ running_threads:
                 }
                 else
                 {
-                    FATAL_LOGGER(service->logger, "Initialize iodaemons pool failed, %s",
-                            strerror(errno));
+                    //FATAL_LOGGER(service->logger, "Initialize iodaemons pool failed, %s",strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
@@ -257,8 +252,7 @@ running_threads:
                 }
                 else
                 {
-                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
-                            strerror(errno));
+                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
@@ -276,8 +270,7 @@ running_threads:
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
-                    service->working_mode, strerror(errno));
+            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
         }
@@ -291,8 +284,7 @@ running_threads:
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
-                    service->working_mode, strerror(errno));
+            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
         }
@@ -305,8 +297,7 @@ running_threads:
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",
-                    service->working_mode, strerror(errno));
+            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
         }
@@ -323,8 +314,7 @@ running_threads:
                 }
                 else
                 {
-                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",
-                            strerror(errno));
+                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s", strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
@@ -348,7 +338,7 @@ int service_set_log(SERVICE *service, char *logfile)
     if(service && logfile)
     {
         LOGGER_INIT(service->logger, logfile);
-        DEBUG_LOGGER(service->logger, "Initialize logger %s", logfile);
+        //DEBUG_LOGGER(service->logger, "Initialize logger %s", logfile);
         service->is_inside_logger = 1;
         return 0;
     }
@@ -401,13 +391,13 @@ new_conn:
                 if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
-                    DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
                 else
                 {
-                    WARN_LOGGER(service->logger, "accept newconnection[%s:%d]  via %d failed, %s", ip, port, fd, strerror(errno));
+                    //WARN_LOGGER(service->logger, "accept newconnection[%s:%d]  via %d failed, %s", ip, port, fd, strerror(errno));
 
                 }
 err_conn:               
@@ -455,15 +445,13 @@ err_conn:
                                 MESSAGE_INPUT, -1, conn->fd, -1, conn, parent, NULL);
                         MUTEX_SIGNAL(parent->mutex);
                     }
-                    DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d"
-                            " buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
+                    //DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
                 }
                 else
                 {
                     shutdown(fd, SHUT_RDWR);
                     close(fd);
-                    FATAL_LOGGER(service->logger, "Accept new connection failed, %s", 
-                            strerror(errno));
+                    //FATAL_LOGGER(service->logger, "Accept new connection failed, %s", strerror(errno));
                 }
             }
         }
@@ -564,7 +552,7 @@ new_conn:
             }
             else
             {
-                FATAL_LOGGER(service->logger, "connect to remote[%s:%d] via local[%s:%d] fd[%d] session[%p] failed, %s", remote_ip, remote_port, local_ip, local_port, fd, sess, strerror(errno));
+                //FATAL_LOGGER(service->logger, "connect to remote[%s:%d] via local[%s:%d] fd[%d] session[%p] failed, %s", remote_ip, remote_port, local_ip, local_port, fd, sess, strerror(errno));
             }
 err_conn:
 #ifdef HAVE_SSL
@@ -580,14 +568,12 @@ err_conn:
                 shutdown(fd, SHUT_RDWR);
                 close(fd);
             }
-            FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",
-                    remote_ip, remote_port, fd, sess, strerror(errno));
+            //FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",remote_ip, remote_port, fd, sess, strerror(errno));
             return conn;
         }
         else
         {
-            FATAL_LOGGER(service->logger, "socket(%d, %d, 0) failed, %s", 
-                    family, sock_type, strerror(errno));
+            //FATAL_LOGGER(service->logger, "socket(%d, %d, 0) failed, %s", family, sock_type, strerror(errno));
         }
     }
     return conn;
@@ -627,7 +613,7 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
 #ifdef HAVE_SSL
             if(sess->is_use_SSL && sock_type == SOCK_STREAM && service->c_ctx)
             {
-                DEBUG_LOGGER(service->logger, "SSL_newproxy() to %s:%d",remote_ip, remote_port);
+                //DEBUG_LOGGER(service->logger, "SSL_newproxy() to %s:%d",remote_ip, remote_port);
                 if((ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
                         && SSL_set_fd((SSL *)ssl, fd) > 0 && SSL_connect((SSL *)ssl) >= 0)
                 {
@@ -671,8 +657,7 @@ err_conn:
         }
         else
         {
-            FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",
-                    remote_ip, remote_port, fd, sess, strerror(errno));
+            //FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",remote_ip, remote_port, fd, sess, strerror(errno));
         }
     }
     return conn;
@@ -716,9 +701,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 }
                 else
                 {
-                    FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d "
-                            "via %d  to service[%s]", remote_ip, remote_port, 
-                            local_ip, local_port, fd, service->service_name);
+                    //FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d via %d  to service[%s]", remote_ip, remote_port, local_ip, local_port, fd, service->service_name);
                     service_pushtoq(service, conn);
                 }
             }
@@ -742,9 +725,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 }
                 else
                 {
-                    FATAL_LOGGER(service->logger, "can not add connection remote[%s:%d]-local[%s:%d] "
-                            "via %d  to service[%s]->procthreads[%p][%d] nprocthreads:%d", remote_ip, remote_port, 
-                            local_ip, local_port, fd, service->service_name, service->procthreads, index, service->nprocthreads);
+                    //FATAL_LOGGER(service->logger, "can not add connection remote[%s:%d]-local[%s:%d] via %d  to service[%s]->procthreads[%p][%d] nprocthreads:%d", remote_ip, remote_port, local_ip, local_port, fd, service->service_name, service->procthreads, index, service->nprocthreads);
                     service_pushtoq(service, conn);
                 }
             }
@@ -790,10 +771,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                 }
                 if(i >= service->index_max) service->index_max = i;
                 ret = 0;
-                DEBUG_LOGGER(service->logger, "Added new conn[%p][%s:%d] on %s:%d via %d "
-                    "d_state:%d index[%d] of total %d", conn, conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port, conn->fd, conn->d_state,
-                    conn->index, service->running_connections);
+                //DEBUG_LOGGER(service->logger, "Added new conn[%p][%s:%d] on %s:%d via %d d_state:%d index[%d] of total %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->d_state,conn->index, service->running_connections);
                 break;
             }
         }
@@ -840,18 +818,12 @@ int service_popconn(SERVICE *service, CONN *conn)
             service->connections[conn->index] = NULL;
             service->running_connections--;
             if(service->index_max == conn->index) service->index_max--;
-            DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d "
-                    "index[%d] of total %d", conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port, conn->fd, 
-                    conn->index, service->running_connections);
+            //DEBUG_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d index[%d] of total %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->index, service->running_connections);
             ret = 0;
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d "
-                    "index[%d] of total %d failed", conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port, conn->fd, 
-                    conn->index, service->running_connections);
+            //FATAL_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d index[%d] of total %d failed", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->index, service->running_connections);
         }
         MUTEX_UNLOCK(service->mutex);
         //return service_pushtoq(service, conn);
@@ -1143,8 +1115,7 @@ int service_add_multicast(SERVICE *service, char *multicast_ip)
         if((ret = setsockopt(service->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
                         (char*)&mreq, sizeof(struct ip_mreq))) == 0)
         {
-            DEBUG_LOGGER(service->logger, "added multicast:%s to service[%p]->fd[%d]",
-                    multicast_ip, service, service->fd);
+            //DEBUG_LOGGER(service->logger, "added multicast:%s to service[%p]->fd[%d]",multicast_ip, service, service->fd);
         }
     }
     return ret;
@@ -1260,7 +1231,7 @@ int service_stategroup(SERVICE *service)
         {
             if(service->groups[i].total >= service->groups[i].limit && service->groups[i].nconnected <= 0) 
             {
-                ACCESS_LOGGER(service->logger, "ignore stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
+                //ACCESS_LOGGER(service->logger, "ignore stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
                 continue;
             }
             while(service->groups[i].limit > 0  
@@ -1316,9 +1287,7 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
         /* Add transaction for procthread */
         if(service->working_mode == WORKING_PROC && service->daemon)
         {
-            DEBUG_LOGGER(service->logger, "Adding transaction[%d] to %s:%d on %s:%d "
-                    "to procthread[%d]", tid, conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port, getpid());
+            //DEBUG_LOGGER(service->logger, "Adding transaction[%d] to %s:%d on %s:%d to procthread[%d]", tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, getpid());
             return service->daemon->newtransaction(service->daemon, conn, tid);
         }
         /* Add transaction to procthread pool */
@@ -1326,9 +1295,7 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
         {
             index = conn->fd % service->nprocthreads;
             pth = service->procthreads[index];
-            DEBUG_LOGGER(service->logger, "Adding transaction[%d] to %s:%d on %s:%d "
-                    "to procthreads[%d]", tid, conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port,index);
+            //DEBUG_LOGGER(service->logger, "Adding transaction[%d] to %s:%d on %s:%d to procthreads[%d]", tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port,index);
             if(pth && pth->newtransaction)
                 return pth->newtransaction(pth, conn, tid);
         }
@@ -1345,7 +1312,7 @@ void service_stop(SERVICE *service)
     if(service)
     {
         service->lock = 1;
-        DEBUG_LOGGER(service->logger, "ready for stop service:%s running_connections:%d nconn:%d nqconns:%d nchunks:%d nqchunk:%d\n", service->service_name, service->running_connections, service->nconn, service->nqconns, service->nchunks, service->nqchunks);
+        //WARN_LOGGER(service->logger, "ready for stop service:%s running_connections:%d nconn:%d nqconns:%d nchunks:%d nqchunk:%d\n", service->service_name, service->running_connections, service->nconn, service->nqconns, service->nchunks, service->nqchunks);
         //acceptor
         if(service->acceptor)
         {
@@ -1356,12 +1323,12 @@ void service_stop(SERVICE *service)
         //stop all connections 
         if(service->connections && service->index_max >= 0)
         {
-            //DEBUG_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
+            //WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
             for(i = 0; i <= service->index_max; i++)
             {
                 if((conn = service->connections[i]))
                 {
-                    DEBUG_LOGGER(service->logger, "Ready for close connections[%d] pconn[%p] dstate:%d remote[%s:%d] via %d", i, conn, conn->d_state, conn->remote_ip, conn->remote_port, conn->fd); 
+                    //WARN_LOGGER(service->logger, "Ready for close connections[%d] pconn[%p]", i, conn); 
                     conn->close(conn);
                 }
             }
@@ -1378,7 +1345,7 @@ void service_stop(SERVICE *service)
                     PROCTHREAD_EXIT(service->iodaemons[i]->threadid, NULL);
                 }
             }
-            DEBUG_LOGGER(service->logger, "over for stop iodaemons");
+            //DEBUG_LOGGER(service->logger, "over for stop iodaemons");
         }
         //threads
         if(service->nprocthreads > 0)
@@ -1405,7 +1372,7 @@ void service_stop(SERVICE *service)
                     PROCTHREAD_EXIT(service->daemons[i]->threadid, NULL);
                 }
             }
-            DEBUG_LOGGER(service->logger, "over for stop daemons");
+            //DEBUG_LOGGER(service->logger, "over for stop daemons");
         }
         //daemon
         if(service->daemon)
@@ -1426,11 +1393,11 @@ void service_stop(SERVICE *service)
         }
         /* delete evtimer */
         EVTIMER_DEL(service->evtimer, service->evid);
-        DEBUG_LOGGER(service->logger, "Ready for remove event");
+        //WARN_LOGGER(service->logger, "Ready for remove event");
         /*remove event */
         event_destroy(&(service->event));
-        if(service->fd > 0)close(service->fd);
-        DEBUG_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
+        if(service->fd > 0){close(service->fd); service->fd = 0;}
+        //WARN_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
     return ;
 }
@@ -1456,8 +1423,7 @@ void service_state(void *arg)
                     {
                         if(service->newconn(service, -1, -1, NULL, -1, NULL) == NULL)
                         {
-                            FATAL_LOGGER(service->logger, "connect to %s:%d failed, %s", 
-                                    service->ip, service->port, strerror(errno));
+                            //FATAL_LOGGER(service->logger, "connect to %s:%d failed, %s", service->ip, service->port, strerror(errno));
                             break;
                         }
                         n--;
@@ -1561,7 +1527,7 @@ void service_clean(SERVICE *service)
             }
         }
         //clean connection_queue
-        DEBUG_LOGGER(service->logger, "Ready for clean connection_chunk:%d", service->nqconns);
+        //DEBUG_LOGGER(service->logger, "Ready for clean connection_chunk:%d", service->nqconns);
         if(service->nqconns > 0)
         {
             //fprintf(stdout, "nqconns:%d\n", service->nqconns);
@@ -1570,14 +1536,14 @@ void service_clean(SERVICE *service)
             {
                 if((conn = (service->qconns[i]))) 
                 {
-                    DEBUG_LOGGER(service->logger, "Ready for clean conn[%p] fd[%d]", conn, conn->fd);
+                   // DEBUG_LOGGER(service->logger, "Ready for clean conn[%p] fd[%d]", conn, conn->fd);
                     conn->clean(conn);
                     service->nconn--;
                 }
             }
         }
         //clean chunks queue
-        DEBUG_LOGGER(service->logger, "Ready for clean chunks_queue:%d", service->nqchunks);
+        //DEBUG_LOGGER(service->logger, "Ready for clean chunks_queue:%d", service->nqchunks);
         if(service->nqchunks > 0)
         {
             //DEBUG_LOGGER(service->logger, "Ready for clean chunks");
@@ -1585,7 +1551,7 @@ void service_clean(SERVICE *service)
             {
                 if((cp = service->qchunks[i]))
                 {
-                    DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]", cp);
+                    //DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]", cp);
                     chunk_clean(cp);
                 }
             }

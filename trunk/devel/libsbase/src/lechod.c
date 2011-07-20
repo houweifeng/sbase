@@ -8,23 +8,149 @@
 #include <sys/resource.h>
 #include <sbase.h>
 #include "iniparser.h"
+#include "http.h"
+#include "stime.h"
+#include "logger.h"
+static int is_detail = 0;
 static SBASE *sbase = NULL;
 static SERVICE *service = NULL;
 static dictionary *dict = NULL;
-
+void *logger = NULL;
+#define HTTP_VIEW_SIZE 65536
+#define XHTTPD_VERSION "0.0.1"
+#define LL(xxx) ((long long int)xxx)
+#define http_default_charset "utf-8"
 int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
 {
     return buffer->ndata;
 }
 
+/* xhttpd index view */
+int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
+{
+    char buf[HTTP_BUF_SIZE], url[HTTP_PATH_MAX], *p = NULL, *e = NULL, *pp = NULL, *end = NULL;
+    int len = 0, n = 0, keepalive = 0;
+    struct dirent *ent = NULL;
+    unsigned char *s = NULL;
+    CB_DATA *block = NULL;
+    struct stat st = {0};
+    DIR *dirp = NULL;
+
+    if(conn && dir && path && (dirp = opendir(dir)))
+    {
+        if((block = service->newchunk(service, HTTP_VIEW_SIZE)))
+        {
+            p = pp = block->data;
+            p += sprintf(p, "<html><head><title>Indexes Of %s </title>"
+                    "<head><body><h1 align=center>xhttpd</h1>", path);
+            p += sprintf(p, "<hr noshade><table><tr align=left><th width=500>Name</th>");
+            if(is_detail)
+            {
+                p += sprintf(p, "<th width=200>Size</th><th>Last-Modified</th>");
+            }
+            p += sprintf(p, "</tr>");
+            end = p;
+            while((ent = readdir(dirp)) != NULL)
+            {
+                if(ent->d_name[0] != '.' && ent->d_reclen > 0)
+                {
+                    p += sprintf(p, "<tr>");
+                    s = (unsigned char *)ent->d_name;
+                    e = url;
+                    while(*s != '\0') 
+                    {
+                        if(*s == 0x20 && *s > 127)
+                        {
+                            e += sprintf(e, "%%%02x", *s);
+                        }else *e++ = *s++;
+                    }
+                    *e = '\0';
+                    if(ent->d_type == DT_DIR)
+                    {
+                        p += sprintf(p, "<td><a href='%s/' >%s/</a></td>", 
+                                url, ent->d_name);
+                    }
+                    else
+                    {
+                        p += sprintf(p, "<td><a href='%s' >%s</a></td>", 
+                                url, ent->d_name);
+                    }
+                    if(is_detail)
+                    {
+                        sprintf(url, "%s/%s", dir, ent->d_name);
+                        if(ent->d_type != DT_DIR && lstat(url, &st) == 0)
+                        {
+                            if(st.st_size >= (off_t)HTTP_BYTE_G)
+                                p += sprintf(p, "<td> %.1fG </td>", 
+                                        (double)st.st_size/(double) HTTP_BYTE_G);
+                            else if(st.st_size >= (off_t)HTTP_BYTE_M)
+                                p += sprintf(p, "<td> %lldM </td>", 
+                                        LL(st.st_size/(off_t)HTTP_BYTE_M));
+                            else if(st.st_size >= (off_t)HTTP_BYTE_K)
+                                p += sprintf(p, "<td> %lldK </td>", 
+                                        LL(st.st_size/(off_t)HTTP_BYTE_K));
+                            else 
+                                p += sprintf(p, "<td> %lldB </td>", LL(st.st_size));
+
+                            p += sprintf(p, "<td>");
+                            if(is_detail )p += strdate(st.st_mtime, p);
+                            p += sprintf(p, "</td>");
+                        }
+                        else
+                        {
+                            p +=  sprintf(p, "<td></td><td></td>");
+                        }
+                    }
+                    p += sprintf(p, "</tr>");
+                }
+            }
+            p += sprintf(p, "</table>");
+            p += sprintf(p, "<hr noshade>");
+            p += sprintf(p, "<em></body></html>");
+            len = (p - pp);
+            p = buf;
+            p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
+                    "Content-Type: text/html; charset=%s\r\n",
+                    LL(len), http_default_charset);
+            if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
+            {
+                p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
+                if(strcasestr(http_req->hlines + n, "close") == NULL )
+                    keepalive = 1;
+            }
+            else 
+            {
+                p += sprintf(p, "Connection: close\r\n");
+            }
+            p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
+            p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
+            conn->push_chunk(conn, buf, p - buf);
+            if(conn->send_chunk(conn, block, len) != 0)
+                service->pushchunk(service, (CHUNK *)block);
+            //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
+            if(!keepalive) conn->over(conn);
+        }
+        closedir(dirp);
+        return 0;
+    }
+    else
+    {
+        fprintf(stderr, "open dir:%s failed, %s\n", dir, strerror(errno));
+    }
+    return -1;
+}
+
+
 int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 {
+    HTTP_REQ http_req = {0};
     int keepalive = 0;
-    char line[65536];
     char *p = NULL;
 
 	if(conn)
     {
+        return xhttpd_index_view(conn, &http_req, "/data/", "/");
+        /*
         p = packet->data + packet->ndata;
         p = '\0';
         if(strcasestr(packet->data, "Keep-Alive")) keepalive = 1;
@@ -42,6 +168,7 @@ int lechod_packet_handler(CONN *conn, CB_DATA *packet)
         if(keepalive == 0) conn->over(conn); 
         return 0;
 		//return conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
+        */
     }
     return -1;
 }
