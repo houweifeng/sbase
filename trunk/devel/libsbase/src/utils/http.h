@@ -543,6 +543,10 @@ typedef struct _HTTP_REQ
     char hlines[HTTP_HEADER_MAX];
     char line[HTTP_ARGV_LINE_MAX];
 }HTTP_REQ;
+/* initialize headers map */
+void *http_headers_map_init();
+/* clean headers map */
+void http_headers_map_clean(void *map);
 /* HTTP request HEADER parser */
 int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map);
 /* HTTP argvs  parser */
