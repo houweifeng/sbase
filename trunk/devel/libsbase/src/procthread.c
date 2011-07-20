@@ -107,7 +107,7 @@ void procthread_run(void *arg)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
                     }
-                    if(QMTOTAL(pth->message_queue) <= 0){MUTEX_WAIT(pth->mutex);}
+                    if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);}
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
@@ -125,7 +125,7 @@ void procthread_run(void *arg)
                     {
                         ++i;
                     }
-                    if(i > 1000){usleep(pth->usec_sleep); i = 0;}
+                    if(i > 0){usleep(pth->usec_sleep); i = 0;}
                     //if(i > 1000) select(0, NULL, NULL, NULL, &tv);
                     //DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                 }while(pth->running_status);

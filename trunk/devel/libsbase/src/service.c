@@ -164,8 +164,8 @@ int service_run(SERVICE *service)
             //        service->heartbeat_interval);
         }
         //evbase setting 
-        if(service->service_type == S_SERVICE && service->evbase 
-            && service->working_mode == WORKING_PROC)
+        if(service->service_type == S_SERVICE && service->evbase) 
+            //&& service->working_mode == WORKING_PROC)
         {
             event_set(&(service->event), service->fd, E_READ|E_EPOLL_ET|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
@@ -275,6 +275,7 @@ running_threads:
             return -1;
         }
         /* acceptor */
+        /*
         if((service->acceptor = procthread_init(service->cond)))
         {
             PROCTHREAD_SET(service, service->acceptor);
@@ -288,6 +289,7 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
+        */
         //recover 
         if((service->recover = procthread_init(0)))
         {
@@ -391,7 +393,7 @@ new_conn:
                 if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
-                    ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
@@ -1306,7 +1308,6 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
 /* stop service */
 void service_stop(SERVICE *service)
 {
-    CONN *conn = NULL;
     int i = 0;
 
     if(service)
@@ -1321,6 +1322,7 @@ void service_stop(SERVICE *service)
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
         //stop all connections 
+        /*
         if(service->connections && service->index_max >= 0)
         {
             //WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
@@ -1333,6 +1335,7 @@ void service_stop(SERVICE *service)
                 }
             }
         }
+        */
         //iodaemons
         if(service->niodaemons > 0)
         {
