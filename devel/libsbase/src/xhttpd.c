@@ -607,14 +607,13 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
          *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL;
     int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0, keepalive = 0;
     off_t from = 0, to = 0, len = 0;
-    HTTP_REQ http_req = {0};
+    HTTP_REQ http_req = {0} ;
     struct stat st = {0};
 
     if(conn && packet)
     {
         //return xhttpd_resp_handler(conn, packet);
         p = packet->data;end = packet->data + packet->ndata;
-        memset(&http_req, 0, sizeof(HTTP_REQ));
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
             goto err;
