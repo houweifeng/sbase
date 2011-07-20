@@ -32,45 +32,42 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
     int op = 0, ev_flags = 0, add = 0, ret = 0;
     struct epoll_event ep_event = {0, {0}};
 
-    if(evbase && event)
+    if(evbase && event && event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
     {
-        if(event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
+        UPDATE_EVENT_FD(evbase, event);
+        event->ev_base = evbase;
+        if(event->ev_flags & E_READ)
         {
-            event->ev_base = evbase;
-            if(event->ev_flags & E_READ)
+            ev_flags |= EPOLLIN;
+            add = 1;
+        }	
+        if(event->ev_flags & E_WRITE)
+        {
+            ev_flags |= EPOLLOUT;
+            add = 1;
+        }
+        if(event->ev_flags & E_EPOLL_ET)
+        {
+            ev_flags |= EPOLLET;
+        }
+        ev_flags |= EPOLLERR | EPOLLHUP;
+        if(add)
+        {
+            op = EPOLL_CTL_ADD; 
+            memset(&ep_event, 0, sizeof(struct epoll_event));
+            ep_event.data.fd = event->ev_fd;
+            ep_event.events = ev_flags;
+            ep_event.data.ptr = (void *)event;
+            if(epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event) < 0)
             {
-                ev_flags |= EPOLLIN;
-                add = 1;
-            }	
-            if(event->ev_flags & E_WRITE)
-            {
-                ev_flags |= EPOLLOUT;
-                add = 1;
-            }
-            if(event->ev_flags & E_EPOLL_ET)
-            {
-                ev_flags |= EPOLLET;
-            }
-            ev_flags |= EPOLLERR | EPOLLHUP;
-            if(add)
-            {
-                op = EPOLL_CTL_ADD; 
-                memset(&ep_event, 0, sizeof(struct epoll_event));
-                ep_event.data.fd = event->ev_fd;
-                ep_event.events = ev_flags;
-                ep_event.data.ptr = (void *)event;
-                if(epoll_ctl(evbase->efd, op, event->ev_fd, &ep_event) < 0)
+                if(errno == ENOENT)
+                    epoll_ctl(evbase->efd, EPOLL_CTL_ADD, event->ev_fd, &ep_event);
+                else if(errno == EEXIST)
+                    epoll_ctl(evbase->efd, EPOLL_CTL_MOD, event->ev_fd, &ep_event);
+                else
                 {
-                    if(errno == ENOENT)
-                        epoll_ctl(evbase->efd, EPOLL_CTL_ADD, event->ev_fd, &ep_event);
-                    else if(errno == EEXIST)
-                        epoll_ctl(evbase->efd, EPOLL_CTL_MOD, event->ev_fd, &ep_event);
-                    else
-                    {
-                        ret = -1;
-                    }
+                    ret = -1;
                 }
-                NEW_EVENT_FD(evbase, event);
             }
         }
     }
@@ -85,6 +82,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
 
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
+        UPDATE_EVENT_FD(evbase, event);
         if(event->ev_flags & E_READ)
         {
             ev_flags |= EPOLLIN;
@@ -109,7 +107,6 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
             if(errno == ENOENT)
             {
                 epoll_ctl(evbase->efd, EPOLL_CTL_ADD, event->ev_fd, &ep_event);
-                NEW_EVENT_FD(evbase, event);
             }
             else if(errno == EEXIST)
                 epoll_ctl(evbase->efd, EPOLL_CTL_MOD, event->ev_fd, &ep_event);
@@ -118,7 +115,6 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
                 ret = -1;
             }
         }
-        UPDATE_EVENT_FD(evbase, event);
         return 0;
     }
     return -1;	

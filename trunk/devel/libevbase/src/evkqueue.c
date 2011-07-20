@@ -49,6 +49,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
     struct kevent kqev;
     if(evbase && event && evbase->evs && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
+        UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         if(event->ev_flags & E_READ)
         {
@@ -70,7 +71,6 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1) goto err;
         }
-        NEW_EVENT_FD(evbase, event);
 err:
         return 0;
     }
@@ -86,6 +86,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
     if(evbase && event && evbase->evs && event->ev_fd >= 0 
             && event->ev_fd < evbase->allowed)
     {
+        UPDATE_EVENT_FD(evbase, event);
         ev_flags = (event->ev_flags ^ event->old_ev_flags);
         add_ev_flags = (event->ev_flags & ev_flags);
         del_ev_flags = (event->old_ev_flags & ev_flags);
@@ -148,7 +149,6 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
                 ret = 0;
             }
         }
-        UPDATE_EVENT_FD(evbase, event);
 err:
         return ret;
     }
