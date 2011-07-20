@@ -179,7 +179,7 @@ void mmblock_reset(MMBLOCK *mmblock)
         }
 		else
 		{
-            //if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
+            if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
 			mmblock->end = mmblock->data;
 			mmblock->left = mmblock->size - 1;
 			mmblock->ndata = 0;
