@@ -845,7 +845,7 @@ int conn_write_handler(CONN *conn)
                 "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
                 conn->local_ip, conn->local_port, conn->fd, queue_total(conn->queue),
                 conn->d_state, conn->i_state);
-        if((cp = (CHUNK *)queue_head(conn->queue)))
+        while(queue_total(conn->queue) > 0 && (cp = (CHUNK *)queue_head(conn->queue)))
         {
             if(CHUNK_STATUS(cp) != CHUNK_STATUS_OVER)
             {
@@ -860,17 +860,20 @@ int conn_write_handler(CONN *conn)
                 }
                 else
                 {
-                    DEBUG_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) "
-                            "to %s:%d on %s:%d via %d leave %lld qtotal:%d failed, %s", n, 
-                            LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
-                            conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left), 
-                            queue_total(conn->queue), strerror(errno));
+                    if(errno != EINTR && errno != EAGAIN)
+                    {
+                        DEBUG_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) "
+                                "to %s:%d on %s:%d via %d leave %lld qtotal:%d failed, %s", n, 
+                                LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
+                                conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left), 
+                                queue_total(conn->queue), strerror(errno));
 #ifdef HAVE_SSL
-                    if(conn->ssl) ERR_print_errors_fp(stdout);
+                        if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
-                    /* Terminate connection */
-                    conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
-                    return ret;
+                        /* Terminate connection */
+                        conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
+                    }
+                    break;
                 }
             }
             else
@@ -893,9 +896,13 @@ int conn_write_handler(CONN *conn)
                     cp  = NULL;
                 }
             }
+            else 
+            {
+                ret = 0;break; 
+            }
             if(queue_total(conn->queue) == 1 
-                && (cp = (CHUNK *)queue_head(conn->queue))
-                && CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
+                    && (cp = (CHUNK *)queue_head(conn->queue))
+                    && CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
             {
                 if((cp = (CHUNK *)queue_pop(conn->queue)))
                 {
@@ -921,11 +928,11 @@ int conn_write_handler(CONN *conn)
                 }
                 ret = 0;
             }
-            DEBUG_LOGGER(conn->logger, "Over for send-data to %s:%d on %s:%d via %d "
+        }
+        DEBUG_LOGGER(conn->logger, "Over for send-data to %s:%d on %s:%d via %d "
                 "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
                 conn->local_ip, conn->local_port, conn->fd, queue_total(conn->queue),
                 conn->d_state, conn->i_state);
-        }
     }
     return ret;
 }
