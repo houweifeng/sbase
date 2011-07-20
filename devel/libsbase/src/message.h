@@ -32,7 +32,7 @@ extern "C" {
 #define MESSAGE_PROXY           0x12
 #define MESSAGE_END             0x13
 #define MESSAGE_MAX		        0x13
-#define QLEFT_MAX               2048
+#define QLEFT_MAX               100000
 static char *messagelist[] = 
 {
     "",
@@ -69,12 +69,14 @@ typedef struct _MESSAGE
 }MESSAGE;
 #define QMSG_LINE_MAX 1024
 #define QMSG_LINE_NUM 10240
+#define QMSG_INIT_NUM 40960
 typedef struct _QMESSAGE
 {
     int total;
     int qtotal;
     int nleft;
     int nlist;
+    MESSAGE pools[QMSG_INIT_NUM];
     MESSAGE *list[QMSG_LINE_MAX];
     MESSAGE *left;
     MESSAGE *first;
