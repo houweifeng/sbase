@@ -87,6 +87,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	sbase->connections_limit = iniparser_getint(dict, "SBASE:connections_limit", SB_CONN_MAX);
 	sbase->usec_sleep = iniparser_getint(dict, "SBASE:usec_sleep", SB_USEC_SLEEP);
 	sbase->set_log(sbase, iniparser_getstr(dict, "SBASE:logfile"));
+    sbase->set_log_level(sbase, iniparser_getint(dict, "SBASE:log_level", 0));
 	sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
 	/* LECHOD */
 	if((service = service_init()) == NULL)
@@ -142,18 +143,11 @@ int sbase_initialize(SBASE *sbase, char *conf)
     if((p = iniparser_getstr(dict, "LECHOD:logfile")))
     {
         service->set_log(service, p);
+        service->set_log_level(service, iniparser_getint(dict, "LECHOD:log_level", 0));
     }
 	/* server */
 	fprintf(stdout, "Parsing for server...\n");
 	return sbase->add_service(sbase, service);
-    /*
-    if(service->sock_type == SOCK_DGRAM 
-            && (p = iniparser_getstr(dict, "LECHOD:multicast")) && ret == 0)
-    {
-        ret = service->add_multicast(service, p);
-    }
-    return ret;
-    */
 }
 
 int main(int argc, char **argv)
