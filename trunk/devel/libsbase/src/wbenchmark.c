@@ -185,7 +185,6 @@ int http_over(CONN *conn, int respcode)
                 if(respcode != 0 && respcode != 200)nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 {
-                    fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
                     if(ncurrent > 0)--ncurrent;
                 }
             }
