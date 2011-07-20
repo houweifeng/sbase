@@ -44,7 +44,7 @@ int chunk_mem(void *chunk, int len)
 {
     int n = 0, size = 0, need = len+1;
 
-    if(chunk)
+    if(chunk && len > 0)
     {
         if(need > CHK(chunk)->bsize)
         {
@@ -62,7 +62,7 @@ int chunk_mem(void *chunk, int len)
             CHK(chunk)->status = CHUNK_STATUS_ON;
             CHK(chunk)->size = CHK(chunk)->left = len;
             CHK(chunk)->end = CHK(chunk)->data;
-            CHK(chunk)->data[need] = 0;
+            CHK(chunk)->data[len] = 0;
             CHK(chunk)->ndata = 0;
         }
         return 0;

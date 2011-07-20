@@ -228,7 +228,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
 	if(conn)
     {
         conn->over_timeout(conn);
-        p = packet->data;end = packet->data + packet->ndata;*end = '\0';
+        p = packet->data;end = packet->data + packet->ndata;
         //check response code 
         if((s = strstr(p, "HTTP/")))
         {
