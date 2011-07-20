@@ -393,7 +393,7 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
             }
             *es = '\0';
             n = es - line;
-            if((i = mtrie_get(map, line, n)) >= 0)
+            if(((i = mtrie_get(map, line, n) - 1)) >= 0)
             {
                 http_req->headers[i] = pp - http_req->hlines;
                 ret++;

@@ -143,7 +143,7 @@ int mmblock_del(MMBLOCK *mmblock, int ndata)
 		if(mmblock->ndata <= ndata)
 		{
 			mmblock->end = mmblock->data;
-			mmblock->left = mmblock->size;
+			mmblock->left = mmblock->size - 1;
 			mmblock->ndata = 0;
 		}
 		else
@@ -176,7 +176,7 @@ void mmblock_reset(MMBLOCK *mmblock)
 		{
             //if(mmblock->data)memset(mmblock->data, 0, mmblock->size);
 			mmblock->end = mmblock->data;
-			mmblock->left = mmblock->size;
+			mmblock->left = mmblock->size - 1;
 			mmblock->ndata = 0;
 		}
 	}

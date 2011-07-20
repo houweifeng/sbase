@@ -31,7 +31,7 @@ int chunk_set_bsize(void *chunk, int len)
             if(CHK(chunk)->data) CHK(chunk)->bsize = size;
             else CHK(chunk)->bsize = 0;
         }
-        if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
+        //if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
         CHK(chunk)->end = CHK(chunk)->data;
         CHK(chunk)->ndata = 0;
         return 0;
@@ -42,25 +42,29 @@ int chunk_set_bsize(void *chunk, int len)
 /* set/initialize chunk mem */
 int chunk_mem(void *chunk, int len)
 {
-    int n = 0, size = 0;
+    int n = 0, size = 0, need = len+1;
 
     if(chunk)
     {
-        if(len > CHK(chunk)->bsize)
+        if(need > CHK(chunk)->bsize)
         {
-            n = len/CHUNK_BLOCK_SIZE;
-            if(len % CHUNK_BLOCK_SIZE) ++n;
+            n = need/CHUNK_BLOCK_SIZE;
+            if(need % CHUNK_BLOCK_SIZE) ++n;
             size = n * CHUNK_BLOCK_SIZE;
             CHK(chunk)->data = (char *)xmm_renew(CHK(chunk)->data, CHK(chunk)->bsize, size);
             if(CHK(chunk)->data) CHK(chunk)->bsize = size;
             else CHK(chunk)->bsize = 0;
         }
-        if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
-        CHK(chunk)->type = CHUNK_MEM;
-        CHK(chunk)->status = CHUNK_STATUS_ON;
-        CHK(chunk)->size = CHK(chunk)->left = len;
-        CHK(chunk)->end = CHK(chunk)->data;
-        CHK(chunk)->ndata = 0;
+        //if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
+        if(CHK(chunk)->data)
+        {
+            CHK(chunk)->type = CHUNK_MEM;
+            CHK(chunk)->status = CHUNK_STATUS_ON;
+            CHK(chunk)->size = CHK(chunk)->left = len;
+            CHK(chunk)->end = CHK(chunk)->data;
+            CHK(chunk)->data[need] = 0;
+            CHK(chunk)->ndata = 0;
+        }
         return 0;
     }
     return -1;
@@ -408,7 +412,7 @@ void chunk_reset(void *chunk)
             CHK(chunk)->data = NULL;
             CHK(chunk)->bsize = 0;
         }
-        if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
+        //if(CHK(chunk)->data) memset(CHK(chunk)->data, 0, CHK(chunk)->bsize);
         CHK(chunk)->end = CHK(chunk)->data;
     }
     return ;
