@@ -20,6 +20,7 @@ int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
 int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 {
     int keepalive = 0;
+    char line[65536];
     char *p = NULL;
 
 	if(conn)

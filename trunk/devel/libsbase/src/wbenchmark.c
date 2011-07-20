@@ -587,6 +587,7 @@ invalid_url:
     if((service = service_init()))
     {
         service->working_mode = 0;
+        if(workers > 0) service->working_mode = 1;
         service->nprocthreads = workers;
         service->niodaemons = 1;
         service->ndaemons = 0;
