@@ -162,6 +162,7 @@ do                                                                              
     MMB_RESET(conn->cache);                                                                 \
     chunk_reset(&conn->chunk);                                                              \
     CONN_STATE_RESET(conn);                                                                 \
+    if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                 \
 }while(0)
     //else{CONN_PUSH_MESSAGE(conn, MESSAGE_END);}                                             
 /* chunk pop/push */
@@ -236,7 +237,7 @@ void conn_end_handler(CONN *conn)
         if(queue_total(conn->queue) > 0)
             event_add(&(conn->event), E_WRITE);
         if(conn->s_state == 0 && MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}
-        ACCESS_LOGGER(conn->logger, "END-Connection[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        //WARN_LOGGER(conn->logger, "END-Connection[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
     }
     return ;
 }

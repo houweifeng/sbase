@@ -75,7 +75,6 @@ int http_request(CONN *conn)
     {
         //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
         MUTEX_LOCK(mutex);n = nrequests++;MUTEX_UNLOCK(mutex);
-        if(n == 0){TIMER_INIT(timer);}
         if(n >= ntasks)
         {
             //WARN_LOGGER(logger, "close-conn[%s:%d] via %d", conn->local_ip, conn->local_port, conn->fd);
@@ -580,6 +579,7 @@ invalid_url:
     sbase->nchilds = 0;
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
+    TIMER_INIT(timer);
     MUTEX_INIT(mutex);
     if(log_level > 1)sbase->set_evlog(sbase, "/tmp/benchmark_ev.log");
     if(log_level > 0) sbase->set_evlog_level(sbase, log_level);
