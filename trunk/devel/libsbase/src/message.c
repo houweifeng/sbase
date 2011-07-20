@@ -6,11 +6,20 @@
 /* initialize */
 void *qmessage_init()
 {
+    MESSAGE *msg = NULL;
     QMESSAGE *q = NULL;
+    int i = 0;
 
     if((q = (QMESSAGE *)xmm_mnew(sizeof(QMESSAGE))))
     {
         MUTEX_INIT(q->mutex);
+        for(i = 0; i < QMSG_INIT_NUM; i++)
+        {
+            msg = &(q->pools[i]);
+            msg->next = q->left;
+            q->left = msg;
+            q->nleft++;
+        }
     }
     return q;
 }
@@ -52,7 +61,6 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
                 }
             }
         }
-        MUTEX_UNLOCK(q->mutex);
         if(msg)
         {
             msg->msg_id = id;
@@ -63,7 +71,6 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
             msg->parent = parent;
             msg->arg = arg;
             msg->next = NULL;
-            MUTEX_LOCK(q->mutex);
             if(q->last)
             {
                 q->last->next = msg;
@@ -74,8 +81,8 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
                 q->first = q->last = msg;
             }
             ++(q->total);
-            MUTEX_UNLOCK(q->mutex);
         }
+        MUTEX_UNLOCK(q->mutex);
     }
     return ;
 }
