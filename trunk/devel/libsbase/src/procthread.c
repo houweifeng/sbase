@@ -7,7 +7,7 @@
 #include "chunk.h"
 #include "stime.h"
 #include "mutex.h"
-#include "queue.h"
+#include "xqueue.h"
 #include "xmm.h"
 #include "mmblock.h"
 #define PUSH_TASK_MESSAGE(pth, msgid, index, fd, tid, handler, arg)                         \
@@ -256,7 +256,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->iodaemon      = pth->iodaemon;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
-        //conn->xqueue        = pth->xqueue;
+        conn->xqueue        = pth->xqueue;
         if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
         {
             DEBUG_LOGGER(pth->logger, "Ready for add conn[%p][%s:%d] d_state:%d "
@@ -405,12 +405,12 @@ void procthread_clean(PROCTHREAD *pth)
             if(pth->have_evbase)
             {
                 event_destroy(&(pth->event));
-                //event_destroy(&(pth->acceptor));
+                event_destroy(&(pth->acceptor));
                 if(pth->evbase) pth->evbase->clean(pth->evbase);
             }
             qmessage_clean(pth->message_queue);
         }
-        //xqueue_clean(pth->xqueue);
+        xqueue_clean(pth->xqueue);
         MUTEX_DESTROY(pth->mutex);
         xmm_free(pth, sizeof(PROCTHREAD));
     }
@@ -438,7 +438,7 @@ PROCTHREAD *procthread_init(int cond)
             pth->evbase->add(pth->evbase, &(pth->event));
         }
         MUTEX_RESET(pth->mutex);
-        //pth->xqueue                 = xqueue_init();
+        pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;
         pth->set_acceptor           = procthread_set_acceptor;
