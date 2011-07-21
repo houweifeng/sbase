@@ -30,7 +30,7 @@
 #define HTTP_NOT_MODIFIED       "HTTP/1.1 304 Not Modified\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NO_CONTENT         "HTTP/1.1 206 No Content\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_LINE_SIZE          65536
-#define HTTP_VIEW_SIZE          1048576 
+#define HTTP_VIEW_SIZE          131072
 #define LL(x) ((long long)x)
 #define UL(x) ((unsigned long int)x)
 static SBASE *sbase = NULL;
@@ -576,7 +576,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
     if(conn && packet)
     {
-        p = packet->data;end = packet->data + packet->ndata; *end = NULL;
+        p = packet->data;end = packet->data + packet->ndata;
+        return xhttpd_index_view(conn, &http_req, httpd_home, "/");
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
         {
             goto err;
@@ -728,8 +729,6 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     else 
                         outfile = file;
 
-                    //if((chunk = httpd->newchunk(httpd, HTTP_LINE_SIZE)))
-                    //{p = chunk->data;
                     p = buf;
                     if(from > 0)
                         p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
@@ -741,7 +740,6 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
                     else
                         p += sprintf(p, "Content-Type: Unkown; charset=%s\r\n",  http_default_charset);
-                    //fprintf(stdout, "%s::%d outfile:%s\n", __FILE__, __LINE__, outfile);
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                     {
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
