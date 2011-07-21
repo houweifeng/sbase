@@ -162,8 +162,8 @@ int service_run(SERVICE *service)
             //        service->heartbeat_interval);
         }
         //evbase setting 
-        if(service->service_type == S_SERVICE && service->evbase) 
-          //&& service->working_mode == WORKING_PROC)
+        if(service->service_type == S_SERVICE && service->evbase
+                && service->working_mode == WORKING_PROC)
         {
             event_set(&(service->event), service->fd, E_READ|E_EPOLL_ET|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
@@ -217,7 +217,7 @@ running_threads:
         {
             for(i = 0; i < service->niodaemons; i++)
             {
-                if((service->iodaemons[i] = procthread_init(service->cond)))
+                if((service->iodaemons[i] = procthread_init(1)))
                 {
                     PROCTHREAD_SET(service, service->iodaemons[i]);
                     ret = 0;
@@ -273,8 +273,7 @@ running_threads:
             return -1;
         }
         /* acceptor */
-        /*
-        if((service->acceptor = procthread_init(service->cond)))
+        if((service->acceptor = procthread_init(1)))
         {
             PROCTHREAD_SET(service, service->acceptor);
             service->acceptor->set_acceptor(service->acceptor, service->fd);
@@ -287,6 +286,7 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
+        /*
         */
         //recover 
         if((service->recover = procthread_init(0)))
@@ -1314,18 +1314,18 @@ void service_stop(SERVICE *service)
         service->lock = 1;
         //WARN_LOGGER(service->logger, "ready for stop service:%s running_connections:%d nconn:%d nqconns:%d nchunks:%d nqchunk:%d\n", service->service_name, service->running_connections, service->nconn, service->nqconns, service->nchunks, service->nqchunks);
         //acceptor
-        /*
         if(service->acceptor)
         {
             //WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
             service->acceptor->stop(service->acceptor);
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
+        /*
         */
         //stop all connections 
         if(service->connections && service->index_max >= 0)
         {
-            //WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
+            WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
             for(i = 0; i <= service->index_max; i++)
             {
                 if((conn = service->connections[i]))
@@ -1352,7 +1352,7 @@ void service_stop(SERVICE *service)
         //threads
         if(service->nprocthreads > 0)
         {
-            //WARN_LOGGER(service->logger, "Ready for stop procthreads");
+            WARN_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
             {
                 if(service->procthreads[i])
@@ -1365,7 +1365,7 @@ void service_stop(SERVICE *service)
         //daemons
         if(service->ndaemons > 0)
         {
-            //WARN_LOGGER(service->logger, "Ready for stop daemons");
+            WARN_LOGGER(service->logger, "Ready for stop daemons");
             for(i = 0; i < service->ndaemons; i++)
             {
                 if(service->daemons[i])
@@ -1379,7 +1379,7 @@ void service_stop(SERVICE *service)
         //daemon
         if(service->daemon)
         {
-            //WARN_LOGGER(service->logger, "Ready for stop threads[daemon]");
+            WARN_LOGGER(service->logger, "Ready for stop threads[daemon]");
             service->daemon->stop(service->daemon);
             if(service->working_mode == WORKING_THREAD)
             {
@@ -1399,7 +1399,7 @@ void service_stop(SERVICE *service)
         /*remove event */
         event_destroy(&(service->event));
         if(service->fd > 0){close(service->fd); service->fd = 0;}
-        //WARN_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
+        WARN_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
     return ;
 }

@@ -24,13 +24,11 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
 
     if(pth && (service = pth->service))
     {
-        /*
         if(event_fd == service->fd)
         {
             service_accept_handler(service);
         }
         else
-        */
         {
             event_del(&(pth->event), E_WRITE);
         }
@@ -56,7 +54,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     int i = 0, usec = 0, sec = 0;
-    //struct timeval tv = {0,0}, *ptv = NULL;
+    struct timeval tv = {0,0};
     //int k = 0;
 
     if(pth)
@@ -67,14 +65,15 @@ void procthread_run(void *arg)
         usec = pth->usec_sleep % 1000000;
         if(pth->have_evbase)
         {
-            /*
+            tv.tv_sec = sec;
+            tv.tv_usec = usec;
             if(pth->listenfd > 0)
             {
                 //SERVICE *service = pth->service;
                 //service_accept_handler(service);
                 do
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, NULL);
+                    i = pth->evbase->loop(pth->evbase, 0, &tv);
                     //if(i > 0)++k;
                     //if(i < 1 || k > 2000000){usleep(pth->usec_sleep); k = 0;}
                     //if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}
@@ -85,10 +84,9 @@ void procthread_run(void *arg)
             }
             else
             {
-                */
                 do
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, NULL);
+                    i = pth->evbase->loop(pth->evbase, 0, &tv);
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
@@ -96,7 +94,7 @@ void procthread_run(void *arg)
                     }
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads[iodaemons]");
-            //}
+            }
         }
         else
         {
@@ -386,7 +384,6 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 }
 
 /* set acceptor */
-/*
 void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
 {
     if(pth && (pth->listenfd = listenfd) > 0)
@@ -397,7 +394,6 @@ void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
     }
     return ;
 }
-*/
 
 /* clean procthread */
 void procthread_clean(PROCTHREAD *pth)
@@ -436,7 +432,7 @@ PROCTHREAD *procthread_init(int cond)
                 fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
                 _exit(-1);
             }
-            pth->cond = cond;
+            pth->cond = open(SB_COND_FILE, O_CREAT|O_RDWR, 0644);
             event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
                     (void *)pth, (void *)&procthread_event_handler);
             pth->evbase->add(pth->evbase, &(pth->event));
@@ -445,7 +441,7 @@ PROCTHREAD *procthread_init(int cond)
         pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;
-        //pth->set_acceptor           = procthread_set_acceptor;
+        pth->set_acceptor           = procthread_set_acceptor;
         pth->pushconn               = procthread_pushconn;
         pth->newconn                = procthread_newconn;
         pth->addconn                = procthread_addconn;

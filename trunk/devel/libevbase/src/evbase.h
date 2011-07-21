@@ -23,6 +23,7 @@ extern "C" {
 #define EOP_WIN32       0x07
 #define EOP_LIMIT       8
 struct _EVENT;
+/*
 #ifndef __TYPEDEF__MUTEX
 #define __TYPEDEF__MUTEX
 #ifdef HAVE_SEMAPHORE
@@ -43,6 +44,7 @@ typedef struct _MUTEX
 }MUTEX;
 #endif
 #endif
+*/
 #ifndef _TYPEDEF_EVBASE
 #define _TYPEDEF_EVBASE
 typedef struct _EVBASE
@@ -51,7 +53,7 @@ typedef struct _EVBASE
     int maxfd;
 	int allowed;
     int evopid;
-    MUTEX mutex;
+    //MUTEX mutex;
 
 	void *ev_read_fds;
 	void *ev_write_fds;
@@ -76,8 +78,8 @@ do{                                                                     \
 }while(0)
 #define UPDATE_EVENT_FD(evbase, event)                                  \
 do{                                                                     \
-    if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
     evbase->evlist[event->ev_fd] = event;                               \
+    if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
 }while(0)
 #define REMOVE_EVENT_FD(evbase, event)                                  \
 do                                                                      \

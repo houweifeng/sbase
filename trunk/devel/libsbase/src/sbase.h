@@ -74,6 +74,7 @@ extern "C" {
 #define PACKET_DELIMITER        0x04
 #define PACKET_PROXY            0x08
 #define PACKET_ALL              0x0f
+#define SB_COND_FILE            "/tmp/sbase_cond"
 struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
@@ -283,7 +284,7 @@ typedef struct _SERVICE
 
     /* working mode */
     struct _PROCTHREAD *daemon;
-    //struct _PROCTHREAD *acceptor;
+    struct _PROCTHREAD *acceptor;
     struct _PROCTHREAD *recover;
     struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
     struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
@@ -389,6 +390,7 @@ typedef struct _PROCTHREAD
     int bits;
     int64_t threadid;
     EVENT event;
+    EVENT acceptor;
 
     MUTEX mutex;
     void *evtimer;
@@ -426,7 +428,7 @@ typedef struct _PROCTHREAD
 
     /* normal */
     void (*run)(void *arg);
-    //void (*set_acceptor)(struct _PROCTHREAD *procthread, int fd);
+    void (*set_acceptor)(struct _PROCTHREAD *procthread, int fd);
     void (*wakeup)(struct _PROCTHREAD *procthread);
     void (*stop)(struct _PROCTHREAD *procthread);
     void (*terminate)(struct _PROCTHREAD *procthread);
