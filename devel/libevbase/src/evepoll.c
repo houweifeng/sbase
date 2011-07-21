@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
+#include "mutex.h"
 /* Initialize evepoll  */
 int evepoll_init(EVBASE *evbase)
 {
@@ -33,6 +34,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
 
     if(evbase && event && event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
     {
+        MUTEX_LOCK(evbase->mutex);
         UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         if(event->ev_flags & E_READ)
@@ -69,6 +71,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
                 }
             }
         }
+        MUTEX_UNLOCK(evbase->mutex);
     }
     return ret;
 }
@@ -81,6 +84,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
 
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
+        MUTEX_LOCK(evbase->mutex);
         UPDATE_EVENT_FD(evbase, event);
         if(event->ev_flags & E_READ)
         {
@@ -114,9 +118,9 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
                 ret = -1;
             }
         }
-        return 0;
+        MUTEX_UNLOCK(evbase->mutex);
     }
-    return -1;	
+    return ret;	
 }
 
 /* Delete event from evbase */
@@ -124,19 +128,17 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
 {
     struct epoll_event ep_event;
 
-    if(evbase && event)
+    if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        if(event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
+        MUTEX_LOCK(evbase->mutex);
+        if(evbase->evlist[event->ev_fd]) 
         {
-            if(evbase->evlist[event->ev_fd]) 
-            {
-                ep_event.data.fd = event->ev_fd;
-                ep_event.data.ptr = event;
-                epoll_ctl(evbase->efd, EPOLL_CTL_DEL, event->ev_fd, &ep_event);
-                REMOVE_EVENT_FD(evbase, event);
-            }
+            ep_event.data.fd = event->ev_fd;
+            ep_event.data.ptr = event;
+            epoll_ctl(evbase->efd, EPOLL_CTL_DEL, event->ev_fd, &ep_event);
+            REMOVE_EVENT_FD(evbase, event);
         }
-        return 0;
+        MUTEX_UNLOCK(evbase->mutex);
     }
     return -1;
 }
@@ -209,14 +211,13 @@ void evepoll_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        //MUTEX_DESTROY(evbase->mutex);
-        close(evbase->efd);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);
         if(evbase->ev_write_fds)free(evbase->ev_write_fds);
         if(evbase->efd > 0 )close(evbase->efd);
+        MUTEX_DESTROY(evbase->mutex);
         free(evbase);
     }	
     return ;

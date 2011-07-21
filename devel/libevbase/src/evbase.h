@@ -23,6 +23,26 @@ extern "C" {
 #define EOP_WIN32       0x07
 #define EOP_LIMIT       8
 struct _EVENT;
+#ifndef __TYPEDEF__MUTEX
+#define __TYPEDEF__MUTEX
+#ifdef HAVE_SEMAPHORE
+#include <semaphore.h>
+typedef struct _MUTEX
+{
+    sem_t mutex;
+    sem_t cond;
+}MUTEX;
+#else
+#include <pthread.h>
+typedef struct _MUTEX
+{
+    pthread_mutex_t mutex;
+    pthread_cond_t  cond;
+    int nowait;
+    int bits;
+}MUTEX;
+#endif
+#endif
 #ifndef _TYPEDEF_EVBASE
 #define _TYPEDEF_EVBASE
 typedef struct _EVBASE
@@ -31,6 +51,7 @@ typedef struct _EVBASE
     int maxfd;
 	int allowed;
     int evopid;
+    MUTEX mutex;
 
 	void *ev_read_fds;
 	void *ev_write_fds;

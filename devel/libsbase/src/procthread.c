@@ -24,11 +24,13 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
 
     if(pth && (service = pth->service))
     {
+        /*
         if(event_fd == service->fd)
         {
             service_accept_handler(service);
         }
         else
+        */
         {
             event_del(&(pth->event), E_WRITE);
         }
@@ -65,6 +67,7 @@ void procthread_run(void *arg)
         usec = pth->usec_sleep % 1000000;
         if(pth->have_evbase)
         {
+            /*
             if(pth->listenfd > 0)
             {
                 //SERVICE *service = pth->service;
@@ -79,11 +82,10 @@ void procthread_run(void *arg)
                     //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads[acceptor]");
-                /*
-                */
             }
             else
             {
+                */
                 do
                 {
                     i = pth->evbase->loop(pth->evbase, 0, NULL);
@@ -94,7 +96,7 @@ void procthread_run(void *arg)
                     }
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads[iodaemons]");
-            }
+            //}
         }
         else
         {
@@ -384,6 +386,7 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 }
 
 /* set acceptor */
+/*
 void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
 {
     if(pth && (pth->listenfd = listenfd) > 0)
@@ -394,6 +397,7 @@ void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
     }
     return ;
 }
+*/
 
 /* clean procthread */
 void procthread_clean(PROCTHREAD *pth)
@@ -405,7 +409,7 @@ void procthread_clean(PROCTHREAD *pth)
             if(pth->have_evbase)
             {
                 event_destroy(&(pth->event));
-                event_destroy(&(pth->acceptor));
+                //event_destroy(&(pth->acceptor));
                 if(pth->evbase) pth->evbase->clean(pth->evbase);
             }
             qmessage_clean(pth->message_queue);
@@ -441,7 +445,7 @@ PROCTHREAD *procthread_init(int cond)
         pth->message_queue          = qmessage_init();
         pth->xqueue                 = xqueue_init();
         pth->run                    = procthread_run;
-        pth->set_acceptor           = procthread_set_acceptor;
+        //pth->set_acceptor           = procthread_set_acceptor;
         pth->pushconn               = procthread_pushconn;
         pth->newconn                = procthread_newconn;
         pth->addconn                = procthread_addconn;

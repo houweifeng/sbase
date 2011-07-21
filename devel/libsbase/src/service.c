@@ -286,6 +286,7 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
+        */
         //recover 
         if((service->recover = procthread_init(0)))
         {
@@ -299,7 +300,6 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        */
         /* daemon worker threads */
         if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
         if(service->ndaemons > 0)
@@ -396,7 +396,7 @@ new_conn:
                 }
                 else
                 {
-                    //WARN_LOGGER(service->logger, "accept newconnection[%s:%d]  via %d failed, %s", ip, port, fd, strerror(errno));
+                    WARN_LOGGER(service->logger, "accept newconnection[%s:%d]  via %d failed, %s", ip, port, fd, strerror(errno));
 
                 }
 err_conn:               
@@ -1305,6 +1305,7 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
 /* stop service */
 void service_stop(SERVICE *service)
 {
+    CONN *conn = NULL;
     int i = 0;
 
     if(service)
@@ -1319,6 +1320,7 @@ void service_stop(SERVICE *service)
             service->acceptor->stop(service->acceptor);
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
+        */
         //stop all connections 
         if(service->connections && service->index_max >= 0)
         {
@@ -1332,11 +1334,10 @@ void service_stop(SERVICE *service)
                 }
             }
         }
-        */
         //iodaemons
         if(service->niodaemons > 0)
         {
-            //WARN_LOGGER(service->logger, "Ready for stop iodaemons");
+            WARN_LOGGER(service->logger, "Ready for stop iodaemons");
             for(i = 0; i < service->niodaemons; i++)
             {
                 if(service->iodaemons[i])
