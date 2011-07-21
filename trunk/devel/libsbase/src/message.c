@@ -12,7 +12,7 @@ void *qmessage_init()
 
     if((q = (QMESSAGE *)xmm_mnew(sizeof(QMESSAGE))))
     {
-        MUTEX_INIT(q->mutex);
+        MUTEX_RESET(q->mutex);
         for(i = 0; i < QMSG_INIT_NUM; i++)
         {
             msg = &(q->pools[i]);

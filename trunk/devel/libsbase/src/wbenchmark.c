@@ -42,7 +42,7 @@ static int running_status = 0;
 static int req_timeout = 1000000;
 static FILE *fp = NULL;
 static void *logger = NULL;
-static MUTEX *mutex;
+static MUTEX mutex;
 
 CONN *http_newconn(int id, char *ip, int port, int is_ssl)
 {
@@ -325,6 +325,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
         conn->over_estate(conn);
         conn->over_timeout(conn);
         conn->close(conn);
+        _exit(-1);
         return http_over(conn, 0);
     }
     return -1;
@@ -580,7 +581,7 @@ invalid_url:
     sbase->usec_sleep = 1000;
     sbase->connections_limit = 65536;
     TIMER_INIT(timer);
-    MUTEX_INIT(mutex);
+    MUTEX_RESET(mutex);
     if(log_level > 1)sbase->set_evlog(sbase, "/tmp/benchmark_ev.log");
     if(log_level > 0) sbase->set_evlog_level(sbase, log_level);
     if((service = service_init()))

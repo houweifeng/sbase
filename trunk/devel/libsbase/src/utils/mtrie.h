@@ -8,6 +8,7 @@ extern "C" {
 #define MTRIE_INCREMENT_NUM        100000
 #define MTRIE_NODES_MAX            1000000
 #define MTRIE_WORD_MAX             4096
+#include "mutex.h"
 typedef struct _MTRLIST
 {
     int count;
@@ -37,7 +38,7 @@ typedef struct _MTRIE
     MTRNODE     *nodes;
     void        *map;
     void        *old_map;
-    void        *mutex;
+    MUTEX       mutex;
     off_t       map_size;
     off_t       size;
 

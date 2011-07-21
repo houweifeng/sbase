@@ -11,7 +11,7 @@ void *queue_init()
 
     if((q = (QUEUE *)xmm_mnew(sizeof(QUEUE)))) 
     {
-        MUTEX_INIT(q->mutex);
+        MUTEX_RESET(q->mutex);
         j = 0;
         while(j  < QNODE_LINE_NUM)
         {

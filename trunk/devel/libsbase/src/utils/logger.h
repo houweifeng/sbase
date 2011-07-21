@@ -45,7 +45,7 @@ typedef struct _LOGGER
     struct timeval tv;
     time_t timep;
     time_t uptime;
-    MUTEX *mutex;
+    MUTEX mutex;
     struct tm *ptm;
     char *s;
     char file[LOGGER_PATH_MAX];
