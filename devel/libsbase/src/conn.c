@@ -4,7 +4,7 @@
 #include "mmblock.h"
 #include "chunk.h"
 #include "logger.h"
-#include "xqueue.h"
+#include "queue.h"
 #include "message.h"
 #include "service.h"
 #include "timer.h"
@@ -43,10 +43,15 @@ int conn_read_buffer(CONN *conn)
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
 #define IODAEMON(conn) ((PROCTHREAD *)(conn->iodaemon))
 #define IOWAKEUP(conn) {if(IODAEMON(conn))IODAEMON(conn)->wakeup(IODAEMON(conn));}            
-#define SENDQTOTAL(conn) xqueue_total(conn->xqueue, conn->qid)
-#define SENDQHEAD(conn) xqueue_head(conn->xqueue, conn->qid)
-#define SENDQPOP(conn) xqueue_pop(conn->xqueue, conn->qid)
-#define SENDQPUSH(conn, ptr) xqueue_push(conn->xqueue, conn->qid, ptr)
+//#define SENDQTOTAL(conn) xqueue_total(conn->xqueue, conn->qid)
+//#define SENDQHEAD(conn) xqueue_head(conn->xqueue, conn->qid)
+//#define SENDQPOP(conn) xqueue_pop(conn->xqueue, conn->qid)
+//#define SENDQPUSH(conn, ptr) xqueue_push(conn->xqueue, conn->qid, ptr)
+#define SENDQTOTAL(conn) queue_total(conn->queue)
+#define SENDQHEAD(conn) queue_head(conn->queue)
+#define SENDQPOP(conn) queue_pop(conn->queue)
+#define SENDQPUSH(conn, ptr) queue_push(conn->queue, ptr)
+
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
     if(conn == NULL ) return ret;                                                           \
@@ -341,7 +346,7 @@ int conn_set(CONN *conn)
         conn->evid = -1;
         if(conn->parent && conn->session.timeout > 0) 
             conn->set_timeout(conn, conn->session.timeout);
-        conn->qid = xqueue_new(conn->xqueue);
+        //conn->qid = xqueue_new(conn->xqueue);
         if(conn->evbase)
         {
             flag = E_READ|E_PERSIST;
@@ -484,9 +489,9 @@ int conn_terminate(CONN *conn)
                 cp = NULL;
             }
         }
-        xqueue_close(conn->xqueue, conn->qid);
-        conn->qid = -1;
-        conn->xqueue = NULL;
+        //xqueue_close(conn->xqueue, conn->qid);
+        //conn->qid = -1;
+        //conn->xqueue = NULL;
         DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
 #ifdef HAVE_SSL
@@ -1330,7 +1335,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
-    if(conn && conn->status == CONN_STATUS_FREE && conn->xqueue && data && size > 0)
+    if(conn && conn->status == CONN_STATUS_FREE && conn->queue && data && size > 0)
     {
         //CHUNK_POP(conn, cp);
         if(PPARENT(conn) && PPARENT(conn)->service 
@@ -1342,7 +1347,7 @@ int conn_push_chunk(CONN *conn, void *data, int size)
             CONN_READY_WRITE(conn);
             DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d queue[%p] "
                     "total:%d on %s:%d via %d", size, cp->bsize,conn->remote_ip, 
-                    conn->remote_port, conn->xqueue, SENDQTOTAL(conn), 
+                    conn->remote_port, conn->queue, SENDQTOTAL(conn), 
                     conn->local_ip, conn->local_port, conn->fd);
             ret = 0;
         }
@@ -1382,7 +1387,7 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
-    if(conn && conn->status == CONN_STATUS_FREE && conn->xqueue 
+    if(conn && conn->status == CONN_STATUS_FREE && conn->queue 
             && filename && offset >= 0 && size > 0)
     {
         //CHUNK_POP(conn, cp);
@@ -1416,7 +1421,7 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
         CONN_READY_WRITE(conn);
         DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d queue[%p] "
                 "total %d on %s:%d via %d", len, CHK(cp)->bsize,conn->remote_ip,conn->remote_port, 
-                conn->xqueue, SENDQTOTAL(conn), conn->local_ip, conn->local_port, conn->fd);
+                conn->queue, SENDQTOTAL(conn), conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
     return ret;
@@ -1429,7 +1434,7 @@ int conn_over_chunk(CONN *conn)
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE|D_STATE_RCLOSE), ret);
 
-    if(conn && conn->status == CONN_STATUS_FREE && conn->xqueue)
+    if(conn && conn->status == CONN_STATUS_FREE && conn->queue)
     {
         if(PPARENT(conn) && PPARENT(conn)->service 
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
@@ -1573,7 +1578,7 @@ void conn_reset(CONN *conn)
         /* timer, logger, message_queue and queue */
         conn->message_queue = NULL;
         conn->ioqmessage = NULL;
-        if(conn->xqueue)
+        if(conn->queue)
         {
             while((cp = (CHUNK *)SENDQPOP(conn)))
             {
@@ -1632,7 +1637,7 @@ void conn_clean(CONN *conn)
         /* Clean chunk */
         chunk_destroy(&(conn->chunk));
         /* Clean queue */
-        //queue_clean(conn->queue);
+        queue_clean(conn->queue);
 #ifdef HAVE_SSL
         if(conn->ssl)
         {
@@ -1657,7 +1662,7 @@ CONN *conn_init()
         conn->index = -1;
         conn->gindex = -1;
         MUTEX_RESET(conn->mutex);
-        //conn->queue                 = queue_init();
+        conn->queue                 = queue_init();
         conn->set                   = conn_set;
         conn->get_service_id        = conn_get_service_id;
         conn->close                 = conn_close;

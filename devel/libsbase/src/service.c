@@ -391,7 +391,7 @@ new_conn:
                 if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
-                    DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
@@ -744,7 +744,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
     int ret = -1, x = 0, id = 0, i = 0;
     CONN *parent = NULL;
 
-    if(service && service->lock == 0 && conn && service->connections)
+    if(service && service->lock == 0 && conn)
     {
         MUTEX_LOCK(service->mutex);
         for(i = 1; i < service->connections_limit; i++)
