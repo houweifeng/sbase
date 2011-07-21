@@ -310,6 +310,7 @@ typedef struct _SERVICE
 
     /* message queue for proc mode */
     void *message_queue;
+    void *xqueue;
 
     //void *chunks_queue;
     CHUNK *qchunks[SB_CHUNKS_MAX];

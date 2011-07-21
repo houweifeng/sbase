@@ -150,6 +150,15 @@ int http_show_state(int n)
     if(is_daemon == 0){running_status = 0;sbase->stop(sbase);}
     return 0;
 }
+/* new request */
+int http_new_request(int id)
+{
+    if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL)
+    {
+        if(ncurrent > 0)--ncurrent;
+    }
+    return 0;
+}
 
 /* http over */
 int http_over(CONN *conn, int respcode)
@@ -324,9 +333,8 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
         ntimeouts++;
         conn->over_estate(conn);
         conn->over_timeout(conn);
-        conn->close(conn);
-        _exit(-1);
-        return http_over(conn, 0);
+        http_new_request(conn->c_id);
+        return conn->close(conn);
     }
     return -1;
 }
@@ -586,8 +594,7 @@ invalid_url:
     if(log_level > 0) sbase->set_evlog_level(sbase, log_level);
     if((service = service_init()))
     {
-        service->working_mode = 0;
-        if(workers > 0) service->working_mode = 1;
+        service->working_mode = 1;
         service->nprocthreads = workers;
         service->niodaemons = 1;
         service->ndaemons = 0;
