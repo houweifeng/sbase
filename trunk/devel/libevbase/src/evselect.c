@@ -5,7 +5,6 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/resource.h>
-#include "mutex.h"
 /* Initialize evselect  */
 int evselect_init(EVBASE *evbase)
 {

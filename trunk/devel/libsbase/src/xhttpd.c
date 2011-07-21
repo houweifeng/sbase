@@ -566,10 +566,10 @@ int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
+    int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0, keepalive = 0;
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = NULL,
          *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
          *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL;
-    int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0, keepalive = 0;
     off_t from = 0, to = 0, len = 0;
     HTTP_REQ http_req = {0} ;
     struct stat st = {0};
@@ -577,11 +577,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     if(conn && packet)
     {
         p = packet->data;end = packet->data + packet->ndata;
-        return xhttpd_index_view(conn, &http_req, httpd_home, "/");
-        if(http_request_parse(p, end, &http_req, http_headers_map) == -1) 
-        {
-            goto err;
-        }
+        //return xhttpd_index_view(conn, &http_req, httpd_home, "/");
+        if(http_request_parse(p, end, &http_req, http_headers_map) == -1) goto err;
         if(http_req.reqid == HTTP_GET)
         {
             //REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);

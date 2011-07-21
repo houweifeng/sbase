@@ -375,6 +375,7 @@ typedef struct _PROCTHREAD
     SERVICE *service;
 
     /* message queue */
+    void *queue;
     void *iodaemon;
     void *ioqmessage;
     void *message_queue;
@@ -451,6 +452,7 @@ typedef struct _CONN
     EVBASE *evbase;
     void *parent;
     void *queue;
+    void *xqueue;
     /* SSL */
     void *ssl;
     /* evtimer */
