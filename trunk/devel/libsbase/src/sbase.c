@@ -226,7 +226,7 @@ running:
             //FATAL_LOGGER(sbase->logger, "new cond socket() failed, %s", strerror(errno));      
             _exit(-1);
         }
-        event_set(&(sbase->event), sbase->cond, E_READ|E_EPOLL_ET|E_PERSIST,
+        event_set(&(sbase->event), sbase->cond, E_READ|E_PERSIST,
                     (void *)sbase, (void *)&sbase_event_handler);
         ret = sbase->evbase->add(sbase->evbase, &(sbase->event));
         //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
@@ -301,11 +301,11 @@ void sbase_clean(SBASE *sbase)
                 sbase->services[i]->clean(sbase->services[i]);
         }
         event_destroy(&(sbase->event));
-        if(sbase->cond) close(sbase->cond);
+        if(sbase->cond > 0) close(sbase->cond);
         if(sbase->evtimer){EVTIMER_CLEAN(sbase->evtimer);}
-        if(sbase->logger){LOGGER_CLEAN(sbase->logger);}
         if(sbase->evbase){sbase->evbase->clean(sbase->evbase);}
         if(sbase->message_queue){qmessage_clean(sbase->message_queue);}
+        if(sbase->logger){LOGGER_CLEAN(sbase->logger);}
 #ifdef HAVE_SSL
         ERR_free_strings();
 #endif

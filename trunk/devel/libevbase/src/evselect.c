@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/resource.h>
+#include "mutex.h"
 /* Initialize evselect  */
 int evselect_init(EVBASE *evbase)
 {
@@ -35,6 +36,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
     int ev_flags = 0;
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
+        MUTEX_LOCK(evbase->mutex);
         UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         if(evbase->ev_read_fds && (event->ev_flags & E_READ))
@@ -47,6 +49,7 @@ int evselect_add(EVBASE *evbase, EVENT *event)
             ev_flags |= E_WRITE;
             FD_SET(event->ev_fd, (fd_set *)evbase->ev_write_fds);	
         }
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }	
     return -1;
@@ -58,6 +61,7 @@ int evselect_update(EVBASE *evbase, EVENT *event)
     int ev_flags = 0, add_ev_flags = 0, del_ev_flags = 0;
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
+        MUTEX_LOCK(evbase->mutex);
         UPDATE_EVENT_FD(evbase, event);
         ev_flags = (event->ev_flags ^ event->old_ev_flags);
         add_ev_flags = (event->ev_flags & ev_flags);
@@ -81,6 +85,7 @@ int evselect_update(EVBASE *evbase, EVENT *event)
         {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
         }
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -90,6 +95,7 @@ int evselect_del(EVBASE *evbase, EVENT *event)
 {
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
+        MUTEX_LOCK(evbase->mutex);
         if(evbase->ev_read_fds)
         {
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_read_fds);
@@ -99,6 +105,7 @@ int evselect_del(EVBASE *evbase, EVENT *event)
             FD_CLR(event->ev_fd, (fd_set *)evbase->ev_write_fds);
         }
         REMOVE_EVENT_FD(evbase, event);
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -169,7 +176,7 @@ void evselect_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        //MUTEX_DESTROY(evbase->mutex);
+        MUTEX_DESTROY(evbase->mutex);
         if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);

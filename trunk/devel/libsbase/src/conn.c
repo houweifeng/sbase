@@ -484,6 +484,9 @@ int conn_terminate(CONN *conn)
                 cp = NULL;
             }
         }
+        xqueue_close(conn->xqueue, conn->qid);
+        conn->qid = -1;
+        conn->xqueue = NULL;
         DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
 #ifdef HAVE_SSL
@@ -922,7 +925,7 @@ int conn_write_handler(CONN *conn)
                     if(SENDQTOTAL(conn) < 1) 
                     {
                         event_del(&(conn->event), E_WRITE);
-                        //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+                        CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                     }
                     ret = 0;
                 }
@@ -1615,7 +1618,7 @@ void conn_clean(CONN *conn)
     {
         MUTEX_DESTROY(conn->mutex);
         event_clean(&(conn->event));
-        DEBUG_LOGGER(conn->logger, "ready-clean conn[%p]", conn);
+        WARN_LOGGER(conn->logger, "ready-clean conn[%p]", conn);
         /* Clean BUFFER */
         MMB_DESTROY(conn->buffer);
         /* Clean OOB */
@@ -1630,7 +1633,6 @@ void conn_clean(CONN *conn)
         chunk_destroy(&(conn->chunk));
         /* Clean queue */
         //queue_clean(conn->queue);
-        xqueue_close(conn->xqueue, conn->qid);
 #ifdef HAVE_SSL
         if(conn->ssl)
         {
