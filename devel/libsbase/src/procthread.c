@@ -7,6 +7,7 @@
 #include "chunk.h"
 #include "stime.h"
 #include "mutex.h"
+#include "xqueue.h"
 #include "xmm.h"
 #include "mmblock.h"
 #define PUSH_TASK_MESSAGE(pth, msgid, index, fd, tid, handler, arg)                         \
@@ -255,6 +256,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->iodaemon      = pth->iodaemon;
         conn->evbase        = pth->evbase;
         conn->parent        = pth;
+        conn->xqueue        = pth->xqueue;
         if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
         {
             DEBUG_LOGGER(pth->logger, "Ready for add conn[%p][%s:%d] d_state:%d "
@@ -436,6 +438,7 @@ PROCTHREAD *procthread_init(int cond)
         }
         MUTEX_INIT(pth->mutex);
         pth->message_queue          = qmessage_init();
+        pth->xqueue                 = xqueue_init();
         pth->run                    = procthread_run;
         pth->set_acceptor           = procthread_set_acceptor;
         pth->pushconn               = procthread_pushconn;
