@@ -10,6 +10,7 @@
 #include "mmblock.h"
 #include "message.h"
 #include "evtimer.h"
+#include "xqueue.h"
 #include "xmm.h"
 #ifndef UI
 #define UI(_x_) ((unsigned int)(_x_))
@@ -1557,6 +1558,7 @@ void service_clean(SERVICE *service)
                 }
             }
         }
+        //xqueue_clean(service->xqueue);
         /* SSL */
 #ifdef HAVE_SSL
         if(service->s_ctx) SSL_CTX_free(XSSL_CTX(service->s_ctx));
@@ -1591,6 +1593,7 @@ SERVICE *service_init()
     if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
         MUTEX_RESET(service->mutex);
+        //service->xqueue             = xqueue_init();
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;

@@ -442,8 +442,8 @@ PROCTHREAD *procthread_init(int cond)
             pth->evbase->add(pth->evbase, &(pth->event));
         }
         MUTEX_RESET(pth->mutex);
-        pth->message_queue          = qmessage_init();
         pth->xqueue                 = xqueue_init();
+        pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;
         //pth->set_acceptor           = procthread_set_acceptor;
         pth->pushconn               = procthread_pushconn;

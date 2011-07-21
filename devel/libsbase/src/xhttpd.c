@@ -22,6 +22,8 @@
 #include "mtrie.h"
 #include "stime.h"
 #include "logger.h"
+#include "xqueue.h"
+#include "message.h"
 #define XHTTPD_VERSION 		    "0.1.0"
 #define HTTP_RESP_OK            "HTTP/1.1 200 OK"
 #define HTTP_BAD_REQUEST        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
@@ -1072,7 +1074,7 @@ int main(int argc, char **argv)
     }
     //fprintf(stdout, "%s::%d sizeof(SERVICE):%u sizeof(SBASE):%u sizeof(PROCTHREAD):%u sizeof(CONN):%u sizeof(SESSION):%u sizeof(CNGROUP):%u sizeof(struct sockaddr_in):%u sizeof(MUTEX):%d\n", __FILE__, __LINE__, sizeof(SERVICE), sizeof(SBASE), sizeof(PROCTHREAD), sizeof(CONN), sizeof(SESSION), sizeof(CNGROUP), sizeof(struct sockaddr_in), sizeof(MUTEX));
     //fprintf(stdout, "sizeof(EVENT):%d sizeof(EVBASE):%d sizeof(MUTEX):%d sizeof(struct timeval):%d sizeof(sem_t):%d\n", sizeof(EVENT), sizeof(EVBASE), sizeof(MUTEX), sizeof(struct timeval), sizeof(sem_t));
-    //fprintf(stdout, "sizeof(MMBLOCK):%d sizeof(CHUNK):%d sizeof(QUEUE):%d sizeof(MUTEX):%d sizeof(CONN):%d sizeof(HTTP_REQ):%d sizeof(LOGGER):%d sizeof(struct timeval):%d sizeof(struct stat):%d\n", sizeof(MMBLOCK), sizeof(CHUNK), sizeof(QUEUE), sizeof(MUTEX), sizeof(CONN), sizeof(HTTP_REQ), sizeof(LOGGER), sizeof(struct timeval), sizeof(struct stat));
+    //fprintf(stdout, "sizeof(SERVICE):%d sizeof(CHUNK):%d sizeof(XQUEUE):%d sizeof(MUTEX):%d sizeof(CONN):%d sizeof(HTTP_REQ):%d sizeof(LOGGER):%d sizeof(struct timeval):%d sizeof(struct stat):%d\n", sizeof(SERVICE), sizeof(CHUNK), sizeof(XQUEUE), sizeof(MUTEX), sizeof(CONN), sizeof(HTTP_REQ), sizeof(LOGGER), sizeof(struct timeval), sizeof(struct stat));
     sbase->running(sbase, 0);
     //sbase->running(sbase, 300000000);sbase->stop(sbase);
     sbase->clean(sbase);

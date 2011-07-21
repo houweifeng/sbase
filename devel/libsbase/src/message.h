@@ -67,8 +67,8 @@ typedef struct _MESSAGE
     struct _MESSAGE *next;
 }MESSAGE;
 #define QMSG_LINE_MAX 1024
-#define QMSG_LINE_NUM 10240
-#define QMSG_INIT_NUM 20480
+#define QMSG_LINE_NUM 1024
+#define QMSG_INIT_NUM 1024
 typedef struct _QMESSAGE
 {
     int total;
