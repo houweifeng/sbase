@@ -164,8 +164,8 @@ int service_run(SERVICE *service)
             //        service->heartbeat_interval);
         }
         //evbase setting 
-        if(service->service_type == S_SERVICE && service->evbase) 
-            //&& service->working_mode == WORKING_PROC)
+        if(service->service_type == S_SERVICE && service->evbase 
+            && service->working_mode == WORKING_PROC)
         {
             event_set(&(service->event), service->fd, E_READ|E_EPOLL_ET|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
@@ -275,7 +275,6 @@ running_threads:
             return -1;
         }
         /* acceptor */
-        /*
         if((service->acceptor = procthread_init(service->cond)))
         {
             PROCTHREAD_SET(service, service->acceptor);
@@ -289,7 +288,6 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        */
         //recover 
         if((service->recover = procthread_init(0)))
         {
