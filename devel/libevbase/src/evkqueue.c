@@ -7,7 +7,7 @@
 #include <sys/event.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include "mutex.h"
+//#include "mutex.h"
 /* Initialize evkqueue  */
 int evkqueue_init(EVBASE *evbase)
 {
@@ -51,7 +51,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
 
     if(evbase && event && evbase->evs && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        MUTEX_LOCK(evbase->mutex);
+        //MUTEX_LOCK(evbase->mutex);
         UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         if(event->ev_flags & E_READ)
@@ -75,7 +75,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             if((ret = kevent(evbase->efd, &kqev, 1, NULL, 0, NULL)) == -1) goto err;
         }
 err:
-        MUTEX_UNLOCK(evbase->mutex);
+        //MUTEX_UNLOCK(evbase->mutex);
     }
     return ret;
 }
@@ -89,7 +89,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
     if(evbase && event && evbase->evs && event->ev_fd >= 0 
             && event->ev_fd < evbase->allowed)
     {
-        MUTEX_LOCK(evbase->mutex);
+        //MUTEX_LOCK(evbase->mutex);
         UPDATE_EVENT_FD(evbase, event);
         ev_flags = (event->ev_flags ^ event->old_ev_flags);
         add_ev_flags = (event->ev_flags & ev_flags);
@@ -154,7 +154,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             }
         }
 err:
-        MUTEX_UNLOCK(evbase->mutex);
+        //MUTEX_UNLOCK(evbase->mutex);
     }
     return ret;
 }
@@ -165,7 +165,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
     struct kevent kqev;
     if(evbase && event && evbase->evs && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        MUTEX_LOCK(evbase->mutex);
+        //MUTEX_LOCK(evbase->mutex);
         memset(&kqev, 0, sizeof(struct kevent));
         kqev.ident  = event->ev_fd;
         kqev.filter = EVFILT_READ;
@@ -176,7 +176,7 @@ int evkqueue_del(EVBASE *evbase, EVENT *event)
         kqev.flags  = EV_DELETE;
         kevent(evbase->efd, &kqev, 1, NULL, 0, NULL);
         REMOVE_EVENT_FD(evbase, event);
-        MUTEX_UNLOCK(evbase->mutex);
+        //MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -240,7 +240,7 @@ void evkqueue_clean(EVBASE *evbase)
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);
         if(evbase->ev_write_fds)free(evbase->ev_write_fds);
         if(evbase->efd > 0)close(evbase->efd);
-        MUTEX_DESTROY(evbase->mutex);
+        //MUTEX_DESTROY(evbase->mutex);
         free(evbase);
     }	
     return ;

@@ -31,7 +31,7 @@
 #ifdef WIN32
 #include "evwin32.h"
 #endif
-#include "mutex.h"
+//#include "mutex.h"
 typedef struct _EVOPS
 {
     char    *name ;
@@ -77,7 +77,7 @@ EVBASE *evbase_init()
 
     if((evbase = (EVBASE *)calloc(1, sizeof(EVBASE))))
     {
-        MUTEX_RESET(evbase->mutex);
+        //MUTEX_RESET(evbase->mutex);
 #ifdef HAVE_EVPORT
         evops_default_v = EOP_PORT;
         evops[EOP_PORT].name = "PORT";
