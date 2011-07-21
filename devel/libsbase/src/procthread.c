@@ -388,7 +388,7 @@ void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
 {
     if(pth && (pth->listenfd = listenfd) > 0)
     {
-        event_set(&(pth->acceptor), listenfd, E_READ|E_PERSIST,
+        event_set(&(pth->acceptor), listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
                 (void *)pth, (void *)&procthread_event_handler);
         pth->evbase->add(pth->evbase, &(pth->acceptor));
     }
@@ -436,7 +436,7 @@ PROCTHREAD *procthread_init(int cond)
                     (void *)pth, (void *)&procthread_event_handler);
             pth->evbase->add(pth->evbase, &(pth->event));
         }
-        MUTEX_INIT(pth->mutex);
+        MUTEX_RESET(pth->mutex);
         pth->message_queue          = qmessage_init();
         pth->xqueue                 = xqueue_init();
         pth->run                    = procthread_run;

@@ -19,12 +19,12 @@ extern "C" {
 #define SB_GROUP_CONN_MAX       1024
 #define SB_IP_MAX               16
 #define SB_XIDS_MAX             16
-#define SB_GROUPS_MAX           256
+#define SB_GROUPS_MAX           32
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
-#define SB_QCONN_MAX            256
-#define SB_CHUNKS_MAX           256
+#define SB_QCONN_MAX            1024
+#define SB_CHUNKS_MAX           1024
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -78,6 +78,26 @@ struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
+#ifndef __TYPEDEF__MUTEX
+#define __TYPEDEF__MUTEX
+#ifdef HAVE_SEMAPHORE
+#include <semaphore.h>
+typedef struct _MUTEX
+{
+    sem_t mutex;
+    sem_t cond;
+}MUTEX;
+#else
+#include <pthread.h>
+typedef struct _MUTEX
+{
+    pthread_mutex_t mutex;
+    pthread_cond_t  cond;
+    int nowait;
+    int bits;
+}MUTEX;
+#endif
+#endif
 #ifndef __TYPEDEF__MMBLOCK
 #define __TYPEDEF__MMBLOCK
 typedef struct _MMBLOCK
@@ -205,8 +225,8 @@ typedef struct _CNGROUP
   int   total;
   int   nconns_free;
   int   conns_free[SB_GROUP_CONN_MAX];
-  void  *mutex;
   char  ip[SB_IP_MAX];
+  MUTEX mutex;
   SESSION session;
 }CNGROUP;
 
@@ -252,7 +272,7 @@ typedef struct _SERVICE
     EVENT event;
 
     /* mutex */
-    void *mutex;
+    MUTEX mutex;
     SBASE *sbase;
 
     /* heartbeat */
@@ -370,7 +390,7 @@ typedef struct _PROCTHREAD
     EVENT event;
     EVENT acceptor;
 
-    void *mutex;
+    MUTEX mutex;
     void *evtimer;
     SERVICE *service;
 
@@ -450,7 +470,7 @@ typedef struct _CONN
     MMBLOCK exchange;
     CHUNK chunk;
     /* evbase */
-    void *mutex;
+    MUTEX mutex;
     EVBASE *evbase;
     void *parent;
     void *queue;

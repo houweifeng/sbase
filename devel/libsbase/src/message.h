@@ -75,12 +75,12 @@ typedef struct _QMESSAGE
     int qtotal;
     int nleft;
     int nlist;
+    MUTEX mutex;
     MESSAGE pools[QMSG_INIT_NUM];
     MESSAGE *list[QMSG_LINE_MAX];
     MESSAGE *left;
     MESSAGE *first;
     MESSAGE *last;
-    MUTEX *mutex;
 }QMESSAGE;
 void *qmessage_init();
 void qmessage_handler(void *q, void *logger);

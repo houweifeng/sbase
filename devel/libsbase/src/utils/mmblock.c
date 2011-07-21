@@ -194,6 +194,8 @@ void mmblock_destroy(MMBLOCK *mmblock)
 	if(mmblock)
     {
         if(mmblock->data) xmm_free(mmblock->data, mmblock->size);
+        mmblock->data = mmblock->end = NULL;
+        mmblock->size = mmblock->ndata = mmblock->left = 0;
     }
 	return ;
 }
@@ -203,7 +205,7 @@ void mmblock_clean(MMBLOCK *mmblock)
 {
 	if(mmblock)
     {
-        xmm_free(mmblock->data, mmblock->size);
+        if(mmblock->data) xmm_free(mmblock->data, mmblock->size);
         xmm_free(mmblock, sizeof(MMBLOCK));
     }
 	return ;

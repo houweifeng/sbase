@@ -10,6 +10,7 @@ extern "C" {
 typedef struct _MUTEX
 {
     sem_t mutex;
+    sem_t cond;
 }MUTEX;
 #else
 #include <pthread.h>
@@ -23,61 +24,54 @@ typedef struct _MUTEX
 #endif
 #endif
 #ifdef HAVE_SEMAPHORE
-#define __MM__(ptr) (&(((MUTEX *)ptr)->mutex))
-#define MUTEX_RESET(ptr) ((ptr)?sem_init(__MM__(ptr), 0, 1):-1)
-#define MUTEX_INIT(ptr) do{if((ptr = (MUTEX *)calloc(1, sizeof(MUTEX)))){MUTEX_RESET(ptr);}}while(0)
-#define MUTEX_LOCK(ptr) ((ptr)?sem_wait(__MM__(ptr)):-1)
-#define MUTEX_UNLOCK(ptr) ((ptr)?sem_post(__MM__(ptr)):-1)
-#define MUTEX_WAIT(ptr) ((ptr)?sem_wait(__MM__(ptr)):-1)
-#define MUTEX_TIMEDWAIT(ptr, ts) ((ptr)?sem_timedwait(__MM__(ptr), &ts):-1)
-#define MUTEX_SIGNAL(ptr) ((ptr)?sem_post(__MM__(ptr)):-1)
-#define MUTEX_DESTROY(ptr) do{if(ptr){sem_destroy(__MM__(ptr));free(ptr);}}while(0)
+#define MUTEX_RESET(m) do{sem_init(&(m.mutex), 0, 1);sem_init(&(m.cond), 0, 1);}while(0)
+#define MUTEX_LOCK(m) sem_wait(&(m.mutex))
+#define MUTEX_UNLOCK(m) sem_post(&(m.mutex))
+#define MUTEX_WAIT(m) sem_wait(&(m.cond))
+#define MUTEX_TIMEDWAIT(m, ts) sem_timedwait(&(m.cond), &ts)
+#define MUTEX_SIGNAL(m) sem_post(&(m.cond))
+#define MUTEX_DESTROY(m) do{sem_destroy(&(m.mutex));sem_destroy(&(m.cond));}while(0)
 #else
-#define __M__(ptr) ((MUTEX *)ptr)
-#define __MM__(ptr) (&(((MUTEX *)ptr)->mutex))
-#define __MC__(ptr) (&(((MUTEX *)ptr)->cond))
-#define MUTEX_RESET(ptr)                                                                \
-{if(ptr)                                                                                \
-{                                                                                       \
-        pthread_mutex_init(__MM__(ptr), NULL);                                          \
-        pthread_cond_init(__MC__(ptr), NULL);                                           \
-}}
-#define MUTEX_INIT(ptr) do{if((ptr = (MUTEX *)calloc(1, sizeof(MUTEX)))){MUTEX_RESET(ptr);}}while(0)
-#define MUTEX_LOCK(ptr) ((ptr)?pthread_mutex_lock(__MM__(ptr)):-1)
-#define MUTEX_UNLOCK(ptr) ((ptr)?pthread_mutex_unlock(__MM__(ptr)):-1)
-#define MUTEX_WAIT(ptr)                                                                 \
-{if(ptr)                                                                                \
-{                                                                                       \
-    pthread_mutex_lock(__MM__(ptr));                                                    \
-    if(__M__(ptr)->nowait == 0)                                                         \
-    pthread_cond_wait(__MC__(ptr), __MM__(ptr));                                        \
-    __M__(ptr)->nowait = 0;                                                             \
-    pthread_mutex_unlock(__MM__(ptr));                                                  \
-}}
-#define MUTEX_TIMEDWAIT(ptr, ts)                                                        \
-{if(ptr)                                                                                \
-{                                                                                       \
-    pthread_mutex_lock(__MM__(ptr));                                                    \
-    if(__M__(ptr)->nowait == 0)                                                         \
-    pthread_cond_timedwait(__MC__(ptr), __MM__(ptr), &ts);                              \
-    __M__(ptr)->nowait = 0;                                                             \
-    pthread_mutex_unlock(__MM__(ptr));                                                  \
-}}
-#define MUTEX_SIGNAL(ptr)                                                               \
-{if(ptr)                                                                                \
-{                                                                                       \
-    pthread_mutex_lock(__MM__(ptr));                                                    \
-    pthread_cond_signal(__MC__(ptr));                                                   \
-    __M__(ptr)->nowait = 1;                                                             \
-    pthread_mutex_unlock(__MM__(ptr));                                                  \
-}}
-#define MUTEX_DESTROY(ptr)                                                              \
-{if(ptr)                                                                                \
-{															                            \
-    pthread_mutex_destroy(__MM__(ptr)); 						                        \
-    pthread_cond_destroy(__MC__(ptr)); 							                        \
-    free(ptr);                                                                          \
-}}
+#define MUTEX_RESET(m)                                                      \
+do                                                                          \
+{                                                                           \
+        pthread_mutex_init(&(m.mutex), NULL);                               \
+        pthread_cond_init(&(m.cond), NULL);                                 \
+}while(0)
+#define MUTEX_LOCK(m) pthread_mutex_lock(&(m.mutex))
+#define MUTEX_UNLOCK(m) pthread_mutex_unlock(&(m.mutex))
+#define MUTEX_WAIT(m)                                                       \
+do                                                                          \
+{                                                                           \
+    pthread_mutex_lock(&(m.mutex));                                         \
+    if(m.nowait == 0)                                                       \
+    pthread_cond_wait(&(m.cond), &(m.mutex));                               \
+    m.nowait = 0;                                                           \
+    pthread_mutex_unlock(&(m.mutex));                                       \
+}while(0)
+#define MUTEX_TIMEDWAIT(m, ts)                                              \
+do                                                                          \
+{                                                                           \
+    pthread_mutex_lock(&(m.mutex));                                         \
+    if(m.nowait == 0)                                                       \
+    pthread_cond_timedwait(&(m.cond), &(m.mutex), &ts);                     \
+    m.nowait = 0;                                                           \
+    pthread_mutex_unlock(&(m.mutex));                                       \
+}while(0)
+#define MUTEX_SIGNAL(m)                                                     \
+do                                                                          \
+{                                                                           \
+    pthread_mutex_lock(&(m.mutex));                                         \
+    pthread_cond_signal(&(m.cond));                                         \
+    m.nowait = 1;                                                           \
+    pthread_mutex_unlock(&(m.mutex));                                       \
+}while(0)
+#define MUTEX_DESTROY(m)                                                    \
+do                                                                          \
+{															                \
+    pthread_mutex_destroy(&(m.mutex)); 						                \
+    pthread_cond_destroy(&(m.cond)); 							            \
+}while(0)
 #endif
 #ifdef __cplusplus
  }

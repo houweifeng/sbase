@@ -119,12 +119,9 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(ns, id, pthid, pth, logger)                                          \
+#define NEW_PROCTHREAD(ns, id, pthdid, proc, logger)                                        \
 {                                                                                           \
-    if(pthread_create((pthread_t *)&pthid, NULL, (void *)(pth->run), (void *)pth) == 0)     \
-    {                                                                                       \
-    }                                                                                       \
-    else                                                                                    \
+    if(pthread_create((pthread_t *)&pthdid, NULL, (void *)(proc->run), (void *)proc) != 0)  \
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
@@ -165,14 +162,14 @@ int service_run(SERVICE *service)
         }
         //evbase setting 
         if(service->service_type == S_SERVICE && service->evbase 
-            && service->working_mode == WORKING_PROC)
+          )//&& service->working_mode == WORKING_PROC)
         {
             event_set(&(service->event), service->fd, E_READ|E_EPOLL_ET|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
             ret = service->evbase->add(service->evbase, &(service->event));
         }
         //initliaze conns
-        for(i = 0; i < service->init_conns; i++)
+        for(i = 0; i < SB_INIT_CONNS; i++)
         {
             if((conn = conn_init()))
             {
@@ -275,6 +272,7 @@ running_threads:
             return -1;
         }
         /* acceptor */
+        /*
         if((service->acceptor = procthread_init(service->cond)))
         {
             PROCTHREAD_SET(service, service->acceptor);
@@ -288,7 +286,6 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        /*
         */
         //recover 
         if((service->recover = procthread_init(0)))
@@ -1169,7 +1166,7 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
         strcpy(service->groups[id].ip, ip);
         service->groups[id].port = port;
         service->groups[id].limit = limit;
-        MUTEX_INIT(service->groups[id].mutex);
+        MUTEX_RESET(service->groups[id].mutex);
         memcpy(&(service->groups[id].session), session, sizeof(SESSION));
         //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, id, service->groups[id].session.data_handler);
     }
@@ -1592,7 +1589,7 @@ SERVICE *service_init()
     SERVICE *service = NULL;
     if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
-        MUTEX_INIT(service->mutex);
+        MUTEX_RESET(service->mutex);
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;

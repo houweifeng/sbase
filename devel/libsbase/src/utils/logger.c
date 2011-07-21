@@ -128,7 +128,7 @@ LOGGER *logger_init(char *file, int rotate_flag)
 
     if((logger = (LOGGER *)calloc(1, sizeof(LOGGER))))
     {
-        MUTEX_INIT(logger->mutex);
+        MUTEX_RESET(logger->mutex);
         strcpy(logger->file, file);
         logger_mkdir(file);
         logger->rflag = rotate_flag;

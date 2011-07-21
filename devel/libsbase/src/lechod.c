@@ -143,20 +143,18 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
 
 int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 {
-    HTTP_REQ http_req = {0};
-    char *p = NULL, *end = NULL;
-
 	if(conn)
     {
+        HTTP_REQ http_req = {0};
+        char *p = NULL, *end = NULL;
         p = packet->data;
         end = packet->data + packet->ndata;
         //if(http_request_parse())
         return xhttpd_index_view(conn, &http_req, "/", "/");
         /*
-        p = '\0';
+        int x = 0, n = 0, keepalive = 0; 
         if(strcasestr(packet->data, "Keep-Alive")) keepalive = 1;
-
-        int x = 0, n = 0; char buf[4096], *s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);
+        char buf[4096], *s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);
         if(keepalive)
         {
             n = sprintf(buf, "HTTP/1.0 200 OK\r\nConnection: Keep-Alive\r\nContent-Length:%d\r\n\r\n%s", x, s);conn->push_chunk(conn, buf, n); 
@@ -168,8 +166,8 @@ int lechod_packet_handler(CONN *conn, CB_DATA *packet)
         }
         if(keepalive == 0) conn->over(conn); 
         return 0;
-		//return conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
         */
+		//return conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
     }
     return -1;
 }
