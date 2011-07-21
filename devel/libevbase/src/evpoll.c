@@ -5,7 +5,6 @@
 #include <string.h>
 #include <poll.h>
 #include <sys/resource.h>
-#include "mutex.h"
 /* Initialize evpoll  */
 int evpoll_init(EVBASE *evbase)
 {

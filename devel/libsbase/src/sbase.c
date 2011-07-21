@@ -322,15 +322,15 @@ SBASE *sbase_init()
     {
         sbase->evtimer          = EVTIMER_INIT();
         sbase->message_queue    = qmessage_init();
-        sbase->set_log		    = &sbase_set_log;
-        sbase->set_log_level	= &sbase_set_log_level;
-        sbase->set_evlog	    = &sbase_set_evlog;
-        sbase->set_evlog_level	= &sbase_set_evlog_level;
-        sbase->add_service	    = &sbase_add_service;
-        sbase->remove_service	= &sbase_remove_service;
-        sbase->running 		    = &sbase_running;
-        sbase->stop 		    = &sbase_stop;
-        sbase->clean 		    = &sbase_clean;
+        sbase->set_log		    = sbase_set_log;
+        sbase->set_log_level	= sbase_set_log_level;
+        sbase->set_evlog	    = sbase_set_evlog;
+        sbase->set_evlog_level	= sbase_set_evlog_level;
+        sbase->add_service	    = sbase_add_service;
+        sbase->remove_service	= sbase_remove_service;
+        sbase->running 		    = sbase_running;
+        sbase->stop 		    = sbase_stop;
+        sbase->clean 		    = sbase_clean;
 #ifdef HAVE_SSL
         sbase->ssl_id           = SSL_library_init();
 #endif

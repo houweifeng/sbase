@@ -7,7 +7,6 @@
 #include <sys/event.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include "mutex.h"
 /* Initialize evkqueue  */
 int evkqueue_init(EVBASE *evbase)
 {

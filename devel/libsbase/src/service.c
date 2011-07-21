@@ -288,6 +288,8 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
+        /*
+        */
         //recover 
         if((service->recover = procthread_init(0)))
         {
@@ -443,7 +445,7 @@ err_conn:
                     {
                         qmessage_push(parent->message_queue, 
                                 MESSAGE_INPUT, -1, conn->fd, -1, conn, parent, NULL);
-                        MUTEX_SIGNAL(parent->mutex);
+                        if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
                     }
                     //DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
                 }
@@ -1592,37 +1594,37 @@ SERVICE *service_init()
     {
         MUTEX_INIT(service->mutex);
         service->etimer             = EVTIMER_INIT();
-        service->set                = &service_set;
-        service->run                = &service_run;
-        service->set_log            = &service_set_log;
-        service->set_log_level      = &service_set_log_level;
-        service->stop               = &service_stop;
-        service->newproxy           = &service_newproxy;
-        service->newconn            = &service_newconn;
-        service->okconn             = &service_okconn;
-        service->addconn            = &service_addconn;
-        service->pushconn           = &service_pushconn;
-        service->popconn            = &service_popconn;
-        service->getconn            = &service_getconn;
-        service->freeconn           = &service_freeconn;
-        service->findconn           = &service_findconn;
-        service->overconn           = &service_overconn;
-        service->popchunk           = &service_popchunk;
-        service->pushchunk          = &service_pushchunk;
-        service->newchunk           = &service_newchunk;
-        service->set_session        = &service_set_session;
-        service->add_multicast      = &service_add_multicast;
-        service->drop_multicast     = &service_drop_multicast;
-        service->broadcast          = &service_broadcast;
-        service->addgroup           = &service_addgroup;
-        service->closegroup         = &service_closegroup;
-        service->castgroup          = &service_castgroup;
-        service->stategroup         = &service_stategroup;
-        service->newtask            = &service_newtask;
-        service->newtransaction     = &service_newtransaction;
-        service->set_heartbeat      = &service_set_heartbeat;
-        service->clean              = &service_clean;
-        service->close              = &service_close;
+        service->set                = service_set;
+        service->run                = service_run;
+        service->set_log            = service_set_log;
+        service->set_log_level      = service_set_log_level;
+        service->stop               = service_stop;
+        service->newproxy           = service_newproxy;
+        service->newconn            = service_newconn;
+        service->okconn             = service_okconn;
+        service->addconn            = service_addconn;
+        service->pushconn           = service_pushconn;
+        service->popconn            = service_popconn;
+        service->getconn            = service_getconn;
+        service->freeconn           = service_freeconn;
+        service->findconn           = service_findconn;
+        service->overconn           = service_overconn;
+        service->popchunk           = service_popchunk;
+        service->pushchunk          = service_pushchunk;
+        service->newchunk           = service_newchunk;
+        service->set_session        = service_set_session;
+        service->add_multicast      = service_add_multicast;
+        service->drop_multicast     = service_drop_multicast;
+        service->broadcast          = service_broadcast;
+        service->addgroup           = service_addgroup;
+        service->closegroup         = service_closegroup;
+        service->castgroup          = service_castgroup;
+        service->stategroup         = service_stategroup;
+        service->newtask            = service_newtask;
+        service->newtransaction     = service_newtransaction;
+        service->set_heartbeat      = service_set_heartbeat;
+        service->clean              = service_clean;
+        service->close              = service_close;
     }
     return service;
 }
