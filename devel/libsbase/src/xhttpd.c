@@ -22,7 +22,6 @@
 #include "mtrie.h"
 #include "stime.h"
 #include "logger.h"
-#include "queue.h"
 #define XHTTPD_VERSION 		    "0.1.0"
 #define HTTP_RESP_OK            "HTTP/1.1 200 OK"
 #define HTTP_BAD_REQUEST        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"

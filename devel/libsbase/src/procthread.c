@@ -410,6 +410,7 @@ void procthread_clean(PROCTHREAD *pth)
             }
             qmessage_clean(pth->message_queue);
         }
+        xqueue_clean(pth->xqueue);
         MUTEX_DESTROY(pth->mutex);
         xmm_free(pth, sizeof(PROCTHREAD));
     }

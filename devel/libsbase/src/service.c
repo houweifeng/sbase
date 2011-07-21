@@ -161,8 +161,8 @@ int service_run(SERVICE *service)
             //        service->heartbeat_interval);
         }
         //evbase setting 
-        if(service->service_type == S_SERVICE && service->evbase 
-          )//&& service->working_mode == WORKING_PROC)
+        if(service->service_type == S_SERVICE && service->evbase) 
+          //&& service->working_mode == WORKING_PROC)
         {
             event_set(&(service->event), service->fd, E_READ|E_EPOLL_ET|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
@@ -286,7 +286,6 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        */
         //recover 
         if((service->recover = procthread_init(0)))
         {
@@ -300,6 +299,7 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
+        */
         /* daemon worker threads */
         if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
         if(service->ndaemons > 0)
@@ -1312,6 +1312,7 @@ void service_stop(SERVICE *service)
         service->lock = 1;
         //WARN_LOGGER(service->logger, "ready for stop service:%s running_connections:%d nconn:%d nqconns:%d nchunks:%d nqchunk:%d\n", service->service_name, service->running_connections, service->nconn, service->nqconns, service->nchunks, service->nqchunks);
         //acceptor
+        /*
         if(service->acceptor)
         {
             //WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
@@ -1319,7 +1320,6 @@ void service_stop(SERVICE *service)
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
         //stop all connections 
-        /*
         if(service->connections && service->index_max >= 0)
         {
             //WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
