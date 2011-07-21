@@ -375,7 +375,7 @@ typedef struct _PROCTHREAD
     SERVICE *service;
 
     /* message queue */
-    void *queue;
+    void *xqueue;
     void *iodaemon;
     void *ioqmessage;
     void *message_queue;
@@ -432,6 +432,8 @@ typedef struct _CONN
     int c_id;
     int d_state;
     int evid;
+    int qid;
+    int bits;
     /* conenction */
     int  sock_type;
     int  fd;

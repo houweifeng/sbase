@@ -12,7 +12,7 @@ void *xqueue_init()
 
     if((q = (XQUEUE *)xmm_mnew(sizeof(XQUEUE)))) 
     {
-        memset(q, 0, sizeof(XQUEUE));
+        //memset(q, 0, sizeof(XQUEUE));
         for(i = 1; i < XQ_ROOTS_MAX; i++)
         {
             q->waits[j++] = i;
