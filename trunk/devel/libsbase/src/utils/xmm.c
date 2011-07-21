@@ -12,10 +12,10 @@ void *xmm_mnew(size_t size)
     void *m = NULL;
     if(size > 0)
     {
+        /*
         if(size < M_PAGE_SIZE)
             m = calloc(1, size);
         else
-        /*
         */
         {
             m = mmap(NULL, MMSIZE(size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
@@ -31,10 +31,10 @@ void *xmm_new(size_t size)
     void *m = NULL;
     if(size > 0)
     {
+        /*
         if(size < M_PAGE_SIZE)
             m = calloc(1, size);
         else
-        /*
         */
         {
             m = mmap(NULL, MMSIZE(size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
@@ -50,12 +50,12 @@ void *xmm_mresize(void *old, size_t old_size, size_t new_size)
     void *m = NULL;
     if(new_size > 0 && new_size > old_size)
     {
+        /*
         if(new_size < M_PAGE_SIZE)
         {
             m = calloc(1, new_size);
         }
         else
-        /*
         */
         {
             m = mmap(NULL, MMSIZE(new_size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
@@ -66,8 +66,8 @@ void *xmm_mresize(void *old, size_t old_size, size_t new_size)
             if(old_size > 0)
             {
                 if(m) memcpy(m, old, old_size);
-                if(old_size < M_PAGE_SIZE) free(old);
-                else 
+                //if(old_size < M_PAGE_SIZE) free(old);
+                //else 
                     munmap(old, MMSIZE(old_size));
             }
         }
@@ -80,12 +80,12 @@ void *xmm_resize(void *old, size_t old_size, size_t new_size)
     void *m = NULL;
     if(new_size > 0 && new_size > old_size)
     {
+        /*
         if(new_size < M_PAGE_SIZE)
         {
             m = calloc(1, new_size);
         }
         else
-        /*
         */
         {
             m = mmap(NULL, MMSIZE(new_size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
@@ -96,8 +96,8 @@ void *xmm_resize(void *old, size_t old_size, size_t new_size)
             if(old_size > 0)
             {
                 if(m) memcpy(m, old, old_size);
-                if(old_size < M_PAGE_SIZE) free(old);
-                else
+                //if(old_size < M_PAGE_SIZE) free(old);
+                //else
                     munmap(old, MMSIZE(old_size));
             }
         }
@@ -124,8 +124,8 @@ void xmm_free(void *m, size_t size)
 {
     if(m && size > 0)
     {
-        if(size < M_PAGE_SIZE) free(m);
-        else 
+        //if(size < M_PAGE_SIZE) free(m);
+        //else 
             munmap(m, MMSIZE(size));
     }
     return ;
