@@ -73,7 +73,7 @@ void procthread_run(void *arg)
                 //service_accept_handler(service);
                 do
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, &tv);
+                    i = pth->evbase->loop(pth->evbase, 0, NULL);
                     //if(i > 0)++k;
                     //if(i < 1 || k > 2000000){usleep(pth->usec_sleep); k = 0;}
                     //if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}
@@ -86,7 +86,7 @@ void procthread_run(void *arg)
             {
                 do
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, &tv);
+                    i = pth->evbase->loop(pth->evbase, 0, NULL);
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
@@ -432,12 +432,13 @@ PROCTHREAD *procthread_init(int cond)
                 fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
                 _exit(-1);
             }
-            pth->cond = open(SB_COND_FILE, O_CREAT|O_RDWR, 0644);
+            pth->cond = cond;
+            //= open(SB_COND_FILE, O_CREAT|O_RDWR, 0644);
             event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
                     (void *)pth, (void *)&procthread_event_handler);
             pth->evbase->add(pth->evbase, &(pth->event));
         }
-        MUTEX_RESET(pth->mutex);
+        MUTEX_INIT(pth->mutex);
         pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;

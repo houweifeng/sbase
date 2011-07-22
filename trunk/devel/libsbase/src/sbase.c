@@ -176,6 +176,7 @@ int sbase_running(SBASE *sbase, int useconds)
     int ret = -1, i = -1, sec = 0, usec = 0;
     struct timeval tv = {0, 0};
     SERVICE *service = NULL;
+    struct ip_mreq mreq;        
     pid_t pid = 0;
 
     if(sbase)
@@ -215,8 +216,6 @@ running:
             fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
             _exit(-1);
         }
-        /*
-        struct ip_mreq mreq;        
         memset(&mreq, 0, sizeof(struct ip_mreq));        
         mreq.imr_multiaddr.s_addr = inet_addr("239.239.239.239");        
         mreq.imr_interface.s_addr = inet_addr("127.0.0.1");      
@@ -227,12 +226,13 @@ running:
             //FATAL_LOGGER(sbase->logger, "new cond socket() failed, %s", strerror(errno));      
             _exit(-1);
         }
-        */
+        /*
         if((sbase->cond = open(SB_COND_FILE, O_CREAT|O_RDWR, 0644)) < 0)
         {
             FATAL_LOGGER(sbase->logger, "open() condition file failed, %s", strerror(errno));      
             _exit(-1);
         }
+        */
         event_set(&(sbase->event), sbase->cond, E_READ|E_PERSIST,
                     (void *)sbase, (void *)&sbase_event_handler);
         ret = sbase->evbase->add(sbase->evbase, &(sbase->event));
@@ -245,6 +245,7 @@ running:
                 if((service = sbase->services[i]))
                 {
                     service->evbase = sbase->evbase;
+                    service->cond = sbase->cond;
                     service->run(service);
                 }
             }

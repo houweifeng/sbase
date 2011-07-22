@@ -20,8 +20,10 @@ void *logger = NULL;
 #define XHTTPD_VERSION "0.0.1"
 #define LL(xxx) ((long long int)xxx)
 #define http_default_charset "utf-8"
+int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path);
 int lechod_packet_reader(CONN *conn, CB_DATA *buffer)
 {
+    //return xhttpd_index_view(conn, NULL, "/data", "/");
     return buffer->ndata;
 }
 
@@ -112,15 +114,18 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
             p += sprintf(p, "HTTP/1.1 200 OK\r\nContent-Length:%lld\r\n"
                     "Content-Type: text/html; charset=%s\r\n",
                     LL(len), http_default_charset);
-            if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
+            if(http_req)
             {
-                p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
-                if(strcasestr(http_req->hlines + n, "close") == NULL )
-                    keepalive = 1;
-            }
-            else 
-            {
-                p += sprintf(p, "Connection: close\r\n");
+                if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
+                {
+                    p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
+                    if(strcasestr(http_req->hlines + n, "close") == NULL )
+                        keepalive = 1;
+                }
+                else 
+                {
+                    p += sprintf(p, "Connection: close\r\n");
+                }
             }
             p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
             p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
@@ -145,13 +150,11 @@ int lechod_packet_handler(CONN *conn, CB_DATA *packet)
 {
 	if(conn)
     {
-        HTTP_REQ http_req = {0};
+        /*HTTP_REQ http_req = {0};
         char *p = NULL, *end = NULL;
         p = packet->data;
         end = packet->data + packet->ndata;
-        //if(http_request_parse())
-        return xhttpd_index_view(conn, &http_req, "/", "/");
-        /*
+        return xhttpd_index_view(conn, NULL, "/", "/"); */
         int x = 0, n = 0, keepalive = 0; 
         if(strcasestr(packet->data, "Keep-Alive")) keepalive = 1;
         char buf[4096], *s = "sdklhafkllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllhflkdfklasdjfkldsakfldsalkfkasdfjksdjfkdasjfklasdjfklsdjfklsjdkfljdssssssssssssssssssssssssssssssssssssssssldkfjsakldjflkajsdfkljadkfjkldajfkljd";x = strlen(s);
@@ -166,6 +169,7 @@ int lechod_packet_handler(CONN *conn, CB_DATA *packet)
         }
         if(keepalive == 0) conn->over(conn); 
         return 0;
+        /*
         */
 		//return conn->push_chunk((CONN *)conn, ((CB_DATA *)packet)->data, packet->ndata);
     }
@@ -231,6 +235,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
 	service->nprocthreads = iniparser_getint(dict, "LECHOD:nprocthreads", 1);
 	service->niodaemons = iniparser_getint(dict, "LECHOD:niodaemons", 1);
 	service->ndaemons = iniparser_getint(dict, "LECHOD:ndaemons", 0);
+    //service->session.packet_type= PACKET_CUSTOMIZED;
     service->session.packet_type=iniparser_getint(dict, "LECHOD:packet_type",PACKET_DELIMITER);
     if((service->session.packet_delimiter = iniparser_getstr(dict, "LECHOD:packet_delimiter")))
     {
@@ -298,7 +303,7 @@ int main(int argc, char **argv)
     /* signal */
     signal(SIGTERM, &lechod_stop);
     signal(SIGINT,  &lechod_stop);
-    signal(SIGHUP,  &lechod_stop);
+    signal(SIGHUP,  SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
     //daemon
     if(is_daemon)

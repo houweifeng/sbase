@@ -19,12 +19,14 @@ int evselect_init(EVBASE *evbase)
         evbase->ev_write_fds = calloc(1, sizeof(fd_set));	
         FD_ZERO((fd_set *)evbase->ev_write_fds);
         //FD_SET(0, (fd_set *)evbase->ev_write_fds);	
+        /*
         if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
                 && rlim.rlim_cur != RLIM_INFINITY )
         {
             max_fd = rlim.rlim_cur;		
         }
         evbase->evlist = (EVENT **)calloc(max_fd, sizeof(EVENT *));	
+        */
         evbase->allowed = max_fd;
         return 0;
     }
@@ -177,7 +179,7 @@ void evselect_clean(EVBASE *evbase)
     if(evbase)
     {
         //MUTEX_DESTROY(evbase->mutex);
-        if(evbase->evlist)free(evbase->evlist);
+        //if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);
