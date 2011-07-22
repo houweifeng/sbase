@@ -63,24 +63,27 @@ void procthread_run(void *arg)
         pth->running_status = 1;
         if(pth->usec_sleep > 1000000) sec = pth->usec_sleep/1000000;
         usec = pth->usec_sleep % 1000000;
-        if(pth->listenfd > 0)
+        if(pth->have_evbase)
         {
-            do
+            if(pth->listenfd > 0)
             {
-                service_accept_handler(pth->service);
-            }while(pth->running_status);
-        }
-        else if(pth->have_evbase)
-        {
-            do
-            {
-                i = pth->evbase->loop(pth->evbase, 0, NULL);
-                if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                do
                 {
-                    qmessage_handler(pth->message_queue, pth->logger);
-                    i++;
-                }
-            }while(pth->running_status);
+                    i = pth->evbase->loop(pth->evbase, 0, NULL);
+                }while(pth->running_status);
+            }
+            else
+            {
+                do
+                {
+                    i = pth->evbase->loop(pth->evbase, 0, NULL);
+                    if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                    {
+                        qmessage_handler(pth->message_queue, pth->logger);
+                        i++;
+                    }
+                }while(pth->running_status);
+            }
         }
         else
         {
@@ -374,12 +377,12 @@ void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
 {
     if(pth)
     {
-        pth->listenfd = listenfd;
-        /*
-        event_set(&(pth->acceptor), listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
-                (void *)pth, (void *)&procthread_event_handler);
-        pth->evbase->add(pth->evbase, &(pth->acceptor));
-        */
+        if((pth->listenfd = listenfd) > 0)
+        {
+            event_set(&(pth->acceptor), listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
+                    (void *)pth, (void *)&procthread_event_handler);
+            pth->evbase->add(pth->evbase, &(pth->acceptor));
+        }
     }
     return ;
 }
