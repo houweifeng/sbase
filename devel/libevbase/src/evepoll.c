@@ -13,12 +13,14 @@ int evepoll_init(EVBASE *evbase)
     int max_fd = EV_MAX_FD;
     if(evbase)
     {
+        /*
         if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
                 && rlim.rlim_cur != RLIM_INFINITY )
         {
             max_fd = rlim.rlim_cur;
         }
         evbase->evlist  = (EVENT **)calloc(max_fd, sizeof(EVENT *));
+        */
         evbase->efd 	= epoll_create(max_fd);
         evbase->evs 	= calloc(max_fd, sizeof(struct epoll_event));
         evbase->allowed = max_fd;
@@ -211,7 +213,7 @@ void evepoll_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        if(evbase->evlist)free(evbase->evlist);
+        //if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);

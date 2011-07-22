@@ -11,7 +11,7 @@ extern "C" {
 #define E_CLOSE		0x04
 #define E_PERSIST	0x08
 #define E_EPOLL_ET  0x10
-#define EV_MAX_FD	1024
+#define EV_MAX_FD	65536
 /*event operating */
 #define EOP_PORT        0x00
 #define EOP_SELECT      0x01
@@ -59,7 +59,7 @@ typedef struct _EVBASE
 	void *ev_write_fds;
 	void *ev_fds;
 	void *evs;
-    struct _EVENT **evlist;
+    struct _EVENT *evlist[EV_MAX_FD];
 
 	int	    (*init)(struct _EVBASE *);
 	int	    (*add)(struct _EVBASE *, struct _EVENT*);

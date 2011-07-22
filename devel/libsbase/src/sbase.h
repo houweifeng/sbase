@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <pthread.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -79,26 +80,6 @@ struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
-#ifndef __TYPEDEF__MUTEX
-#define __TYPEDEF__MUTEX
-#ifdef HAVE_SEMAPHORE
-#include <semaphore.h>
-typedef struct _MUTEX
-{
-    sem_t mutex;
-    sem_t cond;
-}MUTEX;
-#else
-#include <pthread.h>
-typedef struct _MUTEX
-{
-    pthread_mutex_t mutex;
-    pthread_cond_t  cond;
-    int nowait;
-    int bits;
-}MUTEX;
-#endif
-#endif
 #ifndef __TYPEDEF__MMBLOCK
 #define __TYPEDEF__MMBLOCK
 typedef struct _MMBLOCK
@@ -187,7 +168,6 @@ typedef struct _SBASE
     /* evtimer */
     int evid;
     int ssl_id;
-    int64_t nheartbeat;
 
     /* event */
     EVENT event;
@@ -227,7 +207,7 @@ typedef struct _CNGROUP
   int   nconns_free;
   int   conns_free[SB_GROUP_CONN_MAX];
   char  ip[SB_IP_MAX];
-  MUTEX mutex;
+  void *mutex;
   SESSION session;
 }CNGROUP;
 
@@ -273,7 +253,7 @@ typedef struct _SERVICE
     EVENT event;
 
     /* mutex */
-    MUTEX mutex;
+    void *mutex;
     SBASE *sbase;
 
     /* heartbeat */
@@ -388,11 +368,11 @@ typedef struct _PROCTHREAD
     int have_evbase;
     int listenfd;
     int bits;
-    int64_t threadid;
+    pthread_t threadid;
     EVENT event;
     EVENT acceptor;
 
-    MUTEX mutex;
+    void *mutex;
     void *evtimer;
     SERVICE *service;
 
@@ -472,7 +452,7 @@ typedef struct _CONN
     MMBLOCK exchange;
     CHUNK chunk;
     /* evbase */
-    MUTEX mutex;
+    void *mutex;
     EVBASE *evbase;
     void *parent;
     void *queue;
@@ -550,16 +530,16 @@ typedef struct _CONN
     int (*over_session)(struct _CONN *);
     int (*newtask)(struct _CONN *, CALLBACK *);
     int (*get_service_id)(struct _CONN *);
-    /* connection bytes stats */
-    int64_t   recv_oob_total;
-    int64_t   sent_oob_total;
-    int64_t   recv_data_total;
-    int64_t   sent_data_total;
-    /* xid 64 bit */
-    int64_t  xids64[SB_XIDS_MAX];
     char remote_ip[SB_IP_MAX];
     char local_ip[SB_IP_MAX];
     SESSION session;
+    /* connection bytes stats */
+    long long   recv_oob_total;
+    long long   sent_oob_total;
+    long long   recv_data_total;
+    long long   sent_data_total;
+    /* xid 64 bit */
+    int64_t  xids64[SB_XIDS_MAX];
 }CONN, *PCONN;
 CONN *conn_init();
 #ifdef __cplusplus

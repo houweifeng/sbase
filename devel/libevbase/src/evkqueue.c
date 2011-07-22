@@ -27,15 +27,16 @@ int evkqueue_init(EVBASE *evbase)
             fprintf(stderr, "kevent test failed, %s\n", strerror(errno));
             return -1;
         }
-
+        /*
         if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
                 && rlim.rlim_cur != RLIM_INFINITY )
         {
             max_fd = rlim.rlim_cur;
         }
-        if((evbase->evs		= calloc(max_fd, sizeof(struct kevent))) == NULL) 
-            return -1;
         if((evbase->evlist  = (EVENT **)calloc(max_fd, sizeof(EVENT *))) == NULL)
+            return -1;
+        */
+        if((evbase->evs		= calloc(max_fd, sizeof(struct kevent))) == NULL) 
             return -1;
         evbase->allowed = max_fd;
         return 0;
@@ -234,7 +235,7 @@ void evkqueue_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        if(evbase->evlist)free(evbase->evlist);
+        //if(evbase->evlist)free(evbase->evlist);
         if(evbase->evs)free(evbase->evs);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);

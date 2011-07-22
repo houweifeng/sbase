@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,7 +55,9 @@ typedef struct _CONN
 #endif
 }CONN;
 static CONN *conns = NULL;
-
+static char *out_block = "daffffffffdsafhklsdfjlasfjl;adjfl;ajdsfl;ajdlf;jadl;fjl;sdmflsdmfl;asmfl;mdslfmadsl;fmad;lfmad;sffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
+static char out_data[EV_BUF_SIZE];
+static int out_data_len = 0;
 /* set rlimit */
 int setrlimiter(char *name, int rlimit, int nset)
 {
@@ -267,9 +270,6 @@ void ev_handler(int fd, int ev_flags, void *arg)
 #endif
             }
             /* set FD NON-BLOCK */
-            char *s = "daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
-            conns[fd].nout = sprintf(conns[fd].buffer, 
-                    "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(s), s);
             conns[rfd].n = 0;
             fcntl(rfd, F_SETFL, O_NONBLOCK);
             event_set(&(conns[rfd].event), rfd, E_READ|E_PERSIST,
@@ -326,13 +326,15 @@ void ev_handler(int fd, int ev_flags, void *arg)
             }
             else
             {
-                if(strstr(conns[fd].buffer, "Keep-Alive")) keepalive = 1;
-                n = write(fd, conns[fd].buffer+conns[fd].x, conns[fd].nout - conns[fd].x);
+                if(strcasestr(conns[fd].buffer, "Keep-Alive")) keepalive = 1;
+                n = write(fd, out_data + conns[fd].x, out_data_len - conns[fd].x);
             }
             if(n > 0 )
             {
                 conns[fd].x += n;
-                if(conns[fd].x  == conns[fd].nout && keepalive == 0) goto err;
+                //fprintf(stdout, "keepalive:%s\n", conns[fd].buffer);
+                if(conns[fd].x < out_data_len) return ;
+                if(conns[fd].x  == out_data_len && keepalive == 0) goto err;
                 SHOW_LOG("Echo %d bytes to %d", n, fd);
             }
             else
@@ -387,6 +389,9 @@ int main(int argc, char **argv)
     max_connections = (connection_limit > 0) ? connection_limit : CONN_MAX;
     /* Set resource limit */
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
+    out_data_len = sprintf(out_data, "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(out_block), out_block);
+
+
     /* Initialize global vars */
     if((conns = (CONN *)calloc(CONN_MAX, sizeof(CONN))))
     {

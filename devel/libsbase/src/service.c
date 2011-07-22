@@ -217,7 +217,7 @@ running_threads:
         {
             for(i = 0; i < service->niodaemons; i++)
             {
-                if((service->iodaemons[i] = procthread_init(1)))
+                if((service->iodaemons[i] = procthread_init(service->cond)))
                 {
                     PROCTHREAD_SET(service, service->iodaemons[i]);
                     ret = 0;
@@ -273,7 +273,7 @@ running_threads:
             return -1;
         }
         /* acceptor */
-        if((service->acceptor = procthread_init(1)))
+        if((service->acceptor = procthread_init(service->cond)))
         {
             PROCTHREAD_SET(service, service->acceptor);
             service->acceptor->set_acceptor(service->acceptor, service->fd);
@@ -286,8 +286,6 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        /*
-        */
         //recover 
         if((service->recover = procthread_init(0)))
         {
@@ -391,7 +389,7 @@ new_conn:
                 if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
                                 service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
-                    WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
@@ -1167,7 +1165,7 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
         strcpy(service->groups[id].ip, ip);
         service->groups[id].port = port;
         service->groups[id].limit = limit;
-        MUTEX_RESET(service->groups[id].mutex);
+        MUTEX_INIT(service->groups[id].mutex);
         memcpy(&(service->groups[id].session), session, sizeof(SESSION));
         //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, id, service->groups[id].session.data_handler);
     }
@@ -1592,7 +1590,7 @@ SERVICE *service_init()
     SERVICE *service = NULL;
     if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
-        MUTEX_RESET(service->mutex);
+        MUTEX_INIT(service->mutex);
         //service->xqueue             = xqueue_init();
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
