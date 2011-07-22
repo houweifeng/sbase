@@ -12,7 +12,6 @@
 int evkqueue_init(EVBASE *evbase)
 {
     int max_fd = EV_MAX_FD;
-    struct rlimit rlim;
     struct kevent event = {0}, kev = {0};
 
     if(evbase)
@@ -63,7 +62,7 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             kqev.flags  = EV_ADD;
             kqev.udata  = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
-            if((ret = kevent(evbase->efd, &kqev, 1, NULL, 0, NULL)) == -1) goto err;
+            if((ret = kevent(evbase->efd, &kqev, 1, NULL, 0, NULL)) == -1) return -1;
         }
         if(event->ev_flags & E_WRITE)
         {
@@ -73,9 +72,8 @@ int evkqueue_add(EVBASE *evbase, EVENT *event)
             kqev.flags     = EV_ADD;
             kqev.udata     = (void *)event;
             if(!(event->ev_flags & E_PERSIST)) kqev.flags |= EV_ONESHOT;
-            if((ret = kevent(evbase->efd, &kqev, 1, NULL, 0, NULL)) == -1) goto err;
+            if((ret = kevent(evbase->efd, &kqev, 1, NULL, 0, NULL)) == -1) return -1;
         }
-err:
         //MUTEX_UNLOCK(evbase->mutex);
     }
     return ret;
@@ -105,7 +103,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             kqev.filter     = EVFILT_READ;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
-                goto err;
+                return -1;
             }
             else
             {
@@ -118,7 +116,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             kqev.filter     = EVFILT_WRITE;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
-                goto err;
+                return -1;
             }
             else
             {
@@ -132,7 +130,7 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             kqev.filter     = EVFILT_READ;
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
-                goto err;
+                return -1;
             }
             else
             {
@@ -147,14 +145,13 @@ int evkqueue_update(EVBASE *evbase, EVENT *event)
             if(kevent(evbase->efd, &kqev, 1, NULL, 0, NULL) == -1)
             {   
                 //fprintf(stderr, "kevent(%d,ev_fd:%d, ev_flags:%d)\n", evbase->efd, event->ev_fd, event->ev_flags);
-                goto err;
+                return -1;
             }
             else
             {
                 ret = 0;
             }
         }
-err:
         //MUTEX_UNLOCK(evbase->mutex);
     }
     return ret;
@@ -221,11 +218,11 @@ void evkqueue_reset(EVBASE *evbase)
 {
     if(evbase)
     {
-        close(evbase->efd);
+        if(evbase->efd)close(evbase->efd);
         evbase->efd = kqueue();
         evbase->maxfd = 0;
-        memset(evbase->evs, 0, evbase->allowed * sizeof(struct kevent));
-        memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
+        if(evbase->evs) memset(evbase->evs, 0, evbase->allowed * sizeof(struct kevent));
+        if(evbase->evlist)memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
     }
     return ;
 }

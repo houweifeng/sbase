@@ -199,11 +199,11 @@ void evepoll_reset(EVBASE *evbase)
 {
     if(evbase)
     {
-        close(evbase->efd);
+        if(evbase->efd > 0)close(evbase->efd);
         evbase->efd = epoll_create(evbase->allowed);
         evbase->maxfd = 0;
-        memset(evbase->evs, 0, evbase->allowed * sizeof(struct epoll_event));
-        memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
+        if(evbase->evs)memset(evbase->evs, 0, evbase->allowed * sizeof(struct epoll_event));
+        if(evbase->evlist)memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
     }
     return ;
 }

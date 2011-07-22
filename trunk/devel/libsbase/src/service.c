@@ -84,11 +84,14 @@ int service_set(SERVICE *service)
 #ifdef SO_REUSEPORT
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                    && (flag = fcntl(service->fd, F_GETFL, 0)) != -1
-                    && fcntl(service->fd, F_SETFL, flag|O_NONBLOCK) == 0 
                     && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
                             sizeof(service->sa))) == 0)
             {
+                if(service->working_mode == WORKING_PROC)
+                {
+                    flag = fcntl(service->fd, F_GETFL, 0);
+                    ret = fcntl(service->fd, F_SETFL, flag|O_NONBLOCK);
+                }
                 if(service->sock_type == SOCK_STREAM)
                     ret = listen(service->fd, service->backlog);
             }
@@ -274,7 +277,8 @@ running_threads:
             return -1;
         }
         /* acceptor */
-        if((service->acceptor = procthread_init(service->cond)))
+        if(service->service_type == S_SERVICE && service->fd > 0 
+                && (service->acceptor = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->acceptor);
             service->acceptor->set_acceptor(service->acceptor, service->fd);
@@ -1317,10 +1321,9 @@ void service_stop(SERVICE *service)
         {
             //WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
             service->acceptor->stop(service->acceptor);
+            if(service->fd > 0)close(service->fd);
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
-        /*
-        */
         //stop all connections 
         if(service->connections && service->index_max >= 0)
         {
