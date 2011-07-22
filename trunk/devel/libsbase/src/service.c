@@ -11,6 +11,7 @@
 #include "message.h"
 #include "evtimer.h"
 #include "xqueue.h"
+#include "procthread.h"
 #include "xmm.h"
 #ifndef UI
 #define UI(_x_) ((unsigned int)(_x_))
@@ -122,7 +123,7 @@ void sigpipe_ignore()
 #ifdef HAVE_PTHREAD
 #define NEW_PROCTHREAD(ns, id, pthdid, proc, logger)                                        \
 {                                                                                           \
-    if(pthread_create((pthread_t *)&pthdid, NULL, (void *)(proc->run), (void *)proc) != 0)  \
+    if(pthread_create(&(pthdid), NULL, (void *)(&procthread_run), (void *)proc) != 0)       \
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \

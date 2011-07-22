@@ -348,7 +348,8 @@ void ev_handler(int fd, int ev_flags, void *arg)
         return ;
 err:
         {
-            event_destroy(&conns[fd].event);
+            event_destroy(&(conns[fd].event));
+            memset(&(conns[fd]), 0, sizeof(CONN));
             shutdown(fd, SHUT_RDWR);
             close(fd);
 #ifdef USE_SSL
@@ -565,9 +566,9 @@ running:
                 conns[i].ssl = NULL;
             }
 #endif
+            event_destroy(&conns[i].event);
             shutdown(conns[i].fd, SHUT_RDWR);
             close(conns[i].fd);
-            event_destroy(&conns[i].event);
         }
 #ifdef USE_SSL
         ERR_free_strings();
