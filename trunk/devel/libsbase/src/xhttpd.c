@@ -604,10 +604,9 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 p += sprintf(p, "/%s", http_req.path);
             else
                 p += sprintf(p, "%s", http_req.path);
-            //fprintf(stdout, "outfile:%s\r\n", file);
             if((n = (p - file)) > 0 && lstat(file, &st) == 0)
             {
-                if(S_ISDIR(st.st_mode))
+                if((S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode)) && !S_ISREG(st.st_mode))
                 {
                     i = 0;
                     found = 0;
