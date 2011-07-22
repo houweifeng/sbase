@@ -609,16 +609,19 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
             {
                 if(S_ISDIR(st.st_mode))
                 {
-                    /*
                     i = 0;
                     found = 0;
                     if(p > file && *(p-1) != '/') *p++ = '/';
+                    strcpy(p, "index.html");
+                    if(lstat(file, &st) == 0) found = 1;
+                    /*
+                    if(access(file, F_OK) == 0) found = 1;
                     while(i < nindexes && http_indexes[i])
                     {
                         pp = p;
                         pp += sprintf(pp, "%s", http_indexes[i]);
                         //if(access(file, F_OK) == 0 && lstat(file, &st) == 0)
-                        if(lstat(file, &st) == 0)
+                        if(access(file, F_OK) == 0)
                         {
                             found = 1;
                             p = pp;
