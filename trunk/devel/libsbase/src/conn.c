@@ -1628,7 +1628,6 @@ void conn_clean(CONN *conn)
     {
         MUTEX_DESTROY(conn->mutex);
         event_clean(&(conn->event));
-        WARN_LOGGER(conn->logger, "ready-clean conn[%p]", conn);
         /* Clean BUFFER */
         MMB_DESTROY(conn->buffer);
         /* Clean OOB */
