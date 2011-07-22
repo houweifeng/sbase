@@ -177,7 +177,7 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
             if(fd >= 0 && fd < evbase->allowed && evbase->evlist[fd] && ev == evbase->evlist[fd])
             {
                 ev_flags = 0;
-                if(flags & (EPOLLHUP|EPOLLERR))
+                if(flags & (EPOLLHUP|EPOLLERR|EPOLLET))
                 {
                     ev_flags = E_READ|E_WRITE;
                 }
