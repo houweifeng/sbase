@@ -87,7 +87,7 @@ int service_set(SERVICE *service)
                     && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
                             sizeof(service->sa))) == 0)
             {
-                if(service->working_mode == WORKING_PROC)
+                //if(service->working_mode == WORKING_PROC)
                 {
                     flag = fcntl(service->fd, F_GETFL, 0);
                     ret = fcntl(service->fd, F_SETFL, flag|O_NONBLOCK);

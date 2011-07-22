@@ -65,8 +65,22 @@ void procthread_run(void *arg)
         usec = pth->usec_sleep % 1000000;
         if(pth->have_evbase)
         {
+            if((pth->evbase   = evbase_init()) == NULL)
+            {
+                fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
+                _exit(-1);
+            }
+            if(pth->cond  > 0)
+            {
+                event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
+                        (void *)pth, (void *)&procthread_event_handler);
+                pth->evbase->add(pth->evbase, &(pth->event));
+            }
             if(pth->listenfd > 0)
             {
+                event_set(&(pth->acceptor), pth->listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
+                        (void *)pth, (void *)&procthread_event_handler);
+                pth->evbase->add(pth->evbase, &(pth->acceptor));
                 do
                 {
                     i = pth->evbase->loop(pth->evbase, 0, NULL);
@@ -375,14 +389,9 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 /* set acceptor */
 void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
 {
-    if(pth)
+    if(pth && listenfd > 0)
     {
-        if((pth->listenfd = listenfd) > 0)
-        {
-            event_set(&(pth->acceptor), listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
-                    (void *)pth, (void *)&procthread_event_handler);
-            pth->evbase->add(pth->evbase, &(pth->acceptor));
-        }
+        pth->listenfd = listenfd;
     }
     return ;
 }
@@ -416,20 +425,6 @@ PROCTHREAD *procthread_init(int cond)
 
     if((pth = (PROCTHREAD *)xmm_mnew(sizeof(PROCTHREAD))))
     {
-        if(cond  > 0)
-        {
-            pth->have_evbase = 1;
-            if((pth->evbase   = evbase_init()) == NULL)
-            {
-                fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
-                _exit(-1);
-            }
-            pth->cond = cond;
-            //= open(SB_COND_FILE, O_CREAT|O_RDWR, 0644);
-            event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
-                    (void *)pth, (void *)&procthread_event_handler);
-            pth->evbase->add(pth->evbase, &(pth->event));
-        }
         MUTEX_INIT(pth->mutex);
         pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
