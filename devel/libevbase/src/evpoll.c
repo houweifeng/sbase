@@ -149,8 +149,8 @@ void evpoll_reset(EVBASE *evbase)
     if(evbase)
     {
         evbase->maxfd = 0;
-        memset(evbase->ev_fds, 0, evbase->allowed * sizeof(struct pollfd));
-        memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
+        if(evbase->ev_fds)memset(evbase->ev_fds, 0, evbase->allowed * sizeof(struct pollfd));
+        if(evbase->evlist)memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
     }
     return ;
 }
@@ -161,7 +161,7 @@ void evpoll_clean(EVBASE *evbase)
     if(evbase)
     {
         //MUTEX_DESTROY(evbase->mutex);
-        if(evbase->evlist)free(evbase->evlist);
+        //if(evbase->evlist)free(evbase->evlist);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);
         if(evbase->ev_write_fds)free(evbase->ev_write_fds);

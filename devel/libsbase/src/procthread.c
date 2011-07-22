@@ -63,38 +63,24 @@ void procthread_run(void *arg)
         pth->running_status = 1;
         if(pth->usec_sleep > 1000000) sec = pth->usec_sleep/1000000;
         usec = pth->usec_sleep % 1000000;
-        if(pth->have_evbase)
+        if(pth->listenfd > 0)
         {
-            tv.tv_sec = sec;
-            tv.tv_usec = usec;
-            if(pth->listenfd > 0)
+            do
             {
-                //SERVICE *service = pth->service;
-                //service_accept_handler(service);
-                do
-                {
-                    i = pth->evbase->loop(pth->evbase, 0, NULL);
-                    //if(i > 0)++k;
-                    //if(i < 1 || k > 2000000){usleep(pth->usec_sleep); k = 0;}
-                    //if(i < 1){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}
-                    //if(i < 1){if(++k > 10000){tv.tv_sec = sec;tv.tv_usec = usec;k = 0;}}
-                    //else {tv.tv_sec = 0;tv.tv_usec = 0;k = 0;}
-                }while(pth->running_status);
-                //WARN_LOGGER(pth->logger, "ready to exit threads[acceptor]");
-            }
-            else
+                service_accept_handler(pth->service);
+            }while(pth->running_status);
+        }
+        else if(pth->have_evbase)
+        {
+            do
             {
-                do
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
+                if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, NULL);
-                    if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
-                    {
-                        qmessage_handler(pth->message_queue, pth->logger);
-                        i++;
-                    }
-                }while(pth->running_status);
-                //WARN_LOGGER(pth->logger, "ready to exit threads[iodaemons]");
-            }
+                    qmessage_handler(pth->message_queue, pth->logger);
+                    i++;
+                }
+            }while(pth->running_status);
         }
         else
         {
@@ -386,11 +372,14 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
 /* set acceptor */
 void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
 {
-    if(pth && (pth->listenfd = listenfd) > 0)
+    if(pth)
     {
+        pth->listenfd = listenfd;
+        /*
         event_set(&(pth->acceptor), listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
                 (void *)pth, (void *)&procthread_event_handler);
         pth->evbase->add(pth->evbase, &(pth->acceptor));
+        */
     }
     return ;
 }
