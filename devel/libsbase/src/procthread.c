@@ -425,6 +425,7 @@ PROCTHREAD *procthread_init(int cond)
 
     if((pth = (PROCTHREAD *)xmm_mnew(sizeof(PROCTHREAD))))
     {
+        pth->cond = pth->have_evbase = cond;
         MUTEX_INIT(pth->mutex);
         pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
