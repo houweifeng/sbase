@@ -278,7 +278,7 @@ running_threads:
         }
         /* acceptor */
         if(service->service_type == S_SERVICE && service->fd > 0 
-                && (service->acceptor = procthread_init(0)))
+                && (service->acceptor = procthread_init(service->cond)))
         {
             PROCTHREAD_SET(service, service->acceptor);
             service->acceptor->set_acceptor(service->acceptor, service->fd);
@@ -1321,7 +1321,6 @@ void service_stop(SERVICE *service)
         {
             //WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
             service->acceptor->stop(service->acceptor);
-            if(service->fd > 0)close(service->fd);
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
         //stop all connections 
