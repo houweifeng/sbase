@@ -145,13 +145,13 @@ void qmessage_left(void *qmsg, MESSAGE *msg)
 
 void qmessage_handler(void *qmsg, void *logger)
 {
+    int fd = -1, index = 0, total = 0;
     QMESSAGE *q = (QMESSAGE *)qmsg;
-    int fd = -1, index = 0;
     PROCTHREAD *pth = NULL;
     MESSAGE *msg = NULL;
     CONN *conn = NULL;
 
-    if(q)
+    if((total = QMTOTAL(q)) > 0)
     {
         while((msg = qmessage_pop(qmsg)))
         {
@@ -246,6 +246,7 @@ void qmessage_handler(void *qmsg, void *logger)
             }
 next:
             qmessage_left(qmsg, msg);
+            if(--total < 1) break;
         }
     }
     return ;

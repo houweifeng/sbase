@@ -233,7 +233,7 @@ running:
             _exit(-1);
         }
         */
-        event_set(&(sbase->event), sbase->cond, E_READ|E_PERSIST,
+        event_set(&(sbase->event), sbase->cond, E_READ|E_WRITE|E_EPOLL_ET|E_PERSIST,
                     (void *)sbase, (void *)&sbase_event_handler);
         ret = sbase->evbase->add(sbase->evbase, &(sbase->event));
         //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
