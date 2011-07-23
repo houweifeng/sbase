@@ -47,6 +47,7 @@ typedef struct _CONN
     int x;
     int nout;
     int n;
+    int keepalive;
     EVENT event;
     char out[EV_BUF_SIZE];
     char buffer[EV_BUF_SIZE];
@@ -58,6 +59,8 @@ static CONN *conns = NULL;
 static char *out_block = "daffffffffdsafhklsdfjlasfjl;adjfl;ajdsfl;ajdlf;jadl;fjl;sdmflsdmfl;asmfl;mdslfmadsl;fmad;lfmad;sffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm";
 static char out_data[EV_BUF_SIZE];
 static int out_data_len = 0;
+static char kout_data[EV_BUF_SIZE];
+static int kout_data_len = 0;
 /* set rlimit */
 int setrlimiter(char *name, int rlimit, int nset)
 {
@@ -152,7 +155,7 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
                     goto err_end;
                 }
                 /* set FD NON-BLOCK */
-                fcntl(rfd, F_SETFL, O_NONBLOCK);
+                fcntl(rfd, F_SETFL, fcntl(rfd, F_GETFL, 0)|O_NONBLOCK);
                 event_set(&(conns[rfd].event), rfd, E_READ|E_WRITE|E_PERSIST,
                         (void *)&(conns[rfd].event), &ev_udp_handler);
                 evbase->add(evbase, &(conns[rfd].event));
@@ -220,62 +223,66 @@ err:
 
 void ev_handler(int fd, int ev_flags, void *arg)
 {
-    int rfd = 0, n = 0, keepalive = 0;
+    int rfd = 0, n = 0, out_len = 0;
     struct 	sockaddr_in rsa;
     socklen_t rsa_len = sizeof(struct sockaddr_in);
+    char *out = NULL;
+
     if(fd == lfd )
     {
         if((ev_flags & E_READ))
         {
-            if((rfd = accept(fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
+            while((rfd = accept(fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
             {
                 SHOW_LOG("Accept new connection %s:%d via %d total %d ",
                         inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port),
                         rfd, ++connections);
                 conns[rfd].fd = rfd;
-            }
-            else
-            {
-                FATAL_LOG("Accept new connection failed, %s", strerror(errno));
-                return ;
-            }
-            if(is_use_ssl)
-            {
+                /*
+                   else
+                   {
+                   FATAL_LOG("Accept new connection failed, %s", strerror(errno));
+                   return ;
+                   }
+                   */
+                if(is_use_ssl)
+                {
 #ifdef USE_SSL
-                if((conns[rfd].ssl = SSL_new(ctx)) == NULL)
-                {
-                    FATAL_LOG("SSL_new() failed, %s", ERR_reason_error_string(ERR_get_error()));
-                    shutdown(rfd, SHUT_RDWR);
-                    close(rfd);
-                    return ;
-                }
-                //set fd
-                if(SSL_set_fd(conns[rfd].ssl, rfd) == 0) 
-                {
-                    ERR_print_errors_fp(stdout);
-                    shutdown(rfd, SHUT_RDWR);
-                    close(rfd);
-                    return ;
-                }
-                //ssl accept 
-                if((SSL_accept(conns[rfd].ssl)) <= 0)
-                {
-                    FATAL_LOG("SSL_Accept connection %s:%d via %d failed, %s",
-                            inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port),
-                            rfd,  ERR_reason_error_string(ERR_get_error()));
-                    shutdown(rfd, SHUT_RDWR);
-                    close(rfd);
-                    return ;
-                }
+                    if((conns[rfd].ssl = SSL_new(ctx)) == NULL)
+                    {
+                        FATAL_LOG("SSL_new() failed, %s", ERR_reason_error_string(ERR_get_error()));
+                        shutdown(rfd, SHUT_RDWR);
+                        close(rfd);
+                        return ;
+                    }
+                    //set fd
+                    if(SSL_set_fd(conns[rfd].ssl, rfd) == 0) 
+                    {
+                        ERR_print_errors_fp(stdout);
+                        shutdown(rfd, SHUT_RDWR);
+                        close(rfd);
+                        return ;
+                    }
+                    //ssl accept 
+                    if((SSL_accept(conns[rfd].ssl)) <= 0)
+                    {
+                        FATAL_LOG("SSL_Accept connection %s:%d via %d failed, %s",
+                                inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port),
+                                rfd,  ERR_reason_error_string(ERR_get_error()));
+                        shutdown(rfd, SHUT_RDWR);
+                        close(rfd);
+                        return ;
+                    }
 #endif
+                }
+                /* set FD NON-BLOCK */
+                conns[rfd].n = 0;
+                fcntl(rfd, F_SETFL, fcntl(rfd, F_GETFL, 0)|O_NONBLOCK);
+                event_set(&(conns[rfd].event), rfd, E_READ|E_WRITE|E_EPOLL_ET|E_PERSIST,
+                            (void *)&(conns[rfd].event), &ev_handler);
+                evbase->add(evbase, &(conns[rfd].event));
+                SHOW_LOG("add event_fd:%d E_READ\n", rfd);
             }
-            /* set FD NON-BLOCK */
-            conns[rfd].n = 0;
-            fcntl(rfd, F_SETFL, O_NONBLOCK);
-            event_set(&(conns[rfd].event), rfd, E_READ|E_PERSIST,
-                        (void *)&(conns[rfd].event), &ev_handler);
-            evbase->add(evbase, &(conns[rfd].event));
-            SHOW_LOG("add event_fd:%d E_READ\n", rfd);
             return ;
         }
     }
@@ -284,10 +291,11 @@ void ev_handler(int fd, int ev_flags, void *arg)
         SHOW_LOG("EVENT %d on %d", ev_flags, fd);
         if(ev_flags & E_READ)
         {
+
             if(is_use_ssl)
             {
 #ifdef USE_SSL
-                n = SSL_read(conns[fd].ssl, conns[fd].buffer, EV_BUF_SIZE - conns[fd].n);
+                n = SSL_read(conns[fd].ssl, conns[fd].buffer+conns[fd].n, EV_BUF_SIZE - conns[fd].n);
 #endif
             }
             else
@@ -302,6 +310,7 @@ void ev_handler(int fd, int ev_flags, void *arg)
                 SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
                 if(strstr(conns[fd].buffer, "\r\n\r\n"))
                 {
+                    if(strcasestr(conns[fd].buffer, "Keep-Alive")) conns[fd].keepalive = 1;
                     SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
                     conns[fd].x = 0;
                     conns[fd].n = 0;
@@ -318,23 +327,30 @@ void ev_handler(int fd, int ev_flags, void *arg)
         }
         if(ev_flags & E_WRITE)
         {
+            if(conns[fd].keepalive){out = kout_data;out_len = kout_data_len;}
+            else {out = out_data; out_len = out_data_len;}
             if(is_use_ssl)
             {
 #ifdef USE_SSL
-                n = SSL_write(conns[fd].ssl, conns[fd].buffer, conns[fd].n);
+                n = SSL_write(conns[fd].ssl, out + conns[fd].x, out_len - conns[fd].x);
 #endif
             }
             else
             {
-                if(strcasestr(conns[fd].buffer, "Keep-Alive")) keepalive = 1;
-                n = write(fd, out_data + conns[fd].x, out_data_len - conns[fd].x);
+                n = write(fd, out + conns[fd].x, out_len - conns[fd].x);
             }
             if(n > 0 )
             {
                 conns[fd].x += n;
                 //fprintf(stdout, "keepalive:%s\n", conns[fd].buffer);
-                if(conns[fd].x < out_data_len) return ;
-                if(conns[fd].x  == out_data_len && keepalive == 0) goto err;
+                if(conns[fd].x < out_len) return ;
+                if(conns[fd].x  == out_len)
+                {
+                    conns[fd].x = 0;
+                    conns[fd].n = 0;
+                    if(conns[fd].keepalive == 0) goto err;
+                    conns[fd].keepalive = 0;
+                }
                 SHOW_LOG("Echo %d bytes to %d", n, fd);
             }
             else
@@ -391,6 +407,7 @@ int main(int argc, char **argv)
     /* Set resource limit */
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
     out_data_len = sprintf(out_data, "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(out_block), out_block);
+    kout_data_len = sprintf(kout_data, "HTTP/1.0 200 OK\r\nConnection: Keep-Alive\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(out_block), out_block);
 
 
     /* Initialize global vars */
@@ -470,13 +487,11 @@ int main(int argc, char **argv)
             return -1;
         }
         /* set FD NON-BLOCK */
-        /*
-           if(fcntl(lfd, F_SETFL, O_NONBLOCK) != 0 )
-           {
-           SHOW_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
-           return ;
-           }
-           */
+        if(fcntl(lfd, F_SETFL, fcntl(lfd, F_GETFL, 0)|O_NONBLOCK) != 0 )
+        {
+            SHOW_LOG("Setting NON-BLOCK failed, %s", strerror(errno));
+            return -1;
+        }
         /* Listen */
         if(ev_sock_list[ev_sock_type] == SOCK_STREAM)
         {
@@ -529,7 +544,7 @@ running:
             //evbase->set_evops(evbase, EOP_POLL);
             SHOW_LOG("Initialized event ");
             if(ev_sock_list[ev_sock_type] == SOCK_STREAM)
-                event_set(&conns[lfd].event, lfd, E_READ|E_PERSIST, 
+                event_set(&conns[lfd].event, lfd, E_READ|E_EPOLL_ET|E_PERSIST, 
                         (void *)&conns[lfd].event, &ev_handler);
             else 
                 event_set(&conns[lfd].event, lfd, E_READ|E_PERSIST, 

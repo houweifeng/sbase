@@ -49,6 +49,14 @@ static char *_ymonths[]= {
 	fprintf(stderr, "\"\n");							\
 	fflush(stdout);									\
 }
+#define WARN_LOG(format...)								\
+{											\
+	LOG_HEADER(stdout);								\
+	fprintf(stdout, "\"WARN:");							\
+	fprintf(stdout, format);							\
+	fprintf(stdout, "\"\n");							\
+}
+
 #define SHOW_LOG(format...)								
 /*
 #define SHOW_LOG(format...)								\
