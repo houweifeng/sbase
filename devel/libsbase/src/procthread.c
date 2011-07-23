@@ -28,7 +28,6 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
         {
             service_accept_handler(service);
         }
-        else
         {
             event_del(&(pth->event), E_WRITE);
         }
@@ -65,11 +64,6 @@ void procthread_run(void *arg)
         usec = pth->usec_sleep % 1000000;
         if(pth->have_evbase)
         {
-            if((pth->evbase   = evbase_init()) == NULL)
-            {
-                fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
-                _exit(-1);
-            }
             if(pth->cond  > 0)
             {
                 event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
@@ -96,6 +90,7 @@ void procthread_run(void *arg)
                         qmessage_handler(pth->message_queue, pth->logger);
                         i++;
                     }
+                    if(QMTOTAL(pth->message_queue) > 0) pth->wakeup(pth);
                 }while(pth->running_status);
             }
         }
@@ -425,7 +420,14 @@ PROCTHREAD *procthread_init(int cond)
 
     if((pth = (PROCTHREAD *)xmm_mnew(sizeof(PROCTHREAD))))
     {
-        pth->cond = pth->have_evbase = cond;
+        if((pth->cond = pth->have_evbase = cond) > 0)
+        {
+            if((pth->evbase   = evbase_init()) == NULL)
+            {
+                fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
+                _exit(-1);
+            }
+        }
         MUTEX_INIT(pth->mutex);
         pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
