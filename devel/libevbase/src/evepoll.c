@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
+#include "log.h"
 //#include "mutex.h"
 /* Initialize evepoll  */
 int evepoll_init(EVBASE *evbase)
@@ -160,12 +161,15 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
             
         }
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->allowed);
+        //n = epoll_wait(evbase->efd, (struct epoll_event *)(evbase->evs), evbase->maxfd+1, timeout);
+        WARN_LOG("ready loop() => %d", evbase->allowed);
         n = epoll_wait(evbase->efd, (struct epoll_event *)evbase->evs, evbase->allowed, timeout);
         if(n <= 0)
         {
             if(n < 0){fprintf(stderr, "epoll_wait(%d, %p, %d, %d) failed, %s\n", evbase->efd, evbase->evs, evbase->maxfd, timeout, strerror(errno));}
             return n;
         }
+        WARN_LOG("loop()=> %d", n);
         for(i = 0; i < n; i++)
         {
             evp = &(((struct epoll_event *)evbase->evs)[i]);
@@ -190,6 +194,7 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                 }
             }
         }
+        WARN_LOG("over_loop()=> %d", n);
     }
     return n;
 }
