@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -17,7 +18,6 @@
 #include <openssl/err.h>
 #include <openssl/crypto.h>
 #endif
-#include "evbase.h"
 #include "log.h"
 #ifdef HAVE_EVKQUEUE
 #define CONN_MAX 1024
@@ -25,6 +25,8 @@
 #define CONN_MAX 65536
 #endif
 #define EV_BUF_SIZE 1024
+#define E_READ      0x01
+#define E_WRITE     0x02
 static int epollfd = 0;
 static int max_connections = 0;
 static int connections = 0;
@@ -49,7 +51,7 @@ typedef struct _CONN
     int nout;
     int n;
     int keepalive;
-    EVENT event;
+    //EVENT event;
     char out[EV_BUF_SIZE];
     char buffer[EV_BUF_SIZE];
 #ifdef USE_SSL
@@ -100,6 +102,7 @@ void ev_handler(int fd, int ev_flags, void *arg)
     int rfd = 0, n = 0, out_len = 0;
     struct 	sockaddr_in rsa;
     socklen_t rsa_len = sizeof(struct sockaddr_in);
+    struct epoll_event evp;
     char *out = NULL;
 
     if(fd == lfd )
@@ -152,9 +155,15 @@ void ev_handler(int fd, int ev_flags, void *arg)
                 /* set FD NON-BLOCK */
                 conns[rfd].n = 0;
                 fcntl(rfd, F_SETFL, fcntl(rfd, F_GETFL, 0)|O_NONBLOCK);
-                event_set(&(conns[rfd].event), rfd, E_READ|E_WRITE|E_EPOLL_ET|E_PERSIST,
-                            (void *)&(conns[rfd].event), &ev_handler);
-                evbase->add(evbase, &(conns[rfd].event));
+                memset(&evp, 0, sizeof(struct epoll_event));
+                evp.data.fd = rfd;
+                evp.events = EPOLLIN;
+                epoll_ctl(epollfd, EPOLL_CTL_ADD, evp.data.fd, &evp);
+                /*
+                   event_set(&(conns[rfd].event), rfd, E_READ|E_WRITE|E_EPOLL_ET|E_PERSIST,
+                   (void *)&(conns[rfd].event), &ev_handler);
+                   evbase->add(evbase, &(conns[rfd].event));
+                   */
                 SHOW_LOG("add event_fd:%d E_READ\n", rfd);
             }
             return ;
@@ -188,7 +197,11 @@ void ev_handler(int fd, int ev_flags, void *arg)
                     SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
                     conns[fd].x = 0;
                     conns[fd].n = 0;
-                    event_add(&conns[fd].event, E_WRITE);	
+                    memset(&evp, 0, sizeof(struct epoll_event));
+                    evp.data.fd = fd;
+                    evp.events = EPOLLOUT;
+                    epoll_ctl(epollfd, EPOLL_CTL_MOD, evp.data.fd, &evp);
+                    //event_add(&conns[fd].event, E_WRITE);	
                     SHOW_LOG("Updated event[%p] on %d ", &conns[fd].event, fd);
                 }
             }		
@@ -233,12 +246,19 @@ void ev_handler(int fd, int ev_flags, void *arg)
                     FATAL_LOG("Echo data to %d failed, %s", fd, strerror(errno));	
                 goto err;
             }
-            event_del(&conns[fd].event, E_WRITE);
+            memset(&evp, 0, sizeof(struct epoll_event));
+            evp.data.fd = fd;
+            evp.events = EPOLLIN;
+            epoll_ctl(epollfd, EPOLL_CTL_MOD, evp.data.fd, &evp);
+            //event_del(&conns[fd].event, E_WRITE);
         }
         return ;
 err:
         {
-            event_destroy(&(conns[fd].event));
+            memset(&evp, 0, sizeof(struct epoll_event));
+            evp.data.fd = fd;
+            epoll_ctl(epollfd, EPOLL_CTL_DEL, evp.data.fd, &evp);
+            // event_destroy(&(conns[fd].event));
             memset(&(conns[fd]), 0, sizeof(CONN));
             shutdown(fd, SHUT_RDWR);
             close(fd);
@@ -389,7 +409,6 @@ int main(int argc, char **argv)
             }
         }
         SHOW_LOG("Initialize evbase ");
-        if()
         /*
         for(i = 0; i < nprocess; i++)
         {
@@ -431,19 +450,44 @@ running:
             }while(1);
         }
         */
-        for(i = 0; i < CONN_MAX; i++)
+        struct epoll_event evp, events[CONN_MAX];
+        int flag = 0, n = 0;
+        if((epollfd = epoll_create(CONN_MAX)) > 0)
         {
-#ifdef USE_SSL
-            if(conns[i].ssl)
+            memset(&evp, 0, sizeof(struct epoll_event));
+            evp.data.fd = lfd;
+            evp.events = EPOLLIN|EPOLLET;
+            epoll_ctl(epollfd, EPOLL_CTL_ADD, lfd, &evp);
+            do
             {
-                SSL_shutdown(conns[i].ssl);
-                SSL_free(conns[i].ssl);
-                conns[i].ssl = NULL;
-            }
+                n = epoll_wait(epollfd, events, CONN_MAX, -1);
+                for(i = 0; i < n; i++)
+                {
+                    flag = 0;
+                    if(events[i].events & (EPOLLERR|EPOLLHUP))
+                        flag = E_READ|E_WRITE;
+                    else 
+                    {
+                        if(events[i].events & EPOLLIN) flag |= E_READ;
+                        if(events[i].events & EPOLLOUT) flag |= E_WRITE;
+                    }
+                    ev_handler(events[i].data.fd, flag, NULL);
+                }
+            }while(1);
+            for(i = 0; i < CONN_MAX; i++)
+            {
+#ifdef USE_SSL
+                if(conns[i].ssl)
+                {
+                    SSL_shutdown(conns[i].ssl);
+                    SSL_free(conns[i].ssl);
+                    conns[i].ssl = NULL;
+                }
 #endif
-            //event_destroy(&conns[i].event);
-            shutdown(conns[i].fd, SHUT_RDWR);
-            close(conns[i].fd);
+                //event_destroy(&conns[i].event);
+                shutdown(conns[i].fd, SHUT_RDWR);
+                close(conns[i].fd);
+            }
         }
 #ifdef USE_SSL
         ERR_free_strings();
