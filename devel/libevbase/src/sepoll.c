@@ -286,3 +286,4 @@ int main(int argc, char **argv)
     }
     return 0;
 }
+//gcc -o sysepoll epoll.c && ./sysepoll 0 1980 65536 1
