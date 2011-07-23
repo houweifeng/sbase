@@ -278,7 +278,7 @@ void ev_handler(int fd, int ev_flags, void *arg)
                 /* set FD NON-BLOCK */
                 conns[rfd].n = 0;
                 fcntl(rfd, F_SETFL, fcntl(rfd, F_GETFL, 0)|O_NONBLOCK);
-                event_set(&(conns[rfd].event), rfd, E_READ|E_WRITE|E_EPOLL_ET|E_PERSIST,
+                event_set(&(conns[rfd].event), rfd, E_READ|E_PERSIST,
                             (void *)&(conns[rfd].event), &ev_handler);
                 evbase->add(evbase, &(conns[rfd].event));
                 SHOW_LOG("add event_fd:%d E_READ\n", rfd);
