@@ -53,7 +53,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     int i = 0, usec = 0, sec = 0;
-    struct timeval tv = {0,0};
+    //struct timeval tv = {0,0};
     //int k = 0;
 
     if(pth)
@@ -70,29 +70,31 @@ void procthread_run(void *arg)
                         (void *)pth, (void *)&procthread_event_handler);
                 pth->evbase->add(pth->evbase, &(pth->event));
             }
-            if(pth->listenfd > 0)
+            do
             {
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
+                if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                {
+                    qmessage_handler(pth->message_queue, pth->logger);
+                    i++;
+                }
+                if(QMTOTAL(pth->message_queue) > 0) pth->wakeup(pth);
+            }while(pth->running_status);
+
+        }
+        else if(pth->listenfd > 0)
+        {
+                /*
                 event_set(&(pth->acceptor), pth->listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
                         (void *)pth, (void *)&procthread_event_handler);
                 pth->evbase->add(pth->evbase, &(pth->acceptor));
+                */
                 do
                 {
-                    i = pth->evbase->loop(pth->evbase, 0, NULL);
+                    service_accept_handler(pth->service);
+                    //i = pth->evbase->loop(pth->evbase, 0, NULL);
                 }while(pth->running_status);
-            }
-            else
-            {
-                do
-                {
-                    i = pth->evbase->loop(pth->evbase, 0, NULL);
-                    if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
-                    {
-                        qmessage_handler(pth->message_queue, pth->logger);
-                        i++;
-                    }
-                    if(QMTOTAL(pth->message_queue) > 0) pth->wakeup(pth);
-                }while(pth->running_status);
-            }
+                WARN_LOGGER(pth->logger, "Ready for stop threads[acceptor]");
         }
         else
         {
@@ -335,14 +337,13 @@ void procthread_stop(PROCTHREAD *pth)
             pth->lock       = 1;
             pth->running_status = 0;
             PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
-            pth->wakeup(pth);
         }
         else
         {
             pth->lock       = 1;
             pth->running_status = 0;
-            pth->wakeup(pth);
         }
+        pth->wakeup(pth);
     }
     return ;
 }
