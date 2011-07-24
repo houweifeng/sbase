@@ -84,20 +84,20 @@ int service_set(SERVICE *service)
 #ifdef SO_REUSEPORT
                     && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                    && (ret = bind(service->fd, (struct sockaddr *)&(service->sa), 
-                            sizeof(service->sa))) == 0)
+                )
             {
-                //if(service->working_mode == WORKING_PROC)
+                if(service->working_mode == WORKING_PROC)
                 {
                     flag = fcntl(service->fd, F_GETFL, 0);
                     ret = fcntl(service->fd, F_SETFL, flag|O_NONBLOCK);
                 }
-                if(service->sock_type == SOCK_STREAM)
-                    ret = listen(service->fd, service->backlog);
+                ret = bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa));
+                if(service->sock_type == SOCK_STREAM) ret = listen(service->fd, service->backlog);
+                if(ret != 0) return -1;
             }
             else
             {
-                fprintf(stderr, "bind() failed, %s", strerror(errno));
+                fprintf(stderr, "new socket() failed, %s", strerror(errno));
                 return -1;
             }
         }
@@ -278,7 +278,7 @@ running_threads:
         }
         /* acceptor */
         if(service->service_type == S_SERVICE && service->fd > 0 
-                && (service->acceptor = procthread_init(service->cond)))
+                && (service->acceptor = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->acceptor);
             service->acceptor->set_acceptor(service->acceptor, service->fd);
@@ -417,6 +417,7 @@ err_conn:
                     shutdown(fd, SHUT_RDWR);
                     close(fd);
                 }
+                break;
             }
         }
         else if(service->sock_type == SOCK_DGRAM)
@@ -448,6 +449,7 @@ err_conn:
                                 MESSAGE_INPUT, -1, conn->fd, -1, conn, parent, NULL);
                         if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
                     }
+                    continue;
                     //DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
                 }
                 else
@@ -456,6 +458,7 @@ err_conn:
                     close(fd);
                     //FATAL_LOGGER(service->logger, "Accept new connection failed, %s", strerror(errno));
                 }
+                break;
             }
         }
     }
@@ -531,7 +534,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
                 if(fcntl(fd, F_SETFL, flag) != 0) goto err_conn;
                 if((connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
-                    || errno == EINPROGRESS || errno == EALREADY || errno == EINTR))
+                    || errno == EINPROGRESS || errno == EALREADY))
                 {
                     goto new_conn;
                 }else goto err_conn;
@@ -1319,9 +1322,14 @@ void service_stop(SERVICE *service)
         //acceptor
         if(service->acceptor)
         {
-            //WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
             service->acceptor->stop(service->acceptor);
+            WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
+            if(service->fd > 0){shutdown(service->fd, SHUT_RDWR);close(service->fd); service->fd = -1;}
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
+        }
+        else
+        {
+            if(service->fd > 0){shutdown(service->fd, SHUT_RDWR);close(service->fd); service->fd = -1;}
         }
         //stop all connections 
         if(service->connections && service->index_max >= 0)
@@ -1399,7 +1407,6 @@ void service_stop(SERVICE *service)
         //WARN_LOGGER(service->logger, "Ready for remove event");
         /*remove event */
         event_destroy(&(service->event));
-        if(service->fd > 0){close(service->fd); service->fd = 0;}
         WARN_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
     return ;

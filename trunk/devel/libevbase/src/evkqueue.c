@@ -7,6 +7,7 @@
 #include <sys/event.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <fcntl.h>
 //#include "mutex.h"
 /* Initialize evkqueue  */
 int evkqueue_init(EVBASE *evbase)
@@ -26,6 +27,7 @@ int evkqueue_init(EVBASE *evbase)
             fprintf(stderr, "kevent test failed, %s\n", strerror(errno));
             return -1;
         }
+        fcntl(evbase->efd, F_SETFD, FD_CLOEXEC);
         /*
         if(getrlimit(RLIMIT_NOFILE, &rlim) == 0
                 && rlim.rlim_cur != RLIM_INFINITY )
@@ -220,6 +222,7 @@ void evkqueue_reset(EVBASE *evbase)
     {
         if(evbase->efd)close(evbase->efd);
         evbase->efd = kqueue();
+        fcntl(evbase->efd, F_SETFD, FD_CLOEXEC);
         evbase->maxfd = 0;
         if(evbase->evs) memset(evbase->evs, 0, evbase->allowed * sizeof(struct kevent));
         if(evbase->evlist)memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));

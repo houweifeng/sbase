@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
+#include <fcntl.h>
 //#include "log.h"
 //#include "mutex.h"
 /* Initialize evepoll  */
@@ -23,6 +24,7 @@ int evepoll_init(EVBASE *evbase)
         evbase->evlist  = (EVENT **)calloc(max_fd, sizeof(EVENT *));
         */
         evbase->efd 	= epoll_create(max_fd);
+        fcntl(evbase->efd, F_SETFD, FD_CLOEXEC);
         evbase->evs 	= calloc(max_fd, sizeof(struct epoll_event));
         evbase->allowed = max_fd;
         return 0;
@@ -206,6 +208,7 @@ void evepoll_reset(EVBASE *evbase)
     {
         if(evbase->efd > 0)close(evbase->efd);
         evbase->efd = epoll_create(evbase->allowed);
+        fcntl(evbase->efd, F_SETFD, FD_CLOEXEC);
         evbase->maxfd = 0;
         if(evbase->evs)memset(evbase->evs, 0, evbase->allowed * sizeof(struct epoll_event));
         if(evbase->evlist)memset(evbase->evlist, 0, evbase->allowed * sizeof(EVENT *));
