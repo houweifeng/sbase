@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include "sbase.h"
 #include "xssl.h"
 #include "logger.h"
@@ -37,6 +38,7 @@ do                                                                              
 int service_set(SERVICE *service)
 {
     int ret = -1, opt = 1, flag = 0;
+    struct linger linger = {0};
     char *p = NULL;
 
     if(service)
@@ -79,10 +81,13 @@ int service_set(SERVICE *service)
                 }
             }
 #endif
+            linger.l_onoff = 1;linger.l_linger = 1;
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
-                    && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+                && setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt)) == 0
+                && setsockopt(service->fd,SOL_SOCKET,SO_LINGER,&linger,sizeof(struct linger)) == 0
+                && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
-                    && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+                && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
                 )
             {
@@ -497,7 +502,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
     char *local_ip = NULL, *remote_ip = NULL;
     struct sockaddr_in rsa, lsa;
     socklen_t lsa_len = sizeof(lsa);
-    struct linger ling = {0};
+    struct linger linger = {0};
     SESSION *sess = NULL;
     CONN *conn = NULL;
     void *ssl = NULL;
@@ -527,8 +532,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 else goto err_conn;
             }
 #endif
-            ling.l_onoff = 1;ling.l_linger = 0;
-            setsockopt(fd, SOL_SOCKET, SO_LINGER, &ling, sizeof(struct linger));
+            linger.l_onoff = 1;linger.l_linger = 1;
+            setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
