@@ -291,11 +291,11 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        //recover 
-        if((service->recover = procthread_init(0)))
+        //tracker 
+        if((service->tracker = procthread_init(0)))
         {
-            PROCTHREAD_SET(service, service->recover);
-            NEW_PROCTHREAD("recover", 0, service->recover->threadid, service->recover, service->logger);
+            PROCTHREAD_SET(service, service->tracker);
+            NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger);
             ret = 0;
         }
         else
@@ -365,7 +365,7 @@ int service_accept_handler(SERVICE *service)
     char buf[SB_BUF_SIZE], *p = NULL, *ip = NULL;
     socklen_t rsa_len = sizeof(struct sockaddr_in);
     int fd = -1, port = -1, n = 0, opt = 1, i = 0;
-    PROCTHREAD *parent = NULL;
+    PROCTHREAD *parent = NULL, *daemon = NULL;
     struct sockaddr_in rsa;
     CONN *conn = NULL;
     void *ssl = NULL;
@@ -374,6 +374,8 @@ int service_accept_handler(SERVICE *service)
     {
         if(service->sock_type == SOCK_STREAM)
         {
+            daemon = service->tracker;
+            if(daemon == NULL)daemon = service->daemon;
             //WARN_LOGGER(service->logger, "new-connection via %d", service->fd);
             while((fd = accept(service->fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
             {
@@ -391,8 +393,8 @@ int service_accept_handler(SERVICE *service)
                 }
 #endif
 new_conn:
-                if((conn = service_addconn(service, service->sock_type, fd, ip, port, 
-                                service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
+                //if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
+                if(daemon && daemon->pushconn(daemon, fd, ssl))
                 {
                     //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
@@ -968,7 +970,7 @@ void service_overconn(SERVICE *service, CONN *conn)
 
     if(service && conn)
     {
-        if((daemon = service->recover) == NULL) daemon = service->daemon;
+        if((daemon = service->tracker) == NULL) daemon = service->daemon;
         if(daemon)
         {
             qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
@@ -1395,12 +1397,12 @@ void service_stop(SERVICE *service)
                 PROCTHREAD_EXIT(service->daemon->threadid, NULL);
             }
         }
-        //recover
-        if(service->recover)
+        //tracker
+        if(service->tracker)
         {
-            //WARN_LOGGER(service->logger, "Ready for stop threads[recover]");
-            service->recover->stop(service->recover);
-            PROCTHREAD_EXIT(service->recover->threadid, NULL);
+            //WARN_LOGGER(service->logger, "Ready for stop threads[tracker]");
+            service->tracker->stop(service->tracker);
+            PROCTHREAD_EXIT(service->tracker->threadid, NULL);
         }
         /* delete evtimer */
         EVTIMER_DEL(service->evtimer, service->evid);
@@ -1508,7 +1510,8 @@ void service_clean(SERVICE *service)
     {
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
-        if(service->recover) service->recover->clean(service->recover);
+        if(service->acceptor) service->acceptor->clean(service->acceptor);
+        if(service->tracker) service->tracker->clean(service->tracker);
         if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
         for(i = 0;i < service->ngroups; i++)
         {
