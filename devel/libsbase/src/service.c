@@ -393,12 +393,15 @@ int service_accept_handler(SERVICE *service)
                 }
 #endif
 new_conn:
-                //if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
-                if(daemon && daemon->pushconn(daemon, fd, ssl))
+                if((daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
+                }
+                else if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
+                {
+                    i++;
                 }
                 else
                 {
