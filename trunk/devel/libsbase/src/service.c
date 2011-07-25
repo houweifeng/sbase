@@ -2,7 +2,6 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/tcp.h>
 #include "sbase.h"
 #include "xssl.h"
 #include "logger.h"
@@ -125,9 +124,9 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(ns, id, pthdid, procd, logger)                                       \
+#define NEW_PROCTHREAD(ns, id, pthdid, proc, logger)                                        \
 {                                                                                           \
-    if(pthread_create(&(pthdid), NULL, (void *)(&procthread_run), (void *)procd) != 0)      \
+    if(pthread_create(&(pthdid), NULL, (void *)(&procthread_run), (void *)proc) != 0)       \
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
@@ -146,6 +145,7 @@ void sigpipe_ignore()
     pth->service = service;                                                                 \
     pth->logger = service->logger;                                                          \
     pth->usec_sleep = service->usec_sleep;                                                  \
+    pth->use_cond_wait = service->use_cond_wait;                                            \
 }
 
 /* running */
@@ -194,7 +194,6 @@ running_proc:
         if((service->daemon = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->daemon);
-            service->daemon->use_cond_wait = 0;
             if(service->daemon->message_queue)
             {
                 if(service->daemon->message_queue) qmessage_clean(service->daemon->message_queue);
@@ -208,7 +207,7 @@ running_proc:
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",service->working_mode, strerror(errno));
+            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",service->working_mode, strerror(errno));
         }
         return ret;
 running_threads:
@@ -229,7 +228,7 @@ running_threads:
                 }
                 else
                 {
-                    FATAL_LOGGER(service->logger, "Initialize iodaemons pool failed, %s",strerror(errno));
+                    //FATAL_LOGGER(service->logger, "Initialize iodaemons pool failed, %s",strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
@@ -247,7 +246,6 @@ running_threads:
                 if((service->procthreads[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->procthreads[i]);
-                    service->procthreads[i]->use_cond_wait = 1;
                     x = service->nprocthreads % service->niodaemons;
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
                     service->procthreads[i]->iodaemon = service->iodaemons[x];
@@ -256,7 +254,7 @@ running_threads:
                 }
                 else
                 {
-                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",strerror(errno));
+                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
@@ -275,24 +273,23 @@ running_threads:
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
+            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
         }
         /* acceptor */
-        if(service->service_type == S_SERVICE && service->fd > 0) 
+        if(service->service_type == S_SERVICE && service->fd > 0)
         {
             if((service->acceptor = procthread_init(0)))
             {
                 PROCTHREAD_SET(service, service->acceptor);
-                service->acceptor->use_cond_wait = 0;
                 service->acceptor->set_acceptor(service->acceptor, service->fd);
                 NEW_PROCTHREAD("acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger);
                 ret = 0;
             }
             else
             {
-                FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
+                //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
                 exit(EXIT_FAILURE);
                 return -1;
             }
@@ -301,13 +298,12 @@ running_threads:
         if((service->tracker = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->tracker);
-            service->tracker->use_cond_wait = 1;
             NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger);
             ret = 0;
         }
         else
         {
-            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
+            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
         }
@@ -320,12 +316,11 @@ running_threads:
                 if((service->daemons[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
-                    service->daemons[i]->use_cond_wait = 1;
                     ret = 0;
                 }
                 else
                 {
-                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s", strerror(errno));
+                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s", strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
@@ -401,21 +396,16 @@ int service_accept_handler(SERVICE *service)
                 }
 #endif
 new_conn:
-#ifdef SOL_TCP
-#ifdef TCP_NODELAY
-                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
-#endif
-#endif
-
                 if((daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
-                    DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
                 else if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
                     i++;
+                    continue;
                 }
                 else
                 {
@@ -992,7 +982,7 @@ void service_overconn(SERVICE *service, CONN *conn)
         {
             qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
                     -1, daemon, conn, NULL);
-            if(daemon->use_cond_wait){MUTEX_SIGNAL(daemon->mutex);}
+            MUTEX_SIGNAL(daemon->mutex);
         }
     }
     return ;
@@ -1192,7 +1182,7 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
         strcpy(service->groups[id].ip, ip);
         service->groups[id].port = port;
         service->groups[id].limit = limit;
-        MUTEX_RESET(service->groups[id].mutex);
+        MUTEX_INIT(service->groups[id].mutex);
         memcpy(&(service->groups[id].session), session, sizeof(SESSION));
         //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, id, service->groups[id].session.data_handler);
     }
@@ -1341,8 +1331,8 @@ void service_stop(SERVICE *service)
         //acceptor
         if(service->acceptor)
         {
-            WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
             service->acceptor->stop(service->acceptor);
+            WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
             if(service->fd > 0){shutdown(service->fd, SHUT_RDWR);close(service->fd); service->fd = -1;}
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
@@ -1620,7 +1610,7 @@ SERVICE *service_init()
     SERVICE *service = NULL;
     if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
-        MUTEX_RESET(service->mutex);
+        MUTEX_INIT(service->mutex);
         //service->xqueue             = xqueue_init();
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;

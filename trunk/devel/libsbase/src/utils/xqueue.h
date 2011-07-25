@@ -30,8 +30,8 @@ typedef struct _XQUEUE
     int total;
     int nlist;
     int bits;
-    MUTEX mutex;
     XQNODE *left;
+    MUTEX *mutex;
     int waits[XQ_ROOTS_MAX];
     XQNODE *list[XQ_LINE_MAX];
     XQROOT roots[XQ_ROOTS_MAX];
