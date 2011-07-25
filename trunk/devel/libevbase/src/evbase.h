@@ -94,9 +94,8 @@ typedef struct _EVENT
 {
 	int ev_flags;
 	int old_ev_flags;
-	int ev_fd;
+    int ev_fd;
     int bits;
-	struct timeval tv;
 
 	struct _EVBASE *ev_base;
 	void *ev_arg;
