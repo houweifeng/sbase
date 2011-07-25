@@ -18,7 +18,7 @@ typedef struct _EVTIMER
 {
    int nevlist;
    int ntimeout;
-   MUTEX mutex;
+   MUTEX *mutex;
    EVTNODE *evlist[EVTNODE_LINE_MAX];
    EVTNODE *timeouts[EVTNODE_LINE_MAX];
    EVTNODE *left;

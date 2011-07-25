@@ -241,7 +241,7 @@ EVTIMER *evtimer_init()
 
     if((evtimer = (EVTIMER *)xmm_mnew(sizeof(EVTIMER))))
     {
-        MUTEX_RESET(evtimer->mutex);
+        MUTEX_INIT(evtimer->mutex);
     }
     return evtimer;
 }

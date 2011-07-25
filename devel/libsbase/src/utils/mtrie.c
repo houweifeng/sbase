@@ -1167,7 +1167,7 @@ MTRIE *mtrie_init()
 
     if((mtrie = (MTRIE *)calloc(1, sizeof(MTRIE))))
     {
-        MUTEX_RESET(mtrie->mutex);
+        MUTEX_INIT(mtrie->mutex);
         MTRIE_MAP_INIT(mtrie);
         mtrie->add         = mtrie_add;
         mtrie->xadd        = mtrie_xadd;

@@ -20,10 +20,17 @@ do                                                                              
 void procthread_event_handler(int event_fd, int flags, void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
+    SERVICE *service = NULL;
 
-    if(pth)
+    if(pth && (service = pth->service))
     {
-        event_del(&(pth->event), E_WRITE);
+        if(event_fd == service->fd)
+        {
+            service_accept_handler(service);
+        }
+        {
+            event_del(&(pth->event), E_WRITE);
+        }
     }
     return ;
 }
@@ -46,7 +53,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     int i = 0, usec = 0, sec = 0;
-    struct timeval tv = {0,0};
+    //struct timeval tv = {0,0};
     //int k = 0;
 
     if(pth)
@@ -63,17 +70,15 @@ void procthread_run(void *arg)
                         (void *)pth, (void *)&procthread_event_handler);
                 pth->evbase->add(pth->evbase, &(pth->event));
             }
-            tv.tv_sec = sec;
-            tv.tv_usec = usec;
             do
             {
-                i = pth->evbase->loop(pth->evbase, 0, &tv);
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
                 if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                 {
                     qmessage_handler(pth->message_queue, pth->logger);
                     i++;
                 }
-                //if(QMTOTAL(pth->message_queue) > 0) pth->wakeup(pth);
+                if(QMTOTAL(pth->message_queue) > 0) pth->wakeup(pth);
             }while(pth->running_status);
 
         }
@@ -424,7 +429,7 @@ PROCTHREAD *procthread_init(int cond)
                 _exit(-1);
             }
         }
-        MUTEX_RESET(pth->mutex);
+        MUTEX_INIT(pth->mutex);
         pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;
