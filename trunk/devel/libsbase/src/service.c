@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include "sbase.h"
 #include "xssl.h"
 #include "logger.h"
@@ -145,7 +146,6 @@ void sigpipe_ignore()
     pth->service = service;                                                                 \
     pth->logger = service->logger;                                                          \
     pth->usec_sleep = service->usec_sleep;                                                  \
-    pth->use_cond_wait = service->use_cond_wait;                                            \
 }
 
 /* running */
@@ -224,6 +224,7 @@ running_threads:
                 if((service->iodaemons[i] = procthread_init(service->cond)))
                 {
                     PROCTHREAD_SET(service, service->iodaemons[i]);
+                    service->iodaemons[i]->use_cond_wait = 0;
                     ret = 0;
                 }
                 else
@@ -246,6 +247,7 @@ running_threads:
                 if((service->procthreads[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->procthreads[i]);
+                    service->procthreads[i]->use_cond_wait = 1;
                     x = service->nprocthreads % service->niodaemons;
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
                     service->procthreads[i]->iodaemon = service->iodaemons[x];
@@ -267,6 +269,7 @@ running_threads:
         {
             service->daemon->evtimer = service->etimer;
             PROCTHREAD_SET(service, service->daemon);
+            service->daemon->use_cond_wait = 0;
             NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
             ret = 0;
         }
@@ -281,6 +284,7 @@ running_threads:
                 && (service->acceptor = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->acceptor);
+            service->acceptor->use_cond_wait = 0;
             service->acceptor->set_acceptor(service->acceptor, service->fd);
             NEW_PROCTHREAD("acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger);
             ret = 0;
@@ -295,6 +299,7 @@ running_threads:
         if((service->tracker = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->tracker);
+            service->tracker->use_cond_wait = 1;
             NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger);
             ret = 0;
         }
@@ -313,6 +318,7 @@ running_threads:
                 if((service->daemons[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
+                    service->daemons[i]->use_cond_wait = 1;
                     ret = 0;
                 }
                 else
@@ -393,9 +399,15 @@ int service_accept_handler(SERVICE *service)
                 }
 #endif
 new_conn:
+#ifdef SOL_TCP
+#ifdef TCP_NODELAY
+                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+#endif
+#endif
+
                 if((daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
-                    //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
@@ -978,7 +990,7 @@ void service_overconn(SERVICE *service, CONN *conn)
         {
             qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
                     -1, daemon, conn, NULL);
-            MUTEX_SIGNAL(daemon->mutex);
+            if(daemon->use_cond_wait){MUTEX_SIGNAL(daemon->mutex);}
         }
     }
     return ;
@@ -1178,7 +1190,7 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
         strcpy(service->groups[id].ip, ip);
         service->groups[id].port = port;
         service->groups[id].limit = limit;
-        MUTEX_INIT(service->groups[id].mutex);
+        MUTEX_RESET(service->groups[id].mutex);
         memcpy(&(service->groups[id].session), session, sizeof(SESSION));
         //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, id, service->groups[id].session.data_handler);
     }
@@ -1327,8 +1339,8 @@ void service_stop(SERVICE *service)
         //acceptor
         if(service->acceptor)
         {
-            service->acceptor->stop(service->acceptor);
             WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
+            service->acceptor->stop(service->acceptor);
             if(service->fd > 0){shutdown(service->fd, SHUT_RDWR);close(service->fd); service->fd = -1;}
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
@@ -1606,7 +1618,7 @@ SERVICE *service_init()
     SERVICE *service = NULL;
     if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
-        MUTEX_INIT(service->mutex);
+        MUTEX_RESET(service->mutex);
         //service->xqueue             = xqueue_init();
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;

@@ -80,6 +80,26 @@ struct _SBASE;
 struct _SERVICE;
 struct _PROCTHREAD;
 struct _CONN;
+#ifndef __TYPEDEF__MUTEX
+#define __TYPEDEF__MUTEX
+#ifdef HAVE_SEMAPHORE
+#include <semaphore.h>
+typedef struct _MUTEX
+{
+    sem_t mutex;
+    sem_t cond;
+}MUTEX;
+#else
+#include <pthread.h>
+typedef struct _MUTEX
+{
+    pthread_mutex_t mutex;
+    pthread_cond_t  cond;
+    int nowait;
+    int bits;
+}MUTEX;
+#endif
+#endif
 #ifndef __TYPEDEF__MMBLOCK
 #define __TYPEDEF__MMBLOCK
 typedef struct _MMBLOCK
@@ -207,7 +227,7 @@ typedef struct _CNGROUP
   int   nconns_free;
   int   conns_free[SB_GROUP_CONN_MAX];
   char  ip[SB_IP_MAX];
-  void *mutex;
+  MUTEX mutex;
   SESSION session;
 }CNGROUP;
 
@@ -253,7 +273,7 @@ typedef struct _SERVICE
     EVENT event;
 
     /* mutex */
-    void *mutex;
+    MUTEX mutex;
     SBASE *sbase;
 
     /* heartbeat */
@@ -370,9 +390,9 @@ typedef struct _PROCTHREAD
     int bits;
     pthread_t threadid;
     EVENT event;
-    EVENT acceptor;
+    //EVENT acceptor;
 
-    void *mutex;
+    MUTEX mutex;
     void *evtimer;
     SERVICE *service;
 
@@ -452,7 +472,7 @@ typedef struct _CONN
     MMBLOCK exchange;
     CHUNK chunk;
     /* evbase */
-    void *mutex;
+    MUTEX mutex;
     EVBASE *evbase;
     void *parent;
     void *queue;

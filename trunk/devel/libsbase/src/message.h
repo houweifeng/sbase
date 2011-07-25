@@ -75,7 +75,7 @@ typedef struct _QMESSAGE
     int qtotal;
     int nleft;
     int nlist;
-    MUTEX *mutex;
+    MUTEX mutex;
     MESSAGE pools[QMSG_INIT_NUM];
     MESSAGE *list[QMSG_LINE_MAX];
     MESSAGE *left;

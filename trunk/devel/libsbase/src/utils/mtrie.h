@@ -38,7 +38,7 @@ typedef struct _MTRIE
     MTRNODE     *nodes;
     void        *map;
     void        *old_map;
-    MUTEX       *mutex;
+    MUTEX       mutex;
     off_t       map_size;
     off_t       size;
 

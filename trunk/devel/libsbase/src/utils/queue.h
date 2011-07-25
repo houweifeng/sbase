@@ -20,7 +20,7 @@ typedef struct _QUEUE
     int qtotal;
     int total;
     int nlist;
-    MUTEX *mutex;
+    MUTEX mutex;
     QNODE *left;
     QNODE *first;
     QNODE *last;
