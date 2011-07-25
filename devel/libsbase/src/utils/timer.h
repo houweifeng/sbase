@@ -26,7 +26,7 @@ typedef struct _TIMER
 	off_t  last_usec;
     off_t  last_usec_used;
     off_t  now;
-	MUTEX *mutex;
+	MUTEX mutex;
 }TIMER;
 #define PTLL(xxxxx) ((long long int)xxxxx)
 #define PT(ptr) ((TIMER *)ptr)
@@ -49,7 +49,7 @@ do{                                                                             
             + PT(ptr)->tv.tv_usec * 1ll;                                        \
         PT(ptr)->last_sec     = PT(ptr)->start_sec;                             \
         PT(ptr)->last_usec    = PT(ptr)->start_usec;                            \
-        MUTEX_INIT(PT(ptr)->mutex);                                            \
+        MUTEX_RESET(PT(ptr)->mutex);                                            \
     }                                                                           \
 }while(0)                                                                      
 #define TIMER_SAMPLE(ptr)                                                       \

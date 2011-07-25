@@ -18,7 +18,7 @@ void *xqueue_init()
             q->waits[j++] = i;
             q->nwaits++;
         }
-        MUTEX_INIT(q->mutex);
+        MUTEX_RESET(q->mutex);
     }
     return q;
 }
