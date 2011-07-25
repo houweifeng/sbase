@@ -121,7 +121,6 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
             service->connections_limit = sbase->connections_limit;
             if(service->logger == NULL) 
             {
-                fprintf(stdout, "replace %s logger with sbase\n", service->service_name);
                 service->logger = sbase->logger;
             }
             for(i = 0; i < SB_SERVICE_MAX; i++)
@@ -233,7 +232,7 @@ running:
             _exit(-1);
         }
         */
-        event_set(&(sbase->event), sbase->cond, E_READ|E_WRITE|E_EPOLL_ET|E_PERSIST,
+        event_set(&(sbase->event), sbase->cond, E_READ|E_PERSIST,
                     (void *)sbase, (void *)&sbase_event_handler);
         ret = sbase->evbase->add(sbase->evbase, &(sbase->event));
         //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);

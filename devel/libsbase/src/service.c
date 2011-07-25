@@ -125,9 +125,9 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(ns, id, pthdid, proc, logger)                                        \
+#define NEW_PROCTHREAD(ns, id, pthdid, procd, logger)                                       \
 {                                                                                           \
-    if(pthread_create(&(pthdid), NULL, (void *)(&procthread_run), (void *)proc) != 0)       \
+    if(pthread_create(&(pthdid), NULL, (void *)(&procthread_run), (void *)procd) != 0)      \
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
@@ -208,7 +208,7 @@ running_proc:
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",service->working_mode, strerror(errno));
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",service->working_mode, strerror(errno));
         }
         return ret;
 running_threads:
@@ -229,7 +229,7 @@ running_threads:
                 }
                 else
                 {
-                    //FATAL_LOGGER(service->logger, "Initialize iodaemons pool failed, %s",strerror(errno));
+                    FATAL_LOGGER(service->logger, "Initialize iodaemons pool failed, %s",strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
@@ -256,7 +256,7 @@ running_threads:
                 }
                 else
                 {
-                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",strerror(errno));
+                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
@@ -275,25 +275,27 @@ running_threads:
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
         }
         /* acceptor */
-        if(service->service_type == S_SERVICE && service->fd > 0 
-                && (service->acceptor = procthread_init(0)))
+        if(service->service_type == S_SERVICE && service->fd > 0) 
         {
-            PROCTHREAD_SET(service, service->acceptor);
-            service->acceptor->use_cond_wait = 0;
-            service->acceptor->set_acceptor(service->acceptor, service->fd);
-            NEW_PROCTHREAD("acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger);
-            ret = 0;
-        }
-        else
-        {
-            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
-            exit(EXIT_FAILURE);
-            return -1;
+            if((service->acceptor = procthread_init(0)))
+            {
+                PROCTHREAD_SET(service, service->acceptor);
+                service->acceptor->use_cond_wait = 0;
+                service->acceptor->set_acceptor(service->acceptor, service->fd);
+                NEW_PROCTHREAD("acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger);
+                ret = 0;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
+                exit(EXIT_FAILURE);
+                return -1;
+            }
         }
         //tracker 
         if((service->tracker = procthread_init(0)))
@@ -305,7 +307,7 @@ running_threads:
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
+            FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
             exit(EXIT_FAILURE);
             return -1;
         }
@@ -323,7 +325,7 @@ running_threads:
                 }
                 else
                 {
-                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s", strerror(errno));
+                    FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s", strerror(errno));
                     exit(EXIT_FAILURE);
                     return -1;
                 }
