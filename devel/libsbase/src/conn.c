@@ -257,6 +257,8 @@ void conn_end_handler(CONN *conn)
     {
         if(SENDQTOTAL(conn) > 0)
             event_add(&(conn->event), E_WRITE);
+        else
+            event_del(&(conn->event), E_WRITE);
         if(conn->s_state == 0 && MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}
         //WARN_LOGGER(conn->logger, "END-Connection[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
     }
