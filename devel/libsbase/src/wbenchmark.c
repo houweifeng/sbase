@@ -333,7 +333,7 @@ int benchmark_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DA
         ntimeouts++;
         conn->over_estate(conn);
         conn->over_timeout(conn);
-        http_new_request(conn->c_id);
+        http_over(conn, 0);
         return conn->close(conn);
     }
     return -1;
