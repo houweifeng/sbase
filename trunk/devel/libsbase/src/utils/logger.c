@@ -51,19 +51,15 @@ int logger_mkdir(char *path)
     return -1;
 }
 
-void logger_rotate_check(LOGGER *logger)
+void logger_rotate_check(LOGGER *logger, struct tm *ptm)
 {
     char line[LOGGER_LINE_SIZE];
-    struct tm *ptm = NULL;
     struct stat st = {0};
     time_t x = 0;
 
 
-    if(logger)
+    if(logger && ptm)
     {
-        gettimeofday(&(logger->tv), NULL);
-        time(&(logger->timep));
-        ptm = logger->ptm = localtime(&(logger->timep));
         if(logger->rflag == LOG_ROTATE_HOUR)
         {
             x = ((1900+ptm->tm_year) * 1000000)
@@ -125,6 +121,9 @@ void logger_rotate_check(LOGGER *logger)
 LOGGER *logger_init(char *file, int rotate_flag)
 {
     LOGGER *logger = NULL;
+    struct tm *ptm = NULL;
+    struct timeval tv = {0};
+    time_t timep = 0;
 
     if((logger = (LOGGER *)calloc(1, sizeof(LOGGER))))
     {
@@ -132,23 +131,31 @@ LOGGER *logger_init(char *file, int rotate_flag)
         strcpy(logger->file, file);
         logger_mkdir(file);
         logger->rflag = rotate_flag;
-        logger_rotate_check(logger);
+        gettimeofday(&tv, NULL);
+        time(&timep);
+        ptm = localtime(&timep);
+        logger_rotate_check(logger, ptm);
     }
     return logger;
 }
 
 int logger_header(LOGGER *logger, char *buf, int level, char *_file_, int _line_)
 {
-    char *s = NULL;
+    struct tm *ptm = NULL;
+    struct timeval tv = {0};
+    time_t timep = 0;
     int n = 0;
+    char *s = NULL;
 
+    gettimeofday(&tv, NULL);
+    time(&timep);
+    ptm = localtime(&timep);
     if(logger && (s = buf) && _file_ && level < __LEVEL__)
     {
-
-        s += sprintf(s,"[%02d/%s/%04d:%02d:%02d:%02d +%06u] ", PTM(logger)->tm_mday, 
-                ymonths[PTM(logger)->tm_mon], (1900+PTM(logger)->tm_year), 
-                PTM(logger)->tm_hour, PTM(logger)->tm_min, PTM(logger)->tm_sec, 
-                (unsigned int)(PTV(logger).tv_usec));
+        logger_rotate_check(logger, ptm);
+        s += sprintf(s,"[%02d/%s/%04d:%02d:%02d:%02d +%06u] ", ptm->tm_mday, 
+                ymonths[ptm->tm_mon], (1900+ptm->tm_year), ptm->tm_hour, ptm->tm_min, 
+                ptm->tm_sec, (unsigned int)(tv.tv_usec));
         if(level >= 0)                                                          
         {                                                                           
             s += sprintf(s, "[%u/%p] #%s::%d# %s:", (unsigned int)getpid(), 
@@ -157,6 +164,24 @@ int logger_header(LOGGER *logger, char *buf, int level, char *_file_, int _line_
         n = s - buf;
     }
     return n;
+}
+
+int logger_write(LOGGER *logger, int level, char *_file_, int _line_, char *format,...)
+{
+    char buf[LOGGER_LINE_LIMIT], *s = NULL;
+    va_list ap;
+    
+    if((s = buf))
+    {
+        MUTEX_LOCK(logger->mutex);
+        s += logger_header(logger, s, level, _file_, _line_);
+        va_start(ap, format);
+        s += vsprintf(s, format, ap);
+        va_end(ap);
+        *s++ = '\n';
+        if(logger->fd > 0) write(logger->fd, buf, s - buf);
+        MUTEX_UNLOCK(logger->mutex);
+    }
 }
 
 void logger_clean(void *ptr)
