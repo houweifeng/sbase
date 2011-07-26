@@ -298,6 +298,7 @@ typedef struct _SERVICE
     CHUNK *(*popchunk)(struct _SERVICE *service);
     int (*pushchunk)(struct _SERVICE *service, CHUNK *cp);
     CB_DATA *(*newchunk)(struct _SERVICE *service, int len);
+    CB_DATA *(*mnewchunk)(struct _SERVICE *service, int len);
 
     /* connections option */
     struct _CONN *connections[SB_CONN_MAX];
