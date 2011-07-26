@@ -407,13 +407,14 @@ new_conn:
                 //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
                 opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                 opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                /*
                 if((daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
-                else if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
+                else */if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
                     i++;
                     DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
