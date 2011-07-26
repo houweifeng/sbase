@@ -38,7 +38,7 @@ do                                                                              
 int service_set(SERVICE *service)
 {
     int ret = -1, opt = 1, flag = 0;
-    struct linger linger = {0};
+    //struct linger linger = {0};
     char *p = NULL;
 
     if(service)
@@ -81,10 +81,10 @@ int service_set(SERVICE *service)
                 }
             }
 #endif
-            linger.l_onoff = 1;linger.l_linger = 0;
+            //linger.l_onoff = 1;linger.l_linger = 0;
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
-                //&& setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt)) == 0
-                && setsockopt(service->fd,SOL_SOCKET,SO_LINGER,&linger,sizeof(struct linger)) == 0
+                && setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt)) == 0
+                //&& setsockopt(service->fd,SOL_SOCKET,SO_LINGER,&linger,sizeof(struct linger)) == 0
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
@@ -374,6 +374,7 @@ int service_accept_handler(SERVICE *service)
     socklen_t rsa_len = sizeof(struct sockaddr_in);
     int fd = -1, port = -1, n = 0, opt = 1, i = 0;
     PROCTHREAD *parent = NULL, *daemon = NULL;
+    //struct linger linger = {0};
     struct sockaddr_in rsa;
     CONN *conn = NULL;
     void *ssl = NULL;
@@ -401,15 +402,21 @@ int service_accept_handler(SERVICE *service)
                 }
 #endif
 new_conn:
+                fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0)|O_NONBLOCK);
+                //linger.l_onoff = 1;linger.l_linger = 0;
+                //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
+                opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 if((daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
-                    //WARN_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
                 else if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
                     i++;
+                    DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     continue;
                 }
                 else
@@ -441,11 +448,14 @@ err_conn:
             {
                 ip = inet_ntoa(rsa.sin_addr);
                 port = ntohs(rsa.sin_port);
+                //linger.l_onoff = 1;linger.l_linger = 0;opt = 1;
                 if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
-                        && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+                && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
-                        && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+                && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
+                //&& setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) ==0
+                && setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == 0
                         && bind(fd, (struct sockaddr *)&(service->sa), 
                             sizeof(struct sockaddr_in)) == 0
                         && connect(fd, (struct sockaddr *)&rsa, 
@@ -535,16 +545,17 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             linger.l_onoff = 1;linger.l_linger = 0;
             setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+            opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
-            opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             if(sess && (sess->flag & O_NONBLOCK))
             {
                 flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
                 if(fcntl(fd, F_SETFL, flag) != 0) goto err_conn;
                 if((connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
-                    || errno == EINPROGRESS || errno == EALREADY))
+                    || errno == EINPROGRESS))
+                    //|| errno == EINPROGRESS || errno == EALREADY))
                 {
                     goto new_conn;
                 }else goto err_conn;
@@ -710,9 +721,6 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             {
                 if(service->daemon)
                 {
-                    //conn->parent    = service->daemon;
-                    //conn->ioqmessage = service->daemon->message_queue;
-                    //conn->message_queue = service->daemon->message_queue;
                     service->daemon->add_connection(service->daemon, conn);
                 }
                 else
