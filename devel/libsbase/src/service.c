@@ -11,7 +11,7 @@
 #include "mmblock.h"
 #include "message.h"
 #include "evtimer.h"
-#include "xqueue.h"
+//#include "xqueue.h"
 #include "procthread.h"
 #include "xmm.h"
 #ifndef UI
@@ -38,7 +38,7 @@ do                                                                              
 int service_set(SERVICE *service)
 {
     int ret = -1, opt = 1, flag = 0;
-    //struct linger linger = {0};
+    struct linger linger = {0};
     char *p = NULL;
 
     if(service)
@@ -47,7 +47,7 @@ int service_set(SERVICE *service)
         service->sa.sin_family = service->family;
         service->sa.sin_addr.s_addr = (p)? inet_addr(p):INADDR_ANY;
         service->sa.sin_port = htons(service->port);
-        if(service->backlog <= 0) service->backlog = SB_CONN_MAX;
+        if(service->backlog <= 0)service->backlog = SB_CONN_MAX;
         SERVICE_CHECK_SSL_CLIENT(service);
         if(service->service_type == S_SERVICE)
         {
@@ -81,7 +81,7 @@ int service_set(SERVICE *service)
                 }
             }
 #endif
-            //linger.l_onoff = 1;linger.l_linger = 0;
+            linger.l_onoff = 1;linger.l_linger = 0;
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
                 && setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt)) == 0
                 //&& setsockopt(service->fd,SOL_SOCKET,SO_LINGER,&linger,sizeof(struct linger)) == 0
