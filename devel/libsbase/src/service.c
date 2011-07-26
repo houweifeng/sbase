@@ -81,9 +81,9 @@ int service_set(SERVICE *service)
                 }
             }
 #endif
-            linger.l_onoff = 1;linger.l_linger = 1;
+            linger.l_onoff = 1;linger.l_linger = 0;
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
-                && setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt)) == 0
+                //&& setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt)) == 0
                 && setsockopt(service->fd,SOL_SOCKET,SO_LINGER,&linger,sizeof(struct linger)) == 0
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
@@ -532,17 +532,13 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 else goto err_conn;
             }
 #endif
-            linger.l_onoff = 1;linger.l_linger = 1;
+            linger.l_onoff = 1;linger.l_linger = 0;
             setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
-#ifdef SOL_TCP
-#ifdef TCP_NODELAY
             opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
-#endif
-#endif
             if(sess && (sess->flag & O_NONBLOCK))
             {
                 flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
@@ -1109,6 +1105,23 @@ CB_DATA *service_newchunk(SERVICE *service, int len)
     return chunk;
 }
 
+/* new chunk and memset */
+CB_DATA *service_mnewchunk(SERVICE *service, int len)
+{
+    CB_DATA *chunk = NULL;
+    CHUNK *cp = NULL;
+
+    if(service && service->lock == 0)
+    {
+        if((cp = service_popchunk(service)))
+        {
+            chunk_mem(cp, len);
+            if(cp->data) memset(cp->data, 0, len);
+            chunk = (CB_DATA *)cp;
+        }
+    }
+    return chunk;
+}
 /* set service session */
 int service_set_session(SERVICE *service, SESSION *session)
 {
@@ -1636,6 +1649,7 @@ SERVICE *service_init()
         service->popchunk           = service_popchunk;
         service->pushchunk          = service_pushchunk;
         service->newchunk           = service_newchunk;
+        service->mnewchunk          = service_mnewchunk;
         service->set_session        = service_set_session;
         service->add_multicast      = service_add_multicast;
         service->drop_multicast     = service_drop_multicast;

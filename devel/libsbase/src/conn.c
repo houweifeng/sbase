@@ -4,7 +4,7 @@
 #include "mmblock.h"
 #include "chunk.h"
 #include "logger.h"
-#include "xqueue.h"
+#include "queue.h"
 #include "message.h"
 #include "service.h"
 #include "timer.h"
@@ -43,21 +43,26 @@ int conn_read_buffer(CONN *conn)
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
 #define IODAEMON(conn) ((PROCTHREAD *)(conn->iodaemon))
 #define IOWAKEUP(conn) {if(IODAEMON(conn))IODAEMON(conn)->wakeup(IODAEMON(conn));}            
+/*
 #define SENDQ(conn) conn->xqueue
-#define SENDQSET(conn) conn->qid = xqueue_new(conn->xqueue)
+#define SENDQINIT(conn) 
+#define SENDQNEW(conn) conn->qid = xqueue_new(conn->xqueue)
 #define SENDQTOTAL(conn) xqueue_total(conn->xqueue, conn->qid)
 #define SENDQHEAD(conn) xqueue_head(conn->xqueue, conn->qid)
 #define SENDQPOP(conn) xqueue_pop(conn->xqueue, conn->qid)
 #define SENDQPUSH(conn, ptr) xqueue_push(conn->xqueue, conn->qid, ptr)
 #define SENDQCLOSE(conn) xqueue_close(conn->xqueue, conn->qid)
 #define SENDQCLEAN(conn)
-//#define SENDQ(conn) conn->queue
-//#define SENDQSET(conn) (conn->queue = queue_init())
-//#define SENDQTOTAL(conn) queue_total(conn->queue)
-//#define SENDQHEAD(conn) queue_head(conn->queue)
-//#define SENDQPOP(conn) queue_pop(conn->queue)
-//#define SENDQPUSH(conn, ptr) queue_push(conn->queue, ptr)
-//#define SENDQCLEAN(conn) (queue_clean(conn->queue))
+*/
+#define SENDQ(conn) conn->queue
+#define SENDQINIT(conn) (conn->queue = queue_init())
+#define SENDQNEW(conn)
+#define SENDQTOTAL(conn) queue_total(conn->queue)
+#define SENDQHEAD(conn) queue_head(conn->queue)
+#define SENDQPOP(conn) queue_pop(conn->queue)
+#define SENDQPUSH(conn, ptr) queue_push(conn->queue, ptr)
+#define SENDQCLOSE(conn)
+#define SENDQCLEAN(conn) (queue_clean(conn->queue))
 
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
@@ -353,7 +358,7 @@ int conn_set(CONN *conn)
         conn->evid = -1;
         if(conn->parent && conn->session.timeout > 0) 
             conn->set_timeout(conn, conn->session.timeout);
-        SENDQSET(conn);
+        SENDQNEW(conn);
         if(conn->evbase)
         {
             flag = E_READ|E_PERSIST;
@@ -488,7 +493,9 @@ int conn_terminate(CONN *conn)
             if((cp = (CHUNK *)SENDQPOP(conn)))
             {
                 if(parent && parent->service)
+                {
                     parent->service->pushchunk(parent->service, cp);
+                }
                 else
                 {
                     chunk_clean(cp);
@@ -1666,7 +1673,7 @@ CONN *conn_init()
         conn->index = -1;
         conn->gindex = -1;
         MUTEX_INIT(conn->mutex);
-        SENDQSET(conn);
+        SENDQINIT(conn);
         conn->set                   = conn_set;
         conn->get_service_id        = conn_get_service_id;
         conn->close                 = conn_close;

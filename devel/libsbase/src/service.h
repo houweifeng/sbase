@@ -43,6 +43,8 @@ CONN *service_popfromq(SERVICE *service);
 int service_pushchunk(SERVICE *service, CHUNK *cp);
 /* new chunk */
 CB_DATA *service_newchunk(SERVICE *service, int len);
+/* new chunk and memset */
+CB_DATA *service_mnewchunk(SERVICE *service, int len);
 /* set service session */
 int service_set_session(SERVICE *service, SESSION *session);
 /* add multicast */
