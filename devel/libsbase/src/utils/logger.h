@@ -25,7 +25,7 @@ extern "C" {
 #define LOG_ROTATE_SIZE             0x10
 #define ROTATE_LOG_SIZE             268435456
 #define LOGGER_LINE_SIZE            1024
-#define LOGGER_LINE_LIMIT  	        1048576
+#define LOGGER_LINE_LIMIT  	        131072
 #define LOGGER_PATH_MAX             1024
 #define __REAL__		-1
 #define __DEBUG__		0
@@ -42,49 +42,24 @@ typedef struct _LOGGER
     int total;
     int level;
     int bits;
-    struct timeval tv;
-    time_t timep;
     time_t uptime;
     MUTEX *mutex;
-    struct tm *ptm;
-    char *s;
     char file[LOGGER_PATH_MAX];
-    char buf[LOGGER_LINE_LIMIT];
 }LOGGER;
 #endif
 #define PLOG(xxxxx) ((LOGGER *)xxxxx)
-#define PTV(xxxxx) (((LOGGER *)xxxxx)->tv)
-#define PTM(xxxxx) (((LOGGER *)xxxxx)->ptm)
 #ifdef HAVE_PTHREAD
-#define THREADID() (size_t)pthread_self()
+#define THREADID() ((long )pthread_self())
 #else
-#define THREADID() (0)
+#define THREADID() ((long)0)
 #endif
 int logger_mkdir(char *path);
-void logger_rotate_check(LOGGER *logger);
+void logger_rotate_check(LOGGER *logger, struct tm *ptm);
 int logger_header(LOGGER *logger, char *s, int level, char *_file_, int _line_);
+int logger_write(LOGGER *logger, int level, char *_file_, int _line_, char *format,...);
 LOGGER *logger_init(char *file, int rotate_flag);
 void logger_clean(void *ptr);
-#define LOGGER_ADD(ptr, __level__, format...)                                           \
-do                                                                                      \
-{                                                                                       \
-    if(ptr)                                                                             \
-    {                                                                                   \
-        MUTEX_LOCK(PLOG(ptr)->mutex);                                                   \
-        logger_rotate_check(PLOG(ptr));                                                 \
-        if(PTM(ptr) && PLOG(ptr)->fd > 0)                                               \
-        {                                                                               \
-            PLOG(ptr)->s = PLOG(ptr)->buf;                                              \
-            PLOG(ptr)->s += logger_header(PLOG(ptr), PLOG(ptr)->s,                      \
-                    __level__, __FILE__, __LINE__);                                     \
-            PLOG(ptr)->s += sprintf(PLOG(ptr)->s, format);                              \
-            *(PLOG(ptr)->s)++ = '\n';                                                   \
-            PLOG(ptr)->n = write(PLOG(ptr)->fd, PLOG(ptr)->buf,                         \
-                    PLOG(ptr)->s - PLOG(ptr)->buf);                                     \
-        }                                                                               \
-        MUTEX_UNLOCK(PLOG(ptr)->mutex);                                                 \
-    }                                                                                   \
-}while(0)
+#define LOGGER_ADD(ptr, __level__, format...)logger_write(PLOG(ptr),__level__,__FILE__, __LINE__,format) 
 #define LOGGER_INIT(ptr, file) (ptr = logger_init(file, 0))
 #define LOGGER_ROTATE_INIT(ptr, file, flag) (ptr = logger_init(file, flag))
 #define LOGGER_SET_LEVEL(ptr, num) {if(ptr){PLOG(ptr)->level = num;}}
