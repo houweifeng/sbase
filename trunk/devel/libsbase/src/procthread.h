@@ -1,6 +1,7 @@
 #include "sbase.h"
 #ifndef _PROCTHREAD_H
 #define _PROCTHREAD_H
+PROCTHREAD *procthread_init(int cond);
 /* run procthread */
 void procthread_run(void *arg);
 /* add new task */

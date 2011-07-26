@@ -36,6 +36,8 @@ extern "C" {
 /* working mode */
 #define WORKING_PROC            0x00
 #define WORKING_THREAD          0x01
+#define THREAD_EVBASE           0x01 
+#define THREAD_MESSAGEQ         0x02
 /* connection status */
 #define CONN_STATUS_FREE        0x00
 #define CONN_STATUS_READY       0x01
@@ -415,8 +417,6 @@ typedef struct _PROCTHREAD
     void (*terminate)(struct _PROCTHREAD *procthread);
     void (*clean)(struct _PROCTHREAD *procthread);
 }PROCTHREAD;
-/* Initialize procthread */
-PROCTHREAD *procthread_init(int have_evbase);
 /* CONN */
 typedef struct _CONN
 {
