@@ -197,7 +197,7 @@ void conn_buffer_handler(CONN *conn)
     {
         if(SENDQTOTAL(conn) < 1)
             event_del(&(conn->event), E_WRITE);
-        ret = conn->packet_reader(conn);
+        if(conn->s_state == 0) ret = conn->packet_reader(conn);
     }
     return ;
 }
@@ -212,7 +212,7 @@ void conn_chunk_handler(CONN *conn)
     {
         if(SENDQTOTAL(conn) < 1)
             event_del(&(conn->event), E_WRITE);
-        ret = conn__read__chunk(conn);
+        if(conn->s_state == S_STATE_READ_CHUNK) ret = conn__read__chunk(conn);
     }
     return ;
 }
@@ -861,7 +861,7 @@ int conn_read_handler(CONN *conn)
 /* write handler */
 int conn_write_handler(CONN *conn)
 {
-    int ret = -1, n = 0, chunk_over = 0;
+    int ret = -1, n = 0, chunk_over = 0, nsent = 0;
     CHUNK *cp = NULL;
     CONN_CHECK_RET(conn, (D_STATE_CLOSE|D_STATE_WCLOSE), ret);
 
@@ -884,6 +884,7 @@ int conn_write_handler(CONN *conn)
                     if((n = conn_write_chunk(conn, cp)) > 0)
                     {
                         conn->sent_data_total += n;
+                        nsent += n;
                         DEBUG_LOGGER(conn->logger, "Sent %d byte(s) (total sent %lld) "
                                 "to %s:%d on %s:%d via %d leave %lld qtotal:%d", 
                                 n, LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
@@ -943,16 +944,18 @@ int conn_write_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        event_del(&(conn->event), E_WRITE);
+                        //event_del(&(conn->event), E_WRITE);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                     }
                     ret = 0;
                 }
             }
-            ACCESS_LOGGER(conn->logger, "Over for send-data to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
+            ACCESS_LOGGER(conn->logger, "Over for send-ndata[%d] to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", nsent, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
         }
         else
         {
+            ret = 0;
+            event_del(&(conn->event), E_WRITE);
             CONN_PUSH_MESSAGE(conn, MESSAGE_END);
             ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
         }
@@ -1009,7 +1012,7 @@ int conn_packet_reader(CONN *conn)
             goto end;
         }
         /* Read packet with delimiter */
-        else if(packet_type & PACKET_DELIMITER && conn->session.packet_delimiter
+        else if((packet_type & PACKET_DELIMITER) && conn->session.packet_delimiter
                 && conn->session.packet_delimiter_length > 0)
         {
             p = MMB_DATA(conn->buffer);
@@ -1046,7 +1049,8 @@ end:
             /* For packet handling */
             conn->s_state = S_STATE_PACKET_HANDLING;
             CONN_PUSH_MESSAGE(conn, MESSAGE_PACKET);
-            DEBUG_LOGGER(conn->logger, "Got packet length[%d/%d]", len, MMB_SIZE(conn->packet));
+            ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", 
+                packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         }
     }
     return len;
@@ -1293,7 +1297,7 @@ int conn__read__chunk(CONN *conn)
             }
             if(n > 0)
             {
-                DEBUG_LOGGER(conn->logger, "Filled  %d byte(s) left:%lld to chunk from buffer "
+                ACCESS_LOGGER(conn->logger, "Filled  %d byte(s) left:%lld to chunk from buffer "
                         "to %s:%d on conn[%s:%d] via %d", n, LL(CHK_LEFT(conn->chunk)),
                         conn->remote_ip, conn->remote_port, conn->local_ip, 
                         conn->local_port, conn->fd);

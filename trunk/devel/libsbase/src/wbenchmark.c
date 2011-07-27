@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -254,18 +255,21 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
         }
         */
         //check Content-Length
-        if((s = strstr(p, "Content-Length")) || (s = strstr(p, "content-length")))
+        if((s = strcasestr(p, "Content-Length")))
         {
             s += 14;
             while(s < end)
             {
                 if(*s >= '0' && *s <= '9')break;
-                else++s;
+                else ++s;
             }
             if(*s >= '0' && *s <= '9' && (len = atoll(s)) > 0) 
+            {
                 conn->recv_chunk(conn, len);
+            }
             else
             {
+                WARN_LOGGER(logger, "no content:*s", s);
                 return http_check_over(conn);
             }
         }
