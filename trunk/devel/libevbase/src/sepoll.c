@@ -232,7 +232,7 @@ int main(int argc, char **argv)
         /* Listen */
         if(ev_sock_list[ev_sock_type] == SOCK_STREAM)
         {
-            if(listen(lfd, CONN_MAX) != 0 )
+            if(listen(lfd, CONN_MAX-1) != 0 )
             {
                 //SHOW_LOG("Listening  failed, %s", strerror(errno));
                 return -1;
