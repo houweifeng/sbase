@@ -148,7 +148,7 @@ int http_show_state(int n)
                     (PT_USEC_U(timer)/nok));
         }
     }
-    if(is_daemon == 0){running_status = 0;sbase->stop(sbase);}
+    running_status = 0;sbase->stop(sbase);
     return 0;
 }
 /* new request */
@@ -269,7 +269,6 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             }
             else
             {
-                WARN_LOGGER(logger, "no content:*s", s);
                 return http_check_over(conn);
             }
         }
