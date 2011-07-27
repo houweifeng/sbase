@@ -28,6 +28,7 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
         {
             service_accept_handler(service);
         }
+        else
         {
             event_del(&(pth->event), E_WRITE);
         }
@@ -78,7 +79,6 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                     i++;
                 }
-                if(QMTOTAL(pth->message_queue) > 0) pth->wakeup(pth);
             }while(pth->running_status);
 
         }
