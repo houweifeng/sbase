@@ -47,7 +47,7 @@ int service_set(SERVICE *service)
         service->sa.sin_family = service->family;
         service->sa.sin_addr.s_addr = (p)? inet_addr(p):INADDR_ANY;
         service->sa.sin_port = htons(service->port);
-        if(service->backlog <= 0)service->backlog = SB_CONN_MAX;
+        service->backlog = SB_BACKLOG_MAX;
         SERVICE_CHECK_SSL_CLIENT(service);
         if(service->service_type == S_SERVICE)
         {
@@ -97,7 +97,7 @@ int service_set(SERVICE *service)
                     ret = fcntl(service->fd, F_SETFL, flag|O_NONBLOCK);
                 }
                 ret = bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa));
-                if(service->sock_type == SOCK_STREAM) ret = listen(service->fd, service->backlog);
+                if(service->sock_type == SOCK_STREAM) ret = listen(service->fd, SB_BACKLOG_MAX);
                 if(ret != 0) return -1;
             }
             else
@@ -374,7 +374,7 @@ int service_accept_handler(SERVICE *service)
     socklen_t rsa_len = sizeof(struct sockaddr_in);
     int fd = -1, port = -1, n = 0, opt = 1, i = 0;
     PROCTHREAD *parent = NULL, *daemon = NULL;
-    //struct linger linger = {0};
+    struct linger linger = {0};
     struct sockaddr_in rsa;
     CONN *conn = NULL;
     void *ssl = NULL;
@@ -403,7 +403,7 @@ int service_accept_handler(SERVICE *service)
 #endif
 new_conn:
                 fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0)|O_NONBLOCK);
-                //linger.l_onoff = 1;linger.l_linger = 0;
+                linger.l_onoff = 1;linger.l_linger = 0;
                 //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
                 opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                 opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
@@ -449,7 +449,7 @@ err_conn:
             {
                 ip = inet_ntoa(rsa.sin_addr);
                 port = ntohs(rsa.sin_port);
-                //linger.l_onoff = 1;linger.l_linger = 0;opt = 1;
+                linger.l_onoff = 1;linger.l_linger = 0;opt = 1;
                 if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
                 && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
