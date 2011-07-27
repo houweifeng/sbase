@@ -203,7 +203,7 @@ void event_add(EVENT *event, int flags)
 	if(event)
 	{
         //MUTEX_LOCK(event->mutex);
-        if(flags)
+        if((event->ev_flags & flags) != flags)
         {
             event->old_ev_flags = event->ev_flags;
             event->ev_flags |= flags;

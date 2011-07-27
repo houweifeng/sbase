@@ -91,6 +91,7 @@ int service_set(SERVICE *service)
 #endif
                 )
             {
+                fcntl(service->fd, F_SETFD, FD_CLOEXEC);
                 if(service->working_mode == WORKING_PROC)
                 {
                     flag = fcntl(service->fd, F_GETFL, 0);
