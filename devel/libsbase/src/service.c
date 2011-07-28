@@ -1,3 +1,5 @@
+#define  _GNU_SOURCE
+#include <sched.h> 
 #include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -98,7 +100,7 @@ int service_set(SERVICE *service)
                     ret = fcntl(service->fd, F_SETFL, flag|O_NONBLOCK);
                 }
                 ret = bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa));
-                if(service->sock_type == SOCK_STREAM) ret = listen(service->fd, SB_CONN_MAX-1);
+                if(service->sock_type == SOCK_STREAM) ret = listen(service->fd, SB_BACKLOG_MAX);
                 if(ret != 0) return -1;
             }
             else
@@ -130,16 +132,17 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(ns, id, pthdid, proc, logger)                                        \
+#define NEW_PROCTHREAD(ns, id, threadid, proc, logger, cpuset)                              \
 {                                                                                           \
-    if(pthread_create(&(pthdid), NULL, (void *)(&procthread_run), (void *)proc) != 0)       \
+    if(pthread_create(&(threadid), NULL, (void *)(&procthread_run), (void *)proc) != 0)     \
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
+    pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                           \
 }
         //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
-#define NEW_PROCTHREAD(ns, id, pthid, pth, logger)
+#define NEW_PROCTHREAD(ns, id, pthid, pth, logger, cpuset)
 #endif
 #ifdef HAVE_PTHREAD
 #define PROCTHREAD_EXIT(id, exitid) pthread_join((pthread_t)id, exitid)
@@ -157,8 +160,9 @@ void sigpipe_ignore()
 /* running */
 int service_run(SERVICE *service)
 {
-    int ret = -1, i = 0, x = 0;
-    CONN *conn = NULL;
+    int ret = -1, i = 0, x = 0, ncpu = sysconf(_SC_NPROCESSORS_CONF);
+    cpu_set_t cpuset, iocpuset;
+    CONN *conn = NULL; 
 
     if(service)
     {
@@ -219,6 +223,21 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         sigpipe_ignore();
+        CPU_ZERO(&cpuset);
+        CPU_ZERO(&iocpuset);
+        if(ncpu > 0)
+        {
+            for(i = 0; i < ncpu-1; i++)
+            {
+                CPU_SET(i, &cpuset);
+            }
+            CPU_SET(ncpu-1, &iocpuset);
+        }
+        else
+        {
+            CPU_SET(0, &cpuset);
+            CPU_SET(0, &iocpuset);
+        }
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
         if(service->niodaemons < 1) service->niodaemons = 1;
@@ -239,7 +258,7 @@ running_threads:
                     return -1;
                 }
                 NEW_PROCTHREAD("iodaemons", i, service->iodaemons[i]->threadid, 
-                        service->iodaemons[i], service->logger);
+                        service->iodaemons[i], service->logger, iocpuset);
             }
         }
         /* initialize threads  */
@@ -265,7 +284,7 @@ running_threads:
                     return -1;
                 }
                 NEW_PROCTHREAD("procthreads", i, service->procthreads[i]->threadid, 
-                        service->procthreads[i], service->logger);
+                        service->procthreads[i], service->logger, cpuset);
             }
         }
         /* daemon */ 
@@ -274,7 +293,7 @@ running_threads:
             service->daemon->evtimer = service->etimer;
             PROCTHREAD_SET(service, service->daemon);
             service->daemon->use_cond_wait = 0;
-            NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger);
+            NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger,cpuset);
             ret = 0;
         }
         else
@@ -290,7 +309,7 @@ running_threads:
             {
                 PROCTHREAD_SET(service, service->acceptor);
                 service->acceptor->set_acceptor(service->acceptor, service->fd);
-                NEW_PROCTHREAD("acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger);
+                NEW_PROCTHREAD("acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger, iocpuset);
                 ret = 0;
             }
             else
@@ -304,7 +323,7 @@ running_threads:
         if((service->tracker = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->tracker);
-            NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger);
+            NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger, cpuset);
             ret = 0;
         }
         else
@@ -331,7 +350,7 @@ running_threads:
                     return -1;
                 }
                 NEW_PROCTHREAD("daemons", i, service->daemons[i]->threadid,
-                        service->daemons[i], service->logger);
+                        service->daemons[i], service->logger, cpuset);
             }
         }
         return ret;
@@ -406,8 +425,8 @@ new_conn:
                 fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0)|O_NONBLOCK);
                 linger.l_onoff = 1;linger.l_linger = 0;
                 //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
-                opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-                //opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 if((daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
@@ -417,7 +436,7 @@ new_conn:
                 else if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
                     i++;
-                    DEBUG_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     continue;
                 }
                 else
@@ -546,7 +565,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             linger.l_onoff = 1;linger.l_linger = 0;
             setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-            //opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+            opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
