@@ -100,7 +100,7 @@ int service_set(SERVICE *service)
                     ret = fcntl(service->fd, F_SETFL, flag|O_NONBLOCK);
                 }
                 ret = bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa));
-                if(service->sock_type == SOCK_STREAM) ret = listen(service->fd, SB_CONN_MAX-1);
+                if(service->sock_type == SOCK_STREAM) ret = listen(service->fd, SB_BACKLOG_MAX);
                 if(ret != 0) return -1;
             }
             else
