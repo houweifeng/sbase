@@ -163,8 +163,8 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
             
         }
         //memset(evbase->evs, 0, sizeof(struct epoll_event) * evbase->allowed);
-        n = epoll_wait(evbase->efd, (struct epoll_event *)(evbase->evs), evbase->allowed, timeout);
-        //n = epoll_wait(evbase->efd, (struct epoll_event *)evbase->evs, evbase->maxfd+1, timeout);
+        //n = epoll_wait(evbase->efd, (struct epoll_event *)(evbase->evs), evbase->allowed, timeout);
+        n = epoll_wait(evbase->efd, (struct epoll_event *)evbase->evs, evbase->maxfd+1, timeout);
         if(n <= 0)
         {
             if(n < 0){fprintf(stderr, "epoll_wait(%d, %p, %d, %d) failed, %s\n", evbase->efd, evbase->evs, evbase->maxfd, timeout, strerror(errno));}

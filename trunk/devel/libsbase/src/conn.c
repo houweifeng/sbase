@@ -94,7 +94,7 @@ do                                                                              
     {                                                                                       \
             qmessage_push(conn->message_queue, msgid,                                       \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
-        if(conn->parent&&PPARENT(conn)->use_cond_wait){MUTEX_SIGNAL(PPARENT(conn)->mutex);} \
+        if(conn->parent && PPARENT(conn)->use_cond_wait){MUTEX_SIGNAL(PPARENT(conn)->mutex);} \
     }                                                                                       \
 }while(0)
 #define CONN__PUSH__MESSAGE(conn, msgid)                                                    \
@@ -403,8 +403,8 @@ int conn_close(CONN *conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] local[%s:%d] via %d",
                 conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        conn->over_cstate(conn);
-        conn->over_evstate(conn);
+        //conn->over_cstate(conn);
+        //conn->over_evstate(conn);
         conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
         return 0;
     }
@@ -431,20 +431,20 @@ int conn_over(CONN *conn)
 /* shutdown connection */
 int conn_shut(CONN *conn, int d_state, int e_state)
 {
-    if(conn)
+    if(conn && conn->mutex)
     {
         MUTEX_LOCK(conn->mutex);
         conn->over_timeout(conn);
-        DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "
-                "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
-                conn->d_state, conn->local_ip, conn->local_port, conn->fd);
+        //WARN_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "
+        //        "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
+        //        conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         if(conn->d_state == D_STATE_FREE && conn->fd > 0)
         {
             conn->d_state |= d_state;
             if(conn->e_state == E_STATE_OFF) conn->e_state = e_state;
-            DEBUG_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
-                    "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
-                    conn->d_state, conn->local_ip, conn->local_port, conn->fd);
+            //WARN_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
+            //        "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
+            //        conn->d_state, conn->local_ip, conn->local_port, conn->fd);
             CONN__PUSH__MESSAGE(conn, MESSAGE_SHUT);
         }
         MUTEX_UNLOCK(conn->mutex);
@@ -1669,6 +1669,7 @@ void conn_clean(CONN *conn)
     if(conn)
     {
         MUTEX_DESTROY(conn->mutex);
+        conn->mutex = NULL;
         event_clean(&(conn->event));
         /* Clean BUFFER */
         MMB_DESTROY(conn->buffer);
