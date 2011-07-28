@@ -1347,6 +1347,34 @@ int conn_recv_chunk(CONN *conn, int size)
     return ret;
 }
 
+/* receive and fill to chunk */
+int conn_recv2_chunk(CONN *conn, int size, char *data, int ndata)
+{
+    int ret = -1;
+
+    if(conn && ndata >= 0)
+    {
+        DEBUG_LOGGER(conn->logger, "Ready for recv2-chunk size:%d from %s:%d on %s:%d via %d",
+                chunk->left, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        chunk_mem(&conn->chunk, size+ndata);
+        if(data && ndata > 0)
+        {
+            CHUNK_FILL(&conn->chunk, data, ndata);
+        }
+        conn->s_state = S_STATE_READ_CHUNK;
+        if(conn->d_state & D_STATE_CLOSE)
+        {
+            conn->chunk_reader(conn);
+        }
+        else
+        {
+            PUSH_IOQMESSAGE(conn, MESSAGE_CHUNK);
+        }
+        ret = 0;
+    }
+    return ret;
+}
+
 /* push chunk */
 int conn_push_chunk(CONN *conn, void *data, int size)
 {
@@ -1710,6 +1738,7 @@ CONN *conn_init()
         conn->save_cache            = conn_save_cache;
         conn->chunk_reader          = conn_chunk_reader;
         conn->recv_chunk            = conn_recv_chunk;
+        conn->recv2_chunk           = conn_recv2_chunk;
         conn->push_chunk            = conn_push_chunk;
         conn->recv_file             = conn_recv_file;
         conn->push_file             = conn_push_file;
