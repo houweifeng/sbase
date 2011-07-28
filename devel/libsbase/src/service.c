@@ -1370,7 +1370,8 @@ void service_stop(SERVICE *service)
         //stop all connections 
         if(service->connections && service->index_max >= 0)
         {
-            WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
+            //WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
+            MUTEX_LOCK(service->mutex);
             for(i = 0; i <= service->index_max; i++)
             {
                 if((conn = service->connections[i]))
@@ -1379,6 +1380,7 @@ void service_stop(SERVICE *service)
                     conn->close(conn);
                 }
             }
+            MUTEX_UNLOCK(service->mutex);
         }
         //iodaemons
         if(service->niodaemons > 0)
