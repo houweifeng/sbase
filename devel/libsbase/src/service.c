@@ -138,8 +138,8 @@ void sigpipe_ignore()
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
+    pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                           \ 
 }
-    //pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                           
         //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
 #define NEW_PROCTHREAD(ns, id, pthid, pth, logger, cpuset)
@@ -225,7 +225,6 @@ running_threads:
         sigpipe_ignore();
         CPU_ZERO(&cpuset);
         CPU_ZERO(&iocpuset);
-        /*
         if(ncpu > 0)
         {
             for(i = 0; i < ncpu; i++)
@@ -240,7 +239,6 @@ running_threads:
             CPU_SET(0, &cpuset);
             CPU_SET(0, &iocpuset);
         }
-        */
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
         if(service->niodaemons < 1) service->niodaemons = 1;
