@@ -83,6 +83,9 @@ int conn_chunk_reader(CONN *conn);
 /* receive chunk */
 int conn_recv_chunk(CONN *conn, int size);
 
+/* receive and fill to chunk */
+int conn_recv2_chunk(CONN *conn, int size, char *data, int ndata);
+
 /* push chunk */
 int conn_push_chunk(CONN *conn, void *chunk_data, int size);
 
