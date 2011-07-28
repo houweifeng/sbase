@@ -1355,7 +1355,7 @@ int conn_recv2_chunk(CONN *conn, int size, char *data, int ndata)
     if(conn && ndata >= 0)
     {
         DEBUG_LOGGER(conn->logger, "Ready for recv2-chunk size:%d from %s:%d on %s:%d via %d",
-                chunk->left, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+                size, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         chunk_mem(&conn->chunk, size+ndata);
         if(data && ndata > 0)
         {
