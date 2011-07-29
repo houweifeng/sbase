@@ -180,7 +180,7 @@ int service_run(SERVICE *service)
         if(service->service_type == S_SERVICE && service->evbase
                 && service->working_mode == WORKING_PROC)
         {
-            event_set(&(service->event), service->fd, E_READ|E_EPOLL_ET|E_PERSIST,
+            event_set(&(service->event), service->fd, E_READ|E_PERSIST,
                     (void *)service, (void *)&service_event_handler);
             ret = service->evbase->add(service->evbase, &(service->event));
         }
@@ -564,8 +564,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             }
 #endif
             linger.l_onoff = 1;linger.l_linger = 0;
-            setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
-            opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+            //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
+            //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
             //opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
