@@ -1,4 +1,4 @@
-#define  _GNU_SOURCE
+#define _GNU_SOURCE
 #include <sched.h> 
 #include <errno.h>
 #include <signal.h>
@@ -426,8 +426,8 @@ new_conn:
                 fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0)|O_NONBLOCK);
                 linger.l_onoff = 1;linger.l_linger = 0;
                 //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
-                //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-                //opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 if(service->newconn_on_tracker && (daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
@@ -565,8 +565,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
 #endif
             linger.l_onoff = 1;linger.l_linger = 0;
             //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
-            //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-            //opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+            opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+            opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
