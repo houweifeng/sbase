@@ -870,6 +870,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     httpd->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
     httpd->niodaemons = iniparser_getint(dict, "XHTTPD:niodaemons", 2);
     httpd->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
+    httpd->use_cpu_set = iniparser_getint(dict, "XHTTPD:use_cpu_set", 1);
     httpd->set_log(httpd, iniparser_getstr(dict, "XHTTPD:logfile"));
     httpd->set_log_level(httpd, iniparser_getint(dict, "XHTTPD:log_level", 0));
     httpd->session.packet_type=iniparser_getint(dict, "XHTTPD:packet_type",PACKET_DELIMITER);
