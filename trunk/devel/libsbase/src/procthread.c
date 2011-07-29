@@ -79,7 +79,7 @@ void procthread_run(void *arg)
                     qmessage_handler(pth->message_queue, pth->logger);
                     i++;
                 }
-                DEBUG_LOGGER(pth->logger, "iodaemon_loop(%d)", i);
+                DEBUG_LOGGER(pth->logger, "iodaemon_loop(%d) q[%p]{total:%d left:%d}", i, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
             }while(pth->running_status);
 
         }
@@ -111,7 +111,7 @@ void procthread_run(void *arg)
                         qmessage_handler(pth->message_queue, pth->logger);
                     }
                     if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);}
-                    DEBUG_LOGGER(pth->logger, "conn_worker_loop(%d) q[%p]->total:%d", pth->index, pth->message_queue, QMTOTAL(pth->message_queue));
+                    DEBUG_LOGGER(pth->logger, "conn_worker_loop(%d) q[%p]->total:%d nleft:%d", pth->index, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
