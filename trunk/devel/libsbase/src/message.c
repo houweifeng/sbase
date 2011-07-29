@@ -246,7 +246,6 @@ void qmessage_handler(void *qmsg, void *logger)
             }
 next:
             qmessage_left(qmsg, msg);
-            if(--total < 1) break;
         }
     }
     return ;
