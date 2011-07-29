@@ -46,7 +46,12 @@ int setrlimiter(char *name, int rlimit, int nset)
 /* event handler */
 void sbase_event_handler(int event_fd, int flags, void *arg)
 {
-    event_del(&(sbase->event), E_WRITE);
+    SBASE *sbase = (SBASE *)arg;
+
+    if(sbase)
+    {
+        event_del(&(sbase->event), E_WRITE);
+    }
     return ;
 }
 
