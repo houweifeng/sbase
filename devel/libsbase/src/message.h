@@ -68,7 +68,7 @@ typedef struct _MESSAGE
 }MESSAGE;
 #define QMSG_LINE_MAX 1024
 #define QMSG_LINE_NUM 1024
-#define QMSG_INIT_NUM 10240
+#define QMSG_INIT_NUM 4096
 typedef struct _QMESSAGE
 {
     int total;
@@ -88,6 +88,7 @@ void qmessage_push(void *q, int id, int index, int fd, int tid, void *parent, vo
 void qmessage_clean(void *q);
 /* Initialize message */
 #define QMTOTAL(q) ((q)?(((QMESSAGE *)q)->total):0)
+#define QNLEFT(q) ((q)?(((QMESSAGE *)q)->nleft):0)
 #define MESSAGE_INIT() ((MESSAGE *)calloc(1, sizeof(MESSAGE)))
 #define MESSAGE_CLEAN(ptr) {if(ptr){free(ptr);ptr = NULL;}}
 #define MESSAGE_SIZE    sizeof(MESSAGE)
