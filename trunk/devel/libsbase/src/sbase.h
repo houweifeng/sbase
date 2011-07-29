@@ -250,6 +250,8 @@ typedef struct _SERVICE
     int is_inside_logger;
     int ntask;
     int cond;
+    int use_cpu_set;
+    int bits;
     int conns_free[SB_CONN_MAX];
 
     struct  sockaddr_in sa;

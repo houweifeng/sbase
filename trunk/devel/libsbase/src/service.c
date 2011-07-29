@@ -132,17 +132,18 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(ns, id, threadid, proc, logger, cpuset)                              \
+#define NEW_PROCTHREAD(service, ns, id, threadid, proc, logger, cpuset)                     \
 {                                                                                           \
     if(pthread_create(&(threadid), NULL, (void *)(&procthread_run), (void *)proc) != 0)     \
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
-    pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                           \
+    if(service->use_cpu_set)                                                                \
+        pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                       \
 }
         //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
-#define NEW_PROCTHREAD(ns, id, pthid, pth, logger, cpuset)
+#define NEW_PROCTHREAD(service, ns, id, pthid, pth, logger, cpuset)
 #endif
 #ifdef HAVE_PTHREAD
 #define PROCTHREAD_EXIT(id, exitid) pthread_join((pthread_t)id, exitid)
@@ -257,7 +258,7 @@ running_threads:
                     exit(EXIT_FAILURE);
                     return -1;
                 }
-                NEW_PROCTHREAD("iodaemons", i, service->iodaemons[i]->threadid, 
+                NEW_PROCTHREAD(service, "iodaemons", i, service->iodaemons[i]->threadid, 
                         service->iodaemons[i], service->logger, iocpuset);
             }
         }
@@ -283,7 +284,7 @@ running_threads:
                     exit(EXIT_FAILURE);
                     return -1;
                 }
-                NEW_PROCTHREAD("procthreads", i, service->procthreads[i]->threadid, 
+                NEW_PROCTHREAD(service, "procthreads", i, service->procthreads[i]->threadid, 
                         service->procthreads[i], service->logger, cpuset);
             }
         }
@@ -293,7 +294,7 @@ running_threads:
             service->daemon->evtimer = service->etimer;
             PROCTHREAD_SET(service, service->daemon);
             service->daemon->use_cond_wait = 0;
-            NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger, iocpuset);
+            NEW_PROCTHREAD(service, "daemon", 0, service->daemon->threadid, service->daemon, service->logger, iocpuset);
             ret = 0;
         }
         else
@@ -309,7 +310,7 @@ running_threads:
             {
                 PROCTHREAD_SET(service, service->acceptor);
                 service->acceptor->set_acceptor(service->acceptor, service->fd);
-                NEW_PROCTHREAD("acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger, iocpuset);
+                NEW_PROCTHREAD(service, "acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger, iocpuset);
                 ret = 0;
             }
             else
@@ -323,7 +324,7 @@ running_threads:
         if((service->tracker = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->tracker);
-            NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger, iocpuset);
+            NEW_PROCTHREAD(service, "tracker", 0, service->tracker->threadid, service->tracker, service->logger, iocpuset);
             ret = 0;
         }
         else
@@ -349,7 +350,7 @@ running_threads:
                     exit(EXIT_FAILURE);
                     return -1;
                 }
-                NEW_PROCTHREAD("daemons", i, service->daemons[i]->threadid,
+                NEW_PROCTHREAD(service, "daemons", i, service->daemons[i]->threadid,
                         service->daemons[i], service->logger, cpuset);
             }
         }
