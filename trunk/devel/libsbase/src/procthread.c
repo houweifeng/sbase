@@ -86,7 +86,7 @@ void procthread_run(void *arg)
         else if(pth->listenfd > 0)
         {
                 /*
-                event_set(&(pth->acceptor), pth->listenfd, E_READ|E_EPOLL_ET|E_PERSIST,
+                event_set(&(pth->acceptor), pth->listenfd, E_READ|E_PERSIST,
                         (void *)pth, (void *)&procthread_event_handler);
                 pth->evbase->add(pth->evbase, &(pth->acceptor));
                 */

@@ -46,6 +46,7 @@ int setrlimiter(char *name, int rlimit, int nset)
 /* event handler */
 void sbase_event_handler(int event_fd, int flags, void *arg)
 {
+    event_del(&(sbase->event), E_WRITE);
     return ;
 }
 
@@ -233,7 +234,7 @@ running:
             _exit(-1);
         }
         */
-        event_set(&(sbase->event), sbase->cond, E_READ|E_WRITE|E_EPOLL_ET|E_PERSIST,
+        event_set(&(sbase->event), sbase->cond, E_READ|E_PERSIST,
                     (void *)sbase, (void *)&sbase_event_handler);
         ret = sbase->evbase->add(sbase->evbase, &(sbase->event));
         //sbase->evbase->set_evops(sbase->evbase, EOP_POLL);
