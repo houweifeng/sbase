@@ -251,7 +251,7 @@ typedef struct _SERVICE
     int ntask;
     int cond;
     int use_cpu_set;
-    int bits;
+    int newconn_on_tracker;
     int conns_free[SB_CONN_MAX];
 
     struct  sockaddr_in sa;
