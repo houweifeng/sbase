@@ -138,7 +138,7 @@ void sigpipe_ignore()
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
-    pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                           \ 
+    pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                           \
 }
         //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
@@ -225,14 +225,13 @@ running_threads:
         sigpipe_ignore();
         CPU_ZERO(&cpuset);
         CPU_ZERO(&iocpuset);
-        if(ncpu > 0)
+        if(ncpu-- > 1)
         {
             for(i = 0; i < ncpu; i++)
             {
                 CPU_SET(i, &cpuset);
-                CPU_SET(i, &iocpuset);
             }
-            //CPU_SET(ncpu-1, &iocpuset);
+            CPU_SET(ncpu, &iocpuset);
         }
         else
         {
@@ -294,7 +293,7 @@ running_threads:
             service->daemon->evtimer = service->etimer;
             PROCTHREAD_SET(service, service->daemon);
             service->daemon->use_cond_wait = 0;
-            NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger,cpuset);
+            NEW_PROCTHREAD("daemon", 0, service->daemon->threadid, service->daemon, service->logger, iocpuset);
             ret = 0;
         }
         else
@@ -324,7 +323,7 @@ running_threads:
         if((service->tracker = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->tracker);
-            NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger, cpuset);
+            NEW_PROCTHREAD("tracker", 0, service->tracker->threadid, service->tracker, service->logger, iocpuset);
             ret = 0;
         }
         else
@@ -427,17 +426,18 @@ new_conn:
                 linger.l_onoff = 1;linger.l_linger = 0;
                 //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
                 //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                //opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                /*
                 if((daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
                     continue;
                 }
-                else if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
+                else */if((conn = service_addconn(service, service->sock_type, fd, ip, port, service->ip, service->port, &(service->session), ssl, CONN_STATUS_FREE)))
                 {
-                    i++;
                     ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
+                    i++;
                     continue;
                 }
                 else
@@ -566,7 +566,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             linger.l_onoff = 1;linger.l_linger = 0;
             setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-            opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+            //opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
