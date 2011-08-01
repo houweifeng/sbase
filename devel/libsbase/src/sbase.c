@@ -114,13 +114,10 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
         if(service && sbase->running_services < SB_SERVICE_MAX)
         {
             service->evbase = sbase->evbase;
-            /*
             if(service->working_mode == WORKING_PROC) 
                 service->evtimer = sbase->evtimer;
             else 
                 service->evtimer = service->etimer;
-            */
-            service->evtimer = sbase->evtimer;
             service->sbase  = sbase;
             service->message_queue = sbase->message_queue;
             service->usec_sleep = sbase->usec_sleep;
