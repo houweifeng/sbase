@@ -124,7 +124,7 @@ void procthread_run(void *arg)
                 do
                 {
                     //DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
-                    //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
+                    if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);

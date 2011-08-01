@@ -734,7 +734,10 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             strcpy(conn->local_ip, local_ip);
             conn->local_port = local_port;
             conn->sock_type = sock_type;
-            conn->evtimer   = service->evtimer;
+            if(service->working_mode == WORKING_THREAD)
+                conn->evtimer   = service->etimer;
+            else
+                conn->evtimer   = service->evtimer;
             conn->logger    = service->logger;
             conn->set_session(conn, session);
             /* add  to procthread */
