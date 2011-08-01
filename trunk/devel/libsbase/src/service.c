@@ -170,8 +170,9 @@ int service_run(SERVICE *service)
     if(service)
     {
         //added to evtimer 
-        if(service->heartbeat_interval > 0)
+        if(service->heartbeat_interval > 0 || service->service_type == C_SERVICE)
         {
+            if(service->heartbeat_interval < 1) service->heartbeat_interval = SB_HEARTBEAT_INTERVAL;
             service->evid = EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
                     &service_evtimer_handler, (void *)service);
             //WARN_LOGGER(service->logger, "Added service[%s] to evtimer[%p][%d] interval:%d",
@@ -736,10 +737,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             strcpy(conn->local_ip, local_ip);
             conn->local_port = local_port;
             conn->sock_type = sock_type;
-            if(service->working_mode == WORKING_THREAD)
-                conn->evtimer   = service->etimer;
-            else
-                conn->evtimer   = service->evtimer;
+            conn->evtimer   = service->etimer;
             conn->logger    = service->logger;
             conn->set_session(conn, session);
             /* add  to procthread */
@@ -1516,11 +1514,6 @@ void service_set_heartbeat(SERVICE *service, int interval, CALLBACK *handler, vo
         service->heartbeat_interval = interval;
         service->heartbeat_handler = handler;
         service->heartbeat_arg = arg;
-        if(service->evtimer)
-        {
-            service->evid = EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
-                    &service_evtimer_handler, (void *)service);
-        }
     }
     return ;
 }
@@ -1552,10 +1545,13 @@ void service_evtimer_handler(void *arg)
 {
     SERVICE *service = (SERVICE *)arg;
 
-    if(service && service->daemon)
+    if(service)
     {
-        service->daemon->active_heartbeat(service->daemon, 
-                &service_active_heartbeat, (void *)service);
+        service_active_heartbeat(arg);
+        /*
+           service->daemon->active_heartbeat(service->daemon, 
+           &service_active_heartbeat, (void *)service);
+           */
     }
     return ;
 }

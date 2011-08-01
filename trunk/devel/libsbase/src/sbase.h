@@ -30,7 +30,7 @@ extern "C" {
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
-#define SB_HEARTBEAT_INTERVAL   11000
+#define SB_HEARTBEAT_INTERVAL   1000000
 #define SB_NWORKING_TOSLEEP     20000
 /* service type */
 #define S_SERVICE               0x00
