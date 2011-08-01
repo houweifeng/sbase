@@ -105,14 +105,13 @@ void procthread_run(void *arg)
                 do
                 {
                     //DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
-                    //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
                         i++;
                     }
                     if(QMTOTAL(pth->message_queue) < 1)
-                        {MUTEX_WAIT(pth->mutex);i = 0;}
+                        {MUTEX_WAIT(pth->mutex);}
                     else if(i > pth->service->nworking_tosleep && pth != pth->service->tracker)
                         {usleep(pth->usec_sleep);i = 0;}
                     ACCESS_LOGGER(pth->logger, "conn_worker[%p]->loop(%d) q[%p]->total:%d nleft:%d tracker:%p daemon:%p", pth, pth->index, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue), pth->service->tracker, pth->service->daemon);
