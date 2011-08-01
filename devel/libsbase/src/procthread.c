@@ -113,8 +113,8 @@ void procthread_run(void *arg)
                     }
                     if(QMTOTAL(pth->message_queue) < 1)
                         {MUTEX_WAIT(pth->mutex);i = 0;}
-                    else if(i > 1000000 && pth != pth->service->tracker)
-                        {usleep(pth->usec_sleep);i = 0;}
+                    //else if(i > 1000000 && pth != pth->service->tracker)
+                     //   {usleep(pth->usec_sleep);i = 0;}
                     //DEBUG_LOGGER(pth->logger, "conn_worker_loop(%d) q[%p]->total:%d nleft:%d", pth->index, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
