@@ -109,9 +109,13 @@ void procthread_run(void *arg)
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
+                        i++;
                     }
-                    if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);}
-                    DEBUG_LOGGER(pth->logger, "conn_worker_loop(%d) q[%p]->total:%d nleft:%d", pth->index, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                    if(QMTOTAL(pth->message_queue) < 1)
+                        {MUTEX_WAIT(pth->mutex);i = 0;}
+                    else if(i > 1000000 && pth != pth->service->tracker)
+                        {usleep(pth->usec_sleep);i = 0;}
+                    //DEBUG_LOGGER(pth->logger, "conn_worker_loop(%d) q[%p]->total:%d nleft:%d", pth->index, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
@@ -125,11 +129,7 @@ void procthread_run(void *arg)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
                     }
-                    else
-                    {
-                        ++i;
-                    }
-                    if(i > 0){usleep(pth->usec_sleep); i = 0;}
+                    usleep(pth->usec_sleep);
                     //ACCESS_LOGGER(pth->logger, "conn_daemon_loop(%d)", pth->index);
                     //if(i > 1000) select(0, NULL, NULL, NULL, &tv);
                     //DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));

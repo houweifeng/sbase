@@ -69,7 +69,8 @@ typedef struct _MUTEX
 {if(m)                                                                              \
 {                                                                                   \
     pthread_mutex_lock(__MM__(m));                                                  \
-    pthread_cond_signal(__MC__(m));                                                 \
+    if(__M__(m)->nowait == 0)                                                       \
+        pthread_cond_signal(__MC__(m));                                             \
     __M__(m)->nowait = 1;                                                           \
     pthread_mutex_unlock(__MM__(m));                                                \
 }}
