@@ -31,6 +31,7 @@ extern "C" {
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
 #define SB_HEARTBEAT_INTERVAL   11000
+#define SB_NWORKING_TOSLEEP     1000000
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
@@ -252,6 +253,8 @@ typedef struct _SERVICE
     int cond;
     int use_cpu_set;
     int newconn_on_tracker;
+    int nworking_tosleep;
+    int bits; 
     int conns_free[SB_CONN_MAX];
 
     struct  sockaddr_in sa;
