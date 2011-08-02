@@ -87,8 +87,12 @@ int service_set(SERVICE *service)
 #endif
             linger.l_onoff = 1;linger.l_linger = 0;
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
-                && setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt)) == 0
-                //&& setsockopt(service->fd,SOL_SOCKET,SO_LINGER,&linger,sizeof(struct linger)) == 0
+#ifdef TCP_CORK
+                && setsockopt(service->fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt)) == 0
+#endif
+#ifdef TCP_NOPUSH
+                && setsockopt(service->fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt)) == 0
+#endif
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
@@ -140,7 +144,7 @@ void sigpipe_ignore()
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
-    if(service->use_cpu_set)                                                                \
+    if(service->flag & SB_CPU_SET)                                                          \
         pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                       \
 }
         //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
@@ -294,9 +298,7 @@ running_threads:
         /* daemon */ 
         if((service->daemon = procthread_init(0)))
         {
-            service->daemon->evtimer = service->etimer;
             PROCTHREAD_SET(service, service->daemon);
-            service->daemon->use_cond_wait = 0;
             NEW_PROCTHREAD(service, "daemon", 0, service->daemon->threadid, service->daemon, service->logger, iocpuset);
             ret = 0;
         }
@@ -322,19 +324,6 @@ running_threads:
                 exit(EXIT_FAILURE);
                 return -1;
             }
-        }
-        //tracker 
-        if((service->tracker = procthread_init(0)))
-        {
-            PROCTHREAD_SET(service, service->tracker);
-            NEW_PROCTHREAD(service, "tracker", 0, service->tracker->threadid, service->tracker, service->logger, iocpuset);
-            ret = 0;
-        }
-        else
-        {
-            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
-            exit(EXIT_FAILURE);
-            return -1;
         }
         /* daemon worker threads */
         if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
@@ -407,8 +396,7 @@ int service_accept_handler(SERVICE *service)
     {
         if(service->sock_type == SOCK_STREAM)
         {
-            daemon = service->tracker;
-            if(daemon == NULL)daemon = service->daemon;
+            daemon = service->daemon;
             //WARN_LOGGER(service->logger, "new-connection via %d", service->fd);
             while((fd = accept(service->fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
             {
@@ -429,9 +417,21 @@ new_conn:
                 fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0)|O_NONBLOCK);
                 linger.l_onoff = 1;linger.l_linger = 0;
                 //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
-                opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
-                if(service->newconn_on_tracker && (daemon = service->tracker) && daemon->pushconn(daemon, fd, ssl) == 0)
+                if(service->flag & SB_TCP_NODELAY)
+                {
+                    opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                    opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                }
+                else
+                {
+#ifdef TCP_CORK
+                opt = 1;setsockopt(fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
+#endif
+#ifdef TCP_NOPUSH
+                opt=1;setsockopt(fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
+#endif
+                }
+                if((service->flag & SB_NEWCONN_DELAY) && (daemon = service->daemon) && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
@@ -567,9 +567,20 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             }
 #endif
             linger.l_onoff = 1;linger.l_linger = 0;
-            //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
-            opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-            opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+            if(service->flag & SB_TCP_NODELAY)
+            {
+                opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+            }
+            else
+            {
+#ifdef TCP_CORK
+                opt = 1;setsockopt(fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
+#endif
+#ifdef TCP_NOPUSH
+                opt=1;setsockopt(fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
+#endif
+            }
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
@@ -737,7 +748,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             strcpy(conn->local_ip, local_ip);
             conn->local_port = local_port;
             conn->sock_type = sock_type;
-            conn->evtimer   = service->etimer;
+            conn->evtimer   = service->evtimer;
             conn->logger    = service->logger;
             conn->set_session(conn, session);
             /* add  to procthread */
@@ -1010,8 +1021,7 @@ void service_overconn(SERVICE *service, CONN *conn)
 
     if(service && conn)
     {
-        if((daemon = service->tracker) == NULL) daemon = service->daemon;
-        if(daemon)
+        if((daemon = service->daemon))
         {
             qmessage_push(daemon->message_queue, MESSAGE_QUIT, conn->index, conn->fd, 
                     -1, daemon, conn, NULL);
@@ -1456,13 +1466,6 @@ void service_stop(SERVICE *service)
                 PROCTHREAD_EXIT(service->daemon->threadid, NULL);
             }
         }
-        //tracker
-        if(service->tracker)
-        {
-            //WARN_LOGGER(service->logger, "Ready for stop threads[tracker]");
-            service->tracker->stop(service->tracker);
-            PROCTHREAD_EXIT(service->tracker->threadid, NULL);
-        }
         /* delete evtimer */
         EVTIMER_DEL(service->evtimer, service->evid);
         //WARN_LOGGER(service->logger, "Ready for remove event");
@@ -1568,8 +1571,7 @@ void service_clean(SERVICE *service)
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
         if(service->acceptor) service->acceptor->clean(service->acceptor);
-        if(service->tracker) service->tracker->clean(service->tracker);
-        if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
+        //if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
         for(i = 0;i < service->ngroups; i++)
         {
             MUTEX_DESTROY(service->groups[i].mutex);
@@ -1662,7 +1664,7 @@ SERVICE *service_init()
     {
         MUTEX_INIT(service->mutex);
         //service->xqueue             = xqueue_init();
-        service->etimer             = EVTIMER_INIT();
+        //service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;
         service->set_log            = service_set_log;

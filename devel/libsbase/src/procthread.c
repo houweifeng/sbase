@@ -55,7 +55,7 @@ void procthread_run(void *arg)
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     int i = 0, usec = 0, sec = 0;
     struct timeval tv = {0,0};
-    //int k = 0;
+    int k = 0;
 
     if(pth)
     {
@@ -77,12 +77,11 @@ void procthread_run(void *arg)
             do
             {
                 i = pth->evbase->loop(pth->evbase, 0, NULL);
-                if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                if(pth->message_queue && (k = QMTOTAL(pth->message_queue)) > 0)
                 {
                     qmessage_handler(pth->message_queue, pth->logger);
-                    i++;
                 }
-                ACCESS_LOGGER(pth->logger, "iodaemon_loop(%d) q[%p]{total:%d left:%d}", i, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                ACCESS_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
             }while(pth->running_status);
 
         }
@@ -96,7 +95,7 @@ void procthread_run(void *arg)
             do
             {
                 service_accept_handler(pth->service);
-                ACCESS_LOGGER(pth->logger, "acceptor_loop(%d)", i);
+                //ACCESS_LOGGER(pth->logger, "acceptor_loop(%d)", i);
                 //i = pth->evbase->loop(pth->evbase, 0, NULL);
             }while(pth->running_status);
             WARN_LOGGER(pth->logger, "Ready for stop threads[acceptor]");
@@ -108,17 +107,17 @@ void procthread_run(void *arg)
                 do
                 {
                     //DEBUG_LOGGER(pth->logger, "starting cond-wait() threads[%p]->qmessage[%p]_handler(%d)", (void *)pth->threadid,pth->message_queue, QMTOTAL(pth->message_queue));
-                    if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
+                    if(pth->message_queue && (k = QMTOTAL(pth->message_queue)) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
-                        i++;
+                        i = 1;
                     }
                     if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);i = 0;}
-                    if(i > pth->service->nworking_tosleep)
-                    {usleep(pth->usec_sleep);i = 0;}
+                    //if(i > pth->service->nworking_tosleep)
+                    //{usleep(pth->usec_sleep);i = 0;}
                     //{select(0, NULL, NULL, NULL, &tv); i = 0;}
                     //if(k > pth->service->nworking_tosleep){usleep(pth->usec_sleep);i = 0;}
-                    ACCESS_LOGGER(pth->logger, "conn_worker[%p]->loop(%d) q[%p]->total:%d nleft:%d tracker:%p daemon:%p", pth, pth->index, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue), pth->service->tracker, pth->service->daemon);
+                    ACCESS_LOGGER(pth->logger, "conn_worker[%p]->loop(%d) q[%p]->total:%d/%d nleft:%d daemon:%p", pth, pth->index, pth->message_queue, QMTOTAL(pth->message_queue), k, QNLEFT(pth->message_queue), pth->service->daemon);
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
@@ -127,11 +126,12 @@ void procthread_run(void *arg)
                 do
                 {
                     //DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
-                    if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
+                    //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
                     }
+                    //select(0, NULL, NULL, NULL, &tv);
                     usleep(pth->usec_sleep);
                     //ACCESS_LOGGER(pth->logger, "conn_daemon_loop(%d)", pth->index);
                     //if(i > 1000) select(0, NULL, NULL, NULL, &tv);
