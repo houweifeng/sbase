@@ -87,18 +87,26 @@ int service_set(SERVICE *service)
 #endif
             linger.l_onoff = 1;linger.l_linger = 0;
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
-#ifdef TCP_CORK
-                && setsockopt(service->fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt)) == 0
-#endif
-#ifdef TCP_NOPUSH
-                && setsockopt(service->fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt)) == 0
-#endif
+             
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
                 )
             {
+                if(service->flag & SB_TCP_NODELAY)
+                {
+                    opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                }
+                else
+                {
+#ifdef TCP_CORK
+                    opt = 1;setsockopt(service->fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
+#endif
+#ifdef TCP_NOPUSH
+                    opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
+#endif
+                }
                 fcntl(service->fd, F_SETFD, FD_CLOEXEC);
                 if(service->working_mode == WORKING_PROC)
                 {
@@ -567,7 +575,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             }
 #endif
             linger.l_onoff = 1;linger.l_linger = 0;
-            setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
+            //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             if(service->flag & SB_TCP_NODELAY)
             {
                 opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
