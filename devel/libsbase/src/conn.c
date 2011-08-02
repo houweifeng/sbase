@@ -1068,9 +1068,9 @@ int conn_packet_handler(CONN *conn)
 
     if(conn && conn->session.packet_handler)
     {
-        DEBUG_LOGGER(conn->logger, "packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        ACCESS_LOGGER(conn->logger, "packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         ret = conn->session.packet_handler(conn, PCB(conn->packet));
-        DEBUG_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        ACCESS_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
 
         if(conn->s_state == S_STATE_PACKET_HANDLING)
         {
@@ -1109,22 +1109,22 @@ int conn_data_handler(CONN *conn)
         }
         else if(CHK_TYPE(conn->chunk) == CHUNK_MEM && conn->session.data_handler)
         {
-            DEBUG_LOGGER(conn->logger, "data_handler(%p) on %s:%d via %d", 
+            ACCESS_LOGGER(conn->logger, "data_handler(%p) on %s:%d via %d", 
                     conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
             //fprintf(stdout, "service[%s]->session.data_handler:%p\n", PPARENT(conn)->service->service_name, conn->session.data_handler);
             ret = conn->session.data_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), PCB(conn->chunk));
-            DEBUG_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", 
+            ACCESS_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", 
                     conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
         else if(CHK_TYPE(conn->chunk) == CHUNK_FILE && conn->session.file_handler)
         {
-            DEBUG_LOGGER(conn->logger, "file_handler(%p) on %s:%d via %d", 
+            ACCESS_LOGGER(conn->logger, "file_handler(%p) on %s:%d via %d", 
                     conn->session.file_handler, conn->remote_ip, conn->remote_port, conn->fd);
             //fprintf(stdout, "service[%s]->session.data_handler:%p\n", PPARENT(conn)->service->service_name, conn->session.data_handler);
             ret = conn->session.file_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), CHK_FILENAME(conn->chunk));
-            DEBUG_LOGGER(conn->logger, "over file_handler(%p) on %s:%d via %d", 
+            ACCESS_LOGGER(conn->logger, "over file_handler(%p) on %s:%d via %d", 
                     conn->session.file_handler, conn->remote_ip, conn->remote_port, conn->fd);
         }
         //reset session
