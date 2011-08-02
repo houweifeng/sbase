@@ -94,11 +94,13 @@ int service_set(SERVICE *service)
 #endif
                 )
             {
+                /*
                 if(service->flag & SB_TCP_NODELAY)
                 {
                     opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
                 else
+                */
                 {
 #ifdef TCP_CORK
                     opt = 1;setsockopt(service->fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
