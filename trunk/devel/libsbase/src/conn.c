@@ -876,8 +876,8 @@ int conn_write_handler(CONN *conn)
         //if(SENDQTOTAL(conn) > 0)
         if(SENDQTOTAL(conn) > 0)
         {
-            //while(SENDQTOTAL(conn) > 0 && (cp = (CHUNK *)SENDQHEAD(conn)))
-            if((cp = (CHUNK *)SENDQHEAD(conn)))
+            while(SENDQTOTAL(conn) > 0 && (cp = (CHUNK *)SENDQHEAD(conn)))
+            //if((cp = (CHUNK *)SENDQHEAD(conn)))
             {
                 chunk_over = 0;
                 if(CHUNK_STATUS(cp) != CHUNK_STATUS_OVER)
@@ -896,7 +896,7 @@ int conn_write_handler(CONN *conn)
                     {
                         if(errno != EINTR && errno != EAGAIN)
                         {
-                            DEBUG_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) "
+                            WARN_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) "
                                     "to %s:%d on %s:%d via %d leave %lld qtotal:%d failed, %s", n, 
                                     LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
                                     conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left), 
@@ -907,8 +907,8 @@ int conn_write_handler(CONN *conn)
                             /* Terminate connection */
                             conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
                         }
-                        return 0;
-                        //break;
+                        //return 0;
+                        break;
                     }
                 }
                 else
@@ -933,25 +933,28 @@ int conn_write_handler(CONN *conn)
                 }
                 else 
                 {
-                    //ret = 0;break; 
-                    return 0;
+                    ret = 0;break; 
+                    //return 0;
                 }
                 if(chunk_over)
                 {
                     event_del(&(conn->event), E_WRITE);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
-                    //ret = -1;
-                    return -1;
+                    ret = 0;break;
+                    //return -1;
                 }
                 else
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        event_del(&(conn->event), E_WRITE);
-                        CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+                        break;
+                        //event_del(&(conn->event), E_WRITE);
+                        //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                     }
+                    /*
                     //ret = 0;
                     return 0;
+                    */
                 }
             }
             ACCESS_LOGGER(conn->logger, "Over for send-ndata[%d] to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", nsent, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
@@ -960,7 +963,7 @@ int conn_write_handler(CONN *conn)
         {
             ret = 0;
             event_del(&(conn->event), E_WRITE);
-            //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+            CONN_PUSH_MESSAGE(conn, MESSAGE_END);
             DEBUG_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
         }
         //if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                 

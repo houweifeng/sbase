@@ -870,8 +870,9 @@ int sbase_initialize(SBASE *sbase, char *conf)
     httpd->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
     httpd->niodaemons = iniparser_getint(dict, "XHTTPD:niodaemons", 2);
     httpd->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
-    httpd->use_cpu_set = iniparser_getint(dict, "XHTTPD:use_cpu_set", 1);
-    httpd->newconn_on_tracker = iniparser_getint(dict, "XHTTPD:newconn_on_tracker", 1);
+    if(iniparser_getint(dict, "XHTTPD:use_cpu_set", 0) > 0) httpd->flag |= SB_CPU_SET;
+    if(iniparser_getint(dict, "XHTTPD:newconn_delay", 0) > 0) httpd->flag |= SB_NEWCONN_DELAY;
+    if(iniparser_getint(dict, "XHTTPD:tcp_nodelay", 0) > 0) httpd->flag |= SB_TCP_NODELAY;
     httpd->nworking_tosleep = iniparser_getint(dict, "XHTTPD:nworking_tosleep", SB_NWORKING_TOSLEEP);
     httpd->set_log(httpd, iniparser_getstr(dict, "XHTTPD:logfile"));
     httpd->set_log_level(httpd, iniparser_getint(dict, "XHTTPD:log_level", 0));
@@ -1027,6 +1028,7 @@ int main(int argc, char **argv)
     signal(SIGHUP,  &xhttpd_stop);
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
+    signal(SIGALRM, SIG_IGN);
     //daemon
     if(is_daemon)
     {

@@ -32,6 +32,9 @@ extern "C" {
 #define SB_PROXY_TIMEOUT        20000000
 #define SB_HEARTBEAT_INTERVAL   1000000
 #define SB_NWORKING_TOSLEEP     20000
+#define SB_CPU_SET              0x01
+#define SB_NEWCONN_DELAY        0x02
+#define SB_TCP_NODELAY          0x04
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
@@ -251,10 +254,8 @@ typedef struct _SERVICE
     int is_inside_logger;
     int ntask;
     int cond;
-    int use_cpu_set;
-    int newconn_on_tracker;
+    int flag;
     int nworking_tosleep;
-    int bits; 
     int conns_free[SB_CONN_MAX];
 
     struct  sockaddr_in sa;
@@ -273,7 +274,6 @@ typedef struct _SERVICE
     /* working mode */
     struct _PROCTHREAD *daemon;
     struct _PROCTHREAD *acceptor;
-    struct _PROCTHREAD *tracker;
     struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
     struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
     struct _PROCTHREAD *daemons[SB_THREADS_MAX];
