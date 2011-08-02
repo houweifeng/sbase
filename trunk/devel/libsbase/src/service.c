@@ -567,6 +567,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             }
 #endif
             linger.l_onoff = 1;linger.l_linger = 0;
+            setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             if(service->flag & SB_TCP_NODELAY)
             {
                 opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
