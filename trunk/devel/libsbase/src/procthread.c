@@ -54,7 +54,7 @@ void procthread_run(void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     int i = 0, usec = 0, sec = 0;
-    //struct timeval tv = {0,0};
+    struct timeval tv = {0,0};
     //int k = 0;
 
     if(pth)
@@ -63,6 +63,9 @@ void procthread_run(void *arg)
         pth->running_status = 1;
         if(pth->usec_sleep > 1000000) sec = pth->usec_sleep/1000000;
         usec = pth->usec_sleep % 1000000;
+
+        tv.tv_sec = sec;
+        tv.tv_usec = usec;
         if(pth->have_evbase)
         {
             if(pth->cond  > 0)
@@ -85,18 +88,18 @@ void procthread_run(void *arg)
         }
         else if(pth->listenfd > 0)
         {
-                /*
-                event_set(&(pth->acceptor), pth->listenfd, E_READ|E_PERSIST,
-                        (void *)pth, (void *)&procthread_event_handler);
-                pth->evbase->add(pth->evbase, &(pth->acceptor));
-                */
-                do
-                {
-                    service_accept_handler(pth->service);
-                    ACCESS_LOGGER(pth->logger, "acceptor_loop(%d)", i);
-                    //i = pth->evbase->loop(pth->evbase, 0, NULL);
-                }while(pth->running_status);
-                WARN_LOGGER(pth->logger, "Ready for stop threads[acceptor]");
+            /*
+               event_set(&(pth->acceptor), pth->listenfd, E_READ|E_PERSIST,
+               (void *)pth, (void *)&procthread_event_handler);
+               pth->evbase->add(pth->evbase, &(pth->acceptor));
+               */
+            do
+            {
+                service_accept_handler(pth->service);
+                ACCESS_LOGGER(pth->logger, "acceptor_loop(%d)", i);
+                //i = pth->evbase->loop(pth->evbase, 0, NULL);
+            }while(pth->running_status);
+            WARN_LOGGER(pth->logger, "Ready for stop threads[acceptor]");
         }
         else
         {
@@ -110,10 +113,11 @@ void procthread_run(void *arg)
                         qmessage_handler(pth->message_queue, pth->logger);
                         i++;
                     }
-                    if(QMTOTAL(pth->message_queue) < 1)
-                        {MUTEX_WAIT(pth->mutex);}
-                    else if(i > pth->service->nworking_tosleep && pth != pth->service->tracker)
-                        {usleep(pth->usec_sleep);i = 0;}
+                    if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);i = 0;}
+                    if(i > pth->service->nworking_tosleep)
+                    {usleep(pth->usec_sleep);i = 0;}
+                    //{select(0, NULL, NULL, NULL, &tv); i = 0;}
+                    //if(k > pth->service->nworking_tosleep){usleep(pth->usec_sleep);i = 0;}
                     ACCESS_LOGGER(pth->logger, "conn_worker[%p]->loop(%d) q[%p]->total:%d nleft:%d tracker:%p daemon:%p", pth, pth->index, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue), pth->service->tracker, pth->service->daemon);
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
@@ -137,7 +141,7 @@ void procthread_run(void *arg)
             }
         }
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
-                qmessage_handler(pth->message_queue, pth->logger);
+            qmessage_handler(pth->message_queue, pth->logger);
         //WARN_LOGGER(pth->logger, "terminate threads[%d][%p] evbase[%p] qmessage[%p] ioqmessage[%p] qtotal:%d", pth->index, (void *)(pth->threadid), pth->evbase, pth->message_queue, pth->ioqmessage, QMTOTAL(pth->message_queue));
     }
 #ifdef HAVE_PTHREAD

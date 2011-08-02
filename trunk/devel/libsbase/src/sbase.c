@@ -269,8 +269,8 @@ running:
             if(QMTOTAL(sbase->message_queue) > 0)
             {
                 qmessage_handler(sbase->message_queue, sbase->logger);
-                i = 1;
             }
+            ACCESS_LOGGER(sbase->logger, "actived i:%d", i);
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)

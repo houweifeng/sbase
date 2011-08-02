@@ -39,48 +39,50 @@ typedef struct _MUTEX
 #define __MM__(m) (&(((MUTEX *)m)->mutex))
 #define __MC__(m) (&(((MUTEX *)m)->cond))
 #define MUTEX_RESET(m)                                                              \
-{if(m)                                                                              \
+do{if(m)                                                                            \
 {                                                                                   \
         pthread_mutex_init(__MM__(m), NULL);                                        \
         pthread_cond_init(__MC__(m), NULL);                                         \
-}}
+}}while(0)
 #define MUTEX_INIT(m) do{if((m = (MUTEX *)calloc(1, sizeof(MUTEX)))){MUTEX_RESET(m);}}while(0)
 #define MUTEX_LOCK(m) pthread_mutex_lock(__MM__(m))
 #define MUTEX_UNLOCK(m) pthread_mutex_unlock(__MM__(m))
 #define MUTEX_WAIT(m)                                                               \
-{if(m)                                                                              \
+do{if(m)                                                                            \
 {                                                                                   \
     pthread_mutex_lock(__MM__(m));                                                  \
     if(__M__(m)->nowait == 0)                                                       \
-    pthread_cond_wait(__MC__(m), __MM__(m));                                        \
+        pthread_cond_wait(__MC__(m), __MM__(m));                                    \
     __M__(m)->nowait = 0;                                                           \
     pthread_mutex_unlock(__MM__(m));                                                \
-}}
+}}while(0)
 #define MUTEX_TIMEDWAIT(m, ts)                                                      \
-{if(m)                                                                              \
+do{if(m)                                                                            \
 {                                                                                   \
     pthread_mutex_lock(__MM__(m));                                                  \
     if(__M__(m)->nowait == 0)                                                       \
     pthread_cond_timedwait(__MC__(m), __MM__(m), &ts);                              \
     __M__(m)->nowait = 0;                                                           \
     pthread_mutex_unlock(__MM__(m));                                                \
-}}
+}}while(0)
 #define MUTEX_SIGNAL(m)                                                             \
-{if(m)                                                                              \
+do{if(m)                                                                            \
 {                                                                                   \
     pthread_mutex_lock(__MM__(m));                                                  \
     if(__M__(m)->nowait == 0)                                                       \
+    {                                                                               \
+        __M__(m)->nowait = 1;                                                       \
         pthread_cond_signal(__MC__(m));                                             \
-    __M__(m)->nowait = 1;                                                           \
+    }                                                                               \
     pthread_mutex_unlock(__MM__(m));                                                \
-}}
+}}while(0)
 #define MUTEX_DESTROY(m)                                                            \
-{if(m)                                                                              \
+do{if(m)                                                                            \
 {															                        \
     pthread_mutex_destroy(__MM__(m)); 						                        \
     pthread_cond_destroy(__MC__(m)); 							                    \
     free(m);                                                                        \
-}}
+}}while(0)
 #endif
 #ifdef __cplusplus
  }
