@@ -227,7 +227,7 @@ void event_del(EVENT *event, int flags)
 		{
             event->old_ev_flags = event->ev_flags;
 			event->ev_flags ^= flags;
-			if(event->ev_base)
+            if(event->ev_base && event->ev_base->update)
 			{
                 event->ev_base->update(event->ev_base, event);
 			}

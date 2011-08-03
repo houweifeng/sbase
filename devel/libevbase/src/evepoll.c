@@ -90,7 +90,6 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         //MUTEX_LOCK(evbase->mutex);
-        UPDATE_EVENT_FD(evbase, event);
         if(event->ev_flags & E_READ)
         {
             ev_flags |= EPOLLIN;
@@ -123,6 +122,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
                 ret = -1;
             }
         }
+        UPDATE_EVENT_FD(evbase, event);
         //MUTEX_UNLOCK(evbase->mutex);
     }
     return ret;	
