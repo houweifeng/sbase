@@ -881,8 +881,8 @@ int conn_write_handler(CONN *conn)
         //if(SENDQTOTAL(conn) > 0)
         if(SENDQTOTAL(conn) > 0)
         {
-            //if((cp = (CHUNK *)SENDQHEAD(conn)))
-            while(SENDQTOTAL(conn) > 0 && (cp = (CHUNK *)SENDQHEAD(conn)))
+            if((cp = (CHUNK *)SENDQHEAD(conn)))
+            //while(SENDQTOTAL(conn) > 0 && (cp = (CHUNK *)SENDQHEAD(conn)))
             {
                 chunk_over = 0;
                 if(CHUNK_STATUS(cp) != CHUNK_STATUS_OVER)
@@ -912,8 +912,8 @@ int conn_write_handler(CONN *conn)
                             /* Terminate connection */
                             conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
                         }
-                        //return 0;
-                        break;
+                        return 0;
+                        //break;
                     }
                 }
                 else
@@ -938,23 +938,24 @@ int conn_write_handler(CONN *conn)
                 }
                 else 
                 {
-                    ret = 0;break; 
-                    //return 0;
+                    //ret = 0;break; 
+                    return 0;
                 }
                 if(chunk_over)
                 {
                     event_del(&(conn->event), E_WRITE);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
-                    ret = 0;break;
-                    //return -1;
+                    //ret = 0;break;
+                    return -1;
                 }
                 else
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        event_del(&(conn->event), E_WRITE);
-                        CONN_PUSH_MESSAGE(conn, MESSAGE_END);
-                        break;
+                        //event_del(&(conn->event), E_WRITE);
+                        //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+                        //ret = 0; break;
+                        return 0;
                     }
                 }
             }
