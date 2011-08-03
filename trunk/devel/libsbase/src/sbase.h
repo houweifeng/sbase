@@ -36,6 +36,9 @@ extern "C" {
 #define SB_NEWCONN_DELAY        0x02
 #define SB_TCP_NODELAY          0x04
 #define SB_LOG_THREAD           0x08
+#define SB_IO_NANOSLEEP         0x10
+#define SB_IO_USLEEP            0x20
+#define SB_IO_SELECT            0x40
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
