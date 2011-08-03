@@ -876,8 +876,8 @@ int conn_write_handler(CONN *conn)
         //if(SENDQTOTAL(conn) > 0)
         if(SENDQTOTAL(conn) > 0)
         {
-            while(SENDQTOTAL(conn) > 0 && (cp = (CHUNK *)SENDQHEAD(conn)))
             //if((cp = (CHUNK *)SENDQHEAD(conn)))
+            while(SENDQTOTAL(conn) > 0 && (cp = (CHUNK *)SENDQHEAD(conn)))
             {
                 chunk_over = 0;
                 if(CHUNK_STATUS(cp) != CHUNK_STATUS_OVER)
@@ -947,14 +947,10 @@ int conn_write_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
+                        event_del(&(conn->event), E_WRITE);
+                        CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         break;
-                        //event_del(&(conn->event), E_WRITE);
-                        //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                     }
-                    /*
-                    //ret = 0;
-                    return 0;
-                    */
                 }
             }
             ACCESS_LOGGER(conn->logger, "Over for send-ndata[%d] to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", nsent, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
