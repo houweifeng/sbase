@@ -54,12 +54,12 @@ typedef struct _EVBASE
     int maxfd;
 	int allowed;
     int evopid;
-    //MUTEX mutex;
 
 	void *ev_read_fds;
 	void *ev_write_fds;
 	void *ev_fds;
 	void *evs;
+    void *mutex;
     struct _EVENT *evlist[EV_MAX_FD];
 
 	int	    (*init)(struct _EVBASE *);
