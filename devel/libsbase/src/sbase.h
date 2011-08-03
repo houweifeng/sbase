@@ -35,6 +35,7 @@ extern "C" {
 #define SB_CPU_SET              0x01
 #define SB_NEWCONN_DELAY        0x02
 #define SB_TCP_NODELAY          0x04
+#define SB_LOG_THREAD           0x08
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
@@ -379,7 +380,7 @@ typedef struct _PROCTHREAD
     int bits;
     pthread_t threadid;
     EVENT event;
-    //EVENT acceptor;
+    EVENT acceptor;
 
     void *mutex;
     void *evtimer;
