@@ -45,23 +45,23 @@ int conn_read_buffer(CONN *conn)
 #define IOWAKEUP(conn) {if(IODAEMON(conn))IODAEMON(conn)->wakeup(IODAEMON(conn));}            
 /*
 #define SENDQ(conn) conn->xqueue
-#define SENDQINIT(conn) 
+#define SENDQINIT(conn) do{}while(0) 
 #define SENDQNEW(conn) conn->qid = xqueue_new(conn->xqueue)
 #define SENDQTOTAL(conn) xqueue_total(conn->xqueue, conn->qid)
 #define SENDQHEAD(conn) xqueue_head(conn->xqueue, conn->qid)
 #define SENDQPOP(conn) xqueue_pop(conn->xqueue, conn->qid)
 #define SENDQPUSH(conn, ptr) xqueue_push(conn->xqueue, conn->qid, ptr)
 #define SENDQCLOSE(conn) xqueue_close(conn->xqueue, conn->qid)
-#define SENDQCLEAN(conn)
+#define SENDQCLEAN(conn) do{}while(0)
 */
 #define SENDQ(conn) conn->queue
 #define SENDQINIT(conn) (conn->queue = queue_init())
-#define SENDQNEW(conn)
+#define SENDQNEW(conn) do{}while(0)
 #define SENDQTOTAL(conn) queue_total(conn->queue)
 #define SENDQHEAD(conn) queue_head(conn->queue)
 #define SENDQPOP(conn) queue_pop(conn->queue)
 #define SENDQPUSH(conn, ptr) queue_push(conn->queue, ptr)
-#define SENDQCLOSE(conn)
+#define SENDQCLOSE(conn) do{}while(0)
 #define SENDQCLEAN(conn) (queue_clean(conn->queue))
 
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
