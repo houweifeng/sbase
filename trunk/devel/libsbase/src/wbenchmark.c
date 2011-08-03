@@ -605,6 +605,7 @@ invalid_url:
         service->niodaemons = 1;
         service->ndaemons = 0;
         service->use_cond_wait = 1;
+        service->flag = SB_EVENT_LOCK;
         if(tcp_nodelay) service->flag |= SB_TCP_NODELAY;
         service->service_type = C_SERVICE;
         service->family = AF_INET;

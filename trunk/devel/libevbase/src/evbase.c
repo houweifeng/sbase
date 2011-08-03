@@ -202,19 +202,19 @@ void event_add(EVENT *event, int flags)
 {
 	if(event)
 	{
-        MUTEX_LOCK(event->mutex);
         if((flags & event->ev_flags) != flags)
         {
             //if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
+            MUTEX_LOCK(event->mutex);
             event->old_ev_flags = event->ev_flags;
             event->ev_flags |= flags;
+            MUTEX_UNLOCK(event->mutex);
             if(event->ev_base && event->ev_base->update)
             {
                 event->ev_base->update(event->ev_base, event);
             }
             //if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
         }
-        MUTEX_UNLOCK(event->mutex);
 	}
     return ;
 }
@@ -224,19 +224,19 @@ void event_del(EVENT *event, int flags)
 {
 	if(event)
 	{
-        MUTEX_LOCK(event->mutex);
 		if((flags & event->ev_flags))
 		{
             //if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
+            MUTEX_LOCK(event->mutex);
             event->old_ev_flags = event->ev_flags;
 			event->ev_flags &= ~flags;
+            MUTEX_UNLOCK(event->mutex);
             if(event->ev_base && event->ev_base->update)
 			{
                 event->ev_base->update(event->ev_base, event);
 			}
             //if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
 		}
-        MUTEX_UNLOCK(event->mutex);
 	}	
     return ;
 }
