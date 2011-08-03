@@ -187,7 +187,7 @@ void event_set(EVENT *event, int fd, int flags, void *arg, void *handler)
 	{
 		if(fd > 0 && handler)
 		{
-            MUTEX_INIT(event->mutex);
+            if(flags & E_LOCK){MUTEX_INIT(event->mutex);}
 			event->ev_fd		= 	fd;
 			event->ev_flags		=	flags;
 			event->ev_arg		=	arg;
