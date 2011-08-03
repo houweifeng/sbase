@@ -5,7 +5,7 @@
 #include <string.h>
 #include <poll.h>
 #include <sys/resource.h>
-//#include "mutex.h"
+#include "mutex.h"
 /* Initialize evpoll  */
 int evpoll_init(EVBASE *evbase)
 {
@@ -35,7 +35,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed
             && evbase->ev_fds && evbase->evlist)
     {
-        //MUTEX_LOCK(evbase->mutex);
+        MUTEX_LOCK(evbase->mutex);
         UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
@@ -53,7 +53,7 @@ int evpoll_add(EVBASE *evbase, EVENT *event)
             ev->revents = 0;
             ev->fd	  = event->ev_fd;
         }
-        //MUTEX_UNLOCK(evbase->mutex);
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }
     return -1;
@@ -65,7 +65,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
     int ev_flags = 0;
     if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        //MUTEX_LOCK(evbase->mutex);
+        MUTEX_LOCK(evbase->mutex);
         UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         ev = &(((struct pollfd *)evbase->ev_fds)[event->ev_fd]);
@@ -80,7 +80,7 @@ int evpoll_update(EVBASE *evbase, EVENT *event)
         ev->events = ev_flags;
         ev->revents = 0;
         ev->fd	  = event->ev_fd;
-        //MUTEX_UNLOCK(evbase->mutex);
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }	
     return -1;
@@ -90,10 +90,10 @@ int evpoll_del(EVBASE *evbase, EVENT *event)
 {
     if(evbase && event && evbase->ev_fds && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
-        //MUTEX_LOCK(evbase->mutex);
+        MUTEX_LOCK(evbase->mutex);
         memset(&(((struct pollfd *)evbase->ev_fds)[event->ev_fd]), 0, sizeof(struct pollfd));
         REMOVE_EVENT_FD(evbase, event);
-        //MUTEX_UNLOCK(evbase->mutex);
+        MUTEX_UNLOCK(evbase->mutex);
         return 0;
     }	
     return -1;
@@ -160,7 +160,7 @@ void evpoll_clean(EVBASE *evbase)
 {
     if(evbase)
     {
-        //MUTEX_DESTROY(evbase->mutex);
+        MUTEX_DESTROY(evbase->mutex);
         //if(evbase->evlist)free(evbase->evlist);
         if(evbase->ev_fds)free(evbase->ev_fds);
         if(evbase->ev_read_fds)free(evbase->ev_read_fds);
