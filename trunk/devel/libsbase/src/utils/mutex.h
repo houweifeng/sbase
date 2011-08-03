@@ -26,11 +26,11 @@ typedef struct _MUTEX
 #ifdef HAVE_SEMAPHORE
 #define __MM__(m) (&(((MUTEX *)m)->mutex))
 #define __MC__(m) (&(((MUTEX *)m)->cond))
-#define MUTEX_RESET(m) do{if(m){sem_init(__MM__(m), 0, 1);sem_init(__MC__(m), 0, 1);}}while(0)
+#define MUTEX_RESET(m) do{if(m){sem_init(__MM__(m), 0, 1);sem_init(__MC__(m), 0, 0);}}while(0)
 #define MUTEX_INIT(m) do{if((m = (MUTEX *)calloc(1, sizeof(MUTEX)))){MUTEX_RESET(m);}}while(0)
 #define MUTEX_LOCK(m) ((m)?sem_wait(__MM__(m)):-1)
 #define MUTEX_UNLOCK(m) ((m)?sem_post(__MM__(m)):-1)
-#define MUTEX_WAIT(m) ((m)?sem_wait(__MC__(m)):-1)
+#define MUTEX_WAIT(m) ((m)?(sem_wait(__MC__(m))|sem_init(__MC__(m), 0, 0)):-1)
 #define MUTEX_TIMEDWAIT(m, ts) ((m)?sem_timedwait(__MC__(m), &ts):-1)
 #define MUTEX_SIGNAL(m) ((m)?sem_post(__MC__(m)):-1)
 #define MUTEX_DESTROY(m) do{if(m){sem_destroy(__MM__(m));sem_destroy(__MC__(m));free(m);}}while(0)

@@ -68,7 +68,7 @@ void procthread_run(void *arg)
         tv.tv_usec = usec;
         if(pth->have_evbase)
         {
-            if(pth->cond  > 0)
+            if(pth->cond > 0)
             {
                 event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
                         (void *)pth, (void *)&procthread_event_handler);
@@ -81,7 +81,10 @@ void procthread_run(void *arg)
                 {
                     qmessage_handler(pth->message_queue, pth->logger);
                 }
-                ACCESS_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                if(pth->service->flag & SB_LOG_THREAD)
+                {
+                    WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                }
             }while(pth->running_status);
 
         }
@@ -96,7 +99,13 @@ void procthread_run(void *arg)
             {
                 service_accept_handler(pth->service);
                 //ACCESS_LOGGER(pth->logger, "acceptor_loop(%d)", i);
-                //i = pth->evbase->loop(pth->evbase, 0, NULL);
+                /*
+                i = pth->evbase->loop(pth->evbase, 0, NULL);
+                if(pth->service->flag & SB_LOG_THREAD)
+                {
+                    WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                }
+                */
             }while(pth->running_status);
             WARN_LOGGER(pth->logger, "Ready for stop threads[acceptor]");
         }
@@ -117,7 +126,10 @@ void procthread_run(void *arg)
                     //{usleep(pth->usec_sleep);i = 0;}
                     //{select(0, NULL, NULL, NULL, &tv); i = 0;}
                     //if(k > pth->service->nworking_tosleep){usleep(pth->usec_sleep);i = 0;}
-                    ACCESS_LOGGER(pth->logger, "conn_worker[%p]->loop(%d) q[%p]->total:%d/%d nleft:%d daemon:%p", pth, pth->index, pth->message_queue, QMTOTAL(pth->message_queue), k, QNLEFT(pth->message_queue), pth->service->daemon);
+                    if(pth->service->flag & SB_LOG_THREAD)
+                    {
+                        WARN_LOGGER(pth->logger, "conn_worker[%p]->loop(%d) q[%p]->total:%d/%d nleft:%d daemon:%p", pth, pth->index, pth->message_queue, QMTOTAL(pth->message_queue), k, QNLEFT(pth->message_queue), pth->service->daemon);
+                    }
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
