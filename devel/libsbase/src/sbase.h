@@ -100,7 +100,7 @@ typedef struct _MMBLOCK
     int  ndata;
     int  size;
     int  left;
-    int  bit;
+    int  bits;
     char *end;
 }MMBLOCK;
 #endif

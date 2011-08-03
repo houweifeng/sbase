@@ -205,12 +205,14 @@ void event_add(EVENT *event, int flags)
         MUTEX_LOCK(event->mutex);
         if((flags & event->ev_flags) != flags)
         {
+            if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
             event->old_ev_flags = event->ev_flags;
             event->ev_flags |= flags;
             if(event->ev_base && event->ev_base->update)
             {
                 event->ev_base->update(event->ev_base, event);
             }
+            if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
         }
         MUTEX_UNLOCK(event->mutex);
 	}
