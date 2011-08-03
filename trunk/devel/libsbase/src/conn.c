@@ -364,6 +364,8 @@ int conn_set(CONN *conn)
         if(conn->evbase)
         {
             flag = E_READ|E_PERSIST;
+            if(PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_EVENT_LOCK))
+                flag |= E_LOCK;
             if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
             event_set(&(conn->event), conn->fd, flag, (void *)conn, &conn_event_handler);
             DEBUG_LOGGER(conn->logger, "setting conn[%p]->evbase[%p] remote[%s:%d]"
