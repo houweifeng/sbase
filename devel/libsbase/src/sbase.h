@@ -39,6 +39,7 @@ extern "C" {
 #define SB_IO_NANOSLEEP         0x10
 #define SB_IO_USLEEP            0x20
 #define SB_IO_SELECT            0x40
+#define SB_EVENT_LOCK           0x80
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
