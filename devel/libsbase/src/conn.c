@@ -275,7 +275,11 @@ void conn_event_handler(int event_fd, int event, void *arg)
     if(conn)
     {
         //CONN_CHECK(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE);
-        //fprintf(stdout, "%s::%d event[%d] on fd[%d]\n", __FILE__, __LINE__, event, event_fd);
+        //fprintf(stdout, "event[%d] on fd[%d]\n", __FILE__, __LINE__, event, event_fd);
+        if(PPARENT(conn) && PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_LOG_THREAD))
+        {
+            WARN_LOGGER(conn->logger, "socket %d/%d to conn[%p] remote[%s:%d] local[%s:%d] event:%d", conn->fd, event_fd, conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, event);
+        }
         if(event_fd == conn->fd)
         {
             //fprintf(stdout, "%s::%d event[%d] on fd[%d]\n", __FILE__, __LINE__, event, event_fd);
