@@ -102,7 +102,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         {
             ev_flags |= EPOLLET;
         }
-        ev_flags |= EPOLLERR | EPOLLHUP;
+        //ev_flags |= EPOLLERR | EPOLLHUP;
         op = EPOLL_CTL_MOD;
         if(evbase->evlist[event->ev_fd] == NULL) op = EPOLL_CTL_ADD;
         memset(&ep_event, 0, sizeof(struct epoll_event));
@@ -186,8 +186,11 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                 {
                     ev_flags = E_READ|E_WRITE;
                 }
-                if(flags & (EPOLLIN|EPOLLPRI)) ev_flags |= E_READ;
-                if(flags & EPOLLOUT) ev_flags |= E_WRITE;
+                else
+                {
+                    if(flags & (EPOLLIN|EPOLLPRI)) ev_flags |= E_READ;
+                    if(flags & EPOLLOUT) ev_flags |= E_WRITE;
+                }
                 if(ev_flags == 0) continue;
                 if(ev_flags &= ev->ev_flags)
                 {
