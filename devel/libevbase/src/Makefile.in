@@ -217,9 +217,9 @@ evrtsig.h \
 evselect.c \
 evselect.h \
 evwin32.c \
-evwin32.h 
+evwin32.h \
+mutex.h 
 
-#mutex.h 
 libevbase_la_CPPFLAGS = -Wall
 include_HEADERS = evbase.h
 ev_serv_SOURCES = ev_serv.c evbase.h log.h

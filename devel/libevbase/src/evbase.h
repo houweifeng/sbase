@@ -97,6 +97,7 @@ typedef struct _EVENT
     int ev_fd;
     int bits;
 
+    void *mutex;
 	struct _EVBASE *ev_base;
 	void *ev_arg;
 	void (*ev_handler)(int fd, int flags, void *arg);	
