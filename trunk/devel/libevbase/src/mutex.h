@@ -45,8 +45,8 @@ do{if(m)                                                                        
         pthread_cond_init(__MC__(m), NULL);                                         \
 }}while(0)
 #define MUTEX_INIT(m) do{if((m = (MUTEX *)calloc(1, sizeof(MUTEX)))){MUTEX_RESET(m);}}while(0)
-#define MUTEX_LOCK(m) pthread_mutex_lock(__MM__(m))
-#define MUTEX_UNLOCK(m) pthread_mutex_unlock(__MM__(m))
+#define MUTEX_LOCK(m) ((m)?pthread_mutex_lock(__MM__(m)):-1)
+#define MUTEX_UNLOCK(m) ((m)?pthread_mutex_unlock(__MM__(m)):-1)
 #define MUTEX_WAIT(m)                                                               \
 do{if(m)                                                                            \
 {                                                                                   \
