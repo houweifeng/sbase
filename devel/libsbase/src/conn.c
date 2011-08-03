@@ -953,7 +953,7 @@ int conn_write_handler(CONN *conn)
                     if(SENDQTOTAL(conn) < 1) 
                     {
                         event_del(&(conn->event), E_WRITE);
-                        CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+                        //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         ret = 0; break;
                         //return 0;
                     }
