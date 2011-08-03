@@ -191,10 +191,13 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                     if(flags & (EPOLLIN|EPOLLPRI)) ev_flags |= E_READ;
                     if(flags & EPOLLOUT) ev_flags |= E_WRITE;
                 }
-                if(ev_flags == 0) continue;
-                if(ev_flags &= ev->ev_flags)
+                if(ev_flags)
                 {
                     event_active(ev, ev_flags);
+                }
+                else
+                {
+                    fprintf(stderr, "fd:%d evflags:%d event:%d\n", fd, ev->ev_flags, ev_flags); 
                 }
             }
         }
