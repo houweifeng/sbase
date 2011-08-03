@@ -873,6 +873,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
     if(iniparser_getint(dict, "XHTTPD:use_cpu_set", 0) > 0) httpd->flag |= SB_CPU_SET;
     if(iniparser_getint(dict, "XHTTPD:newconn_delay", 0) > 0) httpd->flag |= SB_NEWCONN_DELAY;
     if(iniparser_getint(dict, "XHTTPD:tcp_nodelay", 0) > 0) httpd->flag |= SB_TCP_NODELAY;
+    if(iniparser_getint(dict, "XHTTPD:log_thread", 0) > 0) httpd->flag |= SB_LOG_THREAD;
+    if((n = iniparser_getint(dict, "XHTTPD:IO_SLEEP", 0)) > 0) httpd->flag |= ((SB_IO_NANOSLEEP|SB_IO_USLEEP|SB_IO_SELECT) & n);
     httpd->nworking_tosleep = iniparser_getint(dict, "XHTTPD:nworking_tosleep", SB_NWORKING_TOSLEEP);
     httpd->set_log(httpd, iniparser_getstr(dict, "XHTTPD:logfile"));
     httpd->set_log_level(httpd, iniparser_getint(dict, "XHTTPD:log_level", 0));

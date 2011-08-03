@@ -55,7 +55,8 @@ void procthread_run(void *arg)
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     int i = 0, usec = 0, sec = 0;
     struct timeval tv = {0,0};
-    int k = 0;
+    struct timespec ts = {0, 0};
+    int k = 0, n = 0;
 
     if(pth)
     {
@@ -66,6 +67,8 @@ void procthread_run(void *arg)
 
         tv.tv_sec = sec;
         tv.tv_usec = usec;
+        ts.tv_sec = sec;
+        ts.tv_nsec = (long)usec * 1000l;
         if(pth->have_evbase)
         {
             if(pth->cond > 0)
@@ -84,6 +87,14 @@ void procthread_run(void *arg)
                 if(pth->service->flag & SB_LOG_THREAD)
                 {
                     WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                }
+                if((pth->service->flag & (SB_IO_NANOSLEEP|SB_IO_USLEEP)) 
+                        && n++ > pth->service->nworking_tosleep)
+                {
+                    if(pth->service->flag & SB_IO_NANOSLEEP) nanosleep(&ts, NULL); 
+                    else if(pth->service->flag & SB_IO_USLEEP) usleep(pth->usec_sleep);
+                    else if(pth->service->flag & SB_IO_SELECT) select(0, NULL, NULL, NULL, &tv);
+                    n = 0;
                 }
             }while(pth->running_status);
 
