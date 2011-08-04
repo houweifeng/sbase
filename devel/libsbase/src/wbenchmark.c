@@ -396,10 +396,10 @@ int main(int argc, char **argv)
     pid_t pid;
     char *url = NULL, *urllist = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
     struct hostent *hent = NULL;
-    int n = 0, log_level = 0, tcp_nodelay = 0;
+    int n = 0, log_level = 0, tcp_option = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vqpkdxw:l:c:t:n:e:")) != -1)
+    while((ch = getopt(argc, argv, "vqpkdx:w:l:c:t:n:e:")) != -1)
     {
         switch(ch)
         {
@@ -431,7 +431,7 @@ int main(int argc, char **argv)
                 is_post = 1;
                 break;
             case 'x':
-                tcp_nodelay = 1;
+                tcp_option = atoi(optarg);
                 break;
             case 'e':
                 log_level = atoi(optarg);
@@ -457,7 +457,8 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
                 "Options:\n\t-c concurrency\n\t-n requests\n"
-                "\t-w worker threads\n\t-e log level\n\t-x use_tcp_nodelay\n"
+                "\t-w worker threads\n\t-e log level\n"
+                "\t-x tcp_option 1:tcp_nodelay 2:tcp_cork\n"
                 "\t-t timeout (microseconds, default 1000000)\n"
                 "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
                 "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
@@ -605,8 +606,8 @@ invalid_url:
         service->niodaemons = 1;
         service->ndaemons = 0;
         service->use_cond_wait = 1;
-        service->flag = SB_EVENT_LOCK;
-        if(tcp_nodelay) service->flag |= SB_TCP_NODELAY;
+        if(tcp_option == 1) service->flag |= SB_TCP_NODELAY;
+        else if(tcp_option == 2) service->flag |= SB_TCP_CORK;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;

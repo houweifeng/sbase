@@ -453,7 +453,7 @@ PROCTHREAD *procthread_init(int cond)
     {
         if((pth->cond = pth->have_evbase = cond) > 0)
         {
-            if((pth->evbase   = evbase_init(1)) == NULL)
+            if((pth->evbase   = evbase_init(0)) == NULL)
             {
                 fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
                 _exit(-1);
