@@ -396,10 +396,10 @@ int main(int argc, char **argv)
     pid_t pid;
     char *url = NULL, *urllist = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
     struct hostent *hent = NULL;
-    int n = 0, log_level = 0, tcp_option = 0;
+    int n = 0, log_level = 0, tcp_option = 0, socket_option = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vqpkdx:w:l:c:t:n:e:")) != -1)
+    while((ch = getopt(argc, argv, "vqpkds:x:w:l:c:t:n:e:")) != -1)
     {
         switch(ch)
         {
@@ -433,6 +433,9 @@ int main(int argc, char **argv)
             case 'x':
                 tcp_option = atoi(optarg);
                 break;
+            case 's':
+                socket_option = atoi(optarg);
+                break;
             case 'e':
                 log_level = atoi(optarg);
                 break;
@@ -459,6 +462,7 @@ int main(int argc, char **argv)
                 "Options:\n\t-c concurrency\n\t-n requests\n"
                 "\t-w worker threads\n\t-e log level\n"
                 "\t-x tcp_option 1:tcp_nodelay 2:tcp_cork\n"
+                "\t-s socket_option 1:socket_linger\n"
                 "\t-t timeout (microseconds, default 1000000)\n"
                 "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
                 "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
@@ -606,6 +610,7 @@ invalid_url:
         service->niodaemons = 1;
         service->ndaemons = 0;
         service->use_cond_wait = 1;
+        if(socket_option == 1) service->flag |= SB_SO_LINGER;
         if(tcp_option == 1) service->flag |= SB_TCP_NODELAY;
         else if(tcp_option == 2) service->flag |= SB_TCP_CORK;
         service->service_type = C_SERVICE;
