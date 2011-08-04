@@ -195,8 +195,7 @@ void conn_buffer_handler(CONN *conn)
 
     if(conn)
     {
-        if(SENDQTOTAL(conn) < 1) 
-            event_del(&(conn->event), E_WRITE);
+        //if(SENDQTOTAL(conn) < 1) event_del(&(conn->event), E_WRITE);
         if(conn->s_state == 0) ret = conn->packet_reader(conn);
     }
     return ;
@@ -210,7 +209,7 @@ void conn_chunk_handler(CONN *conn)
 
     if(conn)
     {
-        if(SENDQTOTAL(conn) < 1) event_del(&(conn->event), E_WRITE);
+        //if(SENDQTOTAL(conn) < 1) event_del(&(conn->event), E_WRITE);
         if(conn->s_state == S_STATE_READ_CHUNK) ret = conn__read__chunk(conn);
     }
     return ;
