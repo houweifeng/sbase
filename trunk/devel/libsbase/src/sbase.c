@@ -273,7 +273,7 @@ running:
             {
                 qmessage_handler(sbase->message_queue, sbase->logger);
             }
-            ACCESS_LOGGER(sbase->logger, "actived i:%d", i);
+            //ACCESS_LOGGER(sbase->logger, "actived i:%d", i);
         }while(sbase->running_status);
         /* handler left message */
         if(QMTOTAL(sbase->message_queue) > 0)
@@ -295,7 +295,7 @@ void sbase_stop(SBASE *sbase)
 {
     if(sbase && sbase->running_status)
     {
-        event_add(&(sbase->event), E_WRITE);
+        //event_add(&(sbase->event), E_WRITE);
         sbase->running_status = 0;
         return ;
     }

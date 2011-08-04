@@ -875,7 +875,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     if(iniparser_getint(dict, "XHTTPD:event_lock", 0) > 0) httpd->flag |= SB_EVENT_LOCK;
     if(iniparser_getint(dict, "XHTTPD:newconn_delay", 0) > 0) httpd->flag |= SB_NEWCONN_DELAY;
     if(iniparser_getint(dict, "XHTTPD:tcp_nodelay", 0) > 0) httpd->flag |= SB_TCP_NODELAY;
-    if(iniparser_getint(dict, "XHTTPD:tcp_cork", 0) > 0) httpd->flag |= SB_TCP_CORK;
+    if(iniparser_getint(dict, "XHTTPD:tcp_quickack", 0) > 0) httpd->flag |= SB_TCP_QUICKACK;
     if(iniparser_getint(dict, "XHTTPD:socket_linger", 0) > 0) httpd->flag |= SB_SO_LINGER;
     if(iniparser_getint(dict, "XHTTPD:log_thread", 0) > 0) httpd->flag |= SB_LOG_THREAD;
     if((n = iniparser_getint(dict, "XHTTPD:IO_SLEEP", 0)) > 0) httpd->flag |= ((SB_IO_NANOSLEEP|SB_IO_USLEEP|SB_IO_SELECT) & n);

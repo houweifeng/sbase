@@ -56,7 +56,7 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
         {
             ev_flags |= EPOLLET;
         }
-        //ev_flags |= EPOLLERR | EPOLLHUP;
+        ev_flags |= EPOLLERR | EPOLLHUP;
         if(add)
         {
             op = EPOLL_CTL_ADD; 
@@ -102,7 +102,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         {
             ev_flags |= EPOLLET;
         }
-        //ev_flags |= EPOLLERR | EPOLLHUP;
+        ev_flags |= EPOLLERR | EPOLLHUP;
         op = EPOLL_CTL_MOD;
         if(evbase->evlist[event->ev_fd] == NULL) op = EPOLL_CTL_ADD;
         memset(&ep_event, 0, sizeof(struct epoll_event));

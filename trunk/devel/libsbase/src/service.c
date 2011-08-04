@@ -85,8 +85,8 @@ int service_set(SERVICE *service)
                 }
             }
 #endif
-            linger.l_onoff = 1;linger.l_linger = 0;
             if((service->fd = socket(service->family, service->sock_type, 0)) > 0
+                && fcntl(service->fd, F_SETFD, FD_CLOEXEC) == 0
              
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
@@ -95,22 +95,26 @@ int service_set(SERVICE *service)
                 )
             {
                 if(service->flag & SB_SO_LINGER)
+                {
+                    linger.l_onoff = 1;linger.l_linger = 0;
                     setsockopt(service->fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
+                }
                 if(service->flag & SB_TCP_NODELAY)
                 {
                     opt = 1;setsockopt(service->fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                     opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
-                else if(service->flag & SB_TCP_CORK)
+                if(service->flag & SB_TCP_QUICKACK)
                 {
-#ifdef TCP_CORK
-                    opt = 1;setsockopt(service->fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
+#ifdef TCP_QUICKACK
+                    opt = 1;setsockopt(service->fd, SOL_TCP, TCP_QUICKACK, &opt, sizeof(opt));
 #endif
-#ifdef TCP_NOPUSH
-                    opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
+                    /*
+#ifdef TCP_DEFER_ACCEPT
+                    opt = 1; setsockopt(service->fd, SOL_TCP, TCP_DEFER_ACCEPT, &opt, sizeof(opt));
 #endif
+                    */
                 }
-                //fcntl(service->fd, F_SETFD, FD_CLOEXEC);
                 if(service->working_mode == WORKING_PROC)
                 {
                     flag = fcntl(service->fd, F_GETFL, 0);
@@ -425,25 +429,29 @@ int service_accept_handler(SERVICE *service)
                 }
 #endif
 new_conn:
-                fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0)|O_NONBLOCK);
-                linger.l_onoff = 1;linger.l_linger = 0;
                 if(service->flag & SB_SO_LINGER)
+                {
+                    linger.l_onoff = 1;linger.l_linger = 0;
                     setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
+                }
                 if(service->flag & SB_TCP_NODELAY)
                 {
                     opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                     opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
-                else if(service->flag & SB_TCP_CORK)
+                if(service->flag & SB_TCP_QUICKACK)
                 {
-#ifdef TCP_CORK
-                    opt = 1;setsockopt(fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
+#ifdef TCP_QUICKACK
+                    opt = 1;setsockopt(fd, SOL_TCP, TCP_QUICKACK, &opt, sizeof(opt));
 #endif
-#ifdef TCP_NOPUSH
-                    opt = 1;setsockopt(fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
+                /*
+#ifdef TCP_DEFER_ACCEPT
+opt = 1; setsockopt(fd, SOL_TCP, TCP_DEFER_ACCEPT, &opt, sizeof(opt));
 #endif
+*/
                 }
-                if((service->flag & SB_NEWCONN_DELAY) && (daemon = service->daemon) && daemon->pushconn(daemon, fd, ssl) == 0)
+                fcntl(fd, F_SETFL, (fcntl(fd, F_GETFL, 0)|O_NONBLOCK));
+                if((service->flag & SB_NEWCONN_DELAY) && daemon && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
                     i++;
@@ -491,7 +499,7 @@ err_conn:
                 && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
                 //&& setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) ==0
-                && setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == 0
+                //&& setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == 0
                         && bind(fd, (struct sockaddr *)&(service->sa), 
                             sizeof(struct sockaddr_in)) == 0
                         && connect(fd, (struct sockaddr *)&rsa, 
@@ -578,23 +586,27 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 else goto err_conn;
             }
 #endif
-            linger.l_onoff = 1;linger.l_linger = 0;
             if(service->flag & SB_SO_LINGER)
+            {
+                linger.l_onoff = 1;linger.l_linger = 0;
                 setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
+            }
             if(service->flag & SB_TCP_NODELAY)
             {
                 opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                 opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             }
-            else if(service->flag & SB_TCP_CORK)
+            /*
+            if(service->flag & SB_TCP_QUICKACK)
             {
-#ifdef TCP_CORK
-                opt = 1;setsockopt(fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
+#ifdef TCP_QUICKACK
+                opt = 1;setsockopt(fd, SOL_TCP, TCP_QUICKACK, &opt, sizeof(opt));
 #endif
-#ifdef TCP_NOPUSH
-                opt=1;setsockopt(fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
+#ifdef TCP_DEFER_ACCEPT
+                opt = 1; setsockopt(fd, SOL_TCP, TCP_DEFER_ACCEPT, &opt, sizeof(opt));
 #endif
             }
+            */
             //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
             //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
             //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
