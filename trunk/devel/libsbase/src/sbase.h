@@ -41,8 +41,7 @@ extern "C" {
 #define SB_IO_SELECT            0x40
 #define SB_EVENT_LOCK           0x80
 #define SB_WHILE_SEND           0x100
-#define SB_TCP_QUICKACK         0x200
-#define SB_SO_LINGER            0x400
+#define SB_SO_LINGER            0x200
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
