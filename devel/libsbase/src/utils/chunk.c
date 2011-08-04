@@ -128,7 +128,8 @@ int chunk_write(void *chunk, int fd)
     int n = -1;
 
     if(chunk && fd > 0 && CHK(chunk)->left > 0 && CHK(chunk)->data && CHK(chunk)->end
-            && (n = send(fd, CHK(chunk)->end, CHK(chunk)->left, MSG_DONTWAIT)) > 0)
+            && (n = write(fd, CHK(chunk)->end, CHK(chunk)->left)) > 0)
+            //&& (n = send(fd, CHK(chunk)->end, CHK(chunk)->left, MSG_DONTWAIT)) > 0)
     {
         CHK(chunk)->left -= n;
         CHK(chunk)->end += n;
@@ -316,7 +317,8 @@ int chunk_write_from_file(void *chunk, int fd)
     if(chunk && fd > 0 && CHK(chunk)->left > 0)
     {
         if(chunk_file_check(chunk) > 0 && (data = chunk_mmap(chunk))
-                && (n = send(fd, data,  CHK(chunk)->mmleft, MSG_DONTWAIT)) > 0)
+                && (n = write(fd, data,  CHK(chunk)->mmleft)) > 0)
+                //&& (n = send(fd, data,  CHK(chunk)->mmleft, MSG_DONTWAIT)) > 0)
         {
             CHK(chunk)->mmoff += n;
             CHK(chunk)->mmleft -= n;
