@@ -94,6 +94,8 @@ int service_set(SERVICE *service)
 #endif
                 )
             {
+                if(service->flag & SB_SO_LINGER)
+                    setsockopt(service->fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
                 if(service->flag & SB_TCP_NODELAY)
                 {
                     opt = 1;setsockopt(service->fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
@@ -425,7 +427,8 @@ int service_accept_handler(SERVICE *service)
 new_conn:
                 fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0)|O_NONBLOCK);
                 linger.l_onoff = 1;linger.l_linger = 0;
-                //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
+                if(service->flag & SB_SO_LINGER)
+                    setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
                 if(service->flag & SB_TCP_NODELAY)
                 {
                     opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
@@ -576,7 +579,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             }
 #endif
             linger.l_onoff = 1;linger.l_linger = 0;
-            //setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
+            if(service->flag & SB_SO_LINGER)
+                setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             if(service->flag & SB_TCP_NODELAY)
             {
                 opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
