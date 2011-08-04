@@ -70,14 +70,14 @@ int evbase_set_evops(EVBASE *evbase, int evopid)
 }
 
 /* Initialize evbase */
-EVBASE *evbase_init()
+EVBASE *evbase_init(int use_lock)
 {
     int evops_default_v = -1;
     EVBASE *evbase = NULL;
 
     if((evbase = (EVBASE *)calloc(1, sizeof(EVBASE))))
     {
-        MUTEX_INIT(evbase->mutex);
+        if(use_lock){MUTEX_INIT(evbase->mutex);}
 #ifdef HAVE_EVPORT
         evops_default_v = EOP_PORT;
         evops[EOP_PORT].name = "PORT";

@@ -40,6 +40,8 @@ extern "C" {
 #define SB_IO_USLEEP            0x20
 #define SB_IO_SELECT            0x40
 #define SB_EVENT_LOCK           0x80
+#define SB_WHILE_SEND           0x100
+#define SB_TCP_CORK             0x200
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
@@ -508,6 +510,7 @@ typedef struct _CONN
     /* session */
     int (*read_handler)(struct _CONN *);
     int (*write_handler)(struct _CONN *);
+    int (*send_handler)(struct _CONN *);
     int (*packet_reader)(struct _CONN *);
     int (*packet_handler)(struct _CONN *);
     int (*oob_handler)(struct _CONN *);

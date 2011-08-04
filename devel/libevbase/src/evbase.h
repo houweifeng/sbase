@@ -71,7 +71,7 @@ typedef struct _EVBASE
 	void 	(*clean)(struct _EVBASE *);
     int     (*set_evops)(struct _EVBASE *, int evopid);
 }EVBASE;
-EVBASE *evbase_init();
+EVBASE *evbase_init(int use_lock);
 #define NEW_EVENT_FD(evbase, event)                                     \
 do{                                                                     \
     if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \
