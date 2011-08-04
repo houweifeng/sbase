@@ -613,8 +613,8 @@ invalid_url:
         service->ndaemons = 0;
         service->use_cond_wait = 1;
         if(socket_option == 1) service->flag |= SB_SO_LINGER;
-        if(tcp_option > 0) service->flag |= SB_TCP_NODELAY;
-        //else if(tcp_option == 2) service->flag |= SB_TCP_CORK;
+        if(tcp_option == 1) service->flag |= SB_TCP_NODELAY;
+        //else if(tcp_option == 2) service->flag |= SB_TCP_QUICKACK;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;
