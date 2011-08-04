@@ -101,19 +101,8 @@ int service_set(SERVICE *service)
                 }
                 if(service->flag & SB_TCP_NODELAY)
                 {
-                    opt = 1;setsockopt(service->fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                    //opt = 1;setsockopt(service->fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                     opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
-                }
-                if(service->flag & SB_TCP_QUICKACK)
-                {
-#ifdef TCP_QUICKACK
-                    opt = 1;setsockopt(service->fd, SOL_TCP, TCP_QUICKACK, &opt, sizeof(opt));
-#endif
-                    /*
-#ifdef TCP_DEFER_ACCEPT
-                    opt = 1; setsockopt(service->fd, SOL_TCP, TCP_DEFER_ACCEPT, &opt, sizeof(opt));
-#endif
-                    */
                 }
                 if(service->working_mode == WORKING_PROC)
                 {
@@ -436,19 +425,8 @@ new_conn:
                 }
                 if(service->flag & SB_TCP_NODELAY)
                 {
-                    opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                    //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                     opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
-                }
-                if(service->flag & SB_TCP_QUICKACK)
-                {
-#ifdef TCP_QUICKACK
-                    opt = 1;setsockopt(fd, SOL_TCP, TCP_QUICKACK, &opt, sizeof(opt));
-#endif
-                /*
-#ifdef TCP_DEFER_ACCEPT
-opt = 1; setsockopt(fd, SOL_TCP, TCP_DEFER_ACCEPT, &opt, sizeof(opt));
-#endif
-*/
                 }
                 fcntl(fd, F_SETFL, (fcntl(fd, F_GETFL, 0)|O_NONBLOCK));
                 if((service->flag & SB_NEWCONN_DELAY) && daemon && daemon->pushconn(daemon, fd, ssl) == 0)
@@ -591,25 +569,16 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 linger.l_onoff = 1;linger.l_linger = 0;
                 setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             }
+            /*
             if(service->flag & SB_TCP_NODELAY)
             {
-                opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
+                //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
+                //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
+                //opt = 3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
                 opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             }
-            /*
-            if(service->flag & SB_TCP_QUICKACK)
-            {
-#ifdef TCP_QUICKACK
-                opt = 1;setsockopt(fd, SOL_TCP, TCP_QUICKACK, &opt, sizeof(opt));
-#endif
-#ifdef TCP_DEFER_ACCEPT
-                opt = 1; setsockopt(fd, SOL_TCP, TCP_DEFER_ACCEPT, &opt, sizeof(opt));
-#endif
-            }
             */
-            //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
-            //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
-            //opt=3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
             if(sess && (sess->flag & O_NONBLOCK))
             {
                 flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
