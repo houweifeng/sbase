@@ -463,8 +463,7 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Usage:%s [options] http(s)://host:port/path\n"
                 "Options:\n\t-c concurrency\n\t-n requests\n"
-                "\t-w worker threads\n\t-e log level\n"
-                "\t-x tcp_option 1:tcp_nodelay 2:tcp_cork\n"
+                "\t-w worker threads\n\t-e log level\n\t-x tcp_option 1:tcp_nodelay\n"
                 "\t-s socket_option 1:socket_linger\n\t-i iodaemons\n"
                 "\t-t timeout (microseconds, default 1000000)\n"
                 "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
@@ -614,8 +613,8 @@ invalid_url:
         service->ndaemons = 0;
         service->use_cond_wait = 1;
         if(socket_option == 1) service->flag |= SB_SO_LINGER;
-        if(tcp_option == 1) service->flag |= SB_TCP_NODELAY;
-        else if(tcp_option == 2) service->flag |= SB_TCP_CORK;
+        if(tcp_option > 0) service->flag |= SB_TCP_NODELAY;
+        //else if(tcp_option == 2) service->flag |= SB_TCP_CORK;
         service->service_type = C_SERVICE;
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;

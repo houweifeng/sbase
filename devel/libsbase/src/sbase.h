@@ -18,7 +18,7 @@ extern "C" {
 #endif
 #define SB_CONN_MAX             65536
 #define SB_GROUP_CONN_MAX       1024
-#define SB_BACKLOG_MAX          10000
+#define SB_BACKLOG_MAX          40960
 #define SB_IP_MAX               16
 #define SB_XIDS_MAX             16
 #define SB_GROUPS_MAX           32
@@ -41,7 +41,7 @@ extern "C" {
 #define SB_IO_SELECT            0x40
 #define SB_EVENT_LOCK           0x80
 #define SB_WHILE_SEND           0x100
-#define SB_TCP_CORK             0x200
+#define SB_TCP_QUICKACK         0x200
 #define SB_SO_LINGER            0x400
 /* service type */
 #define S_SERVICE               0x00
@@ -387,7 +387,7 @@ typedef struct _PROCTHREAD
     int bits;
     pthread_t threadid;
     EVENT event;
-    EVENT acceptor;
+    //EVENT acceptor;
 
     void *mutex;
     void *evtimer;
