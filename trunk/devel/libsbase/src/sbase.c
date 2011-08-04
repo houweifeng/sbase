@@ -217,7 +217,7 @@ int sbase_running(SBASE *sbase, int useconds)
             return 0;
         }
 running:
-        if((sbase->evbase   = evbase_init()) == NULL)
+        if((sbase->evbase   = evbase_init(0)) == NULL)
         {
             fprintf(stderr, "Initialize evbase failed, %s\n", strerror(errno));
             _exit(-1);

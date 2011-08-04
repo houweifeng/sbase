@@ -347,7 +347,7 @@ int main(int argc, char **argv)
         xsa.sin_port = htons(port);
         xsa_len = sizeof(struct sockaddr);
         /* set evbase */
-        if((evbase = evbase_init()))
+        if((evbase = evbase_init(0)))
         {
             if(is_use_ssl)
             {

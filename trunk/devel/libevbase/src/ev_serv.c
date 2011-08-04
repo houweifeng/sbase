@@ -25,6 +25,7 @@
 #define CONN_MAX 65536
 #endif
 #define EV_BUF_SIZE 1024
+#define CONN_BACKLOG_MAX 8192
 static int max_connections = 0;
 static int connections = 0;
 static int lfd = 0;
@@ -469,11 +470,20 @@ int main(int argc, char **argv)
            }
            */
 #endif
-        if(setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,
-                    (char *)&opt, (socklen_t) sizeof(opt)) != 0
+        if(setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,(char *)&opt, (socklen_t) sizeof(opt)) != 0
+#ifdef TCP_NODELAY
+                || setsockopt(lfd, SOL_TCP, TCP_NODELAY, (char *)&opt, (socklen_t) sizeof(opt)) != 0
+#endif
+                /*
+#ifdef TCP_CORK
+                || setsockopt(lfd, SOL_TCP, TCP_CORK, (char *)&opt, (socklen_t) sizeof(opt)) != 0
+#endif
+#ifdef TCP_NOPUSH
+                || setsockopt(lfd, SOL_TCP, TCP_NOPUSH, (char *)&opt, (socklen_t) sizeof(opt)) != 0
+#endif
+*/
 #ifdef SO_REUSEPORT
-                || setsockopt(lfd, SOL_SOCKET, SO_REUSEPORT,
-                    (char *)&opt, (socklen_t) sizeof(opt)) != 0
+                || setsockopt(lfd, SOL_SOCKET, SO_REUSEPORT, (char *)&opt, (socklen_t) sizeof(opt)) != 0
 #endif
           )
         {
@@ -495,7 +505,7 @@ int main(int argc, char **argv)
         /* Listen */
         if(ev_sock_list[ev_sock_type] == SOCK_STREAM)
         {
-            if(listen(lfd, CONN_MAX-1) != 0 )
+            if(listen(lfd, CONN_BACKLOG_MAX) != 0 )
             {
                 SHOW_LOG("Listening  failed, %s", strerror(errno));
                 return -1;
@@ -538,7 +548,7 @@ int main(int argc, char **argv)
 running:
         */
         /* set evbase */
-        if((evbase = evbase_init()))
+        if((evbase = evbase_init(0)))
         {
             //evbase->set_logfile(evbase, "/tmp/ev_server.log");
             //evbase->set_evops(evbase, EOP_POLL);

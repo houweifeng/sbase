@@ -94,13 +94,12 @@ int service_set(SERVICE *service)
 #endif
                 )
             {
-                /*
                 if(service->flag & SB_TCP_NODELAY)
                 {
+                    opt = 1;setsockopt(service->fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                     opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
-                else
-                */
+                else if(service->flag & SB_TCP_CORK)
                 {
 #ifdef TCP_CORK
                     opt = 1;setsockopt(service->fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
@@ -109,7 +108,7 @@ int service_set(SERVICE *service)
                     opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
 #endif
                 }
-                fcntl(service->fd, F_SETFD, FD_CLOEXEC);
+                //fcntl(service->fd, F_SETFD, FD_CLOEXEC);
                 if(service->working_mode == WORKING_PROC)
                 {
                     flag = fcntl(service->fd, F_GETFL, 0);
@@ -432,13 +431,13 @@ new_conn:
                     opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                     opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
-                else
+                else if(service->flag & SB_TCP_CORK)
                 {
 #ifdef TCP_CORK
-                opt = 1;setsockopt(fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
+                    opt = 1;setsockopt(fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
 #endif
 #ifdef TCP_NOPUSH
-                opt=1;setsockopt(fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
+                    opt = 1;setsockopt(fd, SOL_TCP, TCP_NOPUSH, &opt, sizeof(opt));
 #endif
                 }
                 if((service->flag & SB_NEWCONN_DELAY) && (daemon = service->daemon) && daemon->pushconn(daemon, fd, ssl) == 0)
@@ -583,7 +582,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                 opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             }
-            else
+            else if(service->flag & SB_TCP_CORK)
             {
 #ifdef TCP_CORK
                 opt = 1;setsockopt(fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
