@@ -423,9 +423,9 @@ new_conn:
                     linger.l_onoff = 1;linger.l_linger = 0;
                     setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
                 }
+                opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                 if(service->flag & SB_TCP_NODELAY)
                 {
-                    //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                     opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
                 fcntl(fd, F_SETFL, (fcntl(fd, F_GETFL, 0)|O_NONBLOCK));
@@ -476,8 +476,8 @@ err_conn:
 #ifdef SO_REUSEPORT
                 && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                //&& setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) ==0
-                //&& setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == 0
+                && setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) ==0
+                && setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == 0
                         && bind(fd, (struct sockaddr *)&(service->sa), 
                             sizeof(struct sockaddr_in)) == 0
                         && connect(fd, (struct sockaddr *)&rsa, 
@@ -569,16 +569,14 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 linger.l_onoff = 1;linger.l_linger = 0;
                 setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
             }
-            /*
+            opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
             if(service->flag & SB_TCP_NODELAY)
             {
-                //opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                 //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
                 //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
                 //opt = 3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
                 opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
             }
-            */
             if(sess && (sess->flag & O_NONBLOCK))
             {
                 flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
