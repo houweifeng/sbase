@@ -88,7 +88,6 @@ void procthread_run(void *arg)
                 {
                     WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                 }
-                /*
                 if((pth->service->flag & (SB_IO_NANOSLEEP|SB_IO_USLEEP|SB_IO_SELECT)) 
                         && n++ > pth->service->nworking_tosleep)
                 {
@@ -97,7 +96,6 @@ void procthread_run(void *arg)
                     else if(pth->service->flag & SB_IO_SELECT) select(0, NULL, NULL, NULL, &tv);
                     n = 0;
                 }
-                */
             }while(pth->running_status);
 
         }
@@ -288,7 +286,9 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->message_queue = pth->message_queue;
         conn->ioqmessage    = pth->ioqmessage;
         conn->iodaemon      = pth->iodaemon;
+        conn->wiodaemon     = pth->wiodaemon;
         conn->evbase        = pth->evbase;
+        conn->wevbase       = pth->wevbase;
         conn->parent        = pth;
         //conn->xqueue        = pth->xqueue;
         if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
@@ -308,6 +308,7 @@ int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && pth->service)
     {
+        event_destroy(&(conn->wevent));
         event_destroy(&(conn->event));
         pth->service->overconn(pth->service, conn);
         ret = 0;

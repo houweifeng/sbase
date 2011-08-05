@@ -279,6 +279,20 @@ running_threads:
                         service->iodaemons[i], service->logger, iocpuset);
             }
         }
+        /* wiodaemon */ 
+        if((service->wiodaemon = procthread_init(service->cond)))
+        {
+            PROCTHREAD_SET(service, service->wiodaemon);
+            service->wiodaemon->use_cond_wait = 0;
+            NEW_PROCTHREAD(service, "wiodaemon", 0, service->wiodaemon->threadid, service->wiodaemon, service->logger, iocpuset);
+            ret = 0;
+        }
+        else
+        {
+            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
+            exit(EXIT_FAILURE);
+            return -1;
+        }
         /* initialize threads  */
         if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
         if(service->nprocthreads < 1) service->nprocthreads = 1;
@@ -292,6 +306,8 @@ running_threads:
                     x = service->nprocthreads % service->niodaemons;
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
                     service->procthreads[i]->iodaemon = service->iodaemons[x];
+                    service->procthreads[i]->wiodaemon = service->wiodaemon;
+                    service->procthreads[i]->wevbase = service->wiodaemon->evbase;
                     service->procthreads[i]->ioqmessage = service->iodaemons[x]->message_queue;
                     ret = 0;
                 }
@@ -1428,6 +1444,16 @@ void service_stop(SERVICE *service)
             }
             //DEBUG_LOGGER(service->logger, "over for stop iodaemons");
         }
+        //wiodaemon
+        if(service->wiodaemon)
+        {
+            WARN_LOGGER(service->logger, "Ready for stop threads[wiodaemon]");
+            service->wiodaemon->stop(service->wiodaemon);
+            if(service->working_mode == WORKING_THREAD)
+            {
+                PROCTHREAD_EXIT(service->wiodaemon->threadid, NULL);
+            }
+        }
         //threads
         if(service->nprocthreads > 0)
         {
@@ -1575,13 +1601,20 @@ void service_clean(SERVICE *service)
         {
             MUTEX_DESTROY(service->groups[i].mutex);
         }
+        if(service->wiodaemon) service->wiodaemon->clean(service->wiodaemon);
+        if(service->niodaemons > 0)
+        {
+            for(i = 0; i < service->ndaemons; i++)
+            {
+                if(service->iodaemons[i])
+                    service->iodaemons[i]->clean(service->iodaemons[i]);
+            }
+        }
         //clean procthreads
         if(service->nprocthreads > 0)
         {
             for(i = 0; i < service->nprocthreads; i++)
             {
-                if(service->iodaemons[i])
-                    service->iodaemons[i]->clean(service->iodaemons[i]);
                 if(service->procthreads[i])
                     service->procthreads[i]->clean(service->procthreads[i]);
             }
