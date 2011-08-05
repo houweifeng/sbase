@@ -86,7 +86,14 @@ void procthread_run(void *arg)
                 }
                 if(pth->service->flag & SB_LOG_THREAD)
                 {
-                    WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                    if(pth == pth->service->wiodaemon)
+                    {
+                        WARN_LOGGER(pth->logger, "wiodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                    }
+                    else
+                    {
+                        WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                    }
                 }
                 if((pth->service->flag & (SB_IO_NANOSLEEP|SB_IO_USLEEP|SB_IO_SELECT)) 
                         && n++ > pth->service->nworking_tosleep)

@@ -86,7 +86,8 @@ int mmblock_read(MMBLOCK *mmblock, int fd)
 	{
         if(mmblock->left < MMBLOCK_MIN) mmblock_incre(mmblock, MMBLOCK_BASE);
 		if(mmblock->data && mmblock->end && mmblock->left > 0
-		&& (n = read(fd, mmblock->end, mmblock->left)) > 0)
+		    && (n = recv(fd, mmblock->end, mmblock->left, MSG_DONTWAIT)) > 0)
+		    //&& (n = read(fd, mmblock->end, mmblock->left)) > 0)
 		{
 			mmblock->ndata += n;
 			mmblock->end += n;

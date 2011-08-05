@@ -93,7 +93,7 @@ int chunk_read(void *chunk, int fd)
     int n = -1;
 
     if(chunk && fd > 0 && CHK(chunk)->left > 0 && CHK(chunk)->data && CHK(chunk)->end
-            && (n = read(fd, CHK(chunk)->end, CHK(chunk)->left)) > 0)
+            && (n = recv(fd, CHK(chunk)->end, CHK(chunk)->left, MSG_DONTWAIT)) > 0)
     {
         CHK(chunk)->left -= n;
         CHK(chunk)->end += n;
@@ -128,8 +128,8 @@ int chunk_write(void *chunk, int fd)
     int n = -1;
 
     if(chunk && fd > 0 && CHK(chunk)->left > 0 && CHK(chunk)->data && CHK(chunk)->end
-            && (n = write(fd, CHK(chunk)->end, CHK(chunk)->left)) > 0)
-            //&& (n = send(fd, CHK(chunk)->end, CHK(chunk)->left, MSG_DONTWAIT)) > 0)
+            //&& (n = write(fd, CHK(chunk)->end, CHK(chunk)->left)) > 0)
+            && (n = send(fd, CHK(chunk)->end, CHK(chunk)->left, MSG_DONTWAIT)) > 0)
     {
         CHK(chunk)->left -= n;
         CHK(chunk)->end += n;
@@ -222,7 +222,9 @@ int chunk_read_to_file(void *chunk, int fd)
     {
         left = CHK(chunk)->bsize;
         if(CHK(chunk)->left < left) left = CHK(chunk)->left;
-        if(chunk_file_check(chunk) > 0 && (n = read(fd, CHK(chunk)->data, left)) > 0
+        if(chunk_file_check(chunk) > 0 
+                && (n = recv(fd, CHK(chunk)->data, left, MSG_DONTWAIT)) > 0
+                //&& (n = read(fd, CHK(chunk)->data, left)) > 0
                 //&& lseek(CHK(chunk)->fd, CHK(chunk)->offset, SEEK_SET) >= 0 
                 //&& write(CHK(chunk)->fd, CHK(chunk)->data,  n) > 0)
                 && pwrite(CHK(chunk)->fd, CHK(chunk)->data,  n, CHK(chunk)->offset) > 0)
@@ -319,8 +321,8 @@ int chunk_write_from_file(void *chunk, int fd)
     if(chunk && fd > 0 && CHK(chunk)->left > 0)
     {
         if(chunk_file_check(chunk) > 0 && (data = chunk_mmap(chunk))
-                && (n = write(fd, data,  CHK(chunk)->mmleft)) > 0)
-                //&& (n = send(fd, data,  CHK(chunk)->mmleft, MSG_DONTWAIT)) > 0)
+                //&& (n = write(fd, data,  CHK(chunk)->mmleft)) > 0)
+                && (n = send(fd, data,  CHK(chunk)->mmleft, MSG_DONTWAIT)) > 0)
         {
             CHK(chunk)->mmoff += n;
             CHK(chunk)->mmleft -= n;
