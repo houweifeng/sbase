@@ -88,6 +88,7 @@ void procthread_run(void *arg)
                 {
                     WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                 }
+                /*
                 if((pth->service->flag & (SB_IO_NANOSLEEP|SB_IO_USLEEP|SB_IO_SELECT)) 
                         && n++ > pth->service->nworking_tosleep)
                 {
@@ -96,6 +97,7 @@ void procthread_run(void *arg)
                     else if(pth->service->flag & SB_IO_SELECT) select(0, NULL, NULL, NULL, &tv);
                     n = 0;
                 }
+                */
             }while(pth->running_status);
 
         }
@@ -133,6 +135,7 @@ void procthread_run(void *arg)
                         i = 1;
                     }
                     if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);i = 0;}
+                    /*
                     //if(i > pth->service->nworking_tosleep)
                     //{usleep(pth->usec_sleep);i = 0;}
                     //{select(0, NULL, NULL, NULL, &tv); i = 0;}
@@ -141,6 +144,7 @@ void procthread_run(void *arg)
                     {
                         WARN_LOGGER(pth->logger, "conn_worker[%p]->loop(%d) q[%p]->total:%d/%d nleft:%d daemon:%p", pth, pth->index, pth->message_queue, QMTOTAL(pth->message_queue), k, QNLEFT(pth->message_queue), pth->service->daemon);
                     }
+                    */
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
