@@ -89,9 +89,11 @@ int service_set(SERVICE *service)
                 && fcntl(service->fd, F_SETFD, FD_CLOEXEC) == 0
              
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+                /*
 #ifdef SO_REUSEPORT
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
+                */
                 )
             {
                 if(service->flag & SB_SO_LINGER)
@@ -99,11 +101,15 @@ int service_set(SERVICE *service)
                     linger.l_onoff = 1;linger.l_linger = 0;
                     setsockopt(service->fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger));
                 }
+                /*
                 if(service->flag & SB_TCP_NODELAY)
                 {
                     //opt = 1;setsockopt(service->fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                     opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
+                */
+                //opt = 1;setsockopt(service->fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
+                //opt = 1;setsockopt(service->fd, SOL_TCP, TCP_QUICKACK, &opt, sizeof(opt));
                 if(service->working_mode == WORKING_PROC)
                 {
                     flag = fcntl(service->fd, F_GETFL, 0);
