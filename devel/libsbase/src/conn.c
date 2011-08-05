@@ -76,7 +76,7 @@ int conn_read_buffer(CONN *conn)
 }
 #define CONN_READY_WRITE(conn)                                                              \
 {                                                                                           \
-    if(SENDQTOTAL(conn) > 0) event_add(&(conn->wevent), E_WRITE);                           \
+    if(SENDQTOTAL(conn) > 0) event_add(&(conn->event), E_WRITE);                            \
 }                                                                                           
 
 #define CONN_STATE_RESET(conn)                                                              \
@@ -225,7 +225,7 @@ void conn_shut_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
-            event_destroy(&(conn->wevent));
+            //event_destroy(&(conn->wevent));
             qmessage_push(conn->ioqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);
             IOWAKEUP(conn);
@@ -251,9 +251,9 @@ void conn_end_handler(CONN *conn)
     if(conn)
     {
         if((n = SENDQTOTAL(conn)) > 0) 
-            event_add(&(conn->wevent), E_WRITE);
+            event_add(&(conn->event), E_WRITE);
         else 
-            event_del(&(conn->wevent), E_WRITE);
+            event_del(&(conn->event), E_WRITE);
         //ACCESS_LOGGER(conn->logger, "end_handler conn[%p]->event{ev_flags:%d old_ev_flags:%d evbase:%p} qtotal:%d/%d nbufer:%d remote[%s:%d] local[%s:%d] via %d", conn, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base, SENDQTOTAL(conn), n, MMB_NDATA(conn->buffer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->s_state == 0 && MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}
         DEBUG_LOGGER(conn->logger, "end_handler conn[%p]->event{ev_flags:%d old_ev_flags:%d evbase:%p} qtotal:%d nbufer:%d remote[%s:%d] local[%s:%d] via %d", conn, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base, SENDQTOTAL(conn), MMB_NDATA(conn->buffer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
@@ -346,7 +346,6 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d END", E_READ, conn, conn->d_state, event_fd);
                 if(ret < 0)return ;
             }
-                /*
             if(event & E_WRITE)
             {
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d START", E_WRITE, conn, conn->d_state, event_fd);
@@ -357,7 +356,6 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
                 if(ret < 0)return ;
             } 
-                */
             /*
                fprintf(stdout, "%s::%d event:%d on remote[%s:%d] local[%s:%d] via %d\n",
                __FILE__, __LINE__, event, conn->remote_ip, conn->remote_port, 
@@ -394,13 +392,13 @@ int conn_set(CONN *conn)
                     conn->remote_ip, conn->remote_port, conn->d_state,
                     conn->local_ip, conn->local_port, conn->fd);
             conn->evbase->add(conn->evbase, &(conn->event));
-
+            /*
             flag = E_WRITE|E_PERSIST;
             if(PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_EVENT_LOCK))
                 flag |= E_LOCK;
             event_set(&(conn->wevent), conn->fd, flag, (void *)conn, &conn_output_handler);
             conn->evbase->add(conn->wevbase, &(conn->wevent));
-
+            */
             return 0;
         }
         else
@@ -969,7 +967,7 @@ int conn_write_handler(CONN *conn)
                 }
                 if(chunk_over)
                 {
-                    event_del(&(conn->wevent), E_WRITE);
+                    event_del(&(conn->event), E_WRITE);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
                     //ret = 0;break;
                     ret = 0;
@@ -978,7 +976,7 @@ int conn_write_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        //event_del(&(conn->wevent), E_WRITE);
+                        //event_del(&(conn->event), E_WRITE);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         //ret = 0; break;
                         ret = 0;
@@ -991,7 +989,7 @@ int conn_write_handler(CONN *conn)
         {
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
             ret = 0;
-            event_del(&(conn->wevent), E_WRITE);
+            //event_del(&(conn->event), E_WRITE);
             //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
         }
@@ -1077,7 +1075,7 @@ int conn_send_handler(CONN *conn)
                 }
                 if(chunk_over)
                 {
-                    event_del(&(conn->wevent), E_WRITE);
+                    event_del(&(conn->event), E_WRITE);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
                     ret = 0;break;
                 }
@@ -1085,7 +1083,7 @@ int conn_send_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        //event_del(&(conn->wevent), E_WRITE);
+                        //event_del(&(conn->event), E_WRITE);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         ret = 0; break;
                     }
@@ -1097,7 +1095,7 @@ int conn_send_handler(CONN *conn)
         {
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
             ret = 0;
-            event_del(&(conn->wevent), E_WRITE);
+            //event_del(&(conn->wevent), E_WRITE);
             //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
         }
