@@ -76,8 +76,7 @@ int conn_read_buffer(CONN *conn)
 }
 #define CONN_READY_WRITE(conn)                                                              \
 {                                                                                           \
-    if(SENDQTOTAL(conn) > 0)                                                                \
-        event_add(&(conn->wevent), E_WRITE);                                                \
+    if(SENDQTOTAL(conn) > 0) event_add(&(conn->wevent), E_WRITE);                           \
 }                                                                                           
 
 #define CONN_STATE_RESET(conn)                                                              \
@@ -175,7 +174,7 @@ do                                                                              
     {                                                                                       \
         qmessage_push(conn->ioqmessage, msgid,                                              \
                 conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);                     \
-        event_add(&(conn->event), E_WRITE);                                                 \
+        IOWAKEUP(conn);                                                                     \
     }                                                                                       \
 }while(0)
 #define SESSION_RESET(conn)                                                                 \
@@ -198,7 +197,6 @@ void conn_buffer_handler(CONN *conn)
     if(conn)
     {
         //if(SENDQTOTAL(conn) < 1){CONN_PUSH_MESSAGE(conn, MESSAGE_END);}
-        if(SENDQTOTAL(conn) < 1){event_del(&(conn->event), E_WRITE);}
         if(conn->s_state == 0) ret = conn->packet_reader(conn);
     }
     return ;
@@ -212,7 +210,6 @@ void conn_chunk_handler(CONN *conn)
 
     if(conn)
     {
-        if(SENDQTOTAL(conn) < 1){event_del(&(conn->event), E_WRITE);}
         if(conn->s_state == S_STATE_READ_CHUNK) ret = conn__read__chunk(conn);
     }
     return ;
@@ -229,9 +226,9 @@ void conn_shut_handler(CONN *conn)
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
             event_destroy(&(conn->wevent));
-            event_add(&(conn->event), E_WRITE);
             qmessage_push(conn->ioqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);
+            IOWAKEUP(conn);
         }
         else
         {
@@ -323,10 +320,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //set conn->status
                 if(PPARENT(conn) && PPARENT(conn)->service)
                     PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
-                if(SENDQTOTAL(conn) < 1) 
-                {
-                    event_del(&(conn->event), E_WRITE);
-                }
+                event_del(&(conn->event), E_WRITE);
                 if(conn->session.ok_handler) conn->session.ok_handler(conn);
                 return ;
             }
@@ -917,7 +911,6 @@ int conn_write_handler(CONN *conn)
         if(SENDQTOTAL(conn) > 0)
         {
             if((cp = (CHUNK *)SENDQHEAD(conn)))
-            //while(SENDQTOTAL(conn) > 0 && (cp = (CHUNK *)SENDQHEAD(conn)))
             {
                 chunk_over = 0;
                 if(CHUNK_STATUS(cp) != CHUNK_STATUS_OVER)
@@ -974,14 +967,14 @@ int conn_write_handler(CONN *conn)
                 else 
                 {
                     //ret = 0;break; 
-                    return 0;
+                    ret = 0;
                 }
                 if(chunk_over)
                 {
                     event_del(&(conn->wevent), E_WRITE);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
                     //ret = 0;break;
-                    return 0;
+                    ret = 0;
                 }
                 else
                 {
@@ -990,7 +983,7 @@ int conn_write_handler(CONN *conn)
                         //event_del(&(conn->wevent), E_WRITE);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         //ret = 0; break;
-                        return 0;
+                        ret = 0;
                     }
                 }
             }
