@@ -94,6 +94,8 @@ do                                                                              
     {                                                                                       \
             qmessage_push(conn->message_queue, msgid,                                       \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
+            DEBUG_LOGGER(conn->logger, "qmessage[%d] completed remote[%s:%d] on %s:%d via %d",  \
+            msgid, conn->remote_ip, conn->remote_port,conn->local_ip, conn->local_port, conn->fd);\
         if(conn->parent && PPARENT(conn)->use_cond_wait){MUTEX_SIGNAL(PPARENT(conn)->mutex);} \
     }                                                                                       \
 }while(0)
