@@ -1407,7 +1407,7 @@ int conn__read__chunk(CONN *conn)
             {
                 MMB_DELETE(conn->buffer, n);
             }
-            if(CHUNK_STATUS(&conn->chunk) == CHUNK_STATUS_OVER )
+            if(CHUNK_STATUS(&conn->chunk) == CHUNK_STATUS_OVER)
             {
                 DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d on %s:%d via %d",
                         LL(CHK_SIZE(conn->chunk)), conn->remote_ip, conn->remote_port, 
