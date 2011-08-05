@@ -450,7 +450,7 @@ new_conn:
                 {
                     opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
-                fcntl(fd, F_SETFL, (fcntl(fd, F_GETFL, 0)|O_NONBLOCK));
+                //fcntl(fd, F_SETFL, (fcntl(fd, F_GETFL, 0)|O_NONBLOCK));
                 if((service->flag & SB_NEWCONN_DELAY) && daemon && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
