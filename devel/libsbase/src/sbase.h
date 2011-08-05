@@ -281,6 +281,7 @@ typedef struct _SERVICE
     /* working mode */
     struct _PROCTHREAD *daemon;
     struct _PROCTHREAD *acceptor;
+    struct _PROCTHREAD *wiodaemon;
     struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
     struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
     struct _PROCTHREAD *daemons[SB_THREADS_MAX];
@@ -395,11 +396,13 @@ typedef struct _PROCTHREAD
     /* message queue */
     void *xqueue;
     void *iodaemon;
+    void *wiodaemon;
     void *ioqmessage;
     void *message_queue;
 
     /* evbase */
     EVBASE *evbase;
+    EVBASE *wevbase;
 
     /* connection */
     struct _CONN **connections;
@@ -458,6 +461,7 @@ typedef struct _CONN
     /* xid */
     int xids[SB_XIDS_MAX];
     EVENT event;
+    EVENT wevent;
     /* buffer */
     MMBLOCK buffer;
     MMBLOCK packet;
@@ -468,6 +472,7 @@ typedef struct _CONN
     /* evbase */
     void *mutex;
     EVBASE *evbase;
+    EVBASE *wevbase;
     void *parent;
     void *queue;
     void *xqueue;
@@ -479,6 +484,7 @@ typedef struct _CONN
     void *logger;
     /* message queue */
     void *iodaemon;
+    void *wiodaemon;
     void *ioqmessage;
     void *message_queue;
     int (*set)(struct _CONN *);
