@@ -31,7 +31,8 @@ extern "C" {
 #define MESSAGE_STOP            0x11
 #define MESSAGE_PROXY           0x12
 #define MESSAGE_END             0x13
-#define MESSAGE_MAX		        0x13
+#define MESSAGE_OVEROUT         0x14
+#define MESSAGE_MAX		        0x14
 static char *messagelist[] = 
 {
     "",

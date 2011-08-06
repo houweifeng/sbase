@@ -86,9 +86,9 @@ void procthread_run(void *arg)
                 }
                 if(pth->service->flag & SB_LOG_THREAD)
                 {
-                    if(pth == pth->service->wiodaemon)
+                    if(pth == pth->service->outdaemon)
                     {
-                        WARN_LOGGER(pth->logger, "wiodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                        WARN_LOGGER(pth->logger, "outdaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                     }
                     else
                     {
@@ -291,11 +291,12 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
                 " on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port,
                 conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         conn->message_queue = pth->message_queue;
-        conn->ioqmessage    = pth->ioqmessage;
-        conn->iodaemon      = pth->iodaemon;
-        conn->wiodaemon     = pth->wiodaemon;
+        conn->indaemon      = pth->indaemon;
+        conn->inqmessage    = pth->inqmessage;
         conn->evbase        = pth->evbase;
-        conn->wevbase       = pth->wevbase;
+        conn->outdaemon     = pth->outdaemon;
+        conn->outqmessage    = pth->outqmessage;
+        conn->outevbase     = pth->outevbase;
         conn->parent        = pth;
         //conn->xqueue        = pth->xqueue;
         if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
@@ -315,7 +316,6 @@ int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && pth->service)
     {
-        event_destroy(&(conn->wevent));
         event_destroy(&(conn->event));
         pth->service->overconn(pth->service, conn);
         ret = 0;
@@ -326,15 +326,15 @@ int procthread_over_connection(PROCTHREAD *pth, CONN *conn)
 /* procthread shut connection */
 int procthread_shut_connection(PROCTHREAD *pth, CONN *conn)
 {
-    PROCTHREAD *iodaemon = NULL;
+    PROCTHREAD *indaemon = NULL;
     int ret = -1;
 
     if(pth && pth->service)
     {
-        if((iodaemon = pth->iodaemon) && iodaemon->message_queue)
+        if((indaemon = pth->indaemon) && indaemon->message_queue)
         {
-            qmessage_push(iodaemon->message_queue, MESSAGE_OVER, conn->index, conn->fd, 
-                -1, iodaemon, conn, NULL);
+            qmessage_push(indaemon->message_queue, MESSAGE_OVER, conn->index, conn->fd, 
+                -1, indaemon, conn, NULL);
         }
         else
         {

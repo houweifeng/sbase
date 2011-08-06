@@ -41,8 +41,10 @@ int conn_read_buffer(CONN *conn)
 	else return MMB_READ(conn->buffer, conn->fd);
 }
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
-#define IODAEMON(conn) ((PROCTHREAD *)(conn->iodaemon))
-#define IOWAKEUP(conn) {if(IODAEMON(conn))IODAEMON(conn)->wakeup(IODAEMON(conn));}            
+#define INDAEMON(conn) ((PROCTHREAD *)(conn->indaemon))
+#define INWAKEUP(conn) {if(INDAEMON(conn))INDAEMON(conn)->wakeup(INDAEMON(conn));}            
+#define OUTDAEMON(conn) ((PROCTHREAD *)(conn->outdaemon))
+#define OUTWAKEUP(conn) {if(OUTDAEMON(conn))OUTDAEMON(conn)->wakeup(OUTDAEMON(conn));}            
 /*
 #define SENDQ(conn) conn->xqueue
 #define SENDQINIT(conn) do{}while(0) 
@@ -74,9 +76,39 @@ int conn_read_buffer(CONN *conn)
     if(conn == NULL) return ;                                                               \
     if(conn->d_state & (_state_)) return ;                                                  \
 }
+#define CONN_OUTEVENT_ADD(conn)                                                             \
+do                                                                                          \
+{                                                                                           \
+    if(conn)                                                                                \
+    {                                                                                       \
+        if(conn->outevbase)                                                                 \
+        {                                                                                   \
+            event_add(&(conn->outevent), E_WRITE);                                          \
+        }                                                                                   \
+        else                                                                                \
+        {                                                                                   \
+            event_add(&(conn->event), E_WRITE);                                             \
+        }                                                                                   \
+    }                                                                                       \
+}while(0)
+#define CONN_OUTEVENT_DEL(conn)                                                             \
+do                                                                                          \
+{                                                                                           \
+    if(conn)                                                                                \
+    {                                                                                       \
+        if(conn->outevbase)                                                                 \
+        {                                                                                   \
+            event_del(&(conn->outevent), E_WRITE);                                          \
+        }                                                                                   \
+        else                                                                                \
+        {                                                                                   \
+            event_del(&(conn->event), E_WRITE);                                             \
+        }                                                                                   \
+    }                                                                                       \
+}while(0)
 #define CONN_READY_WRITE(conn)                                                              \
 {                                                                                           \
-    if(SENDQTOTAL(conn) > 0) event_add(&(conn->event), E_WRITE);                            \
+    if(SENDQTOTAL(conn) > 0){CONN_OUTEVENT_ADD(conn);}                                      \
 }                                                                                           
 
 #define CONN_STATE_RESET(conn)                                                              \
@@ -167,14 +199,14 @@ do                                                                              
     }                                                                                       \
 }while(0)
 
-#define PUSH_IOQMESSAGE(conn, msgid)                                                        \
+#define PUSH_INQMESSAGE(conn, msgid)                                                        \
 do                                                                                          \
 {                                                                                           \
     if(conn && conn->d_state == 0)                                                          \
     {                                                                                       \
-        qmessage_push(conn->ioqmessage, msgid,                                              \
-                conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);                     \
-        IOWAKEUP(conn);                                                                     \
+        qmessage_push(conn->inqmessage, msgid,                                              \
+                conn->index, conn->fd, -1, conn->indaemon, conn, NULL);                     \
+        INWAKEUP(conn);                                                                     \
     }                                                                                       \
 }while(0)
 #define SESSION_RESET(conn)                                                                 \
@@ -184,7 +216,7 @@ do                                                                              
     MMB_RESET(conn->cache);                                                                 \
     chunk_reset(&conn->chunk);                                                              \
     CONN_STATE_RESET(conn);                                                                 \
-    if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                 \
+    if(MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}                 \
 }while(0)
     //else{CONN_PUSH_MESSAGE(conn, MESSAGE_END);}                                             
 /* chunk pop/push */
@@ -216,19 +248,54 @@ void conn_chunk_handler(CONN *conn)
 }
 
 /* over */
-void conn_shut_handler(CONN *conn)
+void conn_overout_handler(CONN *conn)
 {
     if(conn)
     {
-        if(conn->iodaemon)
+        if(conn->outdaemon) event_destroy(&(conn->outevent));
+        if(conn->indaemon)
         {
             DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
-            //event_destroy(&(conn->wevent));
-            qmessage_push(conn->ioqmessage, MESSAGE_OVER,
-                    conn->index, conn->fd, -1, conn->iodaemon, conn, NULL);
-            IOWAKEUP(conn);
+            qmessage_push(conn->inqmessage, MESSAGE_OVER,
+                    conn->index, conn->fd, -1, conn->indaemon, conn, NULL);
+            INWAKEUP(conn);
+        }
+        else
+        {
+            DEBUG_LOGGER(conn->logger, "Ready for quit-connection[%s:%d] local[%s:%d] via %d ",
+                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
+                        conn->fd)
+            qmessage_push(conn->message_queue, MESSAGE_QUIT, 
+                    conn->index, conn->fd, -1, conn->parent, conn, NULL);
+        }
+    }
+    return ;
+}
+
+/* shut */
+void conn_shut_handler(CONN *conn)
+{
+    if(conn)
+    {
+        if(conn->outdaemon)
+        {
+            DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
+                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
+                        conn->fd);
+            qmessage_push(conn->outqmessage, MESSAGE_OVEROUT,
+                    conn->index, conn->fd, -1, conn->outdaemon, conn, NULL);
+            OUTWAKEUP(conn);
+        }
+        else if(conn->indaemon)
+        {
+            DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
+                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
+                        conn->fd);
+            qmessage_push(conn->inqmessage, MESSAGE_OVER,
+                    conn->index, conn->fd, -1, conn->indaemon, conn, NULL);
+            INWAKEUP(conn);
         }
         else
         {
@@ -251,11 +318,15 @@ void conn_end_handler(CONN *conn)
     if(conn)
     {
         if((n = SENDQTOTAL(conn)) > 0) 
-            event_add(&(conn->event), E_WRITE);
+        {
+            CONN_OUTEVENT_ADD(conn);
+        }
         else 
-            event_del(&(conn->event), E_WRITE);
+        {
+            CONN_OUTEVENT_DEL(conn);
+        }
         //ACCESS_LOGGER(conn->logger, "end_handler conn[%p]->event{ev_flags:%d old_ev_flags:%d evbase:%p} qtotal:%d/%d nbufer:%d remote[%s:%d] local[%s:%d] via %d", conn, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base, SENDQTOTAL(conn), n, MMB_NDATA(conn->buffer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        if(conn->s_state == 0 && MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}
+        if(conn->s_state == 0 && MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}
         DEBUG_LOGGER(conn->logger, "end_handler conn[%p]->event{ev_flags:%d old_ev_flags:%d evbase:%p} qtotal:%d nbufer:%d remote[%s:%d] local[%s:%d] via %d", conn, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base, SENDQTOTAL(conn), MMB_NDATA(conn->buffer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
     }
     return ;
@@ -283,8 +354,8 @@ void conn_output_handler(int event_fd, int event, void *arg)
             else
                 ret = conn->write_handler(conn);
             //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
-            if(ret < 0)return ;
             CONN_UPDATE_EVTIMER(conn, evtimer, evid);
+            if(ret < 0)return ;
         }
     }
     return ;
@@ -346,7 +417,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d END", E_READ, conn, conn->d_state, event_fd);
                 if(ret < 0)return ;
             }
-            if(event & E_WRITE)
+            if((event & E_WRITE) && conn->outevbase == NULL)
             {
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d START", E_WRITE, conn, conn->d_state, event_fd);
             if(PPARENT(conn) && PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_WHILE_SEND))
@@ -380,6 +451,14 @@ int conn_set(CONN *conn)
         conn->evid = -1;
         if(conn->parent && conn->session.timeout > 0) conn->set_timeout(conn, conn->session.timeout);
         SENDQNEW(conn);
+        if(conn->outevbase)
+        {
+            flag = E_WRITE|E_PERSIST;
+            if(PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_EVENT_LOCK))
+                flag |= E_LOCK;
+            event_set(&(conn->outevent), conn->fd, flag, (void *)conn, &conn_output_handler);
+            conn->outevbase->add(conn->outevbase, &(conn->outevent));
+        }
         if(conn->evbase)
         {
             flag = E_READ|E_PERSIST;
@@ -392,13 +471,7 @@ int conn_set(CONN *conn)
                     conn->remote_ip, conn->remote_port, conn->d_state,
                     conn->local_ip, conn->local_port, conn->fd);
             conn->evbase->add(conn->evbase, &(conn->event));
-            /*
-            flag = E_WRITE|E_PERSIST;
-            if(PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_EVENT_LOCK))
-                flag |= E_LOCK;
-            event_set(&(conn->wevent), conn->fd, flag, (void *)conn, &conn_output_handler);
-            conn->evbase->add(conn->wevbase, &(conn->wevent));
-            */
+
             return 0;
         }
         else
@@ -759,7 +832,7 @@ int conn__push__message(CONN *conn, int message_id)
     {
         if((parent = (PROCTHREAD *)conn->parent))
         {
-            DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to ioqmessage[%p] "
+            DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to inqmessage[%p] "
                     "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
                     messagelist[message_id], PPL(conn->message_queue), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
@@ -933,7 +1006,7 @@ int conn_write_handler(CONN *conn)
                             if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
                             /* Terminate connection */
-                            event_del(&(conn->wevent), E_WRITE);
+                            CONN_OUTEVENT_DEL(conn);
                             conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
                         }
                         return -1;
@@ -967,7 +1040,7 @@ int conn_write_handler(CONN *conn)
                 }
                 if(chunk_over)
                 {
-                    event_del(&(conn->event), E_WRITE);
+                    CONN_OUTEVENT_DEL(conn);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
                     //ret = 0;break;
                     ret = 0;
@@ -976,7 +1049,6 @@ int conn_write_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        //event_del(&(conn->event), E_WRITE);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         //ret = 0; break;
                         ret = 0;
@@ -989,11 +1061,9 @@ int conn_write_handler(CONN *conn)
         {
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
             ret = 0;
-            //event_del(&(conn->event), E_WRITE);
-            //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
         }
-        //if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                 
+        //if(MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}                 
     }
     return ret;
 }
@@ -1075,7 +1145,7 @@ int conn_send_handler(CONN *conn)
                 }
                 if(chunk_over)
                 {
-                    event_del(&(conn->event), E_WRITE);
+                    CONN_OUTEVENT_DEL(conn);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
                     ret = 0;break;
                 }
@@ -1083,7 +1153,6 @@ int conn_send_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        //event_del(&(conn->event), E_WRITE);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         ret = 0; break;
                     }
@@ -1095,11 +1164,9 @@ int conn_send_handler(CONN *conn)
         {
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
             ret = 0;
-            //event_del(&(conn->wevent), E_WRITE);
-            //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
         }
-        //if(MMB_NDATA(conn->buffer) > 0){PUSH_IOQMESSAGE(conn, MESSAGE_BUFFER);}                 
+        //if(MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}                 
     }
     return ret;
 }
@@ -1481,7 +1548,7 @@ int conn_recv_chunk(CONN *conn, int size)
         }
         else
         {
-            PUSH_IOQMESSAGE(conn, MESSAGE_CHUNK);
+            PUSH_INQMESSAGE(conn, MESSAGE_CHUNK);
         }
         ret = 0;
     }
@@ -1509,7 +1576,7 @@ int conn_recv2_chunk(CONN *conn, int size, char *data, int ndata)
         }
         else
         {
-            PUSH_IOQMESSAGE(conn, MESSAGE_CHUNK);
+            PUSH_INQMESSAGE(conn, MESSAGE_CHUNK);
         }
         ret = 0;
     }
@@ -1557,10 +1624,12 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
         //chunk_set_bsize(&conn->chunk, conn->session.buffer_size);
         conn->s_state = S_STATE_READ_CHUNK;
         if(conn->d_state & D_STATE_CLOSE)
+        {
             conn->chunk_reader(conn);
+        }
         else
         {
-            PUSH_IOQMESSAGE(conn, MESSAGE_CHUNK);
+            PUSH_INQMESSAGE(conn, MESSAGE_CHUNK);
         }
         ret = 0;
     }
@@ -1752,6 +1821,7 @@ void conn_reset(CONN *conn)
         conn->sent_data_total = 0ll;
         /* event */
         conn->evbase = NULL;
+        conn->outevbase = NULL;
 
         /* event timer */
         conn->evid = -1;
@@ -1765,7 +1835,8 @@ void conn_reset(CONN *conn)
         chunk_reset(&conn->chunk);
         /* timer, logger, message_queue and queue */
         conn->message_queue = NULL;
-        conn->ioqmessage = NULL;
+        conn->inqmessage = NULL;
+        conn->outqmessage = NULL;
         if(SENDQ(conn))
         {
             while((cp = (CHUNK *)SENDQPOP(conn)))
@@ -1891,6 +1962,7 @@ CONN *conn_init()
         conn->chunk_handler         = conn_chunk_handler;
         conn->end_handler           = conn_end_handler;
         conn->shut_handler          = conn_shut_handler;
+        conn->overout_handler       = conn_overout_handler;
         conn->set_session           = conn_set_session;
         conn->over_session          = conn_over_session;
         conn->newtask               = conn_newtask;
