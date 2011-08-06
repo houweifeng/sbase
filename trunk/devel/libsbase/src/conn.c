@@ -281,7 +281,7 @@ void conn_shut_handler(CONN *conn)
     {
         if(conn->outdaemon)
         {
-            DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
+            DEBUG_LOGGER(conn->logger, "Ready for shut-connection-out[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
             qmessage_push(conn->outqmessage, MESSAGE_OVEROUT,

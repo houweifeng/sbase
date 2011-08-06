@@ -307,9 +307,9 @@ running_threads:
                     x = service->nprocthreads % service->niodaemons;
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
                     service->procthreads[i]->indaemon = service->iodaemons[x];
-                    service->procthreads[i]->outdaemon = service->outdaemon;
-                    service->procthreads[i]->outevbase = service->outdaemon->evbase;
                     service->procthreads[i]->inqmessage = service->iodaemons[x]->message_queue;
+                    service->procthreads[i]->outevbase = service->outdaemon->evbase;
+                    service->procthreads[i]->outdaemon = service->outdaemon;
                     service->procthreads[i]->outqmessage = service->outdaemon->message_queue;
                     ret = 0;
                 }
