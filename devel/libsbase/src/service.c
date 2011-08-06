@@ -226,7 +226,8 @@ running_proc:
             {
                 if(service->daemon->message_queue) qmessage_clean(service->daemon->message_queue);
                 service->daemon->message_queue = service->message_queue;
-                service->daemon->ioqmessage = service->message_queue;
+                service->daemon->inqmessage = service->message_queue;
+                service->daemon->outqmessage = service->message_queue;
                 service->daemon->evbase = service->evbase;
             }
             //DEBUG_LOGGER(service->logger, "sbase->q[%p] service->q[%p] daemon->q[%p]", service->sbase->message_queue, service->message_queue, service->daemon->message_queue);
@@ -279,12 +280,12 @@ running_threads:
                         service->iodaemons[i], service->logger, iocpuset);
             }
         }
-        /* wiodaemon */ 
-        if((service->wiodaemon = procthread_init(service->cond)))
+        /* outdaemon */ 
+        if((service->outdaemon = procthread_init(service->cond)))
         {
-            PROCTHREAD_SET(service, service->wiodaemon);
-            service->wiodaemon->use_cond_wait = 0;
-            NEW_PROCTHREAD(service, "wiodaemon", 0, service->wiodaemon->threadid, service->wiodaemon, service->logger, iocpuset);
+            PROCTHREAD_SET(service, service->outdaemon);
+            service->outdaemon->use_cond_wait = 0;
+            NEW_PROCTHREAD(service, "outdaemon", 0, service->outdaemon->threadid, service->outdaemon, service->logger, iocpuset);
             ret = 0;
         }
         else
@@ -305,10 +306,11 @@ running_threads:
                     PROCTHREAD_SET(service, service->procthreads[i]);
                     x = service->nprocthreads % service->niodaemons;
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
-                    service->procthreads[i]->iodaemon = service->iodaemons[x];
-                    service->procthreads[i]->wiodaemon = service->wiodaemon;
-                    service->procthreads[i]->wevbase = service->wiodaemon->evbase;
-                    service->procthreads[i]->ioqmessage = service->iodaemons[x]->message_queue;
+                    service->procthreads[i]->indaemon = service->iodaemons[x];
+                    service->procthreads[i]->outdaemon = service->outdaemon;
+                    service->procthreads[i]->outevbase = service->outdaemon->evbase;
+                    service->procthreads[i]->inqmessage = service->iodaemons[x]->message_queue;
+                    service->procthreads[i]->outqmessage = service->outdaemon->message_queue;
                     ret = 0;
                 }
                 else
@@ -785,9 +787,6 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 index = fd % service->nprocthreads;
                 if(service->procthreads && (procthread = service->procthreads[index])) 
                 {
-                    //conn->parent = procthread;
-                    //conn->ioqmessage = procthread->ioqmessage;
-                    //conn->message_queue = procthread->message_queue;
                     if(status == CONN_STATUS_FREE)
                     {
                         procthread->add_connection(procthread, conn);   
@@ -1444,14 +1443,14 @@ void service_stop(SERVICE *service)
             }
             //DEBUG_LOGGER(service->logger, "over for stop iodaemons");
         }
-        //wiodaemon
-        if(service->wiodaemon)
+        //outdaemon
+        if(service->outdaemon)
         {
-            WARN_LOGGER(service->logger, "Ready for stop threads[wiodaemon]");
-            service->wiodaemon->stop(service->wiodaemon);
+            WARN_LOGGER(service->logger, "Ready for stop threads[outdaemon]");
+            service->outdaemon->stop(service->outdaemon);
             if(service->working_mode == WORKING_THREAD)
             {
-                PROCTHREAD_EXIT(service->wiodaemon->threadid, NULL);
+                PROCTHREAD_EXIT(service->outdaemon->threadid, NULL);
             }
         }
         //threads
@@ -1601,7 +1600,7 @@ void service_clean(SERVICE *service)
         {
             MUTEX_DESTROY(service->groups[i].mutex);
         }
-        if(service->wiodaemon) service->wiodaemon->clean(service->wiodaemon);
+        if(service->outdaemon) service->outdaemon->clean(service->outdaemon);
         if(service->niodaemons > 0)
         {
             for(i = 0; i < service->ndaemons; i++)

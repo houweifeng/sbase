@@ -281,7 +281,7 @@ typedef struct _SERVICE
     /* working mode */
     struct _PROCTHREAD *daemon;
     struct _PROCTHREAD *acceptor;
-    struct _PROCTHREAD *wiodaemon;
+    struct _PROCTHREAD *outdaemon;
     struct _PROCTHREAD *iodaemons[SB_THREADS_MAX];
     struct _PROCTHREAD *procthreads[SB_THREADS_MAX];
     struct _PROCTHREAD *daemons[SB_THREADS_MAX];
@@ -395,14 +395,15 @@ typedef struct _PROCTHREAD
 
     /* message queue */
     void *xqueue;
-    void *iodaemon;
-    void *wiodaemon;
-    void *ioqmessage;
+    void *indaemon;
+    void *outdaemon;
+    void *inqmessage;
+    void *outqmessage;
     void *message_queue;
 
     /* evbase */
     EVBASE *evbase;
-    EVBASE *wevbase;
+    EVBASE *outevbase;
 
     /* connection */
     struct _CONN **connections;
@@ -461,7 +462,7 @@ typedef struct _CONN
     /* xid */
     int xids[SB_XIDS_MAX];
     EVENT event;
-    EVENT wevent;
+    EVENT outevent;
     /* buffer */
     MMBLOCK buffer;
     MMBLOCK packet;
@@ -472,7 +473,7 @@ typedef struct _CONN
     /* evbase */
     void *mutex;
     EVBASE *evbase;
-    EVBASE *wevbase;
+    EVBASE *outevbase;
     void *parent;
     void *queue;
     void *xqueue;
@@ -483,9 +484,10 @@ typedef struct _CONN
     /* logger and timer */
     void *logger;
     /* message queue */
-    void *iodaemon;
-    void *wiodaemon;
-    void *ioqmessage;
+    void *indaemon;
+    void *outdaemon;
+    void *inqmessage;
+    void *outqmessage;
     void *message_queue;
     int (*set)(struct _CONN *);
     int (*close)(struct _CONN *);
@@ -541,6 +543,7 @@ typedef struct _CONN
     void(*chunk_handler)(struct _CONN *);
     void(*end_handler)(struct _CONN *);
     void(*shut_handler)(struct _CONN *);
+    void(*overout_handler)(struct _CONN *);
     
     /* normal */
     void (*reset_xids)(struct _CONN *);
