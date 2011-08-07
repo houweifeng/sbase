@@ -453,7 +453,7 @@ int conn_set(CONN *conn)
         SENDQNEW(conn);
         if(conn->outevbase)
         {
-            flag = E_WRITE|E_PERSIST;
+            flag = E_PERSIST;
             if(PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_EVENT_LOCK))
                 flag |= E_LOCK;
             event_set(&(conn->outevent), conn->fd, flag, (void *)conn, &conn_output_handler);
@@ -1049,6 +1049,7 @@ int conn_write_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
+                        //CONN_OUTEVENT_DEL(conn);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         //ret = 0; break;
                         ret = 0;
@@ -1060,6 +1061,8 @@ int conn_write_handler(CONN *conn)
         else
         {
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
+            //CONN_OUTEVENT_DEL(conn);
+            //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
             ret = 0;
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
         }
@@ -1153,6 +1156,7 @@ int conn_send_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
+                        //CONN_OUTEVENT_DEL(conn);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         ret = 0; break;
                     }
@@ -1163,6 +1167,8 @@ int conn_send_handler(CONN *conn)
         else
         {
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
+            //CONN_OUTEVENT_DEL(conn);
+            //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
             ret = 0;
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
         }

@@ -181,23 +181,25 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
             if(fd >= 0 && fd < evbase->allowed && evbase->evlist[fd] && ev == evbase->evlist[fd])
             {
                 ev_flags = 0;
-                if(flags & (EPOLLHUP|EPOLLERR|EPOLLET))
+                if(flags & (EPOLLHUP|EPOLLERR))
                 {
                     ev_flags = E_READ|E_WRITE;
                 }
                 else
                 {
-                    if(flags & (EPOLLIN|EPOLLPRI)) ev_flags |= E_READ;
+                    if(flags & EPOLLIN) ev_flags |= E_READ;
                     if(flags & EPOLLOUT) ev_flags |= E_WRITE;
                 }
-                if(ev_flags)
+                if((ev_flags &= ev->ev_flags))
                 {
                     event_active(ev, ev_flags);
                 }
+                /*
                 else
                 {
                     fprintf(stderr, "fd:%d evflags:%d event:%d\n", fd, ev->ev_flags, ev_flags); 
                 }
+                */
             }
         }
         //WARN_LOG("over_loop()=> %d", n);

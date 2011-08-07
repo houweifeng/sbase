@@ -30,7 +30,7 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
         }
         else
         {
-            event_del(&(pth->event), E_WRITE);
+            if(QMTOTAL(pth->message_queue) < 1) event_del(&(pth->event), E_WRITE);
         }
     }
     return ;
@@ -295,7 +295,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->inqmessage    = pth->inqmessage;
         conn->evbase        = pth->evbase;
         conn->outdaemon     = pth->outdaemon;
-        conn->outqmessage    = pth->outqmessage;
+        conn->outqmessage   = pth->outqmessage;
         conn->outevbase     = pth->outevbase;
         conn->parent        = pth;
         //conn->xqueue        = pth->xqueue;

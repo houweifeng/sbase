@@ -205,7 +205,7 @@ int evkqueue_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                 if(kqev->filter == EVFILT_READ)	ev_flags |= E_READ;
                 else if(kqev->filter == EVFILT_WRITE) ev_flags |= E_WRITE;
                 if(ev_flags == 0) continue;
-                if(ev == evbase->evlist[kqev->ident]) 
+                if(ev == evbase->evlist[kqev->ident] && (ev_flags &= ev->ev_flags)) 
                 {
                     event_active(ev, ev_flags);
                 }
