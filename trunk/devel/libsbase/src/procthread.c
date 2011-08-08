@@ -30,7 +30,8 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
         }
         else
         {
-            if(QMTOTAL(pth->message_queue) < 1) event_del(&(pth->event), E_WRITE);
+            if(QMTOTAL(pth->message_queue) < 1) 
+                event_del(&(pth->event), E_WRITE);
         }
     }
     return ;
@@ -57,6 +58,7 @@ void procthread_run(void *arg)
     struct timeval tv = {0,0};
     struct timespec ts = {0, 0};
     int k = 0, n = 0;
+    char line[1024];
 
     if(pth)
     {
@@ -76,6 +78,21 @@ void procthread_run(void *arg)
                 event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
                         (void *)pth, (void *)&procthread_event_handler);
                 pth->evbase->add(pth->evbase, &(pth->event));
+                /*
+                if(pth->service->logger && PLOG(pth->service->logger)->level > 0)
+                {
+                    if(pth == pth->service->outdaemon)
+                    {
+                        sprintf(line, "/tmp/%s_outdaemon.log", pth->service->service_name);
+                        evbase_set_logfile(pth->evbase, line);
+                    }
+                    else
+                    {
+                        sprintf(line, "/tmp/%s_indaemon.log", pth->service->service_name);
+                        evbase_set_logfile(pth->evbase, line);
+                    }
+                }
+                */
             }
             do
             {

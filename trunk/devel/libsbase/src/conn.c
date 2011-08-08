@@ -108,7 +108,7 @@ do                                                                              
 }while(0)
 #define CONN_READY_WRITE(conn)                                                              \
 {                                                                                           \
-    if(SENDQTOTAL(conn) > 0){CONN_OUTEVENT_ADD(conn);}                                      \
+    if(SENDQTOTAL(conn) < 1){CONN_OUTEVENT_ADD(conn);}                                      \
 }                                                                                           
 
 #define CONN_STATE_RESET(conn)                                                              \
@@ -1604,8 +1604,8 @@ int conn_push_chunk(CONN *conn, void *data, int size)
         {
             chunk_mem(cp, size);
             chunk_mem_copy(cp, data, size);
-            SENDQPUSH(conn, cp);
             CONN_READY_WRITE(conn);
+            SENDQPUSH(conn, cp);
             DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d queue[%p] "
                     "total:%d on %s:%d via %d", size, cp->bsize,conn->remote_ip, 
                     conn->remote_port, SENDQ(conn), SENDQTOTAL(conn), 
@@ -1658,8 +1658,8 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
             chunk_file(cp, filename, offset, size);
-            SENDQPUSH(conn, cp);
             CONN_READY_WRITE(conn);
+            SENDQPUSH(conn, cp);
             DEBUG_LOGGER(conn->logger, "Pushed file[%s] [%lld][%lld] to %s:%d "
                     "queue total %d on %s:%d via %d ", filename, LL(offset), LL(size), 
                     conn->remote_ip, conn->remote_port, SENDQTOTAL(conn), 
@@ -1680,8 +1680,8 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
     if(conn && (cp = (CHUNK *)chunk))
     {
         CHK(cp)->left = len;
-        SENDQPUSH(conn, cp);
         CONN_READY_WRITE(conn);
+        SENDQPUSH(conn, cp);
         DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d queue[%p] "
                 "total %d on %s:%d via %d", len, CHK(cp)->bsize,conn->remote_ip,conn->remote_port, 
                 SENDQ(conn), SENDQTOTAL(conn), conn->local_ip, conn->local_port, conn->fd);
@@ -1702,8 +1702,8 @@ int conn_over_chunk(CONN *conn)
         if(PPARENT(conn) && PPARENT(conn)->service 
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
-            SENDQPUSH(conn, cp);
             CONN_READY_WRITE(conn);
+            SENDQPUSH(conn, cp);
             ret = 0;
         }
         else 
