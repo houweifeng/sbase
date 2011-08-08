@@ -69,6 +69,18 @@ int evbase_set_evops(EVBASE *evbase, int evopid)
     return -1;
 }
 
+/*
+int evbase_set_logfile(EVBASE *evbase, char *logfile)
+{
+    if(evbase && logfile)
+    {
+        LOGGER_INIT(evbase->logger, logfile);
+        return 0;
+    }
+    return -1;
+}
+*/
+
 /* Initialize evbase */
 EVBASE *evbase_init(int use_lock)
 {
@@ -206,14 +218,14 @@ void event_add(EVENT *event, int flags)
         //if((flags & event->ev_flags) != flags)
         if(flags)
         {
-            //if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
+            //WARN_LOGGER(event->ev_base->logger, "ev_fd:%d add_event:%d ev_flags:%d old_ev_flags:%d", event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
             event->old_ev_flags = event->ev_flags;
             event->ev_flags |= flags;
             if(event->ev_base && event->ev_base->update)
             {
                 event->ev_base->update(event->ev_base, event);
             }
-            //if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
+            //WARN_LOGGER(event->ev_base->logger, "ev_fd:%d add_event:%d ev_flags:%d old_ev_flags:%d", event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
         }
         MUTEX_UNLOCK(event->mutex);
 	}
@@ -229,14 +241,14 @@ void event_del(EVENT *event, int flags)
 		//if((flags & event->ev_flags))
         if(flags)
 		{
-            //if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
+            //WARN_LOGGER(event->ev_base->logger, "ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d", event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
             event->old_ev_flags = event->ev_flags;
 			event->ev_flags &= ~flags;
             if(event->ev_base && event->ev_base->update)
 			{
                 event->ev_base->update(event->ev_base, event);
 			}
-            //if(event->ev_flags & E_LOCK) fprintf(stdout, "%s::%d ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d\n", __FILE__, __LINE__, event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
+            //WARN_LOGGER(event->ev_base->logger, "ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d", event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
 		}
         MUTEX_UNLOCK(event->mutex);
 	}	
