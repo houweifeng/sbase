@@ -20,11 +20,11 @@ if test "$havepthread" = "yes" ; then
 fi
 
 #semaphore
-havesemaphore=no
-AC_CHECK_LIB(c, sem_timedwait, havesemaphore=yes)
-if test "$havesemaphore" = "yes" ; then
-    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
-fi
+#havesemaphore=no
+#AC_CHECK_LIB(c, sem_timedwait, havesemaphore=yes)
+#if test "$havesemaphore" = "yes" ; then
+#    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+#fi
 
 #check port
 haveevport=no
