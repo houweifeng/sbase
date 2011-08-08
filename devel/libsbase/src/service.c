@@ -308,9 +308,12 @@ running_threads:
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
                     service->procthreads[i]->indaemon = service->iodaemons[x];
                     service->procthreads[i]->inqmessage = service->iodaemons[x]->message_queue;
-                    service->procthreads[i]->outevbase = service->outdaemon->evbase;
-                    service->procthreads[i]->outdaemon = service->outdaemon;
-                    service->procthreads[i]->outqmessage = service->outdaemon->message_queue;
+                    if(service->outdaemon)
+                    {
+                        service->procthreads[i]->outevbase = service->outdaemon->evbase;
+                        service->procthreads[i]->outdaemon = service->outdaemon;
+                        service->procthreads[i]->outqmessage = service->outdaemon->message_queue;
+                    }
                     ret = 0;
                 }
                 else
@@ -1045,30 +1048,6 @@ void service_overconn(SERVICE *service, CONN *conn)
     return ;
 }
 
-/* pop chunk from service  */
-CHUNK *service_popchunk(SERVICE *service)
-{
-    CHUNK *cp = NULL;
-    int x = 0;
-
-    if(service && service->lock == 0 && service->qchunks)
-    {
-        MUTEX_LOCK(service->mutex);
-        if(service->nqchunks > 0 && (x = --(service->nqchunks)) >= 0 
-                && (cp = service->qchunks[x]))
-        {
-            service->qchunks[x] = NULL;
-        }
-        else
-        {
-            x = -1;
-            service->nchunks++;
-        }
-        MUTEX_UNLOCK(service->mutex);
-        if(x == -1) cp = chunk_init();
-    }
-    return cp;
-}
 
 /* push to qconns */
 int service_pushtoq(SERVICE *service, CONN *conn)
@@ -1118,6 +1097,32 @@ CONN *service_popfromq(SERVICE *service)
     return conn;
 }
 
+/* pop chunk from service  */
+CHUNK *service_popchunk(SERVICE *service)
+{
+    CHUNK *cp = NULL;
+    int x = 0;
+
+    if(service && service->lock == 0 && service->qchunks)
+    {
+        MUTEX_LOCK(service->mutex);
+        if(service->nqchunks > 0 && (x = --(service->nqchunks)) >= 0 
+                && (cp = service->qchunks[x]))
+        {
+            service->qchunks[x] = NULL;
+        }
+        else
+        {
+            x = -1;
+            service->nchunks++;
+        }
+        MUTEX_UNLOCK(service->mutex);
+        if(x == -1) 
+            cp = chunk_init();
+    }
+    return cp;
+}
+
 /* push chunk to service  */
 int service_pushchunk(SERVICE *service, CHUNK *cp)
 {
@@ -1138,7 +1143,8 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
             service->nchunks--;
         }
         MUTEX_UNLOCK(service->mutex);
-        if(x == -1) chunk_clean(cp);
+        if(x == -1) 
+        chunk_clean(cp);
         ret = 0;
     }
     return ret;
