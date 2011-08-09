@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 500
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -227,7 +228,7 @@ int chunk_read_to_file(void *chunk, int fd)
                 //&& (n = read(fd, CHK(chunk)->data, left)) > 0
                 //&& lseek(CHK(chunk)->fd, CHK(chunk)->offset, SEEK_SET) >= 0 
                 //&& write(CHK(chunk)->fd, CHK(chunk)->data,  n) > 0)
-                && pwrite(CHK(chunk)->fd, CHK(chunk)->data,  n, CHK(chunk)->offset) > 0)
+                && pwrite(CHK(chunk)->fd, CHK(chunk)->data, n, CHK(chunk)->offset) > 0)
         {
             CHK(chunk)->offset += n;
             CHK(chunk)->left -= n; 

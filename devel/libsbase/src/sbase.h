@@ -28,7 +28,7 @@ extern "C" {
 #define SB_INIT_CHUNKS          1024
 #define SB_QCONN_MAX            2048
 #define SB_CHUNKS_MAX           2048
-#define SB_QCHUNK_MAX           64
+#define SB_QBLOCK_MAX           64
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -131,6 +131,11 @@ typedef struct _CHUNK
     char filename[CHUNK_FILE_NAME_MAX];
 }CHUNK;
 #endif
+typedef struct _QBLOCK
+{
+    CHUNK chunk;
+    struct _QBLOCK *next;
+}QBLOCK;
 typedef struct _CB_DATA
 {
     char *data;
@@ -456,12 +461,15 @@ typedef struct _CONN
     int d_state;
     int evid;
     int qid;
-    int nqchunks;
+    int nqleft;
+    int qblock_max;
     /* conenction */
     int  sock_type;
     int  fd;
     int  remote_port;
     int  local_port;
+    int  nsendq;
+    int  bits;
     /* xid */
     int xids[SB_XIDS_MAX];
     EVENT event;
@@ -473,7 +481,10 @@ typedef struct _CONN
     MMBLOCK oob;
     MMBLOCK exchange;
     CHUNK chunk;
-    CHUNK *qchunks[SB_QCHUNK_MAX];
+    QBLOCK qblocks[SB_QBLOCK_MAX];
+    QBLOCK *qleft[SB_QBLOCK_MAX];
+    QBLOCK *qhead;
+    QBLOCK *qtail;
     /* evbase */
     void *mutex;
     EVBASE *evbase;
