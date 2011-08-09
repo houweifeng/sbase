@@ -475,7 +475,10 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 if(PPARENT(conn) && PPARENT(conn)->service)
                     PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
                 event_del(&(conn->event), E_WRITE);
-                if(conn->session.ok_handler) conn->session.ok_handler(conn);
+                if(conn->session.ok_handler) 
+                {
+                    conn->session.ok_handler(conn);
+                }
                 return ;
             }
             if(conn->ssl) 
@@ -1125,7 +1128,7 @@ int conn_write_handler(CONN *conn)
                     if(SENDQTOTAL(conn) < 1) 
                     {
                         //CONN_OUTEVENT_DESTROY(conn);
-                        //CONN_OUTEVENT_DEL(conn);
+                        CONN_OUTEVENT_DEL(conn);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         //ret = 0; break;
                         ret = 0;
@@ -1235,7 +1238,7 @@ int conn_send_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        //CONN_OUTEVENT_DEL(conn);
+                        CONN_OUTEVENT_DEL(conn);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         ret = 0; break;
                     }
@@ -1678,7 +1681,7 @@ int conn_chunk_reader(CONN *conn)
     {
         //MUTEX_LOCK(conn->mutex);
         ret = conn__read__chunk(conn);
-        MUTEX_UNLOCK(conn->mutex);
+        //MUTEX_UNLOCK(conn->mutex);
     }
     return ret;
 }
