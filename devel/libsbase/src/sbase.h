@@ -42,6 +42,7 @@ extern "C" {
 #define SB_EVENT_LOCK           0x80
 #define SB_WHILE_SEND           0x100
 #define SB_SO_LINGER            0x200
+#define SB_USE_OUTDAEMON        0x400
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01

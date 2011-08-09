@@ -6,6 +6,7 @@
 #include <sys/epoll.h>
 #include <sys/resource.h>
 #include <fcntl.h>
+#include "logger.h"
 //#include "log.h"
 #include "mutex.h"
 /* Initialize evepoll  */
@@ -56,8 +57,8 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
         {
             ev_flags |= EPOLLET;
         }
-        ev_flags |= EPOLLERR | EPOLLHUP;
-        if(add)
+        //ev_flags |= EPOLLERR | EPOLLHUP;
+        //if(add)
         {
             op = EPOLL_CTL_ADD; 
             memset(&ep_event, 0, sizeof(struct epoll_event));
@@ -90,6 +91,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
     if(evbase && event && event->ev_fd >= 0 && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
+        UPDATE_EVENT_FD(evbase, event);
         if(event->ev_flags & E_READ)
         {
             ev_flags |= EPOLLIN;
@@ -102,7 +104,7 @@ int evepoll_update(EVBASE *evbase, EVENT *event)
         {
             ev_flags |= EPOLLET;
         }
-        ev_flags |= EPOLLERR | EPOLLHUP;
+        //ev_flags |= EPOLLERR | EPOLLHUP;
         op = EPOLL_CTL_MOD;
         if(evbase->evlist[event->ev_fd] == NULL) op = EPOLL_CTL_ADD;
         memset(&ep_event, 0, sizeof(struct epoll_event));
@@ -191,15 +193,14 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                     if(flags & EPOLLOUT) ev_flags |= E_WRITE;
                 }
                 if((ev_flags &= ev->ev_flags))
+                //if(ev_flags)
                 {
                     event_active(ev, ev_flags);
                 }
-                /*
                 else
                 {
-                    fprintf(stderr, "fd:%d evflags:%d event:%d\n", fd, ev->ev_flags, ev_flags); 
+                    WARN_LOGGER(evbase->logger, "fd:%d evflags:%d event:%d", fd, ev->ev_flags, ev_flags); 
                 }
-                */
             }
         }
         //WARN_LOG("over_loop()=> %d", n);
