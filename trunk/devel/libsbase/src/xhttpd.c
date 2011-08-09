@@ -111,7 +111,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
 
     if(conn && dir && path && (dirp = opendir(dir)))
     {
-        if((block = conn->newchunk(httpd, HTTP_VIEW_SIZE)))
+        if((block = conn->newchunk(conn, HTTP_VIEW_SIZE)))
         {
             p = pp = block->data;
             p += sprintf(p, "<html><head><title>Indexes Of %s</title>"
@@ -168,7 +168,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
             p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
             conn->push_chunk(conn, buf, p - buf);
             if(conn->send_chunk(conn, block, len) != 0)
-                conn->freechunk(httpd, (CHUNK *)block);
+                conn->freechunk(conn, block);
             //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
             if(!keepalive) conn->over(conn);
         }

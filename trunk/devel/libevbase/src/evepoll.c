@@ -152,7 +152,7 @@ int evepoll_del(EVBASE *evbase, EVENT *event)
 /* Loop evbase */
 int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
 {
-    int i = 0, n = 0, timeout = -1, flags = 0, ev_flags = 0, fd = 0 ;
+    int i = 0, n = 0, timeout = -1, flags = 0, ev_flags = 0, fd = 0, event = 0;
     struct epoll_event *evp = NULL;
     EVENT *ev = NULL;
 
@@ -192,14 +192,15 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                     if(flags & EPOLLIN) ev_flags |= E_READ;
                     if(flags & EPOLLOUT) ev_flags |= E_WRITE;
                 }
-                if((ev_flags &= ev->ev_flags))
-                //if(ev_flags)
+                event = (ev_flags & ev->ev_flags);
+                //if((ev_flags &= ev->ev_flags))
+                if(event)
                 {
-                    event_active(ev, ev_flags);
+                    event_active(ev, event);
                 }
                 else
                 {
-                    WARN_LOGGER(evbase->logger, "fd:%d evflags:%d event:%d", fd, ev->ev_flags, ev_flags); 
+                    //WARN_LOGGER(evbase->logger, "ev:%p fd:%d evflags:%d event:%d", ev, fd, ev->ev_flags, ev_flags); 
                 }
             }
         }

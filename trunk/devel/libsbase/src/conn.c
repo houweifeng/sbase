@@ -40,6 +40,60 @@ int conn_read_buffer(CONN *conn)
 	if(conn->ssl) return MMB_READ_SSL(conn->buffer, conn->ssl);
 	else return MMB_READ(conn->buffer, conn->fd);
 }
+void conn_pushto_sendq(CONN *conn, CHUNK *cp)
+{
+    QBLOCK *qblock = NULL;
+
+    if(conn && (qblock = (QBLOCK *)cp))
+    {
+        MUTEX_LOCK(conn->mutex);
+        qblock->next = NULL;
+        if(conn->qtail)
+        {
+            conn->qtail->next = qblock;
+            conn->qtail = qblock;
+        }
+        else
+        {
+            conn->qhead = conn->qtail = qblock;
+        }
+        conn->nsendq++;
+        MUTEX_UNLOCK(conn->mutex);
+    }
+    return ;
+}
+
+CHUNK *conn_sendq_head(CONN *conn)
+{
+    CHUNK *chunk = NULL;
+
+    if(conn)
+    {
+        MUTEX_LOCK(conn->mutex);
+        chunk = (CHUNK *)conn->qhead;
+        MUTEX_UNLOCK(conn->mutex);
+    }
+    return chunk;
+}
+
+CHUNK *conn_popfrom_sendq(CONN *conn)
+{
+    CHUNK *chunk = NULL;
+
+    if(conn)
+    {
+        MUTEX_LOCK(conn->mutex);
+        if((chunk = (CHUNK *)conn->qhead)) 
+        {
+            if((conn->qhead = conn->qhead->next) == NULL)
+                conn->qtail = NULL;
+            conn->nsendq--;
+        }
+        MUTEX_UNLOCK(conn->mutex);
+    }
+    return chunk;
+}
+
 #define PPARENT(conn) ((PROCTHREAD *)(conn->parent))
 #define INDAEMON(conn) ((PROCTHREAD *)(conn->indaemon))
 #define INWAKEUP(conn) {if(INDAEMON(conn))INDAEMON(conn)->wakeup(INDAEMON(conn));}            
@@ -55,7 +109,6 @@ int conn_read_buffer(CONN *conn)
 #define SENDQPUSH(conn, ptr) xqueue_push(conn->xqueue, conn->qid, ptr)
 #define SENDQCLOSE(conn) xqueue_close(conn->xqueue, conn->qid)
 #define SENDQCLEAN(conn) do{}while(0)
-*/
 #define SENDQ(conn) conn->queue
 #define SENDQINIT(conn) (conn->queue = queue_init())
 #define SENDQNEW(conn) do{}while(0)
@@ -65,6 +118,15 @@ int conn_read_buffer(CONN *conn)
 #define SENDQPUSH(conn, ptr) queue_push(conn->queue, ptr)
 #define SENDQCLOSE(conn) do{}while(0)
 #define SENDQCLEAN(conn) (queue_clean(conn->queue))
+*/
+#define SENDQ(conn) (conn->qblocks)
+#define SENDQTOTAL(conn) conn->nsendq
+#define SENDQHEAD(conn) conn_sendq_head(conn)
+#define SENDQPOP(conn) conn_popfrom_sendq(conn)
+#define SENDQPUSH(conn, ptr) conn_pushto_sendq(conn, ptr)
+#define SENDQCLOSE(conn) do{}while(0)
+#define SENDQCLEAN(conn) 
+
 
 #define CONN_CHECK_RET(conn, _state_, ret)                                                  \
 {                                                                                           \
@@ -339,7 +401,7 @@ void conn_end_handler(CONN *conn)
         }
         else 
         {
-            //CONN_OUTEVENT_DEL(conn);
+            CONN_OUTEVENT_DEL(conn);
         }
         //ACCESS_LOGGER(conn->logger, "end_handler conn[%p]->event{ev_flags:%d old_ev_flags:%d evbase:%p} qtotal:%d/%d nbufer:%d remote[%s:%d] local[%s:%d] via %d", conn, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base, SENDQTOTAL(conn), n, MMB_NDATA(conn->buffer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->s_state == 0 && MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}
@@ -466,7 +528,7 @@ int conn_set(CONN *conn)
         //timeout
         conn->evid = -1;
         if(conn->parent && conn->session.timeout > 0) conn->set_timeout(conn, conn->session.timeout);
-        SENDQNEW(conn);
+        //SENDQNEW(conn);
         if(conn->outdaemon)
         {
             flag = E_PERSIST;
@@ -607,15 +669,11 @@ int conn_terminate(CONN *conn)
         EVTIMER_DEL(conn->evtimer, conn->evid);
         DEBUG_LOGGER(conn->logger, "terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* clean send queue */
-        while(SENDQTOTAL(conn) > 0)
+        while((cp = (CHUNK *)SENDQPOP(conn)))
         {
-            if((cp = (CHUNK *)SENDQPOP(conn)))
-            {
-                chunk_clean(cp);
-                cp = NULL;
-            }
+            conn_freechunk(conn, (CB_DATA *)cp);
+            cp = NULL;
         }
-        SENDQCLOSE(conn);
         DEBUG_LOGGER(conn->logger, "over-terminateing conn[%p]->d_state:%d queue:%d session[%s:%d] local[%s:%d] via %d", conn, conn->d_state, SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         /* SSL */
 #ifdef HAVE_SSL
@@ -1067,7 +1125,7 @@ int conn_write_handler(CONN *conn)
                     if(SENDQTOTAL(conn) < 1) 
                     {
                         //CONN_OUTEVENT_DESTROY(conn);
-                        CONN_OUTEVENT_DEL(conn);
+                        //CONN_OUTEVENT_DEL(conn);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         //ret = 0; break;
                         ret = 0;
@@ -1177,7 +1235,7 @@ int conn_send_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        CONN_OUTEVENT_DEL(conn);
+                        //CONN_OUTEVENT_DEL(conn);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         ret = 0; break;
                     }
@@ -1543,7 +1601,7 @@ int conn__read__chunk(CONN *conn)
     return ret;
 }
 
-/* newchunk */
+/* pop newchunk */
 CHUNK *conn_popchunk(CONN *conn)
 {
     CHUNK *cp = NULL;
@@ -1552,15 +1610,18 @@ CHUNK *conn_popchunk(CONN *conn)
     if(conn)
     {
         MUTEX_LOCK(conn->mutex);
-        if(conn->nqchunks > 0)
+        if(conn->nqleft > 0)
         {
-            x = --(conn->nqchunks);
-            cp = (conn->qchunks[x]);
-            conn->qchunks[x] = NULL;
+            x = --(conn->nqleft);
+            cp = (CHUNK *)(conn->qleft[x]);
+            conn->qleft[x] = NULL;
         }
-        else x = -1;
+        else 
+        {
+            x = conn->qblock_max++;
+            cp = &(conn->qblocks[x].chunk);
+        }
         MUTEX_UNLOCK(conn->mutex);
-        if(x == -1) cp = chunk_init();
     }
     return cp;
 }
@@ -1573,14 +1634,9 @@ void conn_freechunk(CONN *conn, CB_DATA *chunk)
     if(conn && (cp = (CHUNK *)chunk))
     {
         MUTEX_LOCK(conn->mutex);
-        if(conn->nqchunks < SB_QCHUNK_MAX)
-        {
-            x = conn->nqchunks++;
-            conn->qchunks[x] = cp;
-        }
-        else x = -1;
+        x = conn->nqleft++;
+        conn->qleft[x] = (QBLOCK *)cp;
         MUTEX_UNLOCK(conn->mutex);
-        if(x == -1) chunk_clean(chunk);
     }
     return ;
 }
@@ -1593,7 +1649,7 @@ CB_DATA *conn_newchunk(CONN *conn, int len)
     if(conn && len > 0 && (cp = (CB_DATA *)conn_popchunk(conn)))
     {
         chunk_mem((CHUNK *)cp, len);
-        if(cp->data == NULL){chunk_clean((CHUNK *)cp); cp = NULL;}
+        if(cp->data == NULL){conn_freechunk(conn, cp);cp = NULL;}
     }
     return cp;
 }
@@ -1607,7 +1663,7 @@ CB_DATA *conn_mnewchunk(CONN *conn, int len)
     {
         chunk_mem((CHUNK *)cp, len);
         if(cp->data) memset(cp->data, 0, len);
-        else{chunk_clean((CHUNK *)cp); cp = NULL;}
+        else {conn_freechunk(conn, cp);cp = NULL;}
     }
     return cp;
 }
@@ -1620,7 +1676,9 @@ int conn_chunk_reader(CONN *conn)
 
     if(conn)
     {
+        //MUTEX_LOCK(conn->mutex);
         ret = conn__read__chunk(conn);
+        MUTEX_UNLOCK(conn->mutex);
     }
     return ret;
 }
@@ -2002,10 +2060,9 @@ void conn_clean(CONN *conn)
         chunk_destroy(&(conn->chunk));
         /* Clean queue */
         SENDQCLEAN(conn);
-        for(i = 0; i < conn->nqchunks; i++)
+        for(i = 0; i < conn->qblock_max; i++)
         {
-            if(conn->qchunks[i]) chunk_clean(conn->qchunks[i]);
-            conn->qchunks[i] = NULL;
+            chunk_destroy((void *)&(conn->qblocks[i]));
         }
 #ifdef HAVE_SSL
         if(conn->ssl)
@@ -2031,7 +2088,7 @@ CONN *conn_init()
         conn->index = -1;
         conn->gindex = -1;
         MUTEX_INIT(conn->mutex);
-        SENDQINIT(conn);
+        //SENDQINIT(conn);
         conn->set                   = conn_set;
         conn->get_service_id        = conn_get_service_id;
         conn->close                 = conn_close;
