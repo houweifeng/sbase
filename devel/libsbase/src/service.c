@@ -179,6 +179,7 @@ int service_run(SERVICE *service)
 {
     int ret = -1, i = 0, x = 0, ncpu = sysconf(_SC_NPROCESSORS_CONF);
     cpu_set_t cpuset, iocpuset;
+    CHUNK *chunk = NULL;
     CONN *conn = NULL; 
 
     if(service)
@@ -212,6 +213,19 @@ int service_run(SERVICE *service)
             }
             else break;
         }
+        //initliaze chunks
+        /*
+        for(i = 0; i < SB_INIT_CHUNKS; i++)
+        {
+            if((chunk = chunk_init()))
+            {
+                x = service->nqchunks++;
+                service->qchunks[x] = chunk;
+                //service->nconn++;
+            }
+            else break;
+        }
+        */
         if(service->working_mode == WORKING_THREAD)
             goto running_threads;
         else 
@@ -1105,6 +1119,7 @@ CHUNK *service_popchunk(SERVICE *service)
 
     if(service && service->lock == 0 && service->qchunks)
     {
+        ACCESS_LOGGER(service->logger, "nqchunks:%d", service->nqchunks);
         MUTEX_LOCK(service->mutex);
         if(service->nqchunks > 0 && (x = --(service->nqchunks)) >= 0 
                 && (cp = service->qchunks[x]))
@@ -1117,6 +1132,7 @@ CHUNK *service_popchunk(SERVICE *service)
             service->nchunks++;
         }
         MUTEX_UNLOCK(service->mutex);
+        ACCESS_LOGGER(service->logger, "nqchunks:%d", service->nqchunks);
         if(x == -1) 
             cp = chunk_init();
     }
@@ -1130,7 +1146,9 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
 
     if(service && service->lock == 0 && service->qchunks && cp)
     {
+        ACCESS_LOGGER(service->logger, "nqchunks:%d", service->nqchunks);
         chunk_reset(cp);
+        ACCESS_LOGGER(service->logger, "nqchunks:%d", service->nqchunks);
         MUTEX_LOCK(service->mutex);
         if(service->nqchunks < SB_CHUNKS_MAX)
         {
@@ -1143,8 +1161,8 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
             service->nchunks--;
         }
         MUTEX_UNLOCK(service->mutex);
-        if(x == -1) 
-        chunk_clean(cp);
+        ACCESS_LOGGER(service->logger, "nqchunks:%d", service->nqchunks);
+        if(x == -1) chunk_clean(cp);
         ret = 0;
     }
     return ret;

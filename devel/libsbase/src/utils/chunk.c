@@ -90,7 +90,7 @@ int chunk_file(void *chunk, char *file, off_t offset, off_t len)
 /* reading to chunk */
 int chunk_read(void *chunk, int fd)
 {
-    int n = -1;
+    int n = -2;
 
     if(chunk && fd > 0 && CHK(chunk)->left > 0 && CHK(chunk)->data && CHK(chunk)->end
             && (n = recv(fd, CHK(chunk)->end, CHK(chunk)->left, MSG_DONTWAIT)) > 0)
