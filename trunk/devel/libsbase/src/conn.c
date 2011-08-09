@@ -81,7 +81,7 @@ do                                                                              
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        if(conn->outevbase)                                                                 \
+        if(conn->outdaemon)                                                                 \
         {                                                                                   \
             event_add(&(conn->outevent), E_WRITE);                                          \
         }                                                                                   \
@@ -96,7 +96,7 @@ do                                                                              
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-        if(conn->outevbase)                                                                 \
+        if(conn->outdaemon)                                                                 \
         {                                                                                   \
             event_del(&(conn->outevent), E_WRITE);                                          \
         }                                                                                   \
@@ -108,7 +108,7 @@ do                                                                              
 }while(0)
 #define CONN_READY_WRITE(conn)                                                              \
 {                                                                                           \
-    if(SENDQTOTAL(conn) < 1){CONN_OUTEVENT_ADD(conn);}                                      \
+    if(SENDQTOTAL(conn) > 0){CONN_OUTEVENT_ADD(conn);}                                      \
 }                                                                                           
 
 #define CONN_STATE_RESET(conn)                                                              \
@@ -417,7 +417,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d END", E_READ, conn, conn->d_state, event_fd);
                 if(ret < 0)return ;
             }
-            if((event & E_WRITE) && conn->outevbase == NULL)
+            if((event & E_WRITE) && conn->outdaemon == NULL)
             {
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d START", E_WRITE, conn, conn->d_state, event_fd);
             if(PPARENT(conn) && PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_WHILE_SEND))
@@ -451,7 +451,7 @@ int conn_set(CONN *conn)
         conn->evid = -1;
         if(conn->parent && conn->session.timeout > 0) conn->set_timeout(conn, conn->session.timeout);
         SENDQNEW(conn);
-        if(conn->outevbase)
+        if(conn->outdaemon)
         {
             flag = E_PERSIST;
             if(PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_EVENT_LOCK))
@@ -1156,7 +1156,7 @@ int conn_send_handler(CONN *conn)
                 {
                     if(SENDQTOTAL(conn) < 1) 
                     {
-                        //CONN_OUTEVENT_DEL(conn);
+                        CONN_OUTEVENT_DEL(conn);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
                         ret = 0; break;
                     }
@@ -1604,8 +1604,8 @@ int conn_push_chunk(CONN *conn, void *data, int size)
         {
             chunk_mem(cp, size);
             chunk_mem_copy(cp, data, size);
-            CONN_READY_WRITE(conn);
             SENDQPUSH(conn, cp);
+            CONN_READY_WRITE(conn);
             DEBUG_LOGGER(conn->logger, "Pushed chunk size[%d/%d] to %s:%d queue[%p] "
                     "total:%d on %s:%d via %d", size, cp->bsize,conn->remote_ip, 
                     conn->remote_port, SENDQ(conn), SENDQTOTAL(conn), 
@@ -1658,8 +1658,8 @@ int conn_push_file(CONN *conn, char *filename, long long offset, long long size)
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
             chunk_file(cp, filename, offset, size);
-            CONN_READY_WRITE(conn);
             SENDQPUSH(conn, cp);
+            CONN_READY_WRITE(conn);
             DEBUG_LOGGER(conn->logger, "Pushed file[%s] [%lld][%lld] to %s:%d "
                     "queue total %d on %s:%d via %d ", filename, LL(offset), LL(size), 
                     conn->remote_ip, conn->remote_port, SENDQTOTAL(conn), 
@@ -1680,8 +1680,8 @@ int conn_send_chunk(CONN *conn, CB_DATA *chunk, int len)
     if(conn && (cp = (CHUNK *)chunk))
     {
         CHK(cp)->left = len;
-        CONN_READY_WRITE(conn);
         SENDQPUSH(conn, cp);
+        CONN_READY_WRITE(conn);
         DEBUG_LOGGER(conn->logger, "send chunk len[%d][%d] to %s:%d queue[%p] "
                 "total %d on %s:%d via %d", len, CHK(cp)->bsize,conn->remote_ip,conn->remote_port, 
                 SENDQ(conn), SENDQTOTAL(conn), conn->local_ip, conn->local_port, conn->fd);
@@ -1702,8 +1702,8 @@ int conn_over_chunk(CONN *conn)
         if(PPARENT(conn) && PPARENT(conn)->service 
                 && (cp = PPARENT(conn)->service->popchunk(PPARENT(conn)->service)))
         {
-            CONN_READY_WRITE(conn);
             SENDQPUSH(conn, cp);
+            CONN_READY_WRITE(conn);
             ret = 0;
         }
         else 

@@ -60,6 +60,7 @@ typedef struct _EVBASE
 	void *ev_fds;
 	void *evs;
     void *mutex;
+    void *logger;
     struct _EVENT *evlist[EV_MAX_FD];
 
 	int	    (*init)(struct _EVBASE *);
@@ -72,6 +73,7 @@ typedef struct _EVBASE
     int     (*set_evops)(struct _EVBASE *, int evopid);
 }EVBASE;
 EVBASE *evbase_init(int use_lock);
+int evbase_set_logfile(EVBASE *evbase, char *logfile);
 #define NEW_EVENT_FD(evbase, event)                                     \
 do{                                                                     \
     if(event->ev_fd > evbase->maxfd) evbase->maxfd = event->ev_fd;      \

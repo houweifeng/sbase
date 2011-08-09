@@ -281,7 +281,7 @@ running_threads:
             }
         }
         /* outdaemon */ 
-        if((service->outdaemon = procthread_init(service->cond)))
+        if((service->flag & SB_USE_OUTDAEMON) && (service->outdaemon = procthread_init(service->cond)))
         {
             PROCTHREAD_SET(service, service->outdaemon);
             service->outdaemon->use_cond_wait = 0;
