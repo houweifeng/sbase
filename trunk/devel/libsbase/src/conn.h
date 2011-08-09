@@ -92,6 +92,18 @@ int conn_push_chunk(CONN *conn, void *chunk_data, int size);
 /* over chunk */
 int conn_over_chunk(CONN *conn);
 
+/* pop chunk */
+CHUNK* conn_popchunk(CONN *conn);
+
+/* newchunk */
+CB_DATA* conn_newchunk(CONN *conn, int size);
+
+/* newchunk & memset */
+CB_DATA* conn_mnewchunk(CONN *conn, int size);
+
+/* freechunk */
+void conn_freechunk(CONN *conn, CB_DATA *chunk);
+
 /* receive chunk file */
 int conn_recv_file(CONN *conn, char *file, long long offset, long long size);
 

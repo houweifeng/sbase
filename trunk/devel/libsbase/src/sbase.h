@@ -24,9 +24,11 @@ extern "C" {
 #define SB_GROUPS_MAX           32
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
-#define SB_INIT_CONNS           256
-#define SB_QCONN_MAX            1024
-#define SB_CHUNKS_MAX           1024
+#define SB_INIT_CONNS           1024
+#define SB_INIT_CHUNKS          1024
+#define SB_QCONN_MAX            2048
+#define SB_CHUNKS_MAX           2048
+#define SB_QCHUNK_MAX           64
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -454,7 +456,7 @@ typedef struct _CONN
     int d_state;
     int evid;
     int qid;
-    int bits;
+    int nqchunks;
     /* conenction */
     int  sock_type;
     int  fd;
@@ -471,6 +473,7 @@ typedef struct _CONN
     MMBLOCK oob;
     MMBLOCK exchange;
     CHUNK chunk;
+    CHUNK *qchunks[SB_QCHUNK_MAX];
     /* evbase */
     void *mutex;
     EVBASE *evbase;
@@ -540,6 +543,9 @@ typedef struct _CONN
     int (*push_file)(struct _CONN *, char *file, long long offset, long long size);
     int (*send_chunk)(struct _CONN *, CB_DATA *chunk, int len);
     int (*over_chunk)(struct _CONN *);
+    CB_DATA* (*newchunk)(struct _CONN *, int size);
+    CB_DATA* (*mnewchunk)(struct _CONN *, int size);
+    void (*freechunk)(struct _CONN *, CB_DATA *chunk);
     void(*buffer_handler)(struct _CONN *);
     void(*chunk_handler)(struct _CONN *);
     void(*end_handler)(struct _CONN *);

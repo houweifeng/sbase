@@ -214,10 +214,10 @@ void event_add(EVENT *event, int flags)
 	if(event)
 	{
         MUTEX_LOCK(event->mutex);
-        if((flags & event->ev_flags) != flags)
-        //if(flags)
+        //if((flags & event->ev_flags) != flags)
+        if(flags)
         {
-            WARN_LOGGER(event->ev_base->logger, "ev_fd:%d add_event:%d ev_flags:%d old_ev_flags:%d", event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
+            //WARN_LOGGER(event->ev_base->logger, "ev_fd:%d add_event:%d ev_flags:%d old_ev_flags:%d", event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
             event->old_ev_flags = event->ev_flags;
             event->ev_flags |= flags;
             if(event->ev_base && event->ev_base->update)
@@ -240,7 +240,7 @@ void event_del(EVENT *event, int flags)
 		//if((flags & event->ev_flags))
         if(flags)
 		{
-            WARN_LOGGER(event->ev_base->logger, "ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d", event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
+            //WARN_LOGGER(event->ev_base->logger, "ev_fd:%d del_event:%d ev_flags:%d old_ev_flags:%d", event->ev_fd, flags, event->ev_flags, event->old_ev_flags);
             event->old_ev_flags = event->ev_flags;
 			event->ev_flags &= ~flags;
             if(event->ev_base && event->ev_base->update)

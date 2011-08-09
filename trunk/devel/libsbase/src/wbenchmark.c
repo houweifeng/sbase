@@ -612,7 +612,7 @@ invalid_url:
         service->niodaemons = niodaemons;
         service->ndaemons = 0;
         service->use_cond_wait = 1;
-        service->flag |= SB_USE_OUTDAEMON;
+        service->flag |= (SB_USE_OUTDAEMON|SB_LOG_THREAD);
         if(socket_option == 1) service->flag |= SB_SO_LINGER;
         if(tcp_option == 1) service->flag |= SB_TCP_NODELAY;
         service->service_type = C_SERVICE;
