@@ -2,8 +2,13 @@
 #ifndef _PROCTHREAD_H
 #define _PROCTHREAD_H
 PROCTHREAD *procthread_init(int cond);
+
+/* set evsig */
+void procthread_set_evsig_fd(PROCTHREAD *pth, int fd);
+
 /* run procthread */
 void procthread_run(void *arg);
+
 /* add new task */
 int procthread_newtask(PROCTHREAD *pth, CALLBACK *, void *arg);
 

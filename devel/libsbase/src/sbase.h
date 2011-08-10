@@ -396,6 +396,7 @@ typedef struct _PROCTHREAD
     pthread_t threadid;
     EVENT event;
     //EVENT acceptor;
+    EVSIG evsig;
 
     void *mutex;
     void *evtimer;

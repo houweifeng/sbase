@@ -45,7 +45,11 @@ void procthread_wakeup(PROCTHREAD *pth)
         {
             event_add(&(pth->event), E_WRITE);
         }
-        if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
+        else
+        {
+            evsig_wakeup(&(pth->evsig));
+        }
+        //if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
@@ -156,7 +160,8 @@ void procthread_run(void *arg)
                         qmessage_handler(pth->message_queue, pth->logger);
                         i = 1;
                     }
-                    if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);i = 0;}
+                    //if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);i = 0;}
+                    if(QMTOTAL(pth->message_queue) < 1){evsig_wait(&(pth->evsig));i = 0;}
                     /*
                     //if(i > pth->service->nworking_tosleep)
                     //{usleep(pth->usec_sleep);i = 0;}
@@ -451,6 +456,16 @@ void procthread_set_acceptor(PROCTHREAD *pth, int listenfd)
     return ;
 }
 
+/* set evsig */
+void procthread_set_evsig_fd(PROCTHREAD *pth, int fd)
+{
+    if(pth && fd > 0)
+    {
+        evsig_set(&(pth->evsig), fd);
+    }
+    return ;
+}
+
 /* clean procthread */
 void procthread_clean(PROCTHREAD *pth)
 {
@@ -466,6 +481,7 @@ void procthread_clean(PROCTHREAD *pth)
             }
             qmessage_clean(pth->message_queue);
         }
+        evsig_close(&(pth->evsig));
         //xqueue_clean(pth->xqueue);
         MUTEX_DESTROY(pth->mutex);
         xmm_free(pth, sizeof(PROCTHREAD));
@@ -488,7 +504,7 @@ PROCTHREAD *procthread_init(int cond)
                 _exit(-1);
             }
         }
-        MUTEX_INIT(pth->mutex);
+        //MUTEX_INIT(pth->mutex);
         //pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;

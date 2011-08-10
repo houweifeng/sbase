@@ -117,19 +117,19 @@ void event_active(EVENT *event, int ev_flags);
 void event_destroy(EVENT *event);
 /* Clean event */
 void event_clean(EVENT *event);
-/* event signal */
+#endif 
+#ifndef __TYPEDEF_EVSIG__
+#define __TYPEDEF_EVSIG__
 typedef struct _EVSIG
 {
+    int efd;
     int fd;
-    int bits;
-    void *arg;
-	void (*ev_handler)(int fd, int flags, void *arg);	
 }EVSIG;
-void evsig_set(EVSIG *evsig, int fd, void *arg, void *handler);
+void evsig_set(EVSIG *evsig, int fd);
 void evsig_wait(EVSIG *evsig);
 void evsig_wakeup(EVSIG *evsig);
-#endif 
-
+void evsig_close(EVSIG *evsig);
+#endif
 #ifdef __cplusplus
  }
 #endif

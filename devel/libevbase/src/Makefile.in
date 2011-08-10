@@ -66,7 +66,7 @@ am_libevbase_la_OBJECTS = libevbase_la-evdevpoll.lo \
 	libevbase_la-evkqueue.lo libevbase_la-evpoll.lo \
 	libevbase_la-evport.lo libevbase_la-evrtsig.lo \
 	libevbase_la-evselect.lo libevbase_la-evwin32.lo \
-	libevbase_la-logger.lo
+	libevbase_la-logger.lo libevbase_la-evsig.lo
 libevbase_la_OBJECTS = $(am_libevbase_la_OBJECTS)
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -221,6 +221,7 @@ evwin32.c \
 evwin32.h \
 logger.h \
 logger.c \
+evsig.c \
 mutex.h 
 
 libevbase_la_CPPFLAGS = -Wall
@@ -360,6 +361,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evport.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evrtsig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evselect.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evsig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evwin32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-logger.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sepoll-sepoll.Po@am__quote@
@@ -454,6 +456,13 @@ libevbase_la-logger.lo: logger.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='logger.c' object='libevbase_la-logger.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-logger.lo `test -f 'logger.c' || echo '$(srcdir)/'`logger.c
+
+libevbase_la-evsig.lo: evsig.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libevbase_la-evsig.lo -MD -MP -MF "$(DEPDIR)/libevbase_la-evsig.Tpo" -c -o libevbase_la-evsig.lo `test -f 'evsig.c' || echo '$(srcdir)/'`evsig.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/libevbase_la-evsig.Tpo" "$(DEPDIR)/libevbase_la-evsig.Plo"; else rm -f "$(DEPDIR)/libevbase_la-evsig.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evsig.c' object='libevbase_la-evsig.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libevbase_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libevbase_la-evsig.lo `test -f 'evsig.c' || echo '$(srcdir)/'`evsig.c
 
 ev_cli-ev_cli.o: ev_cli.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ev_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ev_cli-ev_cli.o -MD -MP -MF "$(DEPDIR)/ev_cli-ev_cli.Tpo" -c -o ev_cli-ev_cli.o `test -f 'ev_cli.c' || echo '$(srcdir)/'`ev_cli.c; \
