@@ -47,7 +47,8 @@ void procthread_wakeup(PROCTHREAD *pth)
         }
         else
         {
-            evsig_wakeup(&(pth->evsig));
+            if(pth->service->flag & SB_USE_EVSIG)
+                evsig_wakeup(&(pth->evsig));
         }
         //if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
     }
@@ -161,7 +162,14 @@ void procthread_run(void *arg)
                         i = 1;
                     }
                     //if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);i = 0;}
-                    if(QMTOTAL(pth->message_queue) < 1){evsig_wait(&(pth->evsig));i = 0;}
+                    //if(QMTOTAL(pth->message_queue) < 1){evsig_wait(&(pth->evsig));i = 0;}
+                    if(QMTOTAL(pth->message_queue) < 1) 
+                    {
+                        if(pth->service->flag & SB_USE_EVSIG)
+                            evsig_wait(&(pth->evsig));
+                        else
+                            nanosleep(&ts, NULL);
+                    }
                     /*
                     //if(i > pth->service->nworking_tosleep)
                     //{usleep(pth->usec_sleep);i = 0;}
@@ -461,7 +469,8 @@ void procthread_set_evsig_fd(PROCTHREAD *pth, int fd)
 {
     if(pth && fd > 0)
     {
-        evsig_set(&(pth->evsig), fd);
+        if(pth->service->flag & SB_USE_EVSIG)
+            evsig_set(&(pth->evsig), fd);
     }
     return ;
 }
@@ -483,7 +492,7 @@ void procthread_clean(PROCTHREAD *pth)
         }
         evsig_close(&(pth->evsig));
         //xqueue_clean(pth->xqueue);
-        MUTEX_DESTROY(pth->mutex);
+        //MUTEX_DESTROY(pth->mutex);
         xmm_free(pth, sizeof(PROCTHREAD));
     }
     return ;

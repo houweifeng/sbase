@@ -45,6 +45,7 @@ extern "C" {
 #define SB_WHILE_SEND           0x100
 #define SB_SO_LINGER            0x200
 #define SB_USE_OUTDAEMON        0x400
+#define SB_USE_EVSIG            0x800
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01

@@ -124,6 +124,8 @@ typedef struct _EVSIG
 {
     int efd;
     int fd;
+    int flag;
+    int bits;
 }EVSIG;
 void evsig_set(EVSIG *evsig, int fd);
 void evsig_wait(EVSIG *evsig);

@@ -303,8 +303,8 @@ running_threads:
             {
                 if((service->procthreads[i] = procthread_init(0)))
                 {
-                    procthread_set_evsig_fd(service->procthreads[i], service->cond);
                     PROCTHREAD_SET(service, service->procthreads[i]);
+                    procthread_set_evsig_fd(service->procthreads[i], service->cond);
                     x = service->nprocthreads % service->niodaemons;
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
                     service->procthreads[i]->indaemon = service->iodaemons[x];
@@ -366,8 +366,8 @@ running_threads:
             {
                 if((service->daemons[i] = procthread_init(0)))
                 {
-                    procthread_set_evsig_fd(service->daemons[i], service->cond);
                     PROCTHREAD_SET(service, service->daemons[i]);
+                    procthread_set_evsig_fd(service->daemons[i], service->cond);
                     ret = 0;
                 }
                 else
