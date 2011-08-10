@@ -39,6 +39,7 @@ void evsig_kqueue_wait(EVSIG *evsig)
 
     if(evsig && evsig->efd > 0 && evsig->fd > 0)
     {
+        evsig->flag = 0;
         n = kevent(evsig->efd, NULL, 0, &kev, 1, NULL);
         evsig->flag = 0;
         EV_SET(&kev, evsig->fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
@@ -101,6 +102,7 @@ void evsig_epoll_wait(EVSIG *evsig)
 
     if(evsig && evsig->efd > 0 && evsig->fd > 0)
     {
+        evsig->flag = 0;
         n = epoll_wait(evsig->efd, &ev, 1, -1);
         evsig->flag = 0;
         memset(&ev, 0, sizeof(struct epoll_event));

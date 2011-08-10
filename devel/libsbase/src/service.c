@@ -1474,7 +1474,9 @@ void service_stop(SERVICE *service)
             {
                 if(service->procthreads[i])
                 {
+                    WARN_LOGGER(service->logger, "Ready for stop procthreads[%d][%p]", i, service->procthreads[i]);
                     service->procthreads[i]->stop(service->procthreads[i]);
+                    WARN_LOGGER(service->logger, "Ready for stop procthreads[%d][%p]", i, service->procthreads[i]);
                     PROCTHREAD_EXIT(service->procthreads[i]->threadid, NULL);
                 }
             }

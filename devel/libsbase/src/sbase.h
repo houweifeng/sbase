@@ -24,11 +24,11 @@ extern "C" {
 #define SB_GROUPS_MAX           32
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
-#define SB_INIT_CONNS           1024
+#define SB_INIT_CONNS           256
 #define SB_INIT_CHUNKS          1024
-#define SB_QCONN_MAX            2048
-#define SB_CHUNKS_MAX           2048
-#define SB_QBLOCK_MAX           64
+#define SB_QCONN_MAX            1024
+#define SB_CHUNKS_MAX           1024
+#define SB_QBLOCK_MAX           16
 #define SB_BUF_SIZE             65536
 #define SB_USEC_SLEEP           1000
 #define SB_PROXY_TIMEOUT        20000000
@@ -112,7 +112,7 @@ typedef struct _MMBLOCK
 #endif
 #ifndef __TYPEDEF__CHUNK
 #define __TYPEDEF__CHUNK
-#define CHUNK_FILE_NAME_MAX     1024
+#define CHUNK_FILE_NAME_MAX     256
 typedef struct _CHUNK
 {
     char *data;
