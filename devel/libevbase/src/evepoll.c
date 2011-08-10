@@ -41,7 +41,6 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
     if(evbase && event && event->ev_fd >= 0  && event->ev_fd < evbase->allowed)
     {
         MUTEX_LOCK(evbase->mutex);
-        UPDATE_EVENT_FD(evbase, event);
         event->ev_base = evbase;
         if(event->ev_flags & E_READ)
         {
@@ -58,8 +57,9 @@ int evepoll_add(EVBASE *evbase, EVENT *event)
             ev_flags |= EPOLLET;
         }
         //ev_flags |= EPOLLERR | EPOLLHUP;
-        //if(add)
+        if(add)
         {
+            UPDATE_EVENT_FD(evbase, event);
             op = EPOLL_CTL_ADD; 
             memset(&ep_event, 0, sizeof(struct epoll_event));
             ep_event.data.fd = event->ev_fd;

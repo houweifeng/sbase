@@ -406,13 +406,17 @@ void procthread_stop(PROCTHREAD *pth)
         {
             pth->lock       = 1;
             pth->running_status = 0;
+            WARN_LOGGER(pth->logger, "Ready stop thread[%p]->cond:%d", pth, pth->cond);
             PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
+            WARN_LOGGER(pth->logger, "Ready stop thread[%p]->cond:%d", pth, pth->cond);
         }
         else
         {
+            WARN_LOGGER(pth->logger, "Ready stop thread[%p]->cond:%d", pth, pth->cond);
             pth->lock       = 1;
             pth->running_status = 0;
             pth->wakeup(pth);
+            WARN_LOGGER(pth->logger, "Ready stop thread[%p]->cond:%d", pth, pth->cond);
         }
     }
     return ;
