@@ -246,10 +246,6 @@ running_threads:
         CPU_ZERO(&iocpuset);
         if(ncpu-- > 1)
         {
-            for(i = 0; i < ncpu; i++)
-            {
-                CPU_SET(i, &cpuset);
-            }
             CPU_SET(ncpu, &iocpuset);
         }
         else
@@ -294,39 +290,6 @@ running_threads:
             exit(EXIT_FAILURE);
             return -1;
         }
-        /* initialize threads  */
-        if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
-        if(service->nprocthreads < 1) service->nprocthreads = 1;
-        if(service->nprocthreads > 0)
-        {
-            for(i = 0; i < service->nprocthreads; i++)
-            {
-                if((service->procthreads[i] = procthread_init(0)))
-                {
-                    PROCTHREAD_SET(service, service->procthreads[i]);
-                    procthread_set_evsig_fd(service->procthreads[i], service->cond);
-                    x = service->nprocthreads % service->niodaemons;
-                    service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
-                    service->procthreads[i]->indaemon = service->iodaemons[x];
-                    service->procthreads[i]->inqmessage = service->iodaemons[x]->message_queue;
-                    if(service->outdaemon)
-                    {
-                        service->procthreads[i]->outevbase = service->outdaemon->evbase;
-                        service->procthreads[i]->outdaemon = service->outdaemon;
-                        service->procthreads[i]->outqmessage = service->outdaemon->message_queue;
-                    }
-                    ret = 0;
-                }
-                else
-                {
-                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",strerror(errno));
-                    exit(EXIT_FAILURE);
-                    return -1;
-                }
-                NEW_PROCTHREAD(service, "procthreads", i, service->procthreads[i]->threadid, 
-                        service->procthreads[i], service->logger, cpuset);
-            }
-        }
         /* daemon */ 
         if((service->daemon = procthread_init(0)))
         {
@@ -358,6 +321,40 @@ running_threads:
                 return -1;
             }
         }
+        /* initialize threads  */
+        if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
+        if(service->nprocthreads < 1) service->nprocthreads = 1;
+        if(service->nprocthreads > 0)
+        {
+            for(i = 0; i < service->nprocthreads; i++)
+            {
+                if((service->procthreads[i] = procthread_init(0)))
+                {
+                    PROCTHREAD_SET(service, service->procthreads[i]);
+                    procthread_set_evsig_fd(service->procthreads[i], service->cond);
+                    x = service->nprocthreads % service->niodaemons;
+                    service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
+                    service->procthreads[i]->indaemon = service->iodaemons[x];
+                    service->procthreads[i]->inqmessage = service->iodaemons[x]->message_queue;
+                    if(service->outdaemon)
+                    {
+                        service->procthreads[i]->outevbase = service->outdaemon->evbase;
+                        service->procthreads[i]->outdaemon = service->outdaemon;
+                        service->procthreads[i]->outqmessage = service->outdaemon->message_queue;
+                    }
+                    ret = 0;
+                }
+                else
+                {
+                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",strerror(errno));
+                    exit(EXIT_FAILURE);
+                    return -1;
+                }
+                if(ncpu > 0){CPU_ZERO(&cpuset);CPU_SET(i%ncpu, &cpuset);}
+                NEW_PROCTHREAD(service, "procthreads", i, service->procthreads[i]->threadid, 
+                        service->procthreads[i], service->logger, cpuset);
+            }
+        }
         /* daemon worker threads */
         if(service->ndaemons > SB_THREADS_MAX) service->ndaemons = SB_THREADS_MAX;
         if(service->ndaemons > 0)
@@ -376,6 +373,7 @@ running_threads:
                     exit(EXIT_FAILURE);
                     return -1;
                 }
+                if(ncpu > 0){CPU_ZERO(&cpuset);CPU_SET(i%ncpu, &cpuset);}
                 NEW_PROCTHREAD(service, "daemons", i, service->daemons[i]->threadid,
                         service->daemons[i], service->logger, cpuset);
             }
