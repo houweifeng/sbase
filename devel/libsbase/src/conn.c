@@ -326,7 +326,7 @@ void conn_chunk_handler(CONN *conn)
 }
 
 /* over */
-void conn_overout_handler(CONN *conn)
+void conn_shutout_handler(CONN *conn)
 {
     if(conn)
     {
@@ -362,7 +362,7 @@ void conn_shut_handler(CONN *conn)
             DEBUG_LOGGER(conn->logger, "Ready for shut-connection-out[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
-            qmessage_push(conn->outqmessage, MESSAGE_OVEROUT,
+            qmessage_push(conn->outqmessage, MESSAGE_SHUTOUT,
                     conn->index, conn->fd, -1, conn->outdaemon, conn, NULL);
             OUTWAKEUP(conn);
         }
@@ -432,8 +432,8 @@ void conn_output_handler(int event_fd, int event, void *arg)
             else
                 ret = conn->write_handler(conn);
             //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
-            CONN_UPDATE_EVTIMER(conn, evtimer, evid);
             if(ret < 0)return ;
+            CONN_UPDATE_EVTIMER(conn, evtimer, evid);
         }
     }
     return ;
@@ -490,7 +490,6 @@ void conn_event_handler(int event_fd, int event, void *arg)
                     fcntl(conn->fd, F_SETFL, flag);
                 }
             }
-            CONN_UPDATE_EVTIMER(conn, evtimer, evid);
             if(event & E_READ)
             {
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d START", E_READ, conn, conn->d_state, event_fd);
@@ -508,6 +507,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
                 if(ret < 0)return ;
             } 
+            CONN_UPDATE_EVTIMER(conn, evtimer, evid);
             /*
                fprintf(stdout, "%s::%d event:%d on remote[%s:%d] local[%s:%d] via %d\n",
                __FILE__, __LINE__, event, conn->remote_ip, conn->remote_port, 
@@ -614,15 +614,17 @@ int conn_over(CONN *conn)
 /* shutdown connection */
 int conn_shut(CONN *conn, int d_state, int e_state)
 {
-    if(conn && conn->mutex)
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
+    if(conn)
     {
         MUTEX_LOCK(conn->mutex);
-        conn->over_timeout(conn);
-        //WARN_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "
-        //        "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
-        //        conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         if(conn->d_state == D_STATE_FREE && conn->fd > 0)
         {
+            conn->over_timeout(conn);
+            //WARN_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "
+            //        "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
+            //        conn->d_state, conn->local_ip, conn->local_port, conn->fd);
             conn->d_state |= d_state;
             if(conn->e_state == E_STATE_OFF) conn->e_state = e_state;
             //WARN_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
@@ -1115,13 +1117,17 @@ int conn_write_handler(CONN *conn)
                 }
                 else 
                 {
-                    //ret = 0;break; 
                     ret = 0;
+                }
+                if((cp = (CHUNK *)SENDQHEAD(conn)) && CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
+                {
+                    chunk_over = 1;
+                    if((cp = (CHUNK *)SENDQPOP(conn))) conn_freechunk(conn, (CB_DATA *)cp);
                 }
                 if(chunk_over)
                 {
-                    //CONN_OUTEVENT_DEL(conn);
-                    CONN_OUTEVENT_DESTROY(conn);
+                    CONN_OUTEVENT_DEL(conn);
+                    //CONN_OUTEVENT_DESTROY(conn);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
                     //ret = 0;break;
                     ret = 0;
@@ -1145,7 +1151,7 @@ int conn_write_handler(CONN *conn)
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
             //CONN_OUTEVENT_DEL(conn);
             //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
-            ret = 0;
+            ret = -1;
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
         }
         //if(MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}                 
@@ -1254,7 +1260,7 @@ int conn_send_handler(CONN *conn)
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
             //CONN_OUTEVENT_DEL(conn);
             //CONN_PUSH_MESSAGE(conn, MESSAGE_END);
-            ret = 0;
+            ret = -1;
             //ACCESS_LOGGER(conn->logger, "No-data-send to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d event:{ev_flags:%d old_evflags:%d evbase:%p}", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base);
         }
         //if(MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}                 
@@ -2138,7 +2144,7 @@ CONN *conn_init()
         conn->chunk_handler         = conn_chunk_handler;
         conn->end_handler           = conn_end_handler;
         conn->shut_handler          = conn_shut_handler;
-        conn->overout_handler       = conn_overout_handler;
+        conn->shutout_handler       = conn_shutout_handler;
         conn->set_session           = conn_set_session;
         conn->over_session          = conn_over_session;
         conn->newtask               = conn_newtask;

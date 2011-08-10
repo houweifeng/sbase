@@ -562,7 +562,7 @@ typedef struct _CONN
     void(*chunk_handler)(struct _CONN *);
     void(*end_handler)(struct _CONN *);
     void(*shut_handler)(struct _CONN *);
-    void(*overout_handler)(struct _CONN *);
+    void(*shutout_handler)(struct _CONN *);
     
     /* normal */
     void (*reset_xids)(struct _CONN *);
