@@ -201,7 +201,7 @@ do                                                                              
 {                                                                                           \
     if(conn && conn->d_state == 0)                                                          \
     {                                                                                       \
-            qmessage_push(conn->message_queue, msgid,                                       \
+        qmessage_push(conn->message_queue, msgid,                                       \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
         ACCESS_LOGGER(conn->logger, "qmessage[%d] qtotal:%d qleft:%d remote[%s:%d] on %s:%d via %d",  msgid, QMTOTAL(conn->message_queue), QNLEFT(conn->message_queue), conn->remote_ip, conn->remote_port,conn->local_ip, conn->local_port, conn->fd);\
         if(conn->parent && PPARENT(conn)->use_cond_wait){MUTEX_SIGNAL(PPARENT(conn)->mutex);} \
@@ -598,7 +598,6 @@ int conn_close(CONN *conn)
 int conn_over(CONN *conn)
 {
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
-    int i = 0;
 
     if(conn)
     {
