@@ -19,6 +19,7 @@ evwin32.c \
 evwin32.h \
 logger.h \
 logger.c \
+evsig.c \
 mutex.h 
 
 libevbase_la_CPPFLAGS = -Wall
