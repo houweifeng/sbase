@@ -328,17 +328,19 @@ void conn_chunk_handler(CONN *conn)
 /* over */
 void conn_shutout_handler(CONN *conn)
 {
+    PROCTHREAD *daemon = NULL;
+
     if(conn)
     {
         if(conn->outdaemon) event_destroy(&(conn->outevent));
-        if(conn->indaemon)
+        if((daemon = (PROCTHREAD *)(conn->indaemon)))
         {
             DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
             qmessage_push(conn->inqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->indaemon, conn, NULL);
-            INWAKEUP(conn);
+            daemon->wakeup(daemon);
         }
         else
         {
@@ -355,25 +357,27 @@ void conn_shutout_handler(CONN *conn)
 /* shut */
 void conn_shut_handler(CONN *conn)
 {
+    PROCTHREAD *daemon = NULL;
+
     if(conn)
     {
-        if(conn->outdaemon)
+        if((daemon = (PROCTHREAD *)conn->outdaemon))
         {
             DEBUG_LOGGER(conn->logger, "Ready for shut-connection-out[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
             qmessage_push(conn->outqmessage, MESSAGE_SHUTOUT,
                     conn->index, conn->fd, -1, conn->outdaemon, conn, NULL);
-            OUTWAKEUP(conn);
+            daemon->wakeup(daemon);
         }
-        else if(conn->indaemon)
+        else if((daemon = (PROCTHREAD *)conn->indaemon))
         {
             DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd);
             qmessage_push(conn->inqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->indaemon, conn, NULL);
-            INWAKEUP(conn);
+            daemon->wakeup(daemon);
         }
         else
         {
