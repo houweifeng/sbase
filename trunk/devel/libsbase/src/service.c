@@ -179,7 +179,6 @@ int service_run(SERVICE *service)
 {
     int ret = -1, i = 0, x = 0, ncpu = sysconf(_SC_NPROCESSORS_CONF);
     cpu_set_t cpuset, iocpuset;
-    CHUNK *chunk = NULL;
     CONN *conn = NULL; 
 
     if(service)
@@ -213,19 +212,6 @@ int service_run(SERVICE *service)
             }
             else break;
         }
-        //initliaze chunks
-        /*
-        for(i = 0; i < SB_INIT_CHUNKS; i++)
-        {
-            if((chunk = chunk_init()))
-            {
-                x = service->nqchunks++;
-                service->qchunks[x] = chunk;
-                //service->nconn++;
-            }
-            else break;
-        }
-        */
         if(service->working_mode == WORKING_THREAD)
             goto running_threads;
         else 

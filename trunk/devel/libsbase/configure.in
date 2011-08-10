@@ -21,19 +21,19 @@ if test "$havepthread" = "yes" ; then
     LDFLAGS="${LDFLAGS} -lpthread"
 fi
 #semaphore
-havesemaphore=no
-AC_CHECK_LIB(c, sem_timedwait, havesemaphore=yes)
-if test "$havesemaphore" = "yes" ; then
-    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
-fi
+#havesemaphore=no
+#AC_CHECK_LIB(c, sem_timedwait, havesemaphore=yes)
+#if test "$havesemaphore" = "yes" ; then
+#    CPPFLAGS="${CPPFLAGS} -DHAVE_SEMAPHORE"
+#fi
 
 #ssl
-#havessl=no
-#AC_CHECK_LIB(ssl, SSL_read, havessl=yes)
-#if test "$havessl" = "yes" ; then
-#    CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
-#    LDFLAGS="${LDFLAGS} -lssl -lcrypto"
-#fi
+havessl=no
+AC_CHECK_LIB(ssl, SSL_read, havessl=yes)
+if test "$havessl" = "yes" ; then
+    CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
+    LDFLAGS="${LDFLAGS} -lssl -lcrypto"
+fi
 #zlib
 havezlib=no
 AC_CHECK_LIB(z, compress, havezlib=yes)
@@ -49,13 +49,13 @@ if test "$havebz2lib" = "yes" ; then
     LDFLAGS="${LDFLAGS} -lbz2"
 fi
 #mmap
-havemmap=no
-AC_CHECK_LIB(c, munmap, havemmap=yes)
-if test "$havemmap" = "yes" ; then
-    CPPFLAGS="${CPPFLAGS} -DHAVE_MMAP"
-fi
+#havemmap=no
+#AC_CHECK_LIB(c, munmap, havemmap=yes)
+#if test "$havemmap" = "yes" ; then
+#    CPPFLAGS="${CPPFLAGS} -DHAVE_MMAP"
+#fi
 # FIXME: Replace `main' with a function in `-levbase':
-AC_CHECK_LIB([evbase], [main])
+AC_CHECK_LIB([evbase], [evbase_init])
 
 # Checks for header files.
 AC_HEADER_DIRENT
