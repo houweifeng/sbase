@@ -14,7 +14,7 @@
 do                                                                                          \
 {                                                                                           \
     qmessage_push(pth->message_queue, msgid, index, fd, tid, pth, handler, arg);            \
-    if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}                                       \
+    pth->wakeup(pth);                                                                       \
 }while(0)
 /* event handler */
 void procthread_event_handler(int event_fd, int flags, void *arg)
@@ -401,8 +401,8 @@ void procthread_stop(PROCTHREAD *pth)
         {
             pth->lock       = 1;
             pth->running_status = 0;
+            pth->wakeup(pth);
         }
-        pth->wakeup(pth);
     }
     return ;
 }

@@ -204,7 +204,7 @@ do                                                                              
         qmessage_push(conn->message_queue, msgid,                                       \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
         ACCESS_LOGGER(conn->logger, "qmessage[%d] qtotal:%d qleft:%d remote[%s:%d] on %s:%d via %d",  msgid, QMTOTAL(conn->message_queue), QNLEFT(conn->message_queue), conn->remote_ip, conn->remote_port,conn->local_ip, conn->local_port, conn->fd);\
-        if(conn->parent && PPARENT(conn)->use_cond_wait){MUTEX_SIGNAL(PPARENT(conn)->mutex);} \
+        PPARENT(conn)->wakeup(PPARENT(conn));                                               \
         ACCESS_LOGGER(conn->logger, "qmessage[%d] qtotal:%d qleft:%d remote[%s:%d] on %s:%d via %d",  msgid, QMTOTAL(conn->message_queue), QNLEFT(conn->message_queue), conn->remote_ip, conn->remote_port,conn->local_ip, conn->local_port, conn->fd);\
     }                                                                                       \
 }while(0)
@@ -215,7 +215,7 @@ do                                                                              
     {                                                                                       \
             qmessage_push(conn->message_queue, msgid,                                       \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
-        if(conn->parent&&PPARENT(conn)->use_cond_wait){MUTEX_SIGNAL(PPARENT(conn)->mutex);} \
+        PPARENT(conn)->wakeup(PPARENT(conn));                                               \
     }                                                                                       \
 }while(0)
 
@@ -913,7 +913,8 @@ int conn__push__message(CONN *conn, int message_id)
                     conn->fd, QMTOTAL(conn->message_queue),
                     PPL(conn), parent);
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
-            if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
+            parent->wakeup(parent);
+            //if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
         }
         ret = 0;
     }
@@ -942,7 +943,8 @@ int conn_push_message(CONN *conn, int message_id)
             */
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                     -1, parent, conn, NULL);
-            if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
+            //if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
+            parent->wakeup(parent);
             /*
             DEBUG_LOGGER(conn->logger, "over for pushing message[%s] to message_queue[%p] "
                     "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p][%p]",
