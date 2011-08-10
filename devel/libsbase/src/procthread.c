@@ -96,8 +96,6 @@ void procthread_run(void *arg)
                         evbase_set_logfile(pth->evbase, line);
                     }
                 }
-                /*
-                */
             }
             do
             {
