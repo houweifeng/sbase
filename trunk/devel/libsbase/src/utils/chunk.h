@@ -33,7 +33,7 @@ extern "C" {
 #define CHUNK_STATUS_OVER       0x02
 #ifndef __TYPEDEF__CHUNK
 #define __TYPEDEF__CHUNK
-#define CHUNK_FILE_NAME_MAX     1024
+#define CHUNK_FILE_NAME_MAX     256
 typedef struct _CHUNK
 {
     char *data;

@@ -200,8 +200,8 @@ int evepoll_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                 }
                 else
                 {
+                    WARN_LOGGER(evbase->logger, "ev:%p fd:%d evflags:%d event:%d", ev, fd, ev->ev_flags, ev_flags); 
                     evepoll_update(evbase, ev);  
-                    //WARN_LOGGER(evbase->logger, "ev:%p fd:%d evflags:%d event:%d", ev, fd, ev->ev_flags, ev_flags); 
                 }
             }
         }
