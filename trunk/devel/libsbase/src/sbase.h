@@ -46,6 +46,7 @@ extern "C" {
 #define SB_SO_LINGER            0x200
 #define SB_USE_OUTDAEMON        0x400
 #define SB_USE_EVSIG            0x800
+#define SB_QUICK_PACKET         0x1000
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
@@ -165,6 +166,7 @@ typedef struct _SESSION
     char *packet_delimiter;
 
     /* methods */
+    int (*quick_handler)(struct _CONN *, CB_DATA *packet);
     int (*error_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*packet_reader)(struct _CONN *, CB_DATA *buffer);
     int (*packet_handler)(struct _CONN *, CB_DATA *packet);

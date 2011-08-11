@@ -1287,7 +1287,7 @@ int conn_send_handler(CONN *conn)
 /* packet reader */
 int conn_packet_reader(CONN *conn)
 {
-    int packet_type = 0, len = -1;
+    int packet_type = 0, len = -1, n = 0;
     char *p = NULL, *e = NULL;
     CB_DATA *data = NULL;
 
@@ -1367,8 +1367,18 @@ end:
             MMB_PUSH(conn->packet, MMB_DATA(conn->buffer), len);
             MMB_DELETE(conn->buffer, len);
             /* For packet handling */
-            conn->s_state = S_STATE_PACKET_HANDLING;
-            CONN_PUSH_MESSAGE(conn, MESSAGE_PACKET);
+            if(MMB_NDATA(conn->buffer) > 0 && conn->session.quick_handler 
+                    && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0
+                    && MMB_NDATA(conn->buffer) >= n)
+            {
+                conn->s_state = S_STATE_READ_CHUNK;
+                conn__read__chunk(conn);
+            }
+            else
+            {
+                conn->s_state = S_STATE_PACKET_HANDLING;
+                CONN_PUSH_MESSAGE(conn, MESSAGE_PACKET);
+            }
             ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", 
                 packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         }
