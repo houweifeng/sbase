@@ -1368,8 +1368,7 @@ end:
             MMB_DELETE(conn->buffer, len);
             /* For packet handling */
             if(MMB_NDATA(conn->buffer) > 0 && conn->session.quick_handler 
-                    && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0
-                    && MMB_NDATA(conn->buffer) >= n)
+                    && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0)
             {
                 conn->s_state = S_STATE_READ_CHUNK;
                 conn__read__chunk(conn);
