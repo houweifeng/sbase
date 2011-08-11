@@ -194,11 +194,15 @@ do{                                                                             
                         conn->index, conn->fd, -1, conn->outdaemon, conn, NULL);            \
             OUTDAEMON(conn)->wakeup((OUTDAEMON(conn)));                                     \
         }                                                                                   \
-        else                                                                                \
+        else if(conn->indaemon)                                                             \
         {                                                                                   \
             qmessage_push(conn->inqmessage, MESSAGE_OUT,                                    \
                         conn->index, conn->fd, -1, conn->indaemon, conn, NULL);             \
             INDAEMON(conn)->wakeup((INDAEMON(conn)));                                       \
+        }                                                                                   \
+        else                                                                                \
+        {                                                                                   \
+            event_add(&(conn->event), E_WRITE);                                             \
         }                                                                                   \
     }                                                                                       \
 }while(0)

@@ -349,9 +349,9 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
                 " on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port,
                 conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         conn->message_queue = pth->message_queue;
-        conn->indaemon      = pth->indaemon;
-        conn->inqmessage    = pth->inqmessage;
         conn->evbase        = pth->evbase;
+        conn->indaemon      = pth->indaemon;
+        conn->inqmessage    = pth->indaemon;
         conn->outdaemon     = pth->outdaemon;
         conn->outqmessage   = pth->outqmessage;
         conn->outevbase     = pth->outevbase;
