@@ -244,8 +244,6 @@ do                                                                              
             FATAL_LOGGER(conn->logger, "Reading %d bytes data from conn[%p][%s:%d] ssl:%p " \
                     "on %s:%d via %d failed, %s", n, conn, conn->remote_ip, conn->remote_port,  \
                     conn->ssl, conn->local_ip, conn->local_port, conn->fd, strerror(errno));    \
-            CONN_OUTEVENT_DESTROY(conn);                                                    \
-            conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);                                     \
             break;                                                                          \
         }                                                                                   \
         ACCESS_LOGGER(conn->logger, "Read %d bytes ndata:%d left:%lld to chunk from %s:%d"   \
@@ -323,6 +321,10 @@ void conn_outevent_handler(CONN *conn)
         {
             CONN_OUTEVENT_ADD(conn);
             ret = conn->write_handler(conn);
+            if(ret < 0)
+            {
+                CONN_OUTEVENT_DESTROY(conn);
+            }
         }
     }
     return ;
@@ -462,7 +464,12 @@ void conn_output_handler(int event_fd, int event, void *arg)
             else
                 ret = conn->write_handler(conn);
             //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
-            if(ret < 0)return ;
+            if(ret < 0)
+            {
+                CONN_OUTEVENT_DESTROY(conn);
+                conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
+                return ;
+            }
             CONN_UPDATE_EVTIMER(conn, evtimer, evid);
         }
     }
@@ -526,7 +533,12 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d START", E_READ, conn, conn->d_state, event_fd);
                 ret = conn->read_handler(conn);
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d END", E_READ, conn, conn->d_state, event_fd);
-                if(ret < 0)return ;
+                if(ret < 0)
+                {
+                    event_destroy(&(conn->event)); 
+                    conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
+                    return ;
+                }
             }
             if((event & E_WRITE))
             {
@@ -538,12 +550,18 @@ void conn_event_handler(int event_fd, int event, void *arg)
                     else
                         ret = conn->write_handler(conn);
                     //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
-                    if(ret < 0)return ;
+                    if(ret < 0)
+                    {
+                        event_destroy(&(conn->event)); 
+                        conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
+                        return ;
+                    }
                 }
                 else
                 {
                     event_destroy(&(conn->event)); 
-                    conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
+                    conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
+                    return ;
                 }
             } 
             CONN_UPDATE_EVTIMER(conn, evtimer, evid);
@@ -1023,7 +1041,7 @@ int conn_read_handler(CONN *conn)
                 MMB_DELETE(conn->oob, n);
             }
             // CONN TIMER sample 
-            return ret = 0;
+            return (ret = 0);
         }
         /* Receive to chunk with chunk_read_state before reading to buffer */
         if(conn->s_state == S_STATE_READ_CHUNK
@@ -1052,9 +1070,6 @@ int conn_read_handler(CONN *conn)
                     SENDQTOTAL(conn), conn->remote_ip, 
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
-            // Terminate connection 
-            event_destroy(&(conn->event));
-            conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
             return ret;
         }
         else
@@ -1109,6 +1124,7 @@ int conn_write_handler(CONN *conn)
                                 n, LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
                                 conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left),
                                 SENDQTOTAL(conn));
+                        ret = n;
                     }
                     else
                     {
@@ -1122,17 +1138,15 @@ int conn_write_handler(CONN *conn)
 #ifdef HAVE_SSL
                             if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
-                            /* Terminate connection */
-                            CONN_OUTEVENT_DESTROY(conn);
-                            conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
+                            return (ret = -1);
                         }
-                        return -1;
-                        //ret = -1;break;
+                        ret = 0;
                     }
                 }
                 else
                 {
                     chunk_over = 1;
+                    ret = 0;
                 }
                 /* CONN TIMER sample */
                 if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
@@ -1143,19 +1157,9 @@ int conn_write_handler(CONN *conn)
                                 "on %s:%d via %d clean it leave %d", PPL(cp), 
                                 conn->remote_ip, conn->remote_port, conn->local_ip,
                                 conn->local_port, conn->fd, SENDQTOTAL(conn));
-                        /*
-                        if(cp && PPARENT(conn) && PPARENT(conn)->service)
-                        {
-                            PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
-                        }
-                        */
                         conn_freechunk(conn, (CB_DATA *)cp);
                         cp  = NULL;
                     }
-                }
-                else 
-                {
-                    ret = 0;
                 }
                 if((cp = (CHUNK *)SENDQHEAD(conn)) && CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
                 {
@@ -1166,8 +1170,6 @@ int conn_write_handler(CONN *conn)
                 {
                     CONN_OUTEVENT_DEL(conn);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
-                    //ret = 0;break;
-                    ret = 0;
                 }
                 else
                 {
@@ -1175,8 +1177,6 @@ int conn_write_handler(CONN *conn)
                     {
                         CONN_OUTEVENT_DEL(conn);
                         CONN_PUSH_MESSAGE(conn, MESSAGE_END);
-                        //ret = 0; break;
-                        ret = 0;
                     }
                 }
             }
@@ -1185,6 +1185,7 @@ int conn_write_handler(CONN *conn)
         else
         {
             CONN_OUTEVENT_DEL(conn);
+            ret = 0;
         }
     }
     return ret;
@@ -1222,6 +1223,7 @@ int conn_send_handler(CONN *conn)
                                 n, LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, 
                                 conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left),
                                 SENDQTOTAL(conn));
+                        ret = nsent;
                     }
                     else
                     {
@@ -1235,16 +1237,15 @@ int conn_send_handler(CONN *conn)
 #ifdef HAVE_SSL
                             if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
-                            /* Terminate connection */
-                            CONN_OUTEVENT_DESTROY(conn);
-                            conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
+                            ret = -1;break;
                         }
-                        ret = -1;break;
+                        ret = 0;break;
                     }
                 }
                 else
                 {
                     chunk_over = 1;
+                    ret = 0;
                 }
                 /* CONN TIMER sample */
                 if(CHUNK_STATUS(cp) == CHUNK_STATUS_OVER)
@@ -1255,19 +1256,13 @@ int conn_send_handler(CONN *conn)
                                 "on %s:%d via %d clean it leave %d", PPL(cp), 
                                 conn->remote_ip, conn->remote_port, conn->local_ip,
                                 conn->local_port, conn->fd, SENDQTOTAL(conn));
-                        /*
-                        if(cp && PPARENT(conn) && PPARENT(conn)->service)
-                        {
-                            PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
-                        }
-                        */
                         conn_freechunk(conn, (CB_DATA *)cp);
                         cp  = NULL;
                     }
                 }
                 else 
                 {
-                    ret = 0;break; 
+                    break; 
                 }
                 if(chunk_over)
                 {
@@ -1289,6 +1284,7 @@ int conn_send_handler(CONN *conn)
         }
         else
         {
+            ret = 0;
             CONN_OUTEVENT_DEL(conn);
         }
     }
@@ -1377,6 +1373,7 @@ end:
             MMB_RESET(conn->packet);
             MMB_PUSH(conn->packet, MMB_DATA(conn->buffer), len);
             MMB_DELETE(conn->buffer, len);
+            ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             /* For packet handling */
             if(MMB_NDATA(conn->buffer) > 0 && conn->session.quick_handler 
                     && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0)
@@ -1394,8 +1391,7 @@ end:
             {
                 conn->s_state = S_STATE_PACKET_HANDLING;
                 CONN_PUSH_MESSAGE(conn, MESSAGE_PACKET);
-                ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", 
-                        packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+                ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             }
         }
     }
