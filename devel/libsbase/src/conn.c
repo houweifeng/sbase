@@ -4,7 +4,7 @@
 #include "mmblock.h"
 #include "chunk.h"
 #include "logger.h"
-#include "queue.h"
+//#include "queue.h"
 #include "message.h"
 #include "service.h"
 #include "timer.h"
