@@ -1370,16 +1370,20 @@ end:
             if(MMB_NDATA(conn->buffer) > 0 && conn->session.quick_handler 
                     && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0)
             {
+                chunk_mem(&(conn->chunk), n);
                 conn->s_state = S_STATE_READ_CHUNK;
                 conn__read__chunk(conn);
+                ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", 
+                    CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+
             }
             else
             {
                 conn->s_state = S_STATE_PACKET_HANDLING;
                 CONN_PUSH_MESSAGE(conn, MESSAGE_PACKET);
+                ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", 
+                        packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             }
-            ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", 
-                packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         }
     }
     return len;
@@ -1730,7 +1734,7 @@ int conn_recv_chunk(CONN *conn, int size)
         DEBUG_LOGGER(conn->logger, "Ready for recv-chunk size:%d from %s:%d on %s:%d via %d",
                 size, conn->remote_ip, conn->remote_port, 
                 conn->local_ip, conn->local_port, conn->fd);
-        chunk_mem(&conn->chunk, size);
+        chunk_mem(&(conn->chunk), size);
         conn->s_state = S_STATE_READ_CHUNK;
         if(conn->d_state & D_STATE_CLOSE)
         {
