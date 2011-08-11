@@ -393,7 +393,7 @@ typedef struct _PROCTHREAD
     int cond;
     int have_evbase;
     int listenfd;
-    int bits;
+    int flag;
     pthread_t threadid;
     EVENT event;
     //EVENT acceptor;

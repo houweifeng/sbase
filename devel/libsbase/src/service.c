@@ -350,7 +350,7 @@ running_threads:
                     exit(EXIT_FAILURE);
                     return -1;
                 }
-                if(ncpu > 0){CPU_ZERO(&cpuset);CPU_SET(i%ncpu, &cpuset);}
+                //if(ncpu > 0){CPU_ZERO(&cpuset);CPU_SET(i%ncpu, &cpuset);}
                 NEW_PROCTHREAD(service, "procthreads", i, service->procthreads[i]->threadid, 
                         service->procthreads[i], service->logger, cpuset);
             }
@@ -373,7 +373,7 @@ running_threads:
                     exit(EXIT_FAILURE);
                     return -1;
                 }
-                if(ncpu > 0){CPU_ZERO(&cpuset);CPU_SET(i%ncpu, &cpuset);}
+                //if(ncpu > 0){CPU_ZERO(&cpuset);CPU_SET(i%ncpu, &cpuset);}
                 NEW_PROCTHREAD(service, "daemons", i, service->daemons[i]->threadid,
                         service->daemons[i], service->logger, cpuset);
             }
