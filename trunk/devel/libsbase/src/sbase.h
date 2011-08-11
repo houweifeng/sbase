@@ -533,6 +533,7 @@ typedef struct _CONN
     int (*push_message)(struct _CONN *, int message_id);
 
     /* session */
+    void (*outevent_handler)(struct _CONN *);
     int (*read_handler)(struct _CONN *);
     int (*write_handler)(struct _CONN *);
     int (*send_handler)(struct _CONN *);
