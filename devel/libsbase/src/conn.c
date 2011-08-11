@@ -1825,7 +1825,6 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
                 " from %s:%d on %s:%d via %d", filename, LL(offset), LL(size), conn->remote_ip, 
                 conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         chunk_file(&conn->chunk, filename, offset, size);
-        //chunk_set_bsize(&conn->chunk, conn->session.buffer_size);
         conn->s_state = S_STATE_READ_CHUNK;
         if(conn->d_state & D_STATE_CLOSE)
         {
