@@ -211,10 +211,12 @@ int evkqueue_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                     {
                         event_active(ev, ev_flags);
                     }
+                    /*
                     else
                     {
                         evkqueue_update(evbase, ev);  
                     }
+                    */
                 }
             }
         }

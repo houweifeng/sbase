@@ -1018,7 +1018,8 @@ int conn_read_handler(CONN *conn)
                     conn->remote_port, conn->local_ip, conn->local_port, 
                     conn->fd, strerror(errno));
             // Terminate connection 
-            event_del(&(conn->event), E_READ|E_WRITE);
+            //event_del(&(conn->event), E_READ|E_WRITE);
+            event_destroy(&(conn->event));
             conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
             return ret;
         }
@@ -1088,7 +1089,7 @@ int conn_write_handler(CONN *conn)
                             if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
                             /* Terminate connection */
-                            CONN_OUTEVENT_DEL(conn);
+                            CONN_OUTEVENT_DESTROY(conn);
                             conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
                         }
                         return -1;
@@ -1206,7 +1207,8 @@ int conn_send_handler(CONN *conn)
                             if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
                             /* Terminate connection */
-                            CONN_OUTEVENT_DEL(conn);
+                            //CONN_OUTEVENT_DEL(conn);
+                            CONN_OUTEVENT_DESTROY(conn);
                             conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
                         }
                         ret = -1;break;
