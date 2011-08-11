@@ -21,7 +21,6 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
 {
     PROCTHREAD *pth = (PROCTHREAD *)arg;
     SERVICE *service = NULL;
-    int n = 0;
 
     if(pth && (service = pth->service))
     {
@@ -31,14 +30,19 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
         }
         else
         {
+            /*
             MUTEX_LOCK(pth->mutex);
+            int n = 0;
             if(QMTOTAL(pth->message_queue) < 1) 
             {
                 pth->flag = 0;
                 n = 1;
             }
             MUTEX_UNLOCK(pth->mutex);
-            if(n == 1) event_del(&(pth->event), E_WRITE);
+            if(n == 1) 
+            */
+            if(QMTOTAL(pth->message_queue) < 1) 
+                event_del(&(pth->event), E_WRITE);
         }
     }
     return ;
@@ -46,20 +50,22 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
 /* wakeup */
 void procthread_wakeup(PROCTHREAD *pth)
 {
-    int n = 0;
-
     if(pth)
     {
         if(pth->have_evbase && pth->evbase)
         {
+            /*
             MUTEX_LOCK(pth->mutex);
+            int n = 0;
             if(pth->flag == 0) 
             {
                 pth->flag = 1;
                 n = 1;
             }
             MUTEX_UNLOCK(pth->mutex);
-            if(n == 1)event_add(&(pth->event), E_WRITE);
+            if(n == 1)
+            */
+            event_add(&(pth->event), E_WRITE);
         }
         else
         {
