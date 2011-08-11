@@ -30,8 +30,13 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
         }
         else
         {
-            //if(QMTOTAL(pth->message_queue) < 1) 
+            MUTEX_LOCK(pth->mutex);
+            if(QMTOTAL(pth->message_queue) < 1) 
+            {
                 event_del(&(pth->event), E_WRITE);
+                pth->flag = 0;
+            }
+            MUTEX_UNLOCK(pth->mutex);
         }
     }
     return ;
@@ -43,12 +48,20 @@ void procthread_wakeup(PROCTHREAD *pth)
     {
         if(pth->have_evbase && pth->evbase)
         {
-            event_add(&(pth->event), E_WRITE);
+            MUTEX_LOCK(pth->mutex);
+            if(pth->flag == 0) 
+            {
+                event_add(&(pth->event), E_WRITE);
+                pth->flag = 1;
+            }
+            MUTEX_UNLOCK(pth->mutex);
         }
         else
         {
             if(pth->service->flag & SB_USE_EVSIG)
+            {
                 evsig_wakeup(&(pth->evsig));
+            }
         }
         //if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
     }
@@ -82,9 +95,9 @@ void procthread_run(void *arg)
                 event_set(&(pth->event), pth->cond, E_READ|E_PERSIST,
                         (void *)pth, (void *)&procthread_event_handler);
                 pth->evbase->add(pth->evbase, &(pth->event));
-                if(pth->service->logger && PLOG(pth->service->logger)->level > 0)
+                if(pth->service->flag & SB_LOG_THREAD)
                 {
-                    char line[1024];
+                    char line[256];
                     if(pth == pth->service->outdaemon)
                     {
                         sprintf(line, "/tmp/%s_outdaemon.log", pth->service->service_name);
@@ -406,17 +419,13 @@ void procthread_stop(PROCTHREAD *pth)
         {
             pth->lock       = 1;
             pth->running_status = 0;
-            WARN_LOGGER(pth->logger, "Ready stop thread[%p]->cond:%d", pth, pth->cond);
             PUSH_TASK_MESSAGE(pth, MESSAGE_STOP, -1, -1, -1, NULL, NULL);
-            WARN_LOGGER(pth->logger, "Ready stop thread[%p]->cond:%d", pth, pth->cond);
         }
         else
         {
-            WARN_LOGGER(pth->logger, "Ready stop thread[%p]->cond:%d", pth, pth->cond);
             pth->lock       = 1;
             pth->running_status = 0;
             pth->wakeup(pth);
-            WARN_LOGGER(pth->logger, "Ready stop thread[%p]->cond:%d", pth, pth->cond);
         }
     }
     return ;
@@ -515,7 +524,7 @@ PROCTHREAD *procthread_init(int cond)
                 _exit(-1);
             }
         }
-        //MUTEX_INIT(pth->mutex);
+        MUTEX_INIT(pth->mutex);
         //pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;
