@@ -207,11 +207,12 @@ int evkqueue_loop(EVBASE *evbase, int loop_flags, struct timeval *tv)
                 if(ev_flags == 0) continue;
                 if(ev == evbase->evlist[kqev->ident] && (ev_flags &= ev->ev_flags)) 
                 {
-                    if((ev_flags &= ev->ev_flags))
+                    event_active(ev, ev_flags);
+                    /*
+                    if(ev_flags &= ev->ev_flags))
                     {
                         event_active(ev, ev_flags);
                     }
-                    /*
                     else
                     {
                         evkqueue_update(evbase, ev);  

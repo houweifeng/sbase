@@ -244,6 +244,7 @@ do                                                                              
             FATAL_LOGGER(conn->logger, "Reading %d bytes data from conn[%p][%s:%d] ssl:%p " \
                     "on %s:%d via %d failed, %s", n, conn, conn->remote_ip, conn->remote_port,  \
                     conn->ssl, conn->local_ip, conn->local_port, conn->fd, strerror(errno));    \
+            CONN_OUTEVENT_DESTROY(conn);                                                    \
             conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);                                     \
             break;                                                                          \
         }                                                                                   \
@@ -448,6 +449,7 @@ void conn_output_handler(int event_fd, int event, void *arg)
     {
         if(event & E_READ)
         {
+            CONN_OUTEVENT_DESTROY(conn);
             conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
             return ;
         }
@@ -493,6 +495,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                     WARN_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
                             "connectting failed, error:[%d]{%s}", conn->fd, conn, conn->remote_ip, 
                             conn->remote_port, conn->local_ip, conn->local_port, error, strerror(error));
+                    CONN_OUTEVENT_DESTROY(conn);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);          
                     return ;
                 }
@@ -525,15 +528,23 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 //DEBUG_LOGGER(conn->logger, "E_READ:%d on conn[%p]->d_state:%d via %d END", E_READ, conn, conn->d_state, event_fd);
                 if(ret < 0)return ;
             }
-            if((event & E_WRITE) && conn->outdaemon == NULL)
+            if((event & E_WRITE))
             {
                 //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d START", E_WRITE, conn, conn->d_state, event_fd);
-            if(PPARENT(conn) && PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_WHILE_SEND))
-                ret = conn->send_handler(conn);
-            else
-                ret = conn->write_handler(conn);
-                //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
-                if(ret < 0)return ;
+                if(conn->outdaemon == NULL)
+                {
+                    if(PPARENT(conn) && PPARENT(conn)->service && (PPARENT(conn)->service->flag & SB_WHILE_SEND))
+                        ret = conn->send_handler(conn);
+                    else
+                        ret = conn->write_handler(conn);
+                    //DEBUG_LOGGER(conn->logger, "E_WRITE:%d on conn[%p]->d_state:%d via %d END", E_WRITE, conn, conn->d_state, event_fd);
+                    if(ret < 0)return ;
+                }
+                else
+                {
+                    event_destroy(&(conn->event)); 
+                    conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
+                }
             } 
             CONN_UPDATE_EVTIMER(conn, evtimer, evid);
             /*
@@ -1371,6 +1382,8 @@ end:
                     && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0)
             {
                 chunk_mem(&(conn->chunk), n);
+                ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", 
+                    CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 conn->s_state = S_STATE_READ_CHUNK;
                 conn__read__chunk(conn);
                 ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", 

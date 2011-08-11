@@ -18768,7 +18768,7 @@ fi
 
 if test "$havepthread" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
-    LDFLAGS="${LDFLAGS} -lpthread"
+    LDFLAGS="${LDFLAGS} -pthread"
 fi
 #semaphore
 #havesemaphore=no
