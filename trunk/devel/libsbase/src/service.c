@@ -149,14 +149,20 @@ void sigpipe_ignore()
 
 #ifdef HAVE_PTHREAD
 #define NEW_PROCTHREAD(service, ns, id, threadid, proc, logger, cpuset)                     \
-{                                                                                           \
+do{                                                                                         \
     if(pthread_create(&(threadid), NULL, (void *)(&procthread_run), (void *)proc) != 0)     \
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
     if(service->flag & SB_CPU_SET)                                                          \
-        pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset);                       \
-}
+    {                                                                                       \
+        if(pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset) != 0)               \
+        {                                                                                   \
+            WARN_LOGGER(logger, "setaffinity thread[%s][%d][%p] failed, %s",                \
+            ns, id, (long )threadid, strerror(errno));                                      \
+        }                                                                                   \
+    }                                                                                       \
+}while(0)
         //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
 #define NEW_PROCTHREAD(service, ns, id, pthid, pth, logger, cpuset)
@@ -246,6 +252,10 @@ running_threads:
         CPU_ZERO(&iocpuset);
         if(ncpu-- > 1)
         {
+            for(i = 0; i < ncpu; i++)
+            {
+                CPU_SET(i, &cpuset);
+            }
             CPU_SET(ncpu, &iocpuset);
         }
         else
