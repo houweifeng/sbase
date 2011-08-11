@@ -41,8 +41,8 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
             MUTEX_UNLOCK(pth->mutex);
             if(n == 1) 
             */
-            if(QMTOTAL(pth->message_queue) < 1) 
-                event_del(&(pth->event), E_WRITE);
+            event_del(&(pth->event), E_WRITE);
+            pth->flag = 0;
         }
     }
     return ;
@@ -54,7 +54,6 @@ void procthread_wakeup(PROCTHREAD *pth)
     {
         if(pth->have_evbase && pth->evbase)
         {
-            /*
             MUTEX_LOCK(pth->mutex);
             int n = 0;
             if(pth->flag == 0) 
@@ -64,8 +63,7 @@ void procthread_wakeup(PROCTHREAD *pth)
             }
             MUTEX_UNLOCK(pth->mutex);
             if(n == 1)
-            */
-            event_add(&(pth->event), E_WRITE);
+                event_add(&(pth->event), E_WRITE);
         }
         else
         {
