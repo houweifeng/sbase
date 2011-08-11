@@ -318,8 +318,11 @@ void conn_outevent_handler(CONN *conn)
 
     if(conn)
     {
-        CONN_OUTEVENT_ADD(conn);
-        ret = conn->write_handler(conn);
+        if(SENDQTOTAL(conn) > 0)
+        {
+            CONN_OUTEVENT_ADD(conn);
+            ret = conn->write_handler(conn);
+        }
     }
     return ;
 }
@@ -1168,6 +1171,10 @@ int conn_write_handler(CONN *conn)
             }
             ACCESS_LOGGER(conn->logger, "Over for send-ndata[%d] to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", nsent, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
         }
+        else
+        {
+            CONN_OUTEVENT_DEL(conn);
+        }
     }
     return ret;
 }
@@ -1268,6 +1275,10 @@ int conn_send_handler(CONN *conn)
                 }
             }
             ACCESS_LOGGER(conn->logger, "Over for send-ndata[%d] to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", nsent, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
+        }
+        else
+        {
+            CONN_OUTEVENT_DEL(conn);
         }
     }
     return ret;
