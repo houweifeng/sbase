@@ -13,8 +13,8 @@ typedef struct _MMBLOCK
     char *end;
 }MMBLOCK;
 #endif
-#define  MMBLOCK_BASE 	    65536
-//#define  MMBLOCK_BASE 	32768
+#define  MMBLOCK_BASE 	    32768
+//#define  MMBLOCK_BASE 	65536
 //#define  MMBLOCK_BASE 	131072
 //#define  MMBLOCK_BASE 	524288
 #define  MMBLOCK_MIN 	    1024
