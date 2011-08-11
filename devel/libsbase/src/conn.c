@@ -284,7 +284,7 @@ do                                                                              
 
 /* update evtimer */
 #define CONN_UPDATE_EVTIMER(conn , _evtimer_, _evid_)                                       \
-    do                                                                                      \
+do                                                                                          \
 {                                                                                           \
     if(conn && (_evtimer_ = conn->evtimer) && conn->d_state == 0 && conn->timeout > 0       \
             && (_evid_ = conn->evid) >= 0)                                                  \
@@ -321,14 +321,14 @@ void conn_outevent_handler(CONN *conn)
 
     if(conn)
     {
+        if((ret = conn->write_handler(conn)) < 0)
+        {
+            CONN_OUTEVENT_DESTROY(conn);
+            conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
+        }
         if(SENDQTOTAL(conn) > 0)
         {
             CONN_OUTEVENT_ADD(conn);
-            ret = conn->write_handler(conn);
-            if(ret < 0)
-            {
-                CONN_OUTEVENT_DESTROY(conn);
-            }
         }
     }
     return ;
@@ -447,9 +447,9 @@ void conn_end_handler(CONN *conn)
 
 void conn_output_handler(int event_fd, int event, void *arg)
 {
-    int evid = -1, ret = -1;
     CONN *conn = (CONN *)arg;
-    void *evtimer = NULL;
+    int ret = -1;
+    //void *evtimer = NULL;int evid = -1;
 
     if(conn)
     {
@@ -474,7 +474,7 @@ void conn_output_handler(int event_fd, int event, void *arg)
                 conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
                 return ;
             }
-            CONN_UPDATE_EVTIMER(conn, evtimer, evid);
+            //CONN_UPDATE_EVTIMER(conn, evtimer, evid);
         }
     }
     return ;
@@ -483,9 +483,9 @@ void conn_output_handler(int event_fd, int event, void *arg)
 /* connection event handler */
 void conn_event_handler(int event_fd, int event, void *arg)
 {
-    int len = sizeof(int), error = 0, evid = -1, ret = -1;
+    int len = sizeof(int), error = 0, ret = -1;
     CONN *conn = (CONN *)arg;
-    void *evtimer = NULL;
+    //void *evtimer = NULL;int evid = -1;
 
     if(conn)
     {
@@ -568,7 +568,7 @@ void conn_event_handler(int event_fd, int event, void *arg)
                     return ;
                 }
             } 
-            CONN_UPDATE_EVTIMER(conn, evtimer, evid);
+            //CONN_UPDATE_EVTIMER(conn, evtimer, evid);
             /*
                fprintf(stdout, "%s::%d event:%d on remote[%s:%d] local[%s:%d] via %d\n",
                __FILE__, __LINE__, event, conn->remote_ip, conn->remote_port, 
