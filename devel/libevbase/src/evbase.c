@@ -211,7 +211,7 @@ void event_set(EVENT *event, int fd, int flags, void *arg, void *handler)
 /* Add event flags */
 void event_add(EVENT *event, int flags)
 {
-	if(event)
+	if(event && event->ev_base)
 	{
         MUTEX_LOCK(event->mutex);
         //if((flags & event->ev_flags) != flags)
@@ -234,7 +234,7 @@ void event_add(EVENT *event, int flags)
 /* Delete event flags */
 void event_del(EVENT *event, int flags)
 {
-	if(event)
+	if(event && event->ev_base)
 	{
         MUTEX_LOCK(event->mutex);
 		//if((flags & event->ev_flags))

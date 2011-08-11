@@ -211,6 +211,9 @@ void qmessage_handler(void *qmsg, void *logger)
                 case MESSAGE_SHUTOUT :
                     conn->shutout_handler(conn);
                     break;
+                case MESSAGE_OUT :
+                    conn->outevent_handler(conn);
+                    break;
                 case MESSAGE_OVER :
                     pth->over_connection(pth, conn);
                     break;

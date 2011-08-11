@@ -32,7 +32,8 @@ extern "C" {
 #define MESSAGE_PROXY           0x12
 #define MESSAGE_END             0x13
 #define MESSAGE_SHUTOUT         0x14
-#define MESSAGE_MAX		        0x14
+#define MESSAGE_OUT             0x15
+#define MESSAGE_MAX		        0x15
 static char *messagelist[] = 
 {
     "",
@@ -55,7 +56,8 @@ static char *messagelist[] =
 	"MESSAGE_STOP",
 	"MESSAGE_PROXY",
 	"MESSAGE_END",
-	"MESSAGE_SHUTOUT"
+	"MESSAGE_SHUTOUT",
+    "MESSAGE_OUT"
 };
 typedef struct _MESSAGE
 {
