@@ -73,6 +73,10 @@ void procthread_wakeup(PROCTHREAD *pth)
             {
                 evsig_wakeup(&(pth->evsig));
             }
+            else if(pth->service->flag & SB_USE_COND)
+            {
+                MUTEX_SIGNAL(pth->mutex);
+            }
         }
         //if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
     }
@@ -189,6 +193,10 @@ void procthread_run(void *arg)
                     {
                         if(pth->service->flag & SB_USE_EVSIG)
                             evsig_wait(&(pth->evsig));
+                        else if(pth->service->flag & SB_USE_COND)
+                        {
+                            MUTEX_WAIT(pth->mutex);
+                        }
                         else
                             nanosleep(&ts, NULL);
                     }
@@ -514,7 +522,7 @@ void procthread_clean(PROCTHREAD *pth)
         }
         evsig_close(&(pth->evsig));
         //xqueue_clean(pth->xqueue);
-        //MUTEX_DESTROY(pth->mutex);
+        MUTEX_DESTROY(pth->mutex);
         xmm_free(pth, sizeof(PROCTHREAD));
     }
     return ;
