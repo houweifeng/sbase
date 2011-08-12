@@ -16,12 +16,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define SB_CONN_MAX             65536
+#define SB_CONN_MAX             40960
 #define SB_GROUP_CONN_MAX       1024
 #define SB_BACKLOG_MAX          40960
 #define SB_IP_MAX               16
 #define SB_XIDS_MAX             16
-#define SB_GROUPS_MAX           32
+#define SB_GROUPS_MAX           16
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
@@ -277,7 +277,7 @@ typedef struct _SERVICE
     int cond;
     int flag;
     int nworking_tosleep;
-    int conns_free[SB_CONN_MAX];
+    unsigned short conns_free[SB_CONN_MAX];
 
     struct  sockaddr_in sa;
     EVENT event;
@@ -321,18 +321,18 @@ typedef struct _SERVICE
 
     /* message queue for proc mode */
     void *message_queue;
-    void *xqueue;
+    //void *xqueue;
 
     //void *chunks_queue;
-    CHUNK *qchunks[SB_CHUNKS_MAX];
-    CHUNK *(*popchunk)(struct _SERVICE *service);
-    int (*pushchunk)(struct _SERVICE *service, CHUNK *cp);
-    CB_DATA *(*newchunk)(struct _SERVICE *service, int len);
-    CB_DATA *(*mnewchunk)(struct _SERVICE *service, int len);
+    //CHUNK *qchunks[SB_CHUNKS_MAX];
+    //CHUNK *(*popchunk)(struct _SERVICE *service);
+    //int (*pushchunk)(struct _SERVICE *service, CHUNK *cp);
+    //CB_DATA *(*newchunk)(struct _SERVICE *service, int len);
+    //CB_DATA *(*mnewchunk)(struct _SERVICE *service, int len);
 
     /* connections option */
     struct _CONN *connections[SB_CONN_MAX];
-    struct _CONN *qconns[SB_CONN_MAX];
+    struct _CONN *qconns[SB_QCONN_MAX];
 
     /* C_SERVICE ONLY */
     struct _CONN *(*newproxy)(struct _SERVICE *service, struct _CONN * parent, int inet_family, 
@@ -409,7 +409,7 @@ typedef struct _PROCTHREAD
     SERVICE *service;
 
     /* message queue */
-    void *xqueue;
+    //void *xqueue;
     void *indaemon;
     void *outdaemon;
     void *inqmessage;
@@ -498,7 +498,7 @@ typedef struct _CONN
     EVBASE *outevbase;
     void *parent;
     void *queue;
-    void *xqueue;
+    //void *xqueue;
     /* SSL */
     void *ssl;
     /* evtimer */
