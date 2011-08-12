@@ -351,7 +351,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->message_queue = pth->message_queue;
         conn->evbase        = pth->evbase;
         conn->indaemon      = pth->indaemon;
-        conn->inqmessage    = pth->indaemon;
+        conn->inqmessage    = pth->inqmessage;
         conn->outdaemon     = pth->outdaemon;
         conn->outqmessage   = pth->outqmessage;
         conn->outevbase     = pth->outevbase;

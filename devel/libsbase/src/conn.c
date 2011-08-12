@@ -370,20 +370,19 @@ void conn_shutout_handler(CONN *conn)
         if(conn->outdaemon) event_destroy(&(conn->outevent));
         if((daemon = (PROCTHREAD *)(conn->indaemon)))
         {
-            DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
-                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                        conn->fd);
+            DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] on inqmessage[%p] local[%s:%d] via %d ", conn->remote_ip, conn->remote_port, conn->inqmessage, conn->local_ip, conn->local_port, conn->fd);
             qmessage_push(conn->inqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->indaemon, conn, NULL);
             daemon->wakeup(daemon);
         }
-        else
+        else if((daemon = (PROCTHREAD *)(conn->parent)))
         {
             DEBUG_LOGGER(conn->logger, "Ready for quit-connection[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd)
             qmessage_push(conn->message_queue, MESSAGE_QUIT, 
                     conn->index, conn->fd, -1, conn->parent, conn, NULL);
+            daemon->wakeup(daemon);
         }
     }
     return ;
@@ -414,13 +413,14 @@ void conn_shut_handler(CONN *conn)
                     conn->index, conn->fd, -1, conn->indaemon, conn, NULL);
             daemon->wakeup(daemon);
         }
-        else
+        else if((daemon = (PROCTHREAD *)conn->parent))
         {
             DEBUG_LOGGER(conn->logger, "Ready for quit-connection[%s:%d] local[%s:%d] via %d ",
                         conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
                         conn->fd)
             qmessage_push(conn->message_queue, MESSAGE_QUIT, 
                     conn->index, conn->fd, -1, conn->parent, conn, NULL);
+            daemon->wakeup(daemon);
         }
     }
     return ;
