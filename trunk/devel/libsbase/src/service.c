@@ -152,6 +152,7 @@ void sigpipe_ignore()
 do{                                                                                         \
     if(pthread_create(&(threadid), &attr, (void *)(&procthread_run), (void *)proc) != 0)    \
     {                                                                                       \
+        FATAL_LOGGER(logger, "create newthread failed, %s", strerror(errno));               \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
     if(service->flag & SB_CPU_SET)                                                          \
@@ -291,6 +292,11 @@ running_threads:
         {
             pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
             pthread_attr_setschedpolicy(&ioattr, SCHED_OTHER);
+        }
+        else
+        {
+            pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+            pthread_attr_setschedpolicy(&ioattr, SCHED_FIFO);
         }
         param.sched_priority = 10;
         pthread_attr_setschedparam(&attr, &param);
