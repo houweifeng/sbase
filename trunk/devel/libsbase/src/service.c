@@ -277,11 +277,24 @@ running_threads:
         pthread_attr_setscope(&ioattr, PTHREAD_SCOPE_SYSTEM);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
         pthread_attr_setdetachstate(&ioattr, PTHREAD_CREATE_JOINABLE);
-        pthread_attr_setschedpolicy(&attr, SCHED_RR);
-        pthread_attr_setschedpolicy(&ioattr, SCHED_RR);
-        param.sched_priority = 20;
+        if(service->flag & SB_SCHED_RR)
+        {
+            pthread_attr_setschedpolicy(&attr, SCHED_RR);
+            pthread_attr_setschedpolicy(&ioattr, SCHED_RR);
+        }
+        else if(service->flag & SB_SCHED_FIFO)
+        {
+            pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+            pthread_attr_setschedpolicy(&ioattr, SCHED_FIFO);
+        }
+        else if(service->flag & SB_SCHED_OTHER)
+        {
+            pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
+            pthread_attr_setschedpolicy(&ioattr, SCHED_OTHER);
+        }
+        param.sched_priority = 10;
         pthread_attr_setschedparam(&attr, &param);
-        ioparam.sched_priority = 50;
+        ioparam.sched_priority = 20;
         pthread_attr_setschedparam(&ioattr, &ioparam);
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
