@@ -414,10 +414,10 @@ int main(int argc, char **argv)
     pid_t pid;
     char *url = NULL, *urllist = NULL, line[HTTP_BUF_SIZE], *s = NULL, *p = NULL, ch = 0;
     struct hostent *hent = NULL;
-    int n = 0, log_level = 0, tcp_option = 0, socket_option = 0, niodaemons = 0;
+    int n = 0, log_level = 0, tcp_option = 0, socket_option = 0, niodaemons = 0, is_realtime = 0;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "vqpkdi:s:x:w:l:c:t:n:e:")) != -1)
+    while((ch = getopt(argc, argv, "vqpkrdi:s:x:w:l:c:t:n:e:")) != -1)
     {
         switch(ch)
         {
@@ -441,6 +441,9 @@ int main(int argc, char **argv)
                 break;
             case 'q':
                 is_quiet = 1;
+                break;
+            case 'r':
+                is_realtime = 1;
                 break;
             case 't':
                 req_timeout = atoi(optarg);
@@ -483,7 +486,7 @@ int main(int argc, char **argv)
                 "Options:\n\t-c concurrency\n\t-n requests\n"
                 "\t-w worker threads\n\t-e log level\n\t-x tcp_option 1:tcp_nodelay\n"
                 "\t-s socket_option 1:socket_linger\n\t-i iodaemons\n"
-                "\t-t timeout (microseconds, default 1000000)\n"
+                "\t-t timeout (microseconds, default 1000000)\n\t-r is_realtime_thread\n"
                 "\t-p is_POST\n\t-v is_verbosity\n\t-l urllist file\n"
                 "\t-k is_keepalive\n\t-d is_daemon\n ", argv[0]);
         _exit(-1);
@@ -631,6 +634,7 @@ invalid_url:
         service->ndaemons = 0;
         service->use_cond_wait = 1;
         service->flag |= SB_USE_OUTDAEMON|SB_USE_COND;
+        if(is_realtime) service->flag |= SB_SCHED_REALTIME;
         if(socket_option == 1) service->flag |= SB_SO_LINGER;
         if(tcp_option == 1) service->flag |= SB_TCP_NODELAY;
         service->service_type = C_SERVICE;
