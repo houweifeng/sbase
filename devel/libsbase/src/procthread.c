@@ -1,3 +1,4 @@
+#include <sched.h>
 #include "sbase.h"
 #include "service.h"
 #include "procthread.h"
@@ -91,11 +92,13 @@ void procthread_run(void *arg)
     int i = 0, usec = 0, sec = 0;
     struct timeval tv = {0,0};
     struct timespec ts = {0, 0};
-    int k = 0, n = 0;
+    int k = 0, n = 0, policy = 0;
 
     if(pth)
     {
-        DEBUG_LOGGER(pth->logger, "Ready for running thread[%p]", (void*)((long)(pth->threadid)));
+        struct sched_param param;
+        pthread_getschedparam(pthread_self(), &policy, &param);
+        WARN_LOGGER(pth->logger, "Ready for running thread[%p] policy:%d SCHED_FIFO:%d SCHED_RR:%d SCHED_OTHER:%d", (void*)((long)(pth->threadid)), policy, SCHED_FIFO, SCHED_RR, SCHED_OTHER);
         pth->running_status = 1;
         if(pth->usec_sleep > 1000000) sec = pth->usec_sleep/1000000;
         usec = pth->usec_sleep % 1000000;

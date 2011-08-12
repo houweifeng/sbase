@@ -148,9 +148,9 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(service, attr, ns, id, threadid, proc, logger, cpuset)               \
+#define NEW_PROCTHREAD(service, xattr, ns, id, threadid, proc, logger, cpuset)              \
 do{                                                                                         \
-    if(pthread_create(&(threadid), &attr, (void *)(&procthread_run), (void *)proc) != 0)    \
+    if(pthread_create(&(threadid), &xattr, (void *)(&procthread_run), (void *)proc) != 0)   \
     {                                                                                       \
         FATAL_LOGGER(logger, "create newthread failed, %s", strerror(errno));               \
         exit(EXIT_FAILURE);                                                                 \
@@ -166,7 +166,7 @@ do{                                                                             
 }while(0)
         //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
-#define NEW_PROCTHREAD(service, attr, ns, id, pthid, pth, logger, cpuset)
+#define NEW_PROCTHREAD(service, xattr, ns, id, pthid, pth, logger, cpuset)
 #endif
 #ifdef HAVE_PTHREAD
 #define PROCTHREAD_EXIT(id, exitid) pthread_join((pthread_t)id, exitid)
@@ -270,6 +270,8 @@ running_threads:
         }
         /* set thread attr */
         //pthread_setconcurrency();
+        memset(&param, 0, sizeof(struct sched_param));
+        memset(&ioparam, 0, sizeof(struct sched_param));
         pthread_attr_init(&attr);
         pthread_attr_init(&ioattr);
         pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
@@ -280,19 +282,21 @@ running_threads:
         pthread_attr_setdetachstate(&ioattr, PTHREAD_CREATE_JOINABLE);
         if(service->flag & SB_SCHED_REALTIME)
         {
-            pthread_attr_setschedpolicy(&attr, SCHED_RR);
             pthread_attr_setschedpolicy(&ioattr, SCHED_FIFO);
             ioparam.sched_priority = sched_get_priority_max(SCHED_FIFO);
-            param.sched_priority = ioparam.sched_priority - 1;
-            pthread_attr_setschedparam(&attr, &param);
             pthread_attr_setschedparam(&ioattr, &ioparam);
-            pthread_setschedparam(pthread_self(), SCHED_FIFO, &ioparam);
+            pthread_setschedparam(pthread_self(), SCHED_RR, &ioparam);
+            pthread_attr_setschedpolicy(&attr, SCHED_RR);
+            param.sched_priority = sched_get_priority_max(SCHED_RR) - 1;
+            pthread_attr_setschedparam(&attr, &param);
         }
         else
         {
+            pthread_attr_setschedpolicy(&ioattr, SCHED_FIFO);
+            ioparam.sched_priority = sched_get_priority_max(SCHED_FIFO);
+            pthread_attr_setschedparam(&ioattr, &ioparam);
             pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
-            pthread_attr_setschedpolicy(&ioattr, SCHED_OTHER);
-            pthread_setschedparam(pthread_self(), SCHED_OTHER, &ioparam);
+            pthread_setschedparam(pthread_self(), SCHED_OTHER, &param);
         }
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
