@@ -47,9 +47,7 @@ extern "C" {
 #define SB_USE_OUTDAEMON        0x400
 #define SB_USE_EVSIG            0x800
 #define SB_USE_COND             0x1000
-#define SB_SCHED_RR             0x2000
-#define SB_SCHED_FIFO           0x4000
-#define SB_SCHED_OTHER          0x8000
+#define SB_SCHED_REALTIME       0x2000
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01

@@ -877,8 +877,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
     if(iniparser_getint(dict, "XHTTPD:use_outdaemon", 0) > 0) httpd->flag |= SB_USE_OUTDAEMON;
     if(iniparser_getint(dict, "XHTTPD:use_evsig", 0) > 0) httpd->flag |= SB_USE_EVSIG;
     if(iniparser_getint(dict, "XHTTPD:use_cond", 0) > 0) httpd->flag |= SB_USE_COND;
+    if(iniparser_getint(dict, "XHTTPD:thread_sched", 0) > 0) httpd->flag |= SB_SCHED_REALTIME;
     if((n = iniparser_getint(dict, "XHTTPD:io_sleep", 0)) > 0) httpd->flag |= ((SB_IO_NANOSLEEP|SB_IO_USLEEP|SB_IO_SELECT) & n);
-    n = iniparser_getint(dict, "XHTTPD:thread_sched", 0);if(n == 1) httpd->flag |= SB_SCHED_RR; else if(n == 2) httpd->flag |= SB_SCHED_FIFO; else if(n == 3) httpd->flag |= SB_SCHED_OTHER;
     httpd->nworking_tosleep = iniparser_getint(dict, "XHTTPD:nworking_tosleep", SB_NWORKING_TOSLEEP);
     httpd->set_log(httpd, iniparser_getstr(dict, "XHTTPD:logfile"));
     httpd->set_log_level(httpd, iniparser_getint(dict, "XHTTPD:log_level", 0));
@@ -1088,7 +1088,7 @@ int main(int argc, char **argv)
     }
     //fprintf(stdout, "%s::%d sizeof(SERVICE):%u sizeof(SBASE):%u sizeof(PROCTHREAD):%u sizeof(CONN):%u sizeof(SESSION):%u sizeof(CNGROUP):%u sizeof(struct sockaddr_in):%u sizeof(MUTEX):%d\n", __FILE__, __LINE__, sizeof(SERVICE), sizeof(SBASE), sizeof(PROCTHREAD), sizeof(CONN), sizeof(SESSION), sizeof(CNGROUP), sizeof(struct sockaddr_in), sizeof(MUTEX));
     //fprintf(stdout, "sizeof(EVENT):%d sizeof(EVBASE):%d sizeof(MUTEX):%d sizeof(struct timeval):%d\n", sizeof(EVENT), sizeof(EVBASE), sizeof(MUTEX), sizeof(struct timeval));
-    fprintf(stdout, "sizeof(SERVICE):%d sizeof(CHUNK):%d sizeof(MESSAGE):%d sizeof(MUTEX):%d sizeof(CONN):%d sizeof(HTTP_REQ):%d sizeof(LOGGER):%d sizeof(struct timeval):%d sizeof(struct stat):%d sizeof(pthread_t):%d\n", sizeof(SERVICE), sizeof(CHUNK), sizeof(QMESSAGE), sizeof(MUTEX), sizeof(CONN), sizeof(HTTP_REQ), sizeof(LOGGER), sizeof(struct timeval), sizeof(struct stat), sizeof(pthread_t));
+    //fprintf(stdout, "sizeof(SERVICE):%d sizeof(CHUNK):%d sizeof(MESSAGE):%d sizeof(MUTEX):%d sizeof(CONN):%d sizeof(HTTP_REQ):%d sizeof(LOGGER):%d sizeof(struct timeval):%d sizeof(struct stat):%d sizeof(pthread_t):%d\n", sizeof(SERVICE), sizeof(CHUNK), sizeof(QMESSAGE), sizeof(MUTEX), sizeof(CONN), sizeof(HTTP_REQ), sizeof(LOGGER), sizeof(struct timeval), sizeof(struct stat), sizeof(pthread_t));
     sbase->running(sbase, 0);
     //sbase->running(sbase, 300000000);sbase->stop(sbase);
     sbase->clean(sbase);
