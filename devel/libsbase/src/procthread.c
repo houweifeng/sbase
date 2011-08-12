@@ -41,8 +41,11 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
             MUTEX_UNLOCK(pth->mutex);
             if(n == 1) 
             */
-            event_del(&(pth->event), E_WRITE);
-            pth->flag = 0;
+            if(QMTOTAL(pth->message_queue) < 1) 
+            {
+                event_del(&(pth->event), E_WRITE);
+                pth->flag = 0;
+            }
         }
     }
     return ;
