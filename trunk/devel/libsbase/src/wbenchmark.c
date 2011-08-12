@@ -75,7 +75,16 @@ int http_request(CONN *conn)
     if(running_status && conn)
     {
         //fprintf(stdout, "%s::%d conn[%d]->status:%d\n", __FILE__, __LINE__, conn->fd, conn->status);
-        MUTEX_LOCK(mutex);n = nrequests++;MUTEX_UNLOCK(mutex);
+        MUTEX_LOCK(mutex);
+        if(nrequests < ntasks)
+        {
+            n = nrequests++;
+        }
+        else
+        {
+            n = nrequests;
+        }
+        MUTEX_UNLOCK(mutex);
         if(n >= ntasks)
         {
             //WARN_LOGGER(logger, "close-conn[%s:%d] via %d", conn->local_ip, conn->local_port, conn->fd);
@@ -168,7 +177,15 @@ int http_over(CONN *conn, int respcode)
 
     if(conn)
     {
-        MUTEX_LOCK(mutex);n = ++ncompleted; m = nrequests;nerror = nerrors; ntimeout = ntimeouts;MUTEX_UNLOCK(mutex);
+        MUTEX_LOCK(mutex);
+        if(ncompleted < ntasks)
+        {
+            n = ++ncompleted; 
+            m = nrequests;
+            nerror = nerrors; 
+            ntimeout = ntimeouts;
+        }
+        MUTEX_UNLOCK(mutex);
         //WARN_LOGGER(logger, "complete %d conn[%s:%d] via %d", n, conn->local_ip, conn->local_port, conn->fd);
         id = conn->c_id;
         if(n > 0 && n <= ntasks && (n%1000) == 0)

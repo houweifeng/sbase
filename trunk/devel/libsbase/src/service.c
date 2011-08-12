@@ -1145,6 +1145,7 @@ CONN *service_popfromq(SERVICE *service)
 }
 
 /* pop chunk from service  */
+/*
 CHUNK *service_popchunk(SERVICE *service)
 {
     CHUNK *cp = NULL;
@@ -1171,8 +1172,9 @@ CHUNK *service_popchunk(SERVICE *service)
     }
     return cp;
 }
-
+*/
 /* push chunk to service  */
+/*
 int service_pushchunk(SERVICE *service, CHUNK *cp)
 {
     int ret = -1, x = 0;
@@ -1200,8 +1202,9 @@ int service_pushchunk(SERVICE *service, CHUNK *cp)
     }
     return ret;
 }
-
+*/
 /* new chunk */
+/*
 CB_DATA *service_newchunk(SERVICE *service, int len)
 {
     CB_DATA *chunk = NULL;
@@ -1217,8 +1220,9 @@ CB_DATA *service_newchunk(SERVICE *service, int len)
     }
     return chunk;
 }
-
+*/
 /* new chunk and memset */
+/*
 CB_DATA *service_mnewchunk(SERVICE *service, int len)
 {
     CB_DATA *chunk = NULL;
@@ -1235,6 +1239,7 @@ CB_DATA *service_mnewchunk(SERVICE *service, int len)
     }
     return chunk;
 }
+*/
 /* set service session */
 int service_set_session(SERVICE *service, SESSION *session)
 {
@@ -1646,7 +1651,7 @@ void service_evtimer_handler(void *arg)
 void service_clean(SERVICE *service)
 {
     CONN *conn = NULL;
-    CHUNK *cp = NULL;
+    //CHUNK *cp = NULL;
     int i = 0;
 
     if(service)
@@ -1706,6 +1711,7 @@ void service_clean(SERVICE *service)
         }
         //clean chunks queue
         //DEBUG_LOGGER(service->logger, "Ready for clean chunks_queue:%d", service->nqchunks);
+        /*
         if(service->nqchunks > 0)
         {
             //DEBUG_LOGGER(service->logger, "Ready for clean chunks");
@@ -1718,6 +1724,7 @@ void service_clean(SERVICE *service)
                 }
             }
         }
+        */
         //xqueue_clean(service->xqueue);
         /* SSL */
 #ifdef HAVE_SSL
@@ -1770,10 +1777,10 @@ SERVICE *service_init()
         service->freeconn           = service_freeconn;
         service->findconn           = service_findconn;
         service->overconn           = service_overconn;
-        service->popchunk           = service_popchunk;
-        service->pushchunk          = service_pushchunk;
-        service->newchunk           = service_newchunk;
-        service->mnewchunk          = service_mnewchunk;
+        //service->popchunk           = service_popchunk;
+        //service->pushchunk          = service_pushchunk;
+        //service->newchunk           = service_newchunk;
+        //service->mnewchunk          = service_mnewchunk;
         service->set_session        = service_set_session;
         service->add_multicast      = service_add_multicast;
         service->drop_multicast     = service_drop_multicast;

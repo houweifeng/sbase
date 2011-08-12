@@ -44,7 +44,7 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
         {
             if((i = q->nlist) < QMSG_LINE_MAX)
             {
-                fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
+                fprintf(stdout, "%s::%d q:%p nlist:%d\n", __FILE__, __LINE__, q, q->nlist);
                 if((msg = (MESSAGE *)xmm_new(QMSG_LINE_NUM * sizeof(MESSAGE))))
                 {
                     q->list[i] = msg;
