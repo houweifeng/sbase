@@ -282,26 +282,28 @@ running_threads:
         {
             pthread_attr_setschedpolicy(&attr, SCHED_RR);
             pthread_attr_setschedpolicy(&ioattr, SCHED_RR);
+            ioparam.sched_priority = sched_get_priority_max(SCHED_RR);
+            param.sched_priority = ioparam.sched_priority - 1;
+            pthread_attr_setschedparam(&attr, &param);
+            pthread_attr_setschedparam(&ioattr, &ioparam);
+            pthread_setschedparam(pthread_self(), SCHED_RR, &ioparam);
         }
         else if(service->flag & SB_SCHED_FIFO)
         {
             pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
             pthread_attr_setschedpolicy(&ioattr, SCHED_FIFO);
-        }
-        else if(service->flag & SB_SCHED_OTHER)
-        {
-            pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
-            pthread_attr_setschedpolicy(&ioattr, SCHED_OTHER);
+            ioparam.sched_priority = sched_get_priority_max(SCHED_FIFO);
+            param.sched_priority = ioparam.sched_priority - 1;
+            pthread_attr_setschedparam(&attr, &param);
+            pthread_attr_setschedparam(&ioattr, &ioparam);
+            pthread_setschedparam(pthread_self(), SCHED_FIFO, &ioparam);
         }
         else
         {
-            pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-            pthread_attr_setschedpolicy(&ioattr, SCHED_FIFO);
+            pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
+            pthread_attr_setschedpolicy(&ioattr, SCHED_OTHER);
+            pthread_setschedparam(pthread_self(), SCHED_OTHER, &ioparam);
         }
-        param.sched_priority = 10;
-        pthread_attr_setschedparam(&attr, &param);
-        ioparam.sched_priority = 20;
-        pthread_attr_setschedparam(&ioattr, &ioparam);
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
         if(service->niodaemons < 1) service->niodaemons = 1;
