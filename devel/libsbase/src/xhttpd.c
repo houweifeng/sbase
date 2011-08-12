@@ -8,6 +8,7 @@
 #include <locale.h>
 #include <dirent.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 #include <sys/resource.h>
 #include <sbase.h>
 #ifdef HAVE_ZLIB
@@ -1052,6 +1053,7 @@ int main(int argc, char **argv)
                 break;
         }
     }
+    setpriority(PRIO_PROCESS, getpid(), 19);
     if((sbase = sbase_init()) == NULL)
     {
         exit(EXIT_FAILURE);

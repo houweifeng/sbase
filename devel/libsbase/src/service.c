@@ -148,9 +148,9 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(service, ns, id, threadid, proc, logger, cpuset)                     \
+#define NEW_PROCTHREAD(service, attr, ns, id, threadid, proc, logger, cpuset)               \
 do{                                                                                         \
-    if(pthread_create(&(threadid), NULL, (void *)(&procthread_run), (void *)proc) != 0)     \
+    if(pthread_create(&(threadid), &attr, (void *)(&procthread_run), (void *)proc) != 0)    \
     {                                                                                       \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
@@ -165,7 +165,7 @@ do{                                                                             
 }while(0)
         //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
-#define NEW_PROCTHREAD(service, ns, id, pthid, pth, logger, cpuset)
+#define NEW_PROCTHREAD(service, attr, ns, id, pthid, pth, logger, cpuset)
 #endif
 #ifdef HAVE_PTHREAD
 #define PROCTHREAD_EXIT(id, exitid) pthread_join((pthread_t)id, exitid)
@@ -188,7 +188,7 @@ int service_run(SERVICE *service)
     CONN *conn = NULL; 
 #ifdef HAVE_PTHREAD
     pthread_attr_t ioattr, attr;
-    sched_param ioparam, param;
+    struct sched_param ioparam, param;
 #endif
 
     if(service)
@@ -268,16 +268,21 @@ running_threads:
             CPU_SET(0, &iocpuset);
         }
         /* set thread attr */
+        //pthread_setconcurrency();
         pthread_attr_init(&attr);
         pthread_attr_init(&ioattr);
+        pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+        pthread_attr_setinheritsched(&ioattr, PTHREAD_EXPLICIT_SCHED);
         pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
         pthread_attr_setscope(&ioattr, PTHREAD_SCOPE_SYSTEM);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
         pthread_attr_setdetachstate(&ioattr, PTHREAD_CREATE_JOINABLE);
+        pthread_attr_setschedpolicy(&attr, SCHED_RR);
+        pthread_attr_setschedpolicy(&ioattr, SCHED_RR);
         param.sched_priority = 20;
         pthread_attr_setschedparam(&attr, &param);
-        ioparam.sched_priority = 20;
-        pthread_attr_setschedparam(&ioattr, &param);
+        ioparam.sched_priority = 50;
+        pthread_attr_setschedparam(&ioattr, &ioparam);
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
         if(service->niodaemons < 1) service->niodaemons = 1;
@@ -289,16 +294,12 @@ running_threads:
                 {
                     PROCTHREAD_SET(service, service->iodaemons[i]);
                     service->iodaemons[i]->use_cond_wait = 0;
-                    NEW_PROCTHREAD(service, "iodaemons", i, service->iodaemons[i]->threadid, 
-                        service->iodaemons[i], service->logger, iocpuset);
-
+                    NEW_PROCTHREAD(service, ioattr, "iodaemons", i, service->iodaemons[i]->threadid, service->iodaemons[i], service->logger, iocpuset);
                     ret = 0;
                 }
                 else
                 {
-                    //FATAL_LOGGER(service->logger, "Initialize iodaemons pool failed, %s",strerror(errno));
-                    //exit(EXIT_FAILURE);
-                    //return -1;
+                    FATAL_LOGGER(service->logger, "Initialize iodaemons[%d] failed, %s", i, strerror(errno));
                     goto err;
                 }
             }
@@ -308,14 +309,12 @@ running_threads:
         {
             PROCTHREAD_SET(service, service->outdaemon);
             service->outdaemon->use_cond_wait = 0;
-            NEW_PROCTHREAD(service, "outdaemon", 0, service->outdaemon->threadid, service->outdaemon, service->logger, iocpuset);
+            NEW_PROCTHREAD(service, ioattr, "outdaemon", 0, service->outdaemon->threadid, service->outdaemon, service->logger, iocpuset);
             ret = 0;
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
-            //exit(EXIT_FAILURE);
-            //return -1;
+            FATAL_LOGGER(service->logger, "Initialize outdaemon failed, %s", strerror(errno));
             goto err;
         }
         /* daemon */ 
@@ -323,14 +322,12 @@ running_threads:
         {
             PROCTHREAD_SET(service, service->daemon);
             procthread_set_evsig_fd(service->daemon, service->cond);
-            NEW_PROCTHREAD(service, "daemon", 0, service->daemon->threadid, service->daemon, service->logger, iocpuset);
+            NEW_PROCTHREAD(service, ioattr, "daemon", 0, service->daemon->threadid, service->daemon, service->logger, iocpuset);
             ret = 0;
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
-            //exit(EXIT_FAILURE);
-            //return -1;
+            FATAL_LOGGER(service->logger, "Initialize daemon failed, %s", strerror(errno));
             goto err;
         }
         /* acceptor */
@@ -340,14 +337,12 @@ running_threads:
             {
                 PROCTHREAD_SET(service, service->acceptor);
                 service->acceptor->set_acceptor(service->acceptor, service->fd);
-                NEW_PROCTHREAD(service, "acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger, iocpuset);
+                NEW_PROCTHREAD(service, ioattr, "acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger, iocpuset);
                 ret = 0;
             }
             else
             {
-                //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s", service->working_mode, strerror(errno));
-                //exit(EXIT_FAILURE);
-                //return -1;
+                FATAL_LOGGER(service->logger, "Initialize acceptor failed, %s",  strerror(errno));
                 goto err;
             }
         }
@@ -361,7 +356,8 @@ running_threads:
                 if((service->procthreads[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->procthreads[i]);
-                    procthread_set_evsig_fd(service->procthreads[i], service->cond);
+                    if(service->flag & SB_USE_EVSIG)
+                        procthread_set_evsig_fd(service->procthreads[i], service->cond);
                     x = service->nprocthreads % service->niodaemons;
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
                     service->procthreads[i]->indaemon = service->iodaemons[x];
@@ -372,18 +368,14 @@ running_threads:
                         service->procthreads[i]->outdaemon = service->outdaemon;
                         service->procthreads[i]->outqmessage = service->outdaemon->message_queue;
                     }
+                    NEW_PROCTHREAD(service, attr, "procthreads", i, service->procthreads[i]->threadid, service->procthreads[i], service->logger, cpuset);
                     ret = 0;
                 }
                 else
                 {
-                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s",strerror(errno));
+                    FATAL_LOGGER(service->logger, "Initialize procthreads[%d] failed, %s", i, strerror(errno));
                     goto err;
-                    //exit(EXIT_FAILURE);
-                    //return -1;
                 }
-                //if(ncpu > 0){CPU_ZERO(&cpuset);CPU_SET(i%ncpu, &cpuset);}
-                NEW_PROCTHREAD(service, "procthreads", i, service->procthreads[i]->threadid, 
-                        service->procthreads[i], service->logger, cpuset);
             }
         }
         /* daemon worker threads */
@@ -395,18 +387,16 @@ running_threads:
                 if((service->daemons[i] = procthread_init(0)))
                 {
                     PROCTHREAD_SET(service, service->daemons[i]);
-                    procthread_set_evsig_fd(service->daemons[i], service->cond);
+                    if(service->flag & SB_USE_EVSIG)
+                        procthread_set_evsig_fd(service->daemons[i], service->cond);
+                    NEW_PROCTHREAD(service, attr, "daemons", i, service->daemons[i]->threadid, service->daemons[i], service->logger, cpuset);
                     ret = 0;
                 }
                 else
                 {
-                    //FATAL_LOGGER(service->logger, "Initialize procthreads pool failed, %s", strerror(errno));
-                    //exit(EXIT_FAILURE);
+                    FATAL_LOGGER(service->logger, "Initialize daemons[%d] failed, %s", i, strerror(errno));
                     goto err;
                 }
-                //if(ncpu > 0){CPU_ZERO(&cpuset);CPU_SET(i%ncpu, &cpuset);}
-                NEW_PROCTHREAD(service, "daemons", i, service->daemons[i]->threadid,
-                        service->daemons[i], service->logger, cpuset);
             }
         }
 err:
