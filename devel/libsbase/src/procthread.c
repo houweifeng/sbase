@@ -42,11 +42,10 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
             MUTEX_UNLOCK(pth->mutex);
             if(n == 1) 
             */
-            if(QMTOTAL(pth->message_queue) < 1) 
-            {
-                event_del(&(pth->event), E_WRITE);
-                pth->flag = 0;
-            }
+            MUTEX_LOCK(pth->mutex);
+            event_del(&(pth->event), E_WRITE);
+            pth->flag = 0;
+            MUTEX_UNLOCK(pth->mutex);
         }
     }
     return ;
@@ -59,15 +58,12 @@ void procthread_wakeup(PROCTHREAD *pth)
         if(pth->have_evbase && pth->evbase)
         {
             MUTEX_LOCK(pth->mutex);
-            int n = 0;
             if(pth->flag == 0) 
             {
                 pth->flag = 1;
-                n = 1;
+                event_add(&(pth->event), E_WRITE);
             }
             MUTEX_UNLOCK(pth->mutex);
-            if(n == 1)
-                event_add(&(pth->event), E_WRITE);
         }
         else
         {
@@ -132,10 +128,6 @@ void procthread_run(void *arg)
             do
             {
                 i = pth->evbase->loop(pth->evbase, 0, NULL);
-                if(pth->message_queue && (k = QMTOTAL(pth->message_queue)) > 0)
-                {
-                    qmessage_handler(pth->message_queue, pth->logger);
-                }
                 if(pth->service->flag & SB_LOG_THREAD)
                 {
                     if(pth == pth->service->outdaemon)
@@ -146,6 +138,10 @@ void procthread_run(void *arg)
                     {
                         WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                     }
+                }
+                if(pth->message_queue && (k = QMTOTAL(pth->message_queue)) > 0)
+                {
+                    qmessage_handler(pth->message_queue, pth->logger);
                 }
                 if((pth->service->flag & (SB_IO_NANOSLEEP|SB_IO_USLEEP|SB_IO_SELECT)) 
                         && n++ > pth->service->nworking_tosleep)
