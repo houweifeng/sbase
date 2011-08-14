@@ -145,11 +145,11 @@ do                                                                              
     {                                                                                       \
         if(conn->outdaemon)                                                                 \
         {                                                                                   \
-            event_add(&(conn->outevent), E_WRITE);                                          \
+            if(!(conn->outevent.ev_flags & E_WRITE))event_add(&(conn->outevent), E_WRITE);  \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
-            event_add(&(conn->event), E_WRITE);                                             \
+            if(!(conn->event.ev_flags & E_WRITE))event_add(&(conn->event), E_WRITE);        \
         }                                                                                   \
     }                                                                                       \
 }while(0)
@@ -160,11 +160,11 @@ do                                                                              
     {                                                                                       \
         if(conn->outdaemon)                                                                 \
         {                                                                                   \
-            event_del(&(conn->outevent), E_WRITE);                                          \
+            if(conn->outevent.ev_flags & E_WRITE)event_del(&(conn->outevent), E_WRITE);     \
         }                                                                                   \
         else                                                                                \
         {                                                                                   \
-            event_del(&(conn->event), E_WRITE);                                             \
+            if(conn->event.ev_flags & E_WRITE)event_del(&(conn->event), E_WRITE);           \
         }                                                                                   \
     }                                                                                       \
 }while(0)
@@ -321,14 +321,25 @@ void conn_outevent_handler(CONN *conn)
 
     if(conn)
     {
-        if((ret = conn->write_handler(conn)) < 0)
-        {
-            CONN_OUTEVENT_DESTROY(conn);
-            conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
-        }
         if(SENDQTOTAL(conn) > 0)
         {
-            CONN_OUTEVENT_ADD(conn);
+            if(PPARENT(conn) && PPARENT(conn)->service
+                    && (PPARENT(conn)->service->flag & SB_WHILE_SEND))
+                ret = conn->send_handler(conn);
+            else
+                ret = conn->write_handler(conn);
+            if(ret < 0)
+            {
+                CONN_OUTEVENT_DESTROY(conn);
+                conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
+            }
+            else 
+            {
+                if(SENDQTOTAL(conn) > 0)
+                {
+                    CONN_OUTEVENT_ADD(conn);
+                }
+            }
         }
     }
     return ;
