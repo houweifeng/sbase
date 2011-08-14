@@ -80,12 +80,12 @@ typedef struct _QMESSAGE
     int qtotal;
     int nleft;
     int nlist;
-    MESSAGE pools[QMSG_INIT_NUM];
-    MESSAGE *list[QMSG_LINE_MAX];
     MESSAGE *left;
     MESSAGE *first;
     MESSAGE *last;
     MUTEX *mutex;
+    MESSAGE *list[QMSG_LINE_MAX];
+    MESSAGE pools[QMSG_INIT_NUM];
 }QMESSAGE;
 void *qmessage_init();
 void qmessage_handler(void *q, void *logger);
@@ -94,8 +94,6 @@ void qmessage_clean(void *q);
 /* Initialize message */
 #define QMTOTAL(q) ((q)?(((QMESSAGE *)q)->total):0)
 #define QNLEFT(q) ((q)?(((QMESSAGE *)q)->nleft):0)
-#define MESSAGE_INIT() ((MESSAGE *)calloc(1, sizeof(MESSAGE)))
-#define MESSAGE_CLEAN(ptr) {if(ptr){free(ptr);ptr = NULL;}}
 #define MESSAGE_SIZE    sizeof(MESSAGE)
 #endif
 #ifdef __cplusplus

@@ -19,6 +19,7 @@ void *qmessage_init()
             msg->next = q->left;
             q->left = msg;
             q->nleft++;
+            q->qtotal = QMSG_INIT_NUM;
         }
     }
     return q;
@@ -44,7 +45,7 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
         {
             if((i = q->nlist) < QMSG_LINE_MAX)
             {
-                fprintf(stdout, "%s::%d q:%p nlist:%d\n", __FILE__, __LINE__, q, q->nlist);
+                //fprintf(stdout, "%s::%d q:%p qtotal:%d total:%d left:%d nlist:%d\n", __FILE__, __LINE__, q, q->qtotal, q->total, q->nleft, q->nlist);
                 if((msg = (MESSAGE *)xmm_new(QMSG_LINE_NUM * sizeof(MESSAGE))))
                 {
                     q->list[i] = msg;
@@ -82,6 +83,7 @@ void qmessage_push(void *qmsg, int id, int index, int fd, int tid,
                 q->first = q->last = msg;
             }
             ++(q->total);
+            //fprintf(stdout, "%s::%d q:%p qtotal:%d total:%d left:%d nlist:%d\n", __FILE__, __LINE__, q, q->qtotal, q->total, q->nleft, q->nlist);
         }
         MUTEX_UNLOCK(q->mutex);
     }
