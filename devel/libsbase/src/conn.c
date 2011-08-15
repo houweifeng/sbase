@@ -4,10 +4,8 @@
 #include "mmblock.h"
 #include "chunk.h"
 #include "logger.h"
-//#include "queue.h"
 #include "message.h"
 #include "service.h"
-#include "timer.h"
 #include "evtimer.h"
 #include "xmm.h"
 #ifndef PPL
@@ -219,11 +217,9 @@ do                                                                              
 {                                                                                           \
     if(conn && conn->d_state == 0)                                                          \
     {                                                                                       \
-        qmessage_push(conn->message_queue, msgid,                                       \
+        qmessage_push(conn->message_queue, msgid,                                           \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
-        ACCESS_LOGGER(conn->logger, "qmessage[%d] qtotal:%d qleft:%d remote[%s:%d] on %s:%d via %d",  msgid, QMTOTAL(conn->message_queue), QNLEFT(conn->message_queue), conn->remote_ip, conn->remote_port,conn->local_ip, conn->local_port, conn->fd);\
         PPARENT(conn)->wakeup(PPARENT(conn));                                               \
-        ACCESS_LOGGER(conn->logger, "qmessage[%d] qtotal:%d qleft:%d remote[%s:%d] on %s:%d via %d",  msgid, QMTOTAL(conn->message_queue), QNLEFT(conn->message_queue), conn->remote_ip, conn->remote_port,conn->local_ip, conn->local_port, conn->fd);\
     }                                                                                       \
 }while(0)
 #define CONN__PUSH__MESSAGE(conn, msgid)                                                    \
@@ -231,7 +227,7 @@ do                                                                              
 {                                                                                           \
     if(conn)                                                                                \
     {                                                                                       \
-            qmessage_push(conn->message_queue, msgid,                                       \
+        qmessage_push(conn->message_queue, msgid,                                           \
                 conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
         PPARENT(conn)->wakeup(PPARENT(conn));                                               \
     }                                                                                       \
@@ -266,21 +262,22 @@ do                                                                              
 }while(0)
 /* evtimer setting */
 #define CONN_EVTIMER_SET(conn)                                                              \
-    do{                                                                                         \
-        if(conn && conn->evtimer && conn->timeout > 0)                                          \
-        {                                                                                       \
-            if(conn->evid >= 0)                                                                 \
-            {                                                                                   \
-                EVTIMER_UPDATE(conn->evtimer, conn->evid, conn->timeout,                        \
-                        &conn_evtimer_handler, (void *)conn);                                   \
-            }                                                                                   \
-            else                                                                                \
-            {                                                                                   \
-                conn->evid = EVTIMER_ADD(conn->evtimer, conn->timeout,                          \
-                        &conn_evtimer_handler, (void *)conn);                                   \
-            }                                                                                   \
-        }                                                                                       \
-    }while(0)
+do                                                                                          \
+{                                                                                           \
+    if(conn && conn->evtimer && conn->timeout > 0)                                          \
+    {                                                                                       \
+        if(conn->evid >= 0)                                                                 \
+        {                                                                                   \
+            EVTIMER_UPDATE(conn->evtimer, conn->evid, conn->timeout,                        \
+                    &conn_evtimer_handler, (void *)conn);                                   \
+        }                                                                                   \
+        else                                                                                \
+        {                                                                                   \
+            conn->evid = EVTIMER_ADD(conn->evtimer, conn->timeout,                          \
+                    &conn_evtimer_handler, (void *)conn);                                   \
+        }                                                                                   \
+    }                                                                                       \
+}while(0)
 
 /* update evtimer */
 #define CONN_UPDATE_EVTIMER(conn , _evtimer_, _evid_)                                       \
@@ -323,7 +320,7 @@ void conn_outevent_handler(CONN *conn)
     {
         if(SENDQTOTAL(conn) > 0)
         {
-            if(PPARENT(conn) && PPARENT(conn)->service
+            if(PPARENT(conn) && PPARENT(conn)->service 
                     && (PPARENT(conn)->service->flag & SB_WHILE_SEND))
                 ret = conn->send_handler(conn);
             else
@@ -352,7 +349,6 @@ void conn_buffer_handler(CONN *conn)
 
     if(conn)
     {
-        //if(SENDQTOTAL(conn) < 1){CONN_PUSH_MESSAGE(conn, MESSAGE_END);}
         if(conn->s_state == 0) ret = conn->packet_reader(conn);
     }
     return ;
@@ -443,7 +439,7 @@ void conn_end_handler(CONN *conn)
         }
         //ACCESS_LOGGER(conn->logger, "end_handler conn[%p]->event{ev_flags:%d old_ev_flags:%d evbase:%p} qtotal:%d/%d nbufer:%d remote[%s:%d] local[%s:%d] via %d", conn, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base, SENDQTOTAL(conn), n, MMB_NDATA(conn->buffer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->s_state == 0 && MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}
-        DEBUG_LOGGER(conn->logger, "end_handler conn[%p]->event{ev_flags:%d old_ev_flags:%d evbase:%p} qtotal:%d nbufer:%d remote[%s:%d] local[%s:%d] via %d", conn, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base, SENDQTOTAL(conn), MMB_NDATA(conn->buffer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        //DEBUG_LOGGER(conn->logger, "end_handler conn[%p]->event{ev_flags:%d old_ev_flags:%d evbase:%p} qtotal:%d nbufer:%d remote[%s:%d] local[%s:%d] via %d", conn, conn->event.ev_flags, conn->event.old_ev_flags, conn->event.ev_base, SENDQTOTAL(conn), MMB_NDATA(conn->buffer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
     }
     return ;
 }
@@ -602,8 +598,7 @@ int conn_set(CONN *conn)
         else
         {
             FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or initialize event failed, %s", conn, conn->fd, strerror(errno));	
-            /* Terminate connection */
-            conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
+            //conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
         }
     }	
     return -1;	
@@ -627,8 +622,6 @@ int conn_close(CONN *conn)
     if(conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        //conn->over_cstate(conn);
-        //conn->over_evstate(conn);
         conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
         return 0;
     }
@@ -643,11 +636,8 @@ int conn_over(CONN *conn)
 
     if(conn)
     {
-        //MUTEX_LOCK(conn->mutex);
         DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->d_state == D_STATE_FREE) conn_over_chunk(conn);
-        //MUTEX_UNLOCK(conn->mutex);
-        //if(i == -1) conn_over_chunk(conn);
         return 0;
     }
     return -1;
@@ -664,14 +654,8 @@ int conn_shut(CONN *conn, int d_state, int e_state)
         if(conn->d_state == D_STATE_FREE && conn->fd > 0)
         {
             conn->over_timeout(conn);
-            //WARN_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] d_state:%d "
-            //        "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
-            //        conn->d_state, conn->local_ip, conn->local_port, conn->fd);
             conn->d_state |= d_state;
             if(conn->e_state == E_STATE_OFF) conn->e_state = e_state;
-            //WARN_LOGGER(conn->logger, "closed-conn[%p] remote[%s:%d] d_state:%d "
-            //        "local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port,
-            //        conn->d_state, conn->local_ip, conn->local_port, conn->fd);
             CONN__PUSH__MESSAGE(conn, MESSAGE_SHUT);
         }
         MUTEX_UNLOCK(conn->mutex);
@@ -855,12 +839,6 @@ int conn_start_cstate(CONN *conn)
             conn->c_state = C_STATE_USING;
             while((cp = (CHUNK *)SENDQPOP(conn)))
             {
-                /*
-                if(PPARENT(conn) && PPARENT(conn)->service)
-                {
-                    PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
-                }
-                */
                 conn_freechunk(conn, (CB_DATA *)cp);
                 cp  = NULL;
             }
@@ -936,7 +914,6 @@ int conn__push__message(CONN *conn, int message_id)
             DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to inqmessage[%p] on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]", messagelist[message_id], PPL(conn->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, QMTOTAL(conn->message_queue), PPL(conn), parent);
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
             parent->wakeup(parent);
-            //if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
         }
         ret = 0;
     }
@@ -1019,7 +996,7 @@ int conn_read_handler(CONN *conn)
             if(conn->session.packet_type == PACKET_PROXY) return ret;
         }
         if(conn->s_state == 0 && conn->packet.ndata == 0)
-            conn->packet_reader(conn);
+            ret = conn->packet_reader(conn);
         ret = 0;
     }
     return ret;
@@ -1100,6 +1077,7 @@ int conn_write_handler(CONN *conn)
         else
         {
             CONN_OUTEVENT_DEL(conn);
+            ACCESS_LOGGER(conn->logger, "nodata to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
             ret = 0;
         }
     }
@@ -1183,6 +1161,7 @@ int conn_send_handler(CONN *conn)
         {
             ret = 0;
             CONN_OUTEVENT_DEL(conn);
+            ACCESS_LOGGER(conn->logger, "nodata to %s:%d on %s:%d via %d qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state);
         }
     }
     return ret;
@@ -1234,19 +1213,6 @@ int conn_packet_reader(CONN *conn)
             {
                 len = p + conn->session.packet_delimiter_length - MMB_DATA(conn->buffer);
             }
-            /*
-            if(MMB_END(conn->buffer))
-            while(p < e && i < conn->session.packet_delimiter_length )
-            {
-                if(((char *)conn->session.packet_delimiter)[i++] != *p++) i = 0;
-                if(i == conn->session.packet_delimiter_length)
-                {
-                    len = p - MMB_DATA(conn->buffer);
-                    DEBUG_LOGGER(conn->logger, "Reading packet with delimiter[%d] length[%d] from %s:%d on %s:%d via %d", conn->session.packet_delimiter_length, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-                    break;
-                }
-            }
-            */
             goto end;
         }
         return len;
@@ -1258,12 +1224,12 @@ end:
             MMB_PUSH(conn->packet, MMB_DATA(conn->buffer), len);
             MMB_DELETE(conn->buffer, len);
             ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-            /* For packet handling */
+            /* For packet quick handling */
             if(MMB_NDATA(conn->buffer) > 0 && conn->session.quick_handler 
                     && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0)
             {
                 chunk_mem(&(conn->chunk), n);
-                ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+                ACCESS_LOGGER(conn->logger, "fill-chunk left[%d/%d] from %s:%d on %s:%d via %d", CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 conn->s_state = S_STATE_READ_CHUNK;
                 conn__read__chunk(conn);
                 ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);

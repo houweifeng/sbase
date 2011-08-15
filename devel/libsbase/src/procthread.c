@@ -8,7 +8,6 @@
 #include "chunk.h"
 #include "stime.h"
 #include "mutex.h"
-//#include "xqueue.h"
 #include "xmm.h"
 #include "mmblock.h"
 #define PUSH_TASK_MESSAGE(pth, msgid, index, fd, tid, handler, arg)                         \
@@ -31,17 +30,6 @@ void procthread_event_handler(int event_fd, int flags, void *arg)
         }
         else
         {
-            /*
-            MUTEX_LOCK(pth->mutex);
-            int n = 0;
-            if(QMTOTAL(pth->message_queue) < 1) 
-            {
-                pth->flag = 0;
-                n = 1;
-            }
-            MUTEX_UNLOCK(pth->mutex);
-            if(n == 1) 
-            */
             MUTEX_LOCK(pth->mutex);
             event_del(&(pth->event), E_WRITE);
             pth->flag = 0;
@@ -76,7 +64,6 @@ void procthread_wakeup(PROCTHREAD *pth)
                 MUTEX_SIGNAL(pth->mutex);
             }
         }
-        //if(pth->use_cond_wait){MUTEX_SIGNAL(pth->mutex);}
     }
     return ;
 }
@@ -98,7 +85,6 @@ void procthread_run(void *arg)
         pth->running_status = 1;
         if(pth->usec_sleep > 1000000) sec = pth->usec_sleep/1000000;
         usec = pth->usec_sleep % 1000000;
-
         tv.tv_sec = sec;
         tv.tv_usec = usec;
         ts.tv_sec = sec;
@@ -156,22 +142,9 @@ void procthread_run(void *arg)
         }
         else if(pth->listenfd > 0)
         {
-            /*
-               event_set(&(pth->acceptor), pth->listenfd, E_READ|E_PERSIST,
-               (void *)pth, (void *)&procthread_event_handler);
-               pth->evbase->add(pth->evbase, &(pth->acceptor));
-               */
             do
             {
                 service_accept_handler(pth->service);
-                //ACCESS_LOGGER(pth->logger, "acceptor_loop(%d)", i);
-                /*
-                i = pth->evbase->loop(pth->evbase, 0, NULL);
-                if(pth->service->flag & SB_LOG_THREAD)
-                {
-                    WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
-                }
-                */
             }while(pth->running_status);
             WARN_LOGGER(pth->logger, "Ready for stop threads[acceptor]");
         }
@@ -187,8 +160,6 @@ void procthread_run(void *arg)
                         qmessage_handler(pth->message_queue, pth->logger);
                         i = 1;
                     }
-                    //if(QMTOTAL(pth->message_queue) < 1){MUTEX_WAIT(pth->mutex);i = 0;}
-                    //if(QMTOTAL(pth->message_queue) < 1){evsig_wait(&(pth->evsig));i = 0;}
                     if(QMTOTAL(pth->message_queue) < 1) 
                     {
                         if(pth->service->flag & SB_USE_EVSIG)
@@ -200,16 +171,6 @@ void procthread_run(void *arg)
                         else
                             nanosleep(&ts, NULL);
                     }
-                    /*
-                    //if(i > pth->service->nworking_tosleep)
-                    //{usleep(pth->usec_sleep);i = 0;}
-                    //{select(0, NULL, NULL, NULL, &tv); i = 0;}
-                    //if(k > pth->service->nworking_tosleep){usleep(pth->usec_sleep);i = 0;}
-                    if(pth->service->flag & SB_LOG_THREAD)
-                    {
-                        WARN_LOGGER(pth->logger, "conn_worker[%p]->loop(%d) q[%p]->total:%d/%d nleft:%d daemon:%p", pth, pth->index, pth->message_queue, QMTOTAL(pth->message_queue), k, QNLEFT(pth->message_queue), pth->service->daemon);
-                    }
-                    */
                 }while(pth->running_status);
                 WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
@@ -224,13 +185,9 @@ void procthread_run(void *arg)
                         qmessage_handler(pth->message_queue, pth->logger);
                     }
                     nanosleep(&ts, NULL);
-                    //select(0, NULL, NULL, NULL, &tv);
-                    //usleep(pth->usec_sleep);
-                    //ACCESS_LOGGER(pth->logger, "conn_daemon_loop(%d)", pth->index);
-                    //if(i > 1000) select(0, NULL, NULL, NULL, &tv);
                     //WARN_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                 }while(pth->running_status);
-                //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
+                WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
         }
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
@@ -332,10 +289,7 @@ int procthread_addconn(PROCTHREAD *pth, CONN *conn)
     if(pth && pth->message_queue && conn  && pth->lock == 0)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_NEW_SESSION, -1, conn->fd, -1, conn, NULL);
-        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%p][%s:%d] d_state:%d "
-                "on %s:%d via %d total %d", messagelist[MESSAGE_NEW_SESSION], conn,
-                conn->remote_ip, conn->remote_port, conn->d_state, conn->local_ip, conn->local_port,
-                conn->fd, QMTOTAL(pth->message_queue));
+        DEBUG_LOGGER(pth->logger, "Ready for adding msg[%s] connection[%p][%s:%d] d_state:%d on %s:%d via %d total %d", messagelist[MESSAGE_NEW_SESSION], conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->local_ip, conn->local_port, conn->fd, QMTOTAL(pth->message_queue));
         ret = 0;
     }
     return ret;
@@ -348,9 +302,7 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
 
     if(pth && conn)
     {
-        DEBUG_LOGGER(pth->logger, "Ready for add connection[%p][%s:%d] d_state:%d "
-                " on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port,
-                conn->d_state, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(pth->logger, "Ready for add connection[%p][%s:%d] d_state:%d on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         conn->message_queue = pth->message_queue;
         conn->evbase        = pth->evbase;
         conn->indaemon      = pth->indaemon;
@@ -359,12 +311,9 @@ int procthread_add_connection(PROCTHREAD *pth, CONN *conn)
         conn->outqmessage   = pth->outqmessage;
         conn->outevbase     = pth->outevbase;
         conn->parent        = pth;
-        //conn->xqueue        = pth->xqueue;
         if(pth->service->pushconn(pth->service, conn) == 0 && conn->set(conn) == 0)
         {
-            DEBUG_LOGGER(pth->logger, "Ready for add conn[%p][%s:%d] d_state:%d "
-                " on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port, 
-                conn->d_state, conn->local_ip, conn->local_port, conn->fd);
+            DEBUG_LOGGER(pth->logger, "Ready for add conn[%p][%s:%d] d_state:%d on %s:%d via %d to pool", conn, conn->remote_ip, conn->remote_port, conn->d_state, conn->local_ip, conn->local_port, conn->fd);
         }
     }
     return ret;
@@ -396,11 +345,13 @@ int procthread_shut_connection(PROCTHREAD *pth, CONN *conn)
         {
             qmessage_push(indaemon->message_queue, MESSAGE_OVER, conn->index, conn->fd, 
                 -1, indaemon, conn, NULL);
+            indaemon->wakeup(indaemon);
         }
         else
         {
             qmessage_push(pth->message_queue, MESSAGE_QUIT, conn->index, conn->fd,
                     -1, pth, conn, NULL);
+            pth->wakeup(pth);
         }
         ret = 0;
     }
@@ -418,7 +369,6 @@ int procthread_terminate_connection(PROCTHREAD *pth, CONN *conn)
         ret = conn->terminate(conn);
         if(pth->lock)
         {
-            DEBUG_LOGGER(pth->logger, "Ready for clean conn[%p]", conn);
             conn->clean(conn);
         }
         else
@@ -468,7 +418,6 @@ void procthread_state(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
     if(pth && pth->message_queue)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_STATE, -1, -1, -1, handler, arg);
-        //DEBUG_LOGGER(pth->logger, "Ready for state connections on daemon procthread");
     }
     return ;
 }
@@ -479,7 +428,6 @@ void procthread_active_heartbeat(PROCTHREAD *pth,  CALLBACK *handler, void *arg)
     if(pth && pth->message_queue)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_HEARTBEAT, -1, -1, -1, handler, arg);
-        //WARN_LOGGER(pth->logger, "Ready for activing heartbeat on daemon procthread");
     }
     return ;
 
@@ -516,7 +464,6 @@ void procthread_clean(PROCTHREAD *pth)
             if(pth->have_evbase)
             {
                 event_destroy(&(pth->event));
-                //event_destroy(&(pth->acceptor));
                 if(pth->evbase) pth->evbase->clean(pth->evbase);
             }
             qmessage_clean(pth->message_queue);
