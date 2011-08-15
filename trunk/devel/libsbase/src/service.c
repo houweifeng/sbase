@@ -361,6 +361,20 @@ running_threads:
                 goto err;
             }
         }
+        /* tracker */ 
+        if((service->tracker = procthread_init(0)))
+        {
+            PROCTHREAD_SET(service, service->tracker);
+            service->tracker->use_cond_wait = 0;
+            service->tracker->evtimer = service->etimer;
+            NEW_PROCTHREAD(service, ioattr, "tracker", 0, service->tracker->threadid, service->tracker, service->logger, iocpuset);
+            ret = 0;
+        }
+        else
+        {
+            FATAL_LOGGER(service->logger, "Initialize tracker failed, %s", strerror(errno));
+            goto err;
+        }
         /* initialize threads  */
         if(service->nprocthreads > SB_THREADS_MAX) service->nprocthreads = SB_THREADS_MAX;
         if(service->nprocthreads < 1) service->nprocthreads = 1;
@@ -1550,6 +1564,16 @@ void service_stop(SERVICE *service)
         }
         /* delete evtimer */
         EVTIMER_DEL(service->evtimer, service->evid);
+        /*tracker */
+        if(service->tracker)
+        {
+            WARN_LOGGER(service->logger, "Ready for stop threads[tracker]");
+            service->tracker->stop(service->tracker);
+            if(service->working_mode == WORKING_THREAD)
+            {
+                PROCTHREAD_EXIT(service->tracker->threadid, NULL);
+            }
+        }
         //WARN_LOGGER(service->logger, "Ready for remove event");
         /*remove event */
         event_destroy(&(service->event));
@@ -1653,12 +1677,13 @@ void service_clean(SERVICE *service)
         event_clean(&(service->event)); 
         if(service->daemon) service->daemon->clean(service->daemon);
         if(service->acceptor) service->acceptor->clean(service->acceptor);
-        //if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
+        if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
         for(i = 0;i < service->ngroups; i++)
         {
             MUTEX_DESTROY(service->groups[i].mutex);
         }
         if(service->outdaemon) service->outdaemon->clean(service->outdaemon);
+        if(service->tracker) service->tracker->clean(service->tracker);
         if(service->niodaemons > 0)
         {
             for(i = 0; i < service->ndaemons; i++)
@@ -1755,7 +1780,7 @@ SERVICE *service_init()
     {
         MUTEX_INIT(service->mutex);
         //service->xqueue             = xqueue_init();
-        //service->etimer             = EVTIMER_INIT();
+        service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;
         service->set_log            = service_set_log;
