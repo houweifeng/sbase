@@ -12,7 +12,7 @@ extern "C" {
 #define E_PERSIST	0x08
 #define E_EPOLL_ET  0x10
 #define E_LOCK      0x20
-#define EV_MAX_FD	65536
+#define EV_MAX_FD	65000
 /*event operating */
 #define EOP_PORT        0x00
 #define EOP_SELECT      0x01

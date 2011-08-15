@@ -173,11 +173,13 @@ int mtrie_add(void *mtr, char *key, int nkey, int data)
                     n  = nodes[i].nchilds + 1;
                     z = nodes[i].childs;
                     MTRIE_POP(mtrie, n, pos);
-                    if(pos < MTRIE_LINE_MAX) 
+                    nodes = mtrie->nodes;
+                    if(pos < MTRIE_LINE_MAX || pos > mtrie->state->current) 
                     {
                         goto end;
                     }
                     childs = &(nodes[pos]);
+                    memset(childs, 0, sizeof(MTRNODE) * n);
                     if(x == 0)
                     {
                         MTRNODE_SETK(childs[0], *p);
@@ -297,12 +299,14 @@ int mtrie_xadd(void *mtr, char *key, int nkey)
                     n  = nodes[i].nchilds + 1;
                     z = nodes[i].childs;
                     MTRIE_POP(mtrie, n, pos);
-                    if(pos < MTRIE_LINE_MAX) 
+                    nodes = mtrie->nodes;
+                    if(pos < MTRIE_LINE_MAX || pos > mtrie->state->current) 
                     {
                         ret = -3;
                         goto end;
                     }
                     childs = &(nodes[pos]);
+                    memset(childs, 0, sizeof(MTRNODE) * n);
                     if(x == 0)
                     {
                         MTRNODE_SETK(childs[0], *p);
@@ -663,8 +667,10 @@ int   mtrie_radd(void *mtr, char *key, int nkey, int data)
                     n  = nodes[i].nchilds + 1;
                     z = nodes[i].childs;
                     MTRIE_POP(mtrie, n, pos);
-                    if(pos < MTRIE_LINE_MAX) goto end;
+                    nodes = mtrie->nodes;
+                    if(pos < MTRIE_LINE_MAX || pos > mtrie->state->current) goto end;
                     childs = &(nodes[pos]);
+                    memset(childs, 0, sizeof(MTRNODE) * n);
                     if(x == 0)
                     {
                         MTRNODE_SETK(childs[0], *p);
@@ -778,8 +784,10 @@ int   mtrie_rxadd(void *mtr, char *key, int nkey)
                     n  = nodes[i].nchilds + 1;
                     z = nodes[i].childs;
                     MTRIE_POP(mtrie, n, pos);
-                    if(pos < MTRIE_LINE_MAX) goto end;
+                    nodes = mtrie->nodes;
+                    if(pos < MTRIE_LINE_MAX || pos > mtrie->state->current) goto end; 
                     childs = &(nodes[pos]);
+                    memset(childs, 0, sizeof(MTRNODE) * n);
                     if(x == 0)
                     {
                         MTRNODE_SETK(childs[0], *p);

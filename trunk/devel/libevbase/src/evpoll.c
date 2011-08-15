@@ -9,7 +9,7 @@
 /* Initialize evpoll  */
 int evpoll_init(EVBASE *evbase)
 {
-    struct rlimit rlim;
+    //struct rlimit rlim;
     int max_fd = EV_MAX_FD;
     if(evbase)
     {
