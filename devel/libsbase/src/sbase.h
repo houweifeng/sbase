@@ -291,6 +291,7 @@ typedef struct _SERVICE
     void (*active_heartbeat)(struct _SERVICE *);
 
     /* working mode */
+    struct _PROCTHREAD *tracker;
     struct _PROCTHREAD *daemon;
     struct _PROCTHREAD *acceptor;
     struct _PROCTHREAD *outdaemon;

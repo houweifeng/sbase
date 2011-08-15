@@ -218,16 +218,17 @@ void procthread_run(void *arg)
                 do
                 {
                     //DEBUG_LOGGER(pth->logger, "starting threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
-                    //if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
+                    if(pth->evtimer){EVTIMER_CHECK(pth->evtimer);}
                     if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
                     {
                         qmessage_handler(pth->message_queue, pth->logger);
                     }
+                    nanosleep(&ts, NULL);
                     //select(0, NULL, NULL, NULL, &tv);
-                    usleep(pth->usec_sleep);
+                    //usleep(pth->usec_sleep);
                     //ACCESS_LOGGER(pth->logger, "conn_daemon_loop(%d)", pth->index);
                     //if(i > 1000) select(0, NULL, NULL, NULL, &tv);
-                    //DEBUG_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
+                    //WARN_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                 }while(pth->running_status);
                 //WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
