@@ -388,9 +388,7 @@ void conn_shutout_handler(CONN *conn)
         }
         else if((daemon = (PROCTHREAD *)(conn->parent)))
         {
-            DEBUG_LOGGER(conn->logger, "Ready for quit-connection[%s:%d] local[%s:%d] via %d ",
-                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                        conn->fd)
+            DEBUG_LOGGER(conn->logger, "Ready for quit-connection[%s:%d] local[%s:%d] via %d ", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd)
             qmessage_push(conn->message_queue, MESSAGE_QUIT, 
                     conn->index, conn->fd, -1, conn->parent, conn, NULL);
             daemon->wakeup(daemon);
@@ -408,27 +406,21 @@ void conn_shut_handler(CONN *conn)
     {
         if((daemon = (PROCTHREAD *)conn->outdaemon))
         {
-            DEBUG_LOGGER(conn->logger, "Ready for shut-connection-out[%s:%d] local[%s:%d] via %d ",
-                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                        conn->fd);
+            DEBUG_LOGGER(conn->logger, "Ready for shut-connection-out[%s:%d] local[%s:%d] via %d ", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             qmessage_push(conn->outqmessage, MESSAGE_SHUTOUT,
                     conn->index, conn->fd, -1, conn->outdaemon, conn, NULL);
             daemon->wakeup(daemon);
         }
         else if((daemon = (PROCTHREAD *)conn->indaemon))
         {
-            DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ",
-                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                        conn->fd);
+            DEBUG_LOGGER(conn->logger, "Ready for shut-connection[%s:%d] local[%s:%d] via %d ", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             qmessage_push(conn->inqmessage, MESSAGE_OVER,
                     conn->index, conn->fd, -1, conn->indaemon, conn, NULL);
             daemon->wakeup(daemon);
         }
         else if((daemon = (PROCTHREAD *)conn->parent))
         {
-            DEBUG_LOGGER(conn->logger, "Ready for quit-connection[%s:%d] local[%s:%d] via %d ",
-                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                        conn->fd)
+            DEBUG_LOGGER(conn->logger, "Ready for quit-connection[%s:%d] local[%s:%d] via %d ", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd)
             qmessage_push(conn->message_queue, MESSAGE_QUIT, 
                     conn->index, conn->fd, -1, conn->parent, conn, NULL);
             daemon->wakeup(daemon);
@@ -514,16 +506,12 @@ void conn_event_handler(int event_fd, int event, void *arg)
                 ret = getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
                 if(ret < 0 || error != 0)
                 {
-                    WARN_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] "
-                            "connectting failed, error:[%d]{%s}", conn->fd, conn, conn->remote_ip, 
-                            conn->remote_port, conn->local_ip, conn->local_port, error, strerror(error));
+                    WARN_LOGGER(conn->logger, "socket %d to conn[%p] remote[%s:%d] local[%s:%d] connectting failed, error:[%d]{%s}", conn->fd, conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, error, strerror(error));
                     CONN_OUTEVENT_DESTROY(conn);
                     conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);          
                     return ;
                 }
-                DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]",
-                        conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, 
-                        conn->fd, event);
+                DEBUG_LOGGER(conn->logger, "Connection[%s:%d] local[%s:%d] via %d is OK event[%d]", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, event);
                 //set conn->status
                 if(PPARENT(conn) && PPARENT(conn)->service)
                     PPARENT(conn)->service->okconn(PPARENT(conn)->service, conn);
@@ -619,18 +607,14 @@ int conn_set(CONN *conn)
                 flag |= E_LOCK;
             if(conn->status == CONN_STATUS_READY) flag |= E_WRITE;
             event_set(&(conn->event), conn->fd, flag, (void *)conn, &conn_event_handler);
-            DEBUG_LOGGER(conn->logger, "setting conn[%p]->evbase[%p] remote[%s:%d]"
-                    " d_state:%d local[%s:%d] via %d", conn, conn->evbase,
-                    conn->remote_ip, conn->remote_port, conn->d_state,
-                    conn->local_ip, conn->local_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "setting conn[%p]->evbase[%p] remote[%s:%d] d_state:%d local[%s:%d] via %d", conn, conn->evbase, conn->remote_ip, conn->remote_port, conn->d_state, conn->local_ip, conn->local_port, conn->fd);
             conn->evbase->add(conn->evbase, &(conn->event));
 
             return 0;
         }
         else
         {
-            FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or "
-                    " initialize event failed, %s", conn, conn->fd, strerror(errno));	
+            FATAL_LOGGER(conn->logger, "Connection[%p] fd[%d] evbase or initialize event failed, %s", conn, conn->fd, strerror(errno));	
             /* Terminate connection */
             conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
         }
@@ -655,8 +639,7 @@ int conn_close(CONN *conn)
 
     if(conn)
     {
-        DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] local[%s:%d] via %d",
-                conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "Ready for close-conn[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         //conn->over_cstate(conn);
         //conn->over_evstate(conn);
         conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
@@ -719,11 +702,7 @@ int conn_terminate(CONN *conn)
     if(conn)
     {
         parent = (PROCTHREAD *)conn->parent;
-        DEBUG_LOGGER(conn->logger, "Ready for terminate-conn[%p] remote[%s:%d] local[%s:%d] via %d "
-                "qtotal:%d d_state:%d i_state:%d c_state:%d s_state:%d e_state:%d", conn, 
-                conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd,
-                SENDQTOTAL(conn), conn->d_state, conn->i_state, 
-                conn->c_state, conn->s_state, conn->e_state);
+        DEBUG_LOGGER(conn->logger, "Ready for terminate-conn[%p] remote[%s:%d] local[%s:%d] via %d qtotal:%d d_state:%d i_state:%d c_state:%d s_state:%d e_state:%d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn), conn->d_state, conn->i_state, conn->c_state, conn->s_state, conn->e_state);
         conn->d_state = D_STATE_CLOSE;
         //continue incompleted data handling 
         if(conn->s_state == S_STATE_DATA_HANDLING && CHK_NDATA(conn->chunk) > 0)
@@ -781,10 +760,7 @@ void conn_evtimer_handler(void *arg)
 
     if(conn)
     {
-        DEBUG_LOGGER(conn->logger, "evtimer_handler[%d](%p) "
-                "on remote[%s:%d] local[%s:%d] via %d", conn->evid, 
-                PPL(conn->evtimer), conn->remote_ip, conn->remote_port, 
-                conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "evtimer_handler[%d](%p) on remote[%s:%d] local[%s:%d] via %d", conn->evid, PPL(conn->evtimer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         CONN_PUSH_MESSAGE(conn, MESSAGE_TIMEOUT);
     }
     return ;
@@ -801,9 +777,7 @@ int conn_set_timeout(CONN *conn, int timeout_usec)
     {
         conn->timeout = timeout_usec;
         CONN_EVTIMER_SET(conn);
-        DEBUG_LOGGER(conn->logger, "set evtimer[%p] timeout[%d] evid:%d "
-                "on %s:%d local[%s:%d] via %d", PPL(conn->evtimer), conn->timeout, conn->evid,
-                conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        DEBUG_LOGGER(conn->logger, "set evtimer[%p] timeout[%d] evid:%d on %s:%d local[%s:%d] via %d", PPL(conn->evtimer), conn->timeout, conn->evid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
     }
     return ret;
 }
@@ -862,22 +836,16 @@ int conn_timeout_handler(CONN *conn)
     {
         if(conn->session.timeout_handler)
         {
-            DEBUG_LOGGER(conn->logger, "timeout_handler(%d) on remote[%s:%d] local[%s:%d] via %d", 
-                    conn->timeout, conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "timeout_handler(%d) on remote[%s:%d] local[%s:%d] via %d", conn->timeout, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             ret = conn->session.timeout_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), PCB(conn->chunk));
-            DEBUG_LOGGER(conn->logger, "over timeout_handler(%d) on remote[%s:%d] "
-                    "local[%s:%d] via %d", conn->timeout, conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "over timeout_handler(%d) on remote[%s:%d] local[%s:%d] via %d", conn->timeout, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             CONN_STATE_RESET(conn);
             return 0;
         }
         else
         {
-            DEBUG_LOGGER(conn->logger, "TIMEOUT[%d]-close connection[%p] on remote[%s:%d] "
-                    "local[%s:%d] via %d", conn->timeout, conn, conn->remote_ip, conn->remote_port, 
-                    conn->local_ip, conn->local_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "TIMEOUT[%d]-close connection[%p] on remote[%s:%d] local[%s:%d] via %d", conn->timeout, conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
         }
     }
@@ -896,9 +864,7 @@ int conn_start_cstate(CONN *conn)
     {
         if(conn->c_state == C_STATE_FREE)
         {
-            DEBUG_LOGGER(conn->logger, "Start cstate on conn[%s:%d] local[%s:%d] via %d",
-                    conn->remote_ip, conn->remote_port, conn->local_ip, 
-                    conn->local_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "Start cstate on conn[%s:%d] local[%s:%d] via %d ", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             conn->c_state = C_STATE_USING;
             while((cp = (CHUNK *)SENDQPOP(conn)))
             {
@@ -980,12 +946,7 @@ int conn__push__message(CONN *conn, int message_id)
     {
         if((parent = (PROCTHREAD *)conn->parent))
         {
-            DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to inqmessage[%p] "
-                    "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]",
-                    messagelist[message_id], PPL(conn->message_queue), conn->remote_ip, 
-                    conn->remote_port, conn->local_ip, conn->local_port, 
-                    conn->fd, QMTOTAL(conn->message_queue),
-                    PPL(conn), parent);
+            DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to inqmessage[%p] on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p]", messagelist[message_id], PPL(conn->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, QMTOTAL(conn->message_queue), PPL(conn), parent);
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, -1, parent, conn, NULL);
             parent->wakeup(parent);
             //if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
@@ -1007,25 +968,9 @@ int conn_push_message(CONN *conn, int message_id)
     {
         if((parent = (PROCTHREAD *)conn->parent))
         {
-            /*
-            DEBUG_LOGGER(conn->logger, "Ready for pushing message[%s] to message_queue[%p] "
-                    "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p][%p]",
-                    messagelist[message_id), PPL(conn->message_queue], conn->remote_ip, 
-                    conn->remote_port, conn->local_ip, conn->local_port, 
-                    conn->fd, QMTOTAL(conn->message_queue),
-                    PPL(conn), parent, (void *)(parent->threadid));
-            */
             qmessage_push(conn->message_queue, message_id, conn->index, conn->fd, 
                     -1, parent, conn, NULL);
-            //if(parent->use_cond_wait){MUTEX_SIGNAL(parent->mutex);}
             parent->wakeup(parent);
-            /*
-            DEBUG_LOGGER(conn->logger, "over for pushing message[%s] to message_queue[%p] "
-                    "on conn[%s:%d] local[%s:%d] via %d total %d handler[%p] parent[%p][%p]",
-                    messagelist[message_id), PPL(conn->message_queue], conn->remote_ip, 
-                    conn->remote_port, conn->local_ip, conn->local_port, conn->fd, 
-                    QMTOTAL(conn->message_queue), PPL(conn), parent, (void *)(parent->threadid));
-            */
             ret = 0;
         }
     }
@@ -1041,16 +986,10 @@ int conn_read_handler(CONN *conn)
 
     if(conn)
     {
-        /*
-        DEBUG_LOGGER(conn->logger, "Ready for reading conn[%p] buffer[%d/%d] packet[%d/%d] oob[%d/%d] cache[%d/%d] exchange[%d/%d] chunk[%lld/%d] remote[%s:%d] local[%s:%d] via %d", conn, MMB_LEFT(conn->buffer), MMB_SIZE(conn->buffer), MMB_LEFT(conn->packet), MMB_SIZE(conn->packet), MMB_LEFT(conn->oob), MMB_SIZE(conn->oob), MMB_LEFT(conn->cache), MMB_SIZE(conn->cache), MMB_LEFT(conn->exchange), MMB_SIZE(conn->exchange), LL(CHK_SIZE(conn->chunk)), CHK_BSIZE(conn->chunk), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        */
         if(conn->session.is_use_OOB && (n = MMB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
             conn->recv_oob_total += n;
-            DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld "
-                    "from %s:%d on %s:%d via %d", n, LL(conn->recv_oob_total), 
-                    conn->remote_ip, conn->remote_port, conn->local_ip, 
-                    conn->local_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld from %s:%d on %s:%d via %d", n, LL(conn->recv_oob_total), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             if((n = conn->oob_handler(conn)) > 0)
             {
                 MMB_DELETE(conn->oob, n);
@@ -1079,22 +1018,14 @@ int conn_read_handler(CONN *conn)
         }
         if(n < 1)
         {
-            WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d "
-                    "from %s:%d on %s:%d via %d failed, %s",
-                    n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), 
-                    SENDQTOTAL(conn), conn->remote_ip, 
-                    conn->remote_port, conn->local_ip, conn->local_port, 
-                    conn->fd, strerror(errno));
+            WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d from %s:%d on %s:%d via %d failed, %s", n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
             return ret;
         }
         else
         {
             conn->recv_data_total += n;
         }
-        ACCESS_LOGGER(conn->logger, "Received %d bytes nbuffer:%d/%d  left:%d data total %lld "
-                "from %s:%d on %s:%d via %d", n, conn->buffer.ndata, MMB_SIZE(conn->buffer),
-                MMB_LEFT(conn->buffer), LL(conn->recv_data_total), conn->remote_ip, 
-                conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        ACCESS_LOGGER(conn->logger, "Received %d bytes nbuffer:%d/%d  left:%d data total %lld from %s:%d on %s:%d via %d", n, conn->buffer.ndata, MMB_SIZE(conn->buffer), MMB_LEFT(conn->buffer), LL(conn->recv_data_total), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->session.packet_type & PACKET_PROXY)
         {
             ret = conn->proxy_handler(conn);
@@ -1116,13 +1047,6 @@ int conn_write_handler(CONN *conn)
 
     if(conn)
     {
-        /*
-           DEBUG_LOGGER(conn->logger, "Ready for send-data to %s:%d on %s:%d via %d "
-           "qtotal:%d d_state:%d i_state:%d", conn->remote_ip, conn->remote_port,
-           conn->local_ip, conn->local_port, conn->fd, SENDQTOTAL(conn),
-           conn->d_state, conn->i_state);
-           */
-        //if(SENDQTOTAL(conn) > 0)
         if(SENDQTOTAL(conn) > 0)
         {
             if((cp = (CHUNK *)SENDQHEAD(conn)))
@@ -1394,12 +1318,10 @@ end:
                     && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0)
             {
                 chunk_mem(&(conn->chunk), n);
-                ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", 
-                    CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+                ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 conn->s_state = S_STATE_READ_CHUNK;
                 conn__read__chunk(conn);
-                ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", 
-                    CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+                ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
 
             }
             else
@@ -1647,18 +1569,13 @@ int conn__read__chunk(CONN *conn)
             }
             if(CHUNK_STATUS(&conn->chunk) == CHUNK_STATUS_OVER)
             {
-                DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d on %s:%d via %d",
-                        LL(CHK_SIZE(conn->chunk)), conn->remote_ip, conn->remote_port, 
-                        conn->local_ip, conn->local_port, conn->fd);
+                DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d on %s:%d via %d", LL(CHK_SIZE(conn->chunk)), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 conn->s_state = S_STATE_DATA_HANDLING;
                 CONN_PUSH_MESSAGE(conn, MESSAGE_DATA);
             }
             if(n > 0)
             {
-                ACCESS_LOGGER(conn->logger, "Filled  %d byte(s) left:%lld to chunk from buffer "
-                        "to %s:%d on conn[%s:%d] via %d", n, LL(CHK_LEFT(conn->chunk)),
-                        conn->remote_ip, conn->remote_port, conn->local_ip, 
-                        conn->local_port, conn->fd);
+                ACCESS_LOGGER(conn->logger, "Filled  %d byte(s) left:%lld to chunk from buffer to %s:%d on conn[%s:%d] via %d", n, LL(CHK_LEFT(conn->chunk)),conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 ret = 0;
             }
         }
