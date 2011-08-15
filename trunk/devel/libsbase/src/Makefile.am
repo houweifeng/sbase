@@ -22,8 +22,7 @@ utils/xssl.h 	\
 utils/xmm.h 	\
 utils/xmm.c 	\
 utils/stime.h 	\
-utils/stime.c 	\
-utils/timer.h
+utils/stime.c 	
 
 libsbase_la_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
 libsbase_la_LDFLAGS = -levbase
