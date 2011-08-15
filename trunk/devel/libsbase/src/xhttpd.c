@@ -859,7 +859,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
     httpd->sock_type = iniparser_getint(dict, "XHTTPD:socket_type", SOCK_STREAM);
     httpd->ip = iniparser_getstr(dict, "XHTTPD:service_ip");
     httpd->port = iniparser_getint(dict, "XHTTPD:service_port", 80);
-    httpd->init_conns = iniparser_getint(dict, "XHTTPD:init_conns", 0);
     httpd->working_mode = iniparser_getint(dict, "XHTTPD:working_mode", WORKING_THREAD);
     httpd->service_type = iniparser_getint(dict, "XHTTPD:service_type", S_SERVICE);
     httpd->service_name = iniparser_getstr(dict, "XHTTPD:service_name");

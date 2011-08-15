@@ -521,8 +521,8 @@ void procthread_clean(PROCTHREAD *pth)
             }
             qmessage_clean(pth->message_queue);
         }
-        evsig_close(&(pth->evsig));
-        //xqueue_clean(pth->xqueue);
+        if(pth->service->flag & SB_USE_EVSIG)
+            evsig_close(&(pth->evsig));
         MUTEX_DESTROY(pth->mutex);
         xmm_free(pth, sizeof(PROCTHREAD));
     }
@@ -545,7 +545,6 @@ PROCTHREAD *procthread_init(int cond)
             }
         }
         MUTEX_INIT(pth->mutex);
-        //pth->xqueue                 = xqueue_init();
         pth->message_queue          = qmessage_init();
         pth->run                    = procthread_run;
         pth->set_acceptor           = procthread_set_acceptor;

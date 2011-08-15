@@ -233,7 +233,6 @@ typedef struct _CNGROUP
   int   nconns_free;
   int   conns_free[SB_GROUP_CONN_MAX];
   char  ip[SB_IP_MAX];
-  void *mutex;
   SESSION session;
 }CNGROUP;
 
@@ -245,9 +244,7 @@ typedef struct _SERVICE
     int lock;
     int usec_sleep;
     int use_cond_wait;
-    int init_conns;
     int nconn;
-    int nchunks;
     int connections_limit; 
     int index_max;
     int running_connections;
@@ -280,9 +277,10 @@ typedef struct _SERVICE
     struct  sockaddr_in sa;
     EVENT event;
 
+    EVBASE *evbase;
+    SBASE *sbase;
     /* mutex */
     void *mutex;
-    SBASE *sbase;
 
     /* heartbeat */
     void *heartbeat_arg;
@@ -315,9 +313,7 @@ typedef struct _SERVICE
     int  (*run)(struct _SERVICE *service);
     void (*stop)(struct _SERVICE *service);
 
-    /* event option */
-    EVBASE *evbase;
-
+    
     /* message queue for proc mode */
     void *message_queue;
     //void *xqueue;
@@ -451,7 +447,6 @@ typedef struct _PROCTHREAD
 /* CONN */
 typedef struct _CONN
 {
-    /* global */
     int index;
     int groupid;
     int gindex;
@@ -469,13 +464,11 @@ typedef struct _CONN
     int qid;
     int nqleft;
     int qblock_max;
-    /* conenction */
     int  sock_type;
     int  fd;
     int  remote_port;
     int  local_port;
     int  nsendq;
-    int  bits;
     /* xid */
     int xids[SB_XIDS_MAX];
     EVENT event;
