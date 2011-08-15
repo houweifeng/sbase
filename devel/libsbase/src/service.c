@@ -9,13 +9,12 @@
 #include "xssl.h"
 #include "logger.h"
 #include "service.h"
-#include "mutex.h"
 #include "mmblock.h"
 #include "message.h"
 #include "evtimer.h"
-//#include "xqueue.h"
 #include "procthread.h"
 #include "xmm.h"
+#include "mutex.h"
 #ifndef UI
 #define UI(_x_) ((unsigned int)(_x_))
 #endif
@@ -89,11 +88,9 @@ int service_set(SERVICE *service)
                 && fcntl(service->fd, F_SETFD, FD_CLOEXEC) == 0
              
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
-                /*
 #ifdef SO_REUSEPORT
                 && setsockopt(service->fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                */
                 )
             {
                 if(service->flag & SB_SO_LINGER)
@@ -115,9 +112,9 @@ int service_set(SERVICE *service)
                     flag = fcntl(service->fd, F_GETFL, 0);
                     ret = fcntl(service->fd, F_SETFL, flag|O_NONBLOCK);
                 }
-                ret = bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(service->sa));
+                ret = bind(service->fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr));
                 if(service->sock_type == SOCK_STREAM) ret = listen(service->fd, SB_BACKLOG_MAX);
-                if(ret != 0) return -1;
+                return ret;
             }
             else
             {
@@ -140,6 +137,7 @@ void sigpipe_ignore()
     sigset_t signal_mask;
     sigemptyset(&signal_mask);
     sigaddset(&signal_mask, SIGPIPE);
+    sigaddset(&signal_mask, SIGFPE);
 #ifdef HAVE_PTHREAD
     pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
 #endif
@@ -148,11 +146,11 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(service, xattr, ns, id, threadid, proc, logger, cpuset)              \
+#define NEW_PROCTHREAD(service, xattr, ns, no, threadid, proc, logger, cpuset)              \
 do{                                                                                         \
     if(pthread_create(&(threadid), &xattr, (void *)(&procthread_run), (void *)proc) != 0)   \
     {                                                                                       \
-        FATAL_LOGGER(logger, "create newthread failed, %s", strerror(errno));               \
+        FATAL_LOGGER(logger, "create newthread[%s][%d] failed, %s",ns,no,strerror(errno));  \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
     if(service->flag & SB_CPU_SET)                                                          \
@@ -160,18 +158,17 @@ do{                                                                             
         if(pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset) != 0)               \
         {                                                                                   \
             WARN_LOGGER(logger, "setaffinity thread[%s][%d][%p] failed, %s",                \
-            ns, id, (long )threadid, strerror(errno));                                      \
+            ns, no, (long )threadid, strerror(errno));                                      \
         }                                                                                   \
     }                                                                                       \
 }while(0)
-        //DEBUG_LOGGER(logger, "Created %s[%d] ID[%p]", ns, id, (void*)((long)pthid));        
 #else
 #define NEW_PROCTHREAD(service, xattr, ns, id, pthid, pth, logger, cpuset)
 #endif
 #ifdef HAVE_PTHREAD
-#define PROCTHREAD_EXIT(id, exitid) pthread_join((pthread_t)id, exitid)
+#define PROCTHREAD_EXIT(no, exitid) pthread_join((pthread_t)no, exitid)
 #else
-#define PROCTHREAD_EXIT(id, exitid)
+#define PROCTHREAD_EXIT(no, exitid)
 #endif
 #define PROCTHREAD_SET(service, pth)                                                        \
 {                                                                                           \
@@ -200,9 +197,7 @@ int service_run(SERVICE *service)
             if(service->heartbeat_interval < 1) service->heartbeat_interval = SB_HEARTBEAT_INTERVAL;
             service->evid = EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
                     &service_evtimer_handler, (void *)service);
-            //WARN_LOGGER(service->logger, "Added service[%s] to evtimer[%p][%d] interval:%d",
-            //       service->service_name, service->evtimer, service->evid, 
-            //        service->heartbeat_interval);
+            DEBUG_LOGGER(service->logger, "Added service[%s] to evtimer[%p][%d] interval:%d", service->service_name, service->evtimer, service->evid, service->heartbeat_interval);
         }
         //evbase setting 
         if(service->service_type == S_SERVICE && service->evbase
@@ -235,19 +230,22 @@ running_proc:
             PROCTHREAD_SET(service, service->daemon);
             if(service->daemon->message_queue)
             {
-                if(service->daemon->message_queue) qmessage_clean(service->daemon->message_queue);
+                if(service->daemon->message_queue) 
+                {
+                    qmessage_clean(service->daemon->message_queue);
+                }
                 service->daemon->message_queue = service->message_queue;
                 service->daemon->inqmessage = service->message_queue;
                 service->daemon->outqmessage = service->message_queue;
                 service->daemon->evbase = service->evbase;
             }
-            //DEBUG_LOGGER(service->logger, "sbase->q[%p] service->q[%p] daemon->q[%p]", service->sbase->message_queue, service->message_queue, service->daemon->message_queue);
             service->daemon->service = service;
             ret = 0;
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "Initialize procthread mode[%d] failed, %s",service->working_mode, strerror(errno));
+            FATAL_LOGGER(service->logger, "Initialize daemon mode[%d] failed, %s",service->working_mode, strerror(errno));
+            _exit(-1);
         }
         return ret;
 running_threads:
@@ -336,7 +334,8 @@ running_threads:
         if((service->daemon = procthread_init(0)))
         {
             PROCTHREAD_SET(service, service->daemon);
-            procthread_set_evsig_fd(service->daemon, service->cond);
+            if(service->flag & SB_USE_EVSIG)
+                procthread_set_evsig_fd(service->daemon, service->cond);
             NEW_PROCTHREAD(service, ioattr, "daemon", 0, service->daemon->threadid, service->daemon, service->logger, iocpuset);
             ret = 0;
         }
@@ -387,7 +386,7 @@ running_threads:
                     PROCTHREAD_SET(service, service->procthreads[i]);
                     if(service->flag & SB_USE_EVSIG)
                         procthread_set_evsig_fd(service->procthreads[i], service->cond);
-                    x = service->nprocthreads % service->niodaemons;
+                    x = i % service->niodaemons;
                     service->procthreads[i]->evbase = service->iodaemons[x]->evbase;
                     service->procthreads[i]->indaemon = service->iodaemons[x];
                     service->procthreads[i]->inqmessage = service->iodaemons[x]->message_queue;
@@ -483,7 +482,6 @@ int service_accept_handler(SERVICE *service)
         if(service->sock_type == SOCK_STREAM)
         {
             daemon = service->daemon;
-            //WARN_LOGGER(service->logger, "new-connection via %d", service->fd);
             while((fd = accept(service->fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
             {
                 ip = inet_ntoa(rsa.sin_addr);
@@ -510,7 +508,6 @@ new_conn:
                 {
                     opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
-                //fcntl(fd, F_SETFL, (fcntl(fd, F_GETFL, 0)|O_NONBLOCK));
                 if((service->flag & SB_NEWCONN_DELAY) && daemon && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
                     ACCESS_LOGGER(service->logger, "Accepted i:%d new-connection[%s:%d]  via %d", i, ip, port, fd);
@@ -577,16 +574,16 @@ err_conn:
                                 MESSAGE_INPUT, -1, conn->fd, -1, conn, parent, NULL);
                         parent->wakeup(parent);
                     }
+                    ACCESS_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
                     continue;
-                    //DEBUG_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
                 }
                 else
                 {
+                    FATAL_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d buffer:%d failed, %s", ip, port, fd, MMB_NDATA(conn->buffer), strerror(errno));
                     shutdown(fd, SHUT_RDWR);
                     close(fd);
-                    //FATAL_LOGGER(service->logger, "Accept new connection failed, %s", strerror(errno));
+                    break;
                 }
-                break;
             }
         }
     }
@@ -665,10 +662,11 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 if(fcntl(fd, F_SETFL, flag) != 0) goto err_conn;
                 if((connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
                     || errno == EINPROGRESS))
-                    //|| errno == EINPROGRESS || errno == EALREADY))
                 {
                     goto new_conn;
-                }else goto err_conn;
+                }
+                else 
+                    goto err_conn;
             }
             else
             {
@@ -687,10 +685,6 @@ new_conn:
             {
                 return conn;
             }
-            else
-            {
-                //FATAL_LOGGER(service->logger, "connect to remote[%s:%d] via local[%s:%d] fd[%d] session[%p] failed, %s", remote_ip, remote_port, local_ip, local_port, fd, sess, strerror(errno));
-            }
 err_conn:
 #ifdef HAVE_SSL
             if(ssl)
@@ -705,12 +699,11 @@ err_conn:
                 shutdown(fd, SHUT_RDWR);
                 close(fd);
             }
-            //FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",remote_ip, remote_port, fd, sess, strerror(errno));
             return conn;
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "socket(%d, %d, 0) failed, %s", family, sock_type, strerror(errno));
+            FATAL_LOGGER(service->logger, "socket(%d, %d, 0) failed, %s", family, sock_type, strerror(errno));
         }
     }
     return conn;
@@ -794,7 +787,7 @@ err_conn:
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",remote_ip, remote_port, fd, sess, strerror(errno));
+            FATAL_LOGGER(service->logger, "connect to %s:%d via %d session[%p] failed, %s",remote_ip, remote_port, fd, sess, strerror(errno));
         }
     }
     return conn;
@@ -811,10 +804,8 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
 
     if(service && service->lock == 0 && fd > 0 && session)
     {
-        //WARN_LOGGER(service->logger, "Ready for add-conn remote[%s:%d] local[%s:%d] via %d", remote_ip, remote_port, local_ip, local_port, fd);
         if((conn = service_popfromq(service)))
         {
-            //fprintf(stdout, "%s::%d OK\n", __FILE__, __LINE__);
             conn->fd = fd;
             conn->ssl = ssl;
             conn->status = status;
@@ -835,7 +826,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
                 }
                 else
                 {
-                    //FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d via %d  to service[%s]", remote_ip, remote_port, local_ip, local_port, fd, service->service_name);
+                    FATAL_LOGGER(service->logger, "can not add connection[%s:%d] on %s:%d via %d  to service[%s]", remote_ip, remote_port, local_ip, local_port, fd, service->service_name);
                     service_pushtoq(service, conn);
                 }
             }
@@ -900,7 +891,7 @@ int service_pushconn(SERVICE *service, CONN *conn)
                         ++x;
                     }
                 }
-                if(i >= service->index_max) service->index_max = i;
+                if(i > service->index_max) service->index_max = i;
                 ret = 0;
                 //DEBUG_LOGGER(service->logger, "Added new conn[%p][%s:%d] on %s:%d via %d d_state:%d index[%d] of total %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->d_state,conn->index, service->running_connections);
                 break;
@@ -954,7 +945,7 @@ int service_popconn(SERVICE *service, CONN *conn)
         }
         else
         {
-            //FATAL_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d index[%d] of total %d failed", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->index, service->running_connections);
+            FATAL_LOGGER(service->logger, "Removed connection[%s:%d] on %s:%d via %d index[%d] of total %d failed", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->index, service->running_connections);
         }
         MUTEX_UNLOCK(service->mutex);
         //return service_pushtoq(service, conn);
@@ -987,9 +978,9 @@ CONN *service_getconn(SERVICE *service, int groupid)
 
     if(service && service->lock == 0)
     {
+        MUTEX_LOCK(service->mutex);
         if(groupid > 0 && groupid <= service->ngroups)
         {
-            MUTEX_LOCK(service->groups[groupid].mutex);
             x = 0;
             while(x < SB_GROUP_CONN_MAX && service->groups[groupid].nconns_free > 0)
             {
@@ -1012,11 +1003,10 @@ CONN *service_getconn(SERVICE *service, int groupid)
                 }
                 ++x;
             }
-            MUTEX_UNLOCK(service->groups[groupid].mutex);
+            //MUTEX_UNLOCK(service->groups[groupid].mutex);
         }
         else
         {
-            MUTEX_LOCK(service->mutex);
             while(service->nconns_free > 0)
             {
                 x = --(service->nconns_free);
@@ -1027,8 +1017,8 @@ CONN *service_getconn(SERVICE *service, int groupid)
                     break;
                 }
             }
-            MUTEX_UNLOCK(service->mutex);
         }
+        MUTEX_UNLOCK(service->mutex);
     }
     return conn;
 }
@@ -1102,7 +1092,6 @@ void service_overconn(SERVICE *service, CONN *conn)
     }
     return ;
 }
-
 
 /* push to qconns */
 int service_pushtoq(SERVICE *service, CONN *conn)
@@ -1274,7 +1263,7 @@ int service_add_multicast(SERVICE *service, char *multicast_ip)
         if((ret = setsockopt(service->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
                         (char*)&mreq, sizeof(struct ip_mreq))) == 0)
         {
-            //DEBUG_LOGGER(service->logger, "added multicast:%s to service[%p]->fd[%d]",multicast_ip, service, service->fd);
+            DEBUG_LOGGER(service->logger, "added multicast:%s to service[%p]->fd[%d]",multicast_ip, service, service->fd);
         }
     }
     return ret;
@@ -1326,7 +1315,7 @@ int service_addgroup(SERVICE *service, char *ip, int port, int limit, SESSION *s
         strcpy(service->groups[id].ip, ip);
         service->groups[id].port = port;
         service->groups[id].limit = limit;
-        MUTEX_INIT(service->groups[id].mutex);
+        //MUTEX_INIT(service->groups[id].mutex);
         memcpy(&(service->groups[id].session), session, sizeof(SESSION));
         //fprintf(stdout, "%s::%d service[%s]->group[%d]->session.data_handler:%p\n", __FILE__, __LINE__, service->service_name, id, service->groups[id].session.data_handler);
     }
@@ -1341,7 +1330,7 @@ int service_closegroup(SERVICE *service, int groupid)
 
     if(service && groupid < SB_GROUPS_MAX)
     {
-        MUTEX_LOCK(service->groups[groupid].mutex);
+        MUTEX_LOCK(service->mutex);
         service->groups[groupid].limit = 0;
         while((i = --(service->groups[groupid].nconns_free)) >= 0)
         {
@@ -1351,7 +1340,7 @@ int service_closegroup(SERVICE *service, int groupid)
                 conn->close(conn);
             }
         }
-        MUTEX_UNLOCK(service->groups[groupid].mutex);
+        MUTEX_UNLOCK(service->mutex);
     }
     return id;
 }
@@ -1446,7 +1435,6 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
         /* Add transaction for procthread */
         if(service->working_mode == WORKING_PROC && service->daemon)
         {
-            //DEBUG_LOGGER(service->logger, "Adding transaction[%d] to %s:%d on %s:%d to procthread[%d]", tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, getpid());
             return service->daemon->newtransaction(service->daemon, conn, tid);
         }
         /* Add transaction to procthread pool */
@@ -1454,7 +1442,6 @@ int service_newtransaction(SERVICE *service, CONN *conn, int tid)
         {
             index = conn->fd % service->nprocthreads;
             pth = service->procthreads[index];
-            //DEBUG_LOGGER(service->logger, "Adding transaction[%d] to %s:%d on %s:%d to procthreads[%d]", tid, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port,index);
             if(pth && pth->newtransaction)
                 return pth->newtransaction(pth, conn, tid);
         }
@@ -1471,7 +1458,6 @@ void service_stop(SERVICE *service)
     if(service)
     {
         service->lock = 1;
-        //WARN_LOGGER(service->logger, "ready for stop service:%s running_connections:%d nconn:%d nqconns:%d nchunks:%d nqchunk:%d\n", service->service_name, service->running_connections, service->nconn, service->nqconns, service->nchunks, service->nqchunks);
         //acceptor
         if(service->acceptor)
         {
@@ -1493,7 +1479,6 @@ void service_stop(SERVICE *service)
             {
                 if((conn = service->connections[i]))
                 {
-                    WARN_LOGGER(service->logger, "Ready for close connections[%d] pconn[%p]", i, conn); 
                     conn->close(conn);
                 }
             }
@@ -1511,7 +1496,6 @@ void service_stop(SERVICE *service)
                     PROCTHREAD_EXIT(service->iodaemons[i]->threadid, NULL);
                 }
             }
-            //DEBUG_LOGGER(service->logger, "over for stop iodaemons");
         }
         //outdaemon
         if(service->outdaemon)
@@ -1531,9 +1515,7 @@ void service_stop(SERVICE *service)
             {
                 if(service->procthreads[i])
                 {
-                    WARN_LOGGER(service->logger, "Ready for stop procthreads[%d][%p]", i, service->procthreads[i]);
                     service->procthreads[i]->stop(service->procthreads[i]);
-                    WARN_LOGGER(service->logger, "Ready for stop procthreads[%d][%p]", i, service->procthreads[i]);
                     PROCTHREAD_EXIT(service->procthreads[i]->threadid, NULL);
                 }
             }
@@ -1574,7 +1556,6 @@ void service_stop(SERVICE *service)
                 PROCTHREAD_EXIT(service->tracker->threadid, NULL);
             }
         }
-        //WARN_LOGGER(service->logger, "Ready for remove event");
         /*remove event */
         event_destroy(&(service->event));
         WARN_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
@@ -1639,12 +1620,8 @@ void service_active_heartbeat(void *arg)
         {
             service->heartbeat_handler(service->heartbeat_arg);
         }
-        //if(service->evid == 0)fprintf(stdout, "Ready for updating evtimer[%p][%d] [%p][%p] count[%d] q[%d]\n", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
-        //if(service->evid == 0) EVTIMER_LIST(service->evtimer, stdout);
         EVTIMER_UPDATE(service->evtimer, service->evid, service->heartbeat_interval, 
                 &service_evtimer_handler, (void *)service);
-        //if(service->evid == 0)fprintf(stdout, "Over for updating evtimer[%p][%d] [%p][%p] count[%d] q[%d]\n", service->evtimer, service->evid, PEVT_EVN(service->evtimer, service->evid)->prev, PEVT_EVN(service->evtimer, service->evid)->next, PEVT_NLIST(service->evtimer), PEVT_NQ(service->evtimer));
-        //if(service->evid == 0) EVTIMER_LIST(service->evtimer, stdout);
     }
     return ;
 }
@@ -1657,10 +1634,6 @@ void service_evtimer_handler(void *arg)
     if(service)
     {
         service_active_heartbeat(arg);
-        /*
-           service->daemon->active_heartbeat(service->daemon, 
-           &service_active_heartbeat, (void *)service);
-           */
     }
     return ;
 }
@@ -1678,10 +1651,6 @@ void service_clean(SERVICE *service)
         if(service->daemon) service->daemon->clean(service->daemon);
         if(service->acceptor) service->acceptor->clean(service->acceptor);
         if(service->etimer) {EVTIMER_CLEAN(service->etimer);}
-        for(i = 0;i < service->ngroups; i++)
-        {
-            MUTEX_DESTROY(service->groups[i].mutex);
-        }
         if(service->outdaemon) service->outdaemon->clean(service->outdaemon);
         if(service->tracker) service->tracker->clean(service->tracker);
         if(service->niodaemons > 0)
@@ -1713,38 +1682,17 @@ void service_clean(SERVICE *service)
             }
         }
         //clean connection_queue
-        //DEBUG_LOGGER(service->logger, "Ready for clean connection_chunk:%d", service->nqconns);
         if(service->nqconns > 0)
         {
-            //fprintf(stdout, "nqconns:%d\n", service->nqconns);
-            //DEBUG_LOGGER(service->logger, "Ready for clean connections");
             while((i = --(service->nqconns)) >= 0)
             {
                 if((conn = (service->qconns[i]))) 
                 {
-                   // DEBUG_LOGGER(service->logger, "Ready for clean conn[%p] fd[%d]", conn, conn->fd);
                     conn->clean(conn);
                     service->nconn--;
                 }
             }
         }
-        //clean chunks queue
-        //DEBUG_LOGGER(service->logger, "Ready for clean chunks_queue:%d", service->nqchunks);
-        /*
-        if(service->nqchunks > 0)
-        {
-            //DEBUG_LOGGER(service->logger, "Ready for clean chunks");
-            while((i = --(service->nqchunks)) >= 0)
-            {
-                if((cp = service->qchunks[i]))
-                {
-                    //DEBUG_LOGGER(service->logger, "Ready for clean conn[%p]", cp);
-                    chunk_clean(cp);
-                }
-            }
-        }
-        */
-        //xqueue_clean(service->xqueue);
         /* SSL */
 #ifdef HAVE_SSL
         if(service->s_ctx) SSL_CTX_free(XSSL_CTX(service->s_ctx));
@@ -1779,7 +1727,6 @@ SERVICE *service_init()
     if((service = (SERVICE *)xmm_mnew(sizeof(SERVICE))))
     {
         MUTEX_INIT(service->mutex);
-        //service->xqueue             = xqueue_init();
         service->etimer             = EVTIMER_INIT();
         service->set                = service_set;
         service->run                = service_run;
@@ -1796,10 +1743,6 @@ SERVICE *service_init()
         service->freeconn           = service_freeconn;
         service->findconn           = service_findconn;
         service->overconn           = service_overconn;
-        //service->popchunk           = service_popchunk;
-        //service->pushchunk          = service_pushchunk;
-        //service->newchunk           = service_newchunk;
-        //service->mnewchunk          = service_mnewchunk;
         service->set_session        = service_set_session;
         service->add_multicast      = service_add_multicast;
         service->drop_multicast     = service_drop_multicast;
