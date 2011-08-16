@@ -80,8 +80,8 @@ am_evdns_cli_OBJECTS = evdns_cli-evdns_cli.$(OBJEXT) \
 	evdns_cli-evdns.$(OBJEXT)
 evdns_cli_OBJECTS = $(am_evdns_cli_OBJECTS)
 evdns_cli_DEPENDENCIES = libevbase.la
-am_sepoll_OBJECTS = sepoll-sepoll.$(OBJEXT)
-sepoll_OBJECTS = $(am_sepoll_OBJECTS)
+sepoll_SOURCES = sepoll.c
+sepoll_OBJECTS = sepoll.$(OBJEXT)
 sepoll_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -95,9 +95,9 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libevbase_la_SOURCES) $(ev_cli_SOURCES) $(ev_serv_SOURCES) \
-	$(evdns_cli_SOURCES) $(sepoll_SOURCES)
+	$(evdns_cli_SOURCES) sepoll.c
 DIST_SOURCES = $(libevbase_la_SOURCES) $(ev_cli_SOURCES) \
-	$(ev_serv_SOURCES) $(evdns_cli_SOURCES) $(sepoll_SOURCES)
+	$(ev_serv_SOURCES) $(evdns_cli_SOURCES) sepoll.c
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -238,8 +238,6 @@ evdns_cli_SOURCES = evdns_cli.c evbase.h log.h evdns.h evdns.c timer.h
 evdns_cli_CPPFLAGS = -Wall
 evdns_cli_LDFLAGS = -static
 evdns_cli_LDADD = libevbase.la
-sepoll_SOURCES = sepoll.c log.h
-sepoll_CPPFLAGS = -Wall
 all: all-am
 
 .SUFFIXES:
@@ -364,7 +362,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evsig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evwin32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-logger.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sepoll-sepoll.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sepoll.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -519,20 +517,6 @@ evdns_cli-evdns.obj: evdns.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='evdns.c' object='evdns_cli-evdns.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(evdns_cli_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o evdns_cli-evdns.obj `if test -f 'evdns.c'; then $(CYGPATH_W) 'evdns.c'; else $(CYGPATH_W) '$(srcdir)/evdns.c'; fi`
-
-sepoll-sepoll.o: sepoll.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(sepoll_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sepoll-sepoll.o -MD -MP -MF "$(DEPDIR)/sepoll-sepoll.Tpo" -c -o sepoll-sepoll.o `test -f 'sepoll.c' || echo '$(srcdir)/'`sepoll.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/sepoll-sepoll.Tpo" "$(DEPDIR)/sepoll-sepoll.Po"; else rm -f "$(DEPDIR)/sepoll-sepoll.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sepoll.c' object='sepoll-sepoll.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(sepoll_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sepoll-sepoll.o `test -f 'sepoll.c' || echo '$(srcdir)/'`sepoll.c
-
-sepoll-sepoll.obj: sepoll.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(sepoll_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT sepoll-sepoll.obj -MD -MP -MF "$(DEPDIR)/sepoll-sepoll.Tpo" -c -o sepoll-sepoll.obj `if test -f 'sepoll.c'; then $(CYGPATH_W) 'sepoll.c'; else $(CYGPATH_W) '$(srcdir)/sepoll.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/sepoll-sepoll.Tpo" "$(DEPDIR)/sepoll-sepoll.Po"; else rm -f "$(DEPDIR)/sepoll-sepoll.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sepoll.c' object='sepoll-sepoll.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(sepoll_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sepoll-sepoll.obj `if test -f 'sepoll.c'; then $(CYGPATH_W) 'sepoll.c'; else $(CYGPATH_W) '$(srcdir)/sepoll.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -736,6 +720,8 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 	uninstall-includeHEADERS uninstall-info-am \
 	uninstall-libLTLIBRARIES
 
+#sepoll_SOURCES = sepoll.c log.h
+#sepoll_CPPFLAGS = -Wall
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:
