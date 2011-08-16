@@ -182,8 +182,8 @@ int logger_write(LOGGER *logger, int level, char *_file_, int _line_, char *form
         s += vsprintf(s, format, ap);
         va_end(ap);
         *s++ = '\n';
-        //if(logger->fd > 0) ret = pwrite(logger->fd, buf, s - buf, SEEK_END);
-        if(logger->fd > 0) ret = write(logger->fd, buf, s - buf);
+        if(logger->fd > 0) ret = pwrite(logger->fd, buf, s - buf, SEEK_END);
+        //if(logger->fd > 0) ret = write(logger->fd, buf, s - buf);
     }
     return ret;
 }
