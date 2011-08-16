@@ -37,6 +37,6 @@ evdns_cli_SOURCES = evdns_cli.c evbase.h log.h evdns.h evdns.c timer.h
 evdns_cli_CPPFLAGS = -Wall
 evdns_cli_LDFLAGS = -static
 evdns_cli_LDADD = libevbase.la
-sepoll_SOURCES = sepoll.c log.h
-sepoll_CPPFLAGS = -Wall
+#sepoll_SOURCES = sepoll.c log.h
+#sepoll_CPPFLAGS = -Wall
 
