@@ -102,11 +102,11 @@ int service_set(SERVICE *service)
                 if(service->flag & SB_TCP_NODELAY)
                 {
                     //opt = 1;setsockopt(service->fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-                    opt = 1;setsockopt(service->fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                    opt = 1;setsockopt(service->fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
                 */
-                //opt = 1;setsockopt(service->fd, SOL_TCP, TCP_CORK, &opt, sizeof(opt));
-                //opt = 1;setsockopt(service->fd, SOL_TCP, TCP_QUICKACK, &opt, sizeof(opt));
+                //opt = 1;setsockopt(service->fd, IPPROTO_TCP, TCP_CORK, &opt, sizeof(opt));
+                //opt = 1;setsockopt(service->fd, IPPROTO_TCP, TCP_QUICKACK, &opt, sizeof(opt));
                 if(service->working_mode == WORKING_PROC)
                 {
                     flag = fcntl(service->fd, F_GETFL, 0);
@@ -146,24 +146,16 @@ void sigpipe_ignore()
 }
 
 #ifdef HAVE_PTHREAD
-#define NEW_PROCTHREAD(service, xattr, ns, no, threadid, proc, logger, cpuset)              \
+#define NEW_PROCTHREAD(service, xattr, ns, no, threadid, proc, logger)                      \
 do{                                                                                         \
     if(pthread_create(&(threadid), &xattr, (void *)(&procthread_run), (void *)proc) != 0)   \
     {                                                                                       \
         FATAL_LOGGER(logger, "create newthread[%s][%d] failed, %s",ns,no,strerror(errno));  \
         exit(EXIT_FAILURE);                                                                 \
     }                                                                                       \
-    if(service->flag & SB_CPU_SET)                                                          \
-    {                                                                                       \
-        if(pthread_setaffinity_np(threadid, sizeof(cpu_set_t), &cpuset) != 0)               \
-        {                                                                                   \
-            WARN_LOGGER(logger, "setaffinity thread[%s][%d][%p] failed, %s",                \
-            ns, no, (long )threadid, strerror(errno));                                      \
-        }                                                                                   \
-    }                                                                                       \
 }while(0)
 #else
-#define NEW_PROCTHREAD(service, xattr, ns, id, pthid, pth, logger, cpuset)
+#define NEW_PROCTHREAD(service, xattr, ns, id, pthid, pth, logger)
 #endif
 #ifdef HAVE_PTHREAD
 #define PROCTHREAD_EXIT(no, exitid) pthread_join((pthread_t)no, exitid)
@@ -182,7 +174,6 @@ do{                                                                             
 int service_run(SERVICE *service)
 {
     int ret = -1, i = 0, x = 0, ncpu = sysconf(_SC_NPROCESSORS_CONF);
-    cpu_set_t cpuset, iocpuset;
     CONN *conn = NULL; 
 #ifdef HAVE_PTHREAD
     pthread_attr_t ioattr, attr;
@@ -251,21 +242,6 @@ running_proc:
 running_threads:
 #ifdef HAVE_PTHREAD
         sigpipe_ignore();
-        CPU_ZERO(&cpuset);
-        CPU_ZERO(&iocpuset);
-        if(ncpu-- > 1)
-        {
-            for(i = 0; i < ncpu; i++)
-            {
-                CPU_SET(i, &cpuset);
-            }
-            CPU_SET(ncpu, &iocpuset);
-        }
-        else
-        {
-            CPU_SET(0, &cpuset);
-            CPU_SET(0, &iocpuset);
-        }
         /* set thread attr */
         //pthread_setconcurrency();
         memset(&param, 0, sizeof(struct sched_param));
@@ -317,7 +293,7 @@ running_threads:
                 {
                     PROCTHREAD_SET(service, service->iodaemons[i]);
                     service->iodaemons[i]->use_cond_wait = 0;
-                    NEW_PROCTHREAD(service, ioattr, "iodaemons", i, service->iodaemons[i]->threadid, service->iodaemons[i], service->logger, iocpuset);
+                    NEW_PROCTHREAD(service, ioattr, "iodaemons", i, service->iodaemons[i]->threadid, service->iodaemons[i], service->logger);
                     ret = 0;
                 }
                 else
@@ -332,7 +308,7 @@ running_threads:
         {
             PROCTHREAD_SET(service, service->outdaemon);
             service->outdaemon->use_cond_wait = 0;
-            NEW_PROCTHREAD(service, ioattr, "outdaemon", 0, service->outdaemon->threadid, service->outdaemon, service->logger, iocpuset);
+            NEW_PROCTHREAD(service, ioattr, "outdaemon", 0, service->outdaemon->threadid, service->outdaemon, service->logger);
             ret = 0;
         }
         else
@@ -346,7 +322,7 @@ running_threads:
             PROCTHREAD_SET(service, service->daemon);
             if(service->flag & SB_USE_EVSIG)
                 procthread_set_evsig_fd(service->daemon, service->cond);
-            NEW_PROCTHREAD(service, ioattr, "daemon", 0, service->daemon->threadid, service->daemon, service->logger, iocpuset);
+            NEW_PROCTHREAD(service, ioattr, "daemon", 0, service->daemon->threadid, service->daemon, service->logger);
             ret = 0;
         }
         else
@@ -361,7 +337,7 @@ running_threads:
             {
                 PROCTHREAD_SET(service, service->acceptor);
                 service->acceptor->set_acceptor(service->acceptor, service->fd);
-                NEW_PROCTHREAD(service, ioattr, "acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger, iocpuset);
+                NEW_PROCTHREAD(service, ioattr, "acceptor", 0, service->acceptor->threadid, service->acceptor, service->logger);
                 ret = 0;
             }
             else
@@ -376,7 +352,7 @@ running_threads:
             PROCTHREAD_SET(service, service->tracker);
             service->tracker->use_cond_wait = 0;
             service->tracker->evtimer = service->etimer;
-            NEW_PROCTHREAD(service, ioattr, "tracker", 0, service->tracker->threadid, service->tracker, service->logger, iocpuset);
+            NEW_PROCTHREAD(service, ioattr, "tracker", 0, service->tracker->threadid, service->tracker, service->logger);
             ret = 0;
         }
         else
@@ -406,7 +382,7 @@ running_threads:
                         service->procthreads[i]->outdaemon = service->outdaemon;
                         service->procthreads[i]->outqmessage = service->outdaemon->message_queue;
                     }
-                    NEW_PROCTHREAD(service, attr, "procthreads", i, service->procthreads[i]->threadid, service->procthreads[i], service->logger, cpuset);
+                    NEW_PROCTHREAD(service, attr, "procthreads", i, service->procthreads[i]->threadid, service->procthreads[i], service->logger);
                     ret = 0;
                 }
                 else
@@ -427,7 +403,7 @@ running_threads:
                     PROCTHREAD_SET(service, service->daemons[i]);
                     if(service->flag & SB_USE_EVSIG)
                         procthread_set_evsig_fd(service->daemons[i], service->cond);
-                    NEW_PROCTHREAD(service, attr, "daemons", i, service->daemons[i]->threadid, service->daemons[i], service->logger, cpuset);
+                    NEW_PROCTHREAD(service, attr, "daemons", i, service->daemons[i]->threadid, service->daemons[i], service->logger);
                     ret = 0;
                 }
                 else
@@ -516,7 +492,7 @@ new_conn:
                 opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
                 if(service->flag & SB_TCP_NODELAY)
                 {
-                    opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                    opt = 1;setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
                 }
                 if((service->flag & SB_NEWCONN_DELAY) && daemon && daemon->pushconn(daemon, fd, ssl) == 0)
                 {
@@ -661,10 +637,10 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             opt = 1;setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
             if(service->flag & SB_TCP_NODELAY)
             {
-                //opt = 60;setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
-                //opt = 5;setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
-                //opt = 3;setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
-                opt = 1;setsockopt(fd, SOL_TCP, TCP_NODELAY, &opt, sizeof(opt));
+                //opt = 60;setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &opt, sizeof(opt));
+                //opt = 5;setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &opt, sizeof(opt));
+                //opt = 3;setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
+                opt = 1;setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
             }
             if(sess && (sess->flag & O_NONBLOCK))
             {
