@@ -34,8 +34,8 @@ extern "C" {
 #define SB_PROXY_TIMEOUT        20000000
 #define SB_HEARTBEAT_INTERVAL   1000000
 #define SB_NWORKING_TOSLEEP     20000
-#define SB_CPU_SET              0x01
-#define SB_NEWCONN_DELAY        0x02
+#define SB_SCHED_FIFO           0x01
+#define SB_SCHED_RR             0x02
 #define SB_TCP_NODELAY          0x04
 #define SB_LOG_THREAD           0x08
 #define SB_IO_NANOSLEEP         0x10
@@ -48,6 +48,8 @@ extern "C" {
 #define SB_USE_EVSIG            0x800
 #define SB_USE_COND             0x1000
 #define SB_SCHED_REALTIME       0x2000
+#define SB_CPU_SET              0x4000
+#define SB_NEWCONN_DELAY        0x8000
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
