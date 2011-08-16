@@ -38,8 +38,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = ev_serv$(EXEEXT) ev_cli$(EXEEXT) evdns_cli$(EXEEXT) \
-	sepoll$(EXEEXT)
+bin_PROGRAMS = ev_serv$(EXEEXT) ev_cli$(EXEEXT) evdns_cli$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -80,9 +79,6 @@ am_evdns_cli_OBJECTS = evdns_cli-evdns_cli.$(OBJEXT) \
 	evdns_cli-evdns.$(OBJEXT)
 evdns_cli_OBJECTS = $(am_evdns_cli_OBJECTS)
 evdns_cli_DEPENDENCIES = libevbase.la
-sepoll_SOURCES = sepoll.c
-sepoll_OBJECTS = sepoll.$(OBJEXT)
-sepoll_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -95,9 +91,9 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libevbase_la_SOURCES) $(ev_cli_SOURCES) $(ev_serv_SOURCES) \
-	$(evdns_cli_SOURCES) sepoll.c
+	$(evdns_cli_SOURCES)
 DIST_SOURCES = $(libevbase_la_SOURCES) $(ev_cli_SOURCES) \
-	$(ev_serv_SOURCES) $(evdns_cli_SOURCES) sepoll.c
+	$(ev_serv_SOURCES) $(evdns_cli_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -337,9 +333,6 @@ ev_serv$(EXEEXT): $(ev_serv_OBJECTS) $(ev_serv_DEPENDENCIES)
 evdns_cli$(EXEEXT): $(evdns_cli_OBJECTS) $(evdns_cli_DEPENDENCIES) 
 	@rm -f evdns_cli$(EXEEXT)
 	$(LINK) $(evdns_cli_LDFLAGS) $(evdns_cli_OBJECTS) $(evdns_cli_LDADD) $(LIBS)
-sepoll$(EXEEXT): $(sepoll_OBJECTS) $(sepoll_DEPENDENCIES) 
-	@rm -f sepoll$(EXEEXT)
-	$(LINK) $(sepoll_LDFLAGS) $(sepoll_OBJECTS) $(sepoll_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -362,7 +355,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evsig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-evwin32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libevbase_la-logger.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sepoll.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
