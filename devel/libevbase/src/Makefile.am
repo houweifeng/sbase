@@ -24,7 +24,7 @@ mutex.h
 
 libevbase_la_CPPFLAGS = -Wall
 include_HEADERS = evbase.h
-bin_PROGRAMS = ev_serv ev_cli evdns_cli sepoll
+bin_PROGRAMS = ev_serv ev_cli evdns_cli
 ev_serv_SOURCES = ev_serv.c evbase.h log.h
 ev_serv_CPPFLAGS = -Wall
 ev_serv_LDFLAGS = -static
