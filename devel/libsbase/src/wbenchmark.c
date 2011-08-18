@@ -145,7 +145,7 @@ int http_show_state(int n)
             REALLOG(logger, "timeout:%d error:%d ok:%d total:%d "
                     "time used:%lld request per sec:%lld avg_time:%lld", 
                     ntimeouts, nerrors, nok, n, PT_USEC_U(timer), 
-                    ((long long int)nok * 1000000ll/PT_USEC_U(timer)),
+                    (((long long int)nok * 1000000ll)/PT_USEC_U(timer)),
                     (PT_USEC_U(timer)/nok));
         }
         else
@@ -208,7 +208,7 @@ int http_over(CONN *conn, int respcode)
             else
             {
                 if(is_keepalive) conn->close(conn);
-                if(respcode != 0 && respcode != 200)nerrors++;
+                //if(respcode != 0 && respcode != 200)nerrors++;
                 if(http_newconn(id, server_ip, server_port, server_is_ssl)  == NULL) 
                 {
                     if(ncurrent > 0)--ncurrent;
@@ -263,6 +263,7 @@ int benchmark_packet_handler(CONN *conn, CB_DATA *packet)
             if(*s >= '0' && *s <= '9') respcode = atoi(s);
         }
         conn->s_id = respcode;
+        if(respcode != 200 && respcode != 204) nerrors++;
         /*
         if(respcode != 200)
         {
