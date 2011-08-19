@@ -179,7 +179,7 @@ int mtrie_add(void *mtr, char *key, int nkey, int data)
                         goto end;
                     }
                     childs = &(nodes[pos]);
-                    memset(childs, 0, sizeof(MTRNODE) * n);
+                    //memset(childs, 0, sizeof(MTRNODE) * n);
                     if(x == 0)
                     {
                         MTRNODE_SETK(childs[0], *p);
@@ -306,7 +306,7 @@ int mtrie_xadd(void *mtr, char *key, int nkey)
                         goto end;
                     }
                     childs = &(nodes[pos]);
-                    memset(childs, 0, sizeof(MTRNODE) * n);
+                    //memset(childs, 0, sizeof(MTRNODE) * n);
                     if(x == 0)
                     {
                         MTRNODE_SETK(childs[0], *p);
@@ -670,7 +670,7 @@ int   mtrie_radd(void *mtr, char *key, int nkey, int data)
                     nodes = mtrie->nodes;
                     if(pos < MTRIE_LINE_MAX || pos > mtrie->state->current) goto end;
                     childs = &(nodes[pos]);
-                    memset(childs, 0, sizeof(MTRNODE) * n);
+                    //memset(childs, 0, sizeof(MTRNODE) * n);
                     if(x == 0)
                     {
                         MTRNODE_SETK(childs[0], *p);
@@ -787,7 +787,7 @@ int   mtrie_rxadd(void *mtr, char *key, int nkey)
                     nodes = mtrie->nodes;
                     if(pos < MTRIE_LINE_MAX || pos > mtrie->state->current) goto end; 
                     childs = &(nodes[pos]);
-                    memset(childs, 0, sizeof(MTRNODE) * n);
+                    //memset(childs, 0, sizeof(MTRNODE) * n);
                     if(x == 0)
                     {
                         MTRNODE_SETK(childs[0], *p);
