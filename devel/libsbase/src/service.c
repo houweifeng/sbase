@@ -173,7 +173,8 @@ do{                                                                             
 /* running */
 int service_run(SERVICE *service)
 {
-    int ret = -1, i = 0, x = 0, ncpu = sysconf(_SC_NPROCESSORS_CONF);
+    int ret = -1, i = 0, x = 0;
+    //ncpu = sysconf(_SC_NPROCESSORS_CONF);
     CONN *conn = NULL; 
 #ifdef HAVE_PTHREAD
     pthread_attr_t ioattr, attr;
