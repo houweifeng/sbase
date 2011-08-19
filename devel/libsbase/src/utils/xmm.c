@@ -35,7 +35,7 @@ void *xmm_new(size_t size)
         {
             m = mmap(NULL, MMSIZE(size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
             if(m == NULL || m == (void *)-1) m = NULL;
-            //else memset(m, 0, MMSIZE(size));
+            else memset(m, 0, MMSIZE(size));
         }
     }
     return m;
@@ -54,6 +54,7 @@ void *xmm_mresize(void *old, size_t old_size, size_t new_size)
         {
             m = mmap(NULL, MMSIZE(new_size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
             if(m == (void *)-1) m = NULL;
+            else memset(m, 0, MMSIZE(new_size));
         }
         if(old)
         {
@@ -82,6 +83,7 @@ void *xmm_resize(void *old, size_t old_size, size_t new_size)
         {
             m = mmap(NULL, MMSIZE(new_size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
             if(m == (void *)-1) m = NULL;
+            else memset(m, 0, MMSIZE(new_size));
         }
         if(old)
         {
