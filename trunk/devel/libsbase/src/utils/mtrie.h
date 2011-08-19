@@ -36,8 +36,8 @@ typedef struct _MTRIE
 {
     MTRSTATE    *state;
     MTRNODE     *nodes;
-    void        *map;
-    void        *old_map;
+    char        *map;
+    char        *old_map;
     MUTEX       *mutex;
     off_t       map_size;
     off_t       size;

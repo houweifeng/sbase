@@ -44,7 +44,7 @@ do                                                                              
             {                                                                               \
                 x->map_size = x->size;                                                      \
                 x->state = (MTRSTATE *)(x->map);                                            \
-                memset(x->state, 0,sizeof(MTRSTATE)+sizeof(sizeof(MTRNODE)*MTRIE_LINE_MAX));\
+                memset(x->map, 0,sizeof(MTRSTATE)+sizeof(sizeof(MTRNODE)*MTRIE_LINE_MAX));  \
                 x->state->total = MTRIE_NODES_MAX;                                          \
                 x->state->left = MTRIE_NODES_MAX - MTRIE_LINE_MAX;                          \
                 x->state->current = MTRIE_LINE_MAX;                                         \
