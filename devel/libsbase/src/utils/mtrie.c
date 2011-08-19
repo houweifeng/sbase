@@ -13,7 +13,7 @@
 #else
 #define MMAP_SHARED MAP_SHARED
 #endif
-#define MTRNODE_COPY(new, old)                                                 \
+#define MTRNODE_COPY(new, old)                                                  \
 do                                                                              \
 {                                                                               \
     new.key = old.key;                                                          \
@@ -21,7 +21,7 @@ do                                                                              
     new.data = old.data;                                                        \
     new.childs = old.childs;                                                    \
 }while(0)
-#define MTRNODE_SETK(node, val)                                                \
+#define MTRNODE_SETK(node, val)                                                 \
 do                                                                              \
 {                                                                               \
     node.key = val;                                                             \
@@ -44,7 +44,7 @@ do                                                                              
             {                                                                               \
                 x->map_size = x->size;                                                      \
                 x->state = (MTRSTATE *)(x->map);                                            \
-                memset(x->state, 0, sizeof(MTRSTATE));                                      \
+                memset(x->state, 0,sizeof(MTRSTATE)+sizeof(sizeof(MTRNODE)*MTRIE_LINE_MAX));\
                 x->state->total = MTRIE_NODES_MAX;                                          \
                 x->state->left = MTRIE_NODES_MAX - MTRIE_LINE_MAX;                          \
                 x->state->current = MTRIE_LINE_MAX;                                         \
