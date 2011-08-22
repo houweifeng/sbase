@@ -306,7 +306,7 @@ do                                                                              
 {                                                                                           \
     MMB_RESET(conn->packet);                                                                \
     MMB_RESET(conn->cache);                                                                 \
-    chunk_reset(&conn->chunk);                                                              \
+    chunk_reset(&(conn->chunk));                                                            \
     CONN_STATE_RESET(conn);                                                                 \
     if(MMB_NDATA(conn->buffer) > 0){PUSH_INQMESSAGE(conn, MESSAGE_BUFFER);}                 \
 }while(0)
@@ -1517,6 +1517,7 @@ void conn_freechunk(CONN *conn, CB_DATA *chunk)
 
     if(conn && (cp = (CHUNK *)chunk))
     {
+        chunk_reset(cp);
         MUTEX_LOCK(conn->mutex);
         x = conn->nqleft++;
         conn->qleft[x] = (QBLOCK *)cp;
