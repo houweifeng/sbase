@@ -633,11 +633,15 @@ int conn_close(CONN *conn)
 int conn_over(CONN *conn)
 {
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+    int over = 0;
 
     if(conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for over-connection[%p] remote[%s:%d] local[%s:%d] via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        if(conn->d_state == D_STATE_FREE) conn_over_chunk(conn);
+        MUTEX_LOCK(conn->mutex);
+        if(conn->d_state == D_STATE_FREE) over = 1;
+        MUTEX_UNLOCK(conn->mutex);
+        if(over)conn_over_chunk(conn);
         return 0;
     }
     return -1;
