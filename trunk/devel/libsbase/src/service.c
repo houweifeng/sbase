@@ -305,17 +305,20 @@ running_threads:
             }
         }
         /* outdaemon */ 
-        if((service->flag & SB_USE_OUTDAEMON) && (service->outdaemon = procthread_init(service->cond)))
+        if((service->flag & SB_USE_OUTDAEMON))
         {
-            PROCTHREAD_SET(service, service->outdaemon);
-            service->outdaemon->use_cond_wait = 0;
-            NEW_PROCTHREAD(service, ioattr, "outdaemon", 0, service->outdaemon->threadid, service->outdaemon, service->logger);
-            ret = 0;
-        }
-        else
-        {
-            FATAL_LOGGER(service->logger, "Initialize outdaemon failed, %s", strerror(errno));
-            goto err;
+            if((service->outdaemon = procthread_init(service->cond)))
+            {
+                PROCTHREAD_SET(service, service->outdaemon);
+                service->outdaemon->use_cond_wait = 0;
+                NEW_PROCTHREAD(service, ioattr, "outdaemon", 0, service->outdaemon->threadid, service->outdaemon, service->logger);
+                ret = 0;
+            }
+            else
+            {
+                FATAL_LOGGER(service->logger, "Initialize outdaemon failed, %s", strerror(errno));
+                goto err;
+            }
         }
         /* daemon */ 
         if((service->daemon = procthread_init(0)))
