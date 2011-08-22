@@ -1869,13 +1869,6 @@ void conn_reset(CONN *conn)
         {
             while((cp = (CHUNK *)SENDQPOP(conn)))
             {
-                /*
-                if(PPARENT(conn) && PPARENT(conn)->service)
-                {
-                    PPARENT(conn)->service->pushchunk(PPARENT(conn)->service, cp);
-                }
-                else break;
-                */
                 conn_freechunk(conn, (CB_DATA *)cp);
                 cp  = NULL;
             }
