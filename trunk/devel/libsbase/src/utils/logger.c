@@ -150,10 +150,10 @@ int logger_header(LOGGER *logger, char *buf, int level, char *_file_, int _line_
 
     if(logger && (s = buf) && _file_ && level < __LEVEL__)
     {
-        MUTEX_LOCK(logger->mutex);
         gettimeofday(&tv, NULL);
         time(&timep);
         ptm = localtime(&timep);
+        MUTEX_LOCK(logger->mutex);
         logger_rotate_check(logger, ptm);
         MUTEX_UNLOCK(logger->mutex);
         s += sprintf(s,"[%02d/%s/%04d:%02d:%02d:%02d +%06u] ", ptm->tm_mday, 

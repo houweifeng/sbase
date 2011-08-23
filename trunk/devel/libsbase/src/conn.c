@@ -1197,7 +1197,7 @@ int conn_packet_reader(CONN *conn)
         else if(packet_type & PACKET_CUSTOMIZED && conn->session.packet_reader)
         {
             len = conn->session.packet_reader(conn, data);
-            DEBUG_LOGGER(conn->logger, "Reading packet with customized function[%p] length[%d]-[%d] from %s:%d on %s:%d via %d", PPL(conn->session.packet_reader), len, data->ndata, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+            ACCESS_LOGGER(conn->logger, "Reading packet with customized function[%p] length[%d]-[%d] from %s:%d on %s:%d via %d", PPL(conn->session.packet_reader), len, data->ndata, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             goto end;
         }
         /* Read packet with certain length */
@@ -1205,7 +1205,7 @@ int conn_packet_reader(CONN *conn)
                 && MMB_NDATA(conn->buffer) >= conn->session.packet_length)
         {
             len = conn->session.packet_length;
-            DEBUG_LOGGER(conn->logger, "Reading packet with certain length[%d] from %s:%d on %s:%d via %d", len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+            ACCESS_LOGGER(conn->logger, "Reading packet with certain length[%d] from %s:%d on %s:%d via %d", len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             goto end;
         }
         /* Read packet with delimiter */
@@ -1232,6 +1232,7 @@ end:
             if(MMB_NDATA(conn->buffer) > 0 && conn->session.quick_handler 
                     && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0)
             {
+                ACCESS_LOGGER(conn->logger, "fill-chunk left[%d/%d] from %s:%d on %s:%d via %d", CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 chunk_mem(&(conn->chunk), n);
                 conn->s_state = S_STATE_READ_CHUNK;
                 conn__read__chunk(conn);
