@@ -138,7 +138,14 @@ void procthread_run(void *arg)
                     n = 0;
                 }
             }while(pth->running_status);
-
+            if(pth == pth->service->outdaemon)
+            {
+                WARN_LOGGER(pth->logger, "Ready for stop outdaemons[%p]", pth);
+            }
+            else
+            {
+                WARN_LOGGER(pth->logger, "Ready for stop iodaemons[%p]", pth);
+            }
         }
         else if(pth->listenfd > 0)
         {

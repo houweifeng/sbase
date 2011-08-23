@@ -1059,9 +1059,15 @@ int service_freeconn(SERVICE *service, CONN *conn)
 CONN *service_findconn(SERVICE *service, int index)
 {
     CONN *conn = NULL;
-    if(service && service->lock == 0 && index >= 0 && index <= service->index_max)
+    if(service && service->lock == 0)
     {
-        conn = service->connections[index];
+        MUTEX_LOCK(service->mutex);
+        if(index >= 0 && index <= service->index_max)
+        {
+            if((conn = service->connections[index]) && (conn->s_state & D_STATE_CLOSE))
+                conn = NULL;
+        }
+        MUTEX_UNLOCK(service->mutex);
     }
     return conn;
 }
@@ -1477,7 +1483,7 @@ void service_stop(SERVICE *service)
         //iodaemons
         if(service->niodaemons > 0)
         {
-            WARN_LOGGER(service->logger, "Ready for stop iodaemons");
+            WARN_LOGGER(service->logger, "Ready for stop iodaemons:%d", service->niodaemons);
             for(i = 0; i < service->niodaemons; i++)
             {
                 if(service->iodaemons[i])

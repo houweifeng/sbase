@@ -1224,16 +1224,15 @@ end:
         /* Copy data to packet from buffer */
         if(len > 0)
         {
+            ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             MMB_RESET(conn->packet);
             MMB_PUSH(conn->packet, MMB_DATA(conn->buffer), len);
             MMB_DELETE(conn->buffer, len);
-            ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             /* For packet quick handling */
             if(MMB_NDATA(conn->buffer) > 0 && conn->session.quick_handler 
                     && (n = conn->session.quick_handler(conn, PCB(conn->packet))) > 0)
             {
                 chunk_mem(&(conn->chunk), n);
-                ACCESS_LOGGER(conn->logger, "fill-chunk left[%d/%d] from %s:%d on %s:%d via %d", CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 conn->s_state = S_STATE_READ_CHUNK;
                 conn__read__chunk(conn);
                 ACCESS_LOGGER(conn->logger, "Read-chunk left[%d/%d] from %s:%d on %s:%d via %d", CHK_LEFT(conn->chunk), n, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
@@ -1243,7 +1242,6 @@ end:
             {
                 conn->s_state = S_STATE_PACKET_HANDLING;
                 CONN_PUSH_MESSAGE(conn, MESSAGE_PACKET);
-                ACCESS_LOGGER(conn->logger, "Read-packet[%d] length[%d] from %s:%d on %s:%d via %d", packet_type, len, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             }
         }
     }
@@ -1255,12 +1253,13 @@ int conn_packet_handler(CONN *conn)
 {
     int ret = -1;
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+    PROCTHREAD *parent = NULL;
 
-    if(conn && conn->session.packet_handler)
+    if(conn && conn->session.packet_handler && (parent = PPARENT(conn)))
     {
         ACCESS_LOGGER(conn->logger, "packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         ret = conn->session.packet_handler(conn, PCB(conn->packet));
-        ACCESS_LOGGER(conn->logger, "over packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        ACCESS_LOGGER(conn->logger, "over packet_handler(%p) parent->qtotal:%d on %s:%d local[%s:%d] via %d", conn->session.packet_handler, QMTOTAL(parent->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
 
         if(conn->s_state == S_STATE_PACKET_HANDLING)
         {
@@ -1290,8 +1289,9 @@ int conn_data_handler(CONN *conn)
 {
     int ret = -1;
     CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+    PROCTHREAD *parent = NULL;
 
-    if(conn)
+    if(conn && (parent = PPARENT(conn)))
     {
         if(conn->session.packet_type == PACKET_PROXY)
         {
@@ -1303,7 +1303,7 @@ int conn_data_handler(CONN *conn)
             //fprintf(stdout, "service[%s]->session.data_handler:%p\n", PPARENT(conn)->service->service_name, conn->session.data_handler);
             ret = conn->session.data_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), PCB(conn->chunk));
-            ACCESS_LOGGER(conn->logger, "over data_handler(%p) on %s:%d via %d", conn->session.data_handler, conn->remote_ip, conn->remote_port, conn->fd);
+            ACCESS_LOGGER(conn->logger, "over data_handler(%p) parent->qtotal:%d on %s:%d local[%s:%d] via %d", conn->session.packet_handler, QMTOTAL(parent->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         }
         else if(CHK_TYPE(conn->chunk) == CHUNK_FILE && conn->session.file_handler)
         {
@@ -1311,7 +1311,7 @@ int conn_data_handler(CONN *conn)
             //fprintf(stdout, "service[%s]->session.data_handler:%p\n", PPARENT(conn)->service->service_name, conn->session.data_handler);
             ret = conn->session.file_handler(conn, PCB(conn->packet), 
                     PCB(conn->cache), CHK_FILENAME(conn->chunk));
-            ACCESS_LOGGER(conn->logger, "over file_handler(%p) on %s:%d via %d", conn->session.file_handler, conn->remote_ip, conn->remote_port, conn->fd);
+            ACCESS_LOGGER(conn->logger, "over file_handler(%p) parent->qtotal:%d on %s:%d local[%s:%d] via %d", conn->session.packet_handler, QMTOTAL(parent->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         }
         //reset session
         if(conn->s_state == S_STATE_DATA_HANDLING)
