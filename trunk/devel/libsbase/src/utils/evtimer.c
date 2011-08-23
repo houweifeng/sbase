@@ -53,9 +53,9 @@ void evtimer_push(EVTIMER *evtimer, EVTNODE *node)
 /* add event timer */
 int evtimer_add(EVTIMER *evtimer, off_t timeout, EVTCALLBACK *handler, void *arg)
 {
-    int evid = -1, x = 0, i = 0;
     struct timeval tv = {0};
     EVTNODE *node = NULL;
+    int evid = -1;
 
     if(evtimer && handler && timeout > 0)
     {
@@ -63,29 +63,6 @@ int evtimer_add(EVTIMER *evtimer, off_t timeout, EVTCALLBACK *handler, void *arg
         if((node = evtimer->left))
         {
             evtimer->left = node->next; 
-        }
-        else
-        {
-            if((x = evtimer->nevlist) < EVTNODE_LINE_MAX 
-                    && (node = (EVTNODE *)xmm_mnew(sizeof(EVTNODE) * EVTNODE_LINE_NUM)))
-            {
-                evtimer->evlist[x] = node;
-                evtimer->nevlist++;
-                //fprintf(stdout, "%s::%d lines:%d\n", __FILE__, __LINE__, evtimer->nevlist);
-                x *= EVTNODE_LINE_NUM;
-                node[0].id = x;
-                i = 1;
-                while(i < EVTNODE_LINE_NUM)
-                {
-                    node[i].id = i + x;
-                    node[i].next = evtimer->left;
-                    evtimer->left = &(node[i]);
-                    ++i;
-                }
-            }
-        }
-        if(node)
-        {
             evid = node->id;
             node->handler = handler;
             node->arg = arg;
@@ -102,16 +79,14 @@ int evtimer_add(EVTIMER *evtimer, off_t timeout, EVTCALLBACK *handler, void *arg
 /* update event timer */
 int evtimer_update(EVTIMER *evtimer, int evid, off_t timeout, EVTCALLBACK *handler, void *arg)
 {
-    EVTNODE *nodes = NULL, *node = NULL;
-    int x = 0, i = 0, ret = -1;
     struct timeval tv = {0};
+    EVTNODE *node = NULL;
+    int i = 0, ret = -1;
 
-    if(evtimer && evid >= 0 && evid < ((evtimer->nevlist+1) * EVTNODE_LINE_NUM))
+    if(evtimer &&  (i = evid) > 0 && evid < EVTNODE_MAX)
     {
         MUTEX_LOCK(evtimer->mutex);
-        x = evid / EVTNODE_LINE_NUM;
-        i = evid % EVTNODE_LINE_NUM;
-        if((nodes = evtimer->evlist[x]) && (node = &(nodes[i])) && node->ison)
+        if((node = &(evtimer->nodes[i])) && node->ison)
         {
             if(node->prev) node->prev->next = node->next;
             if(node->next) node->next->prev = node->prev;
@@ -132,17 +107,14 @@ int evtimer_update(EVTIMER *evtimer, int evid, off_t timeout, EVTCALLBACK *handl
 /* delete event timer */
 int evtimer_delete(EVTIMER *evtimer, int evid)
 {
-    EVTNODE *nodes = NULL, *node = NULL;
-    int ret = -1, i = 0, x = 0;
+    EVTNODE *node = NULL;
+    int ret = -1, i = 0;
 
-    if(evtimer && evid >= 0 && evid < ((evtimer->nevlist+1) * EVTNODE_LINE_NUM))
+    if(evtimer && (i = evid) > 0 && evid < EVTNODE_MAX)
     {
         MUTEX_LOCK(evtimer->mutex);
-        x = evid / EVTNODE_LINE_NUM;
-        i = evid % EVTNODE_LINE_NUM;
-        if((nodes = evtimer->evlist[x]) && (node = &(nodes[i])) && node->ison)
+        if((node = &(evtimer->nodes[i])) && node->ison)
         {
-            //fprintf(stdout, "%s::%d delete evid:%d\n", __FILE__, __LINE__, evid);
             if(node->prev) node->prev->next = node->next;
             if(node->next) node->next->prev = node->prev;
             if(node == evtimer->head) evtimer->head = node->next;
@@ -163,30 +135,29 @@ void evtimer_check(EVTIMER *evtimer)
     EVTCALLBACK *handler = NULL;
     struct timeval tv = {0};
     EVTNODE *node = NULL;
+    int i = 0, id = 0;
     off_t now = 0;
-    int i = 0;
 
     if(evtimer && evtimer->head)
     {
-        MUTEX_LOCK(evtimer->mutex);
         gettimeofday(&tv, NULL);
         now = (off_t)(tv.tv_sec * 1000000ll + tv.tv_usec * 1ll);
+        MUTEX_LOCK(evtimer->mutex);
         evtimer->ntimeout = 0;
-        while(evtimer->ntimeout < EVTNODE_LINE_MAX 
-                && (node = evtimer->head) && node->evusec < now)
+        while((node = evtimer->head) && node->evusec < now)
         {
-            //if(node->handler) node->handler(node->arg);
             if((evtimer->head = node->next))
                 evtimer->head->prev = NULL;
             else
                 evtimer->tail = NULL;
-            evtimer->timeouts[evtimer->ntimeout++] = node;
+            evtimer->timeouts[evtimer->ntimeout++] = node->id;
             node->next = node->prev = NULL;
         }
         MUTEX_UNLOCK(evtimer->mutex);
         for(i = 0; i < evtimer->ntimeout; i++)
         {
-            if((node = evtimer->timeouts[i]) && node->next == NULL && node->prev == NULL
+            if((id = evtimer->timeouts[i]) && (node = &(evtimer->nodes[id])) 
+                    && node->next == NULL && node->prev == NULL
                     && node->ison && (handler = node->handler))
                 handler(node->arg);
         }
@@ -224,10 +195,12 @@ void evtimer_clean(EVTIMER *evtimer)
     if(evtimer)
     {
         MUTEX_DESTROY(evtimer->mutex);
+        /*
         for(i = 0; i < evtimer->nevlist; i++)
         {
             xmm_free(evtimer->evlist[i], sizeof(EVTNODE) * EVTNODE_LINE_NUM);
         }
+        */
         xmm_free(evtimer, sizeof(EVTIMER));
     }
 
@@ -238,10 +211,19 @@ void evtimer_clean(EVTIMER *evtimer)
 EVTIMER *evtimer_init()
 {
     EVTIMER *evtimer = NULL;
+    EVTNODE *node = NULL;
+    int i = 0;
 
     if((evtimer = (EVTIMER *)xmm_mnew(sizeof(EVTIMER))))
     {
         MUTEX_INIT(evtimer->mutex);
+        for(i = 1; i < EVTNODE_MAX; i++)
+        {
+            node = &(evtimer->nodes[i]);
+            node->next = evtimer->left;
+            node->id = i;
+            evtimer->left = node;
+        }
     }
     return evtimer;
 }

@@ -12,15 +12,14 @@ typedef struct _EVTNODE
     struct _EVTNODE *prev;
     struct _EVTNODE *next;
 }EVTNODE;
-#define  EVTNODE_LINE_MAX   1024
-#define  EVTNODE_LINE_NUM   10240
+#define  EVTNODE_MAX        65536
 typedef struct _EVTIMER
 {
-   int nevlist;
+   int current;
    int ntimeout;
    MUTEX *mutex;
-   EVTNODE *evlist[EVTNODE_LINE_MAX];
-   EVTNODE *timeouts[EVTNODE_LINE_MAX];
+   EVTNODE nodes[EVTNODE_MAX];
+   unsigned short timeouts[EVTNODE_MAX];
    EVTNODE *left;
    EVTNODE *head;
    EVTNODE *tail;
