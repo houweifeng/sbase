@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE  500
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -127,7 +128,7 @@ LOGGER *logger_init(char *file, int rotate_flag)
 
     if((logger = (LOGGER *)calloc(1, sizeof(LOGGER))))
     {
-        //MUTEX_INIT(logger->mutex);
+        MUTEX_INIT(logger->mutex);
         strcpy(logger->file, file);
         logger_mkdir(file);
         logger->rflag = rotate_flag;
@@ -178,7 +179,7 @@ int logger_write(LOGGER *logger, int level, char *_file_, int _line_, char *form
     {
         s += logger_header(logger, s, level, _file_, _line_);
         va_start(ap, format);
-        s += vsprintf(s, format, ap);
+        s += vsnprintf(s, LOGGER_LINE_LIMIT - (s - buf), format, ap);
         va_end(ap);
         *s++ = '\n';
         if(logger->fd > 0) ret = pwrite(logger->fd, buf, s - buf, SEEK_END);

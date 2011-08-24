@@ -179,7 +179,7 @@ int logger_write(LOGGER *logger, int level, char *_file_, int _line_, char *form
     {
         s += logger_header(logger, s, level, _file_, _line_);
         va_start(ap, format);
-        s += vsprintf(s, format, ap);
+        s += vsnprintf(s, LOGGER_LINE_LIMIT - (s - buf), format, ap);
         va_end(ap);
         *s++ = '\n';
         if(logger->fd > 0) ret = pwrite(logger->fd, buf, s - buf, SEEK_END);
