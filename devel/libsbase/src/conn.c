@@ -1244,6 +1244,7 @@ end:
             {
                 conn->s_state = S_STATE_PACKET_HANDLING;
                 CONN_PUSH_MESSAGE(conn, MESSAGE_PACKET);
+                ACCESS_LOGGER(conn->logger, "Got-packet to message_queue:%d from %s:%d on %s:%d via %d", QMTOTAL(conn->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             }
         }
     }
