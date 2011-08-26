@@ -73,8 +73,9 @@ do{if(m)                                                                        
 do{if(m)                                                                            \
 {                                                                                   \
     pthread_mutex_lock(__MM__(m));                                                  \
-    if(__M__(m)->nowait == 0) __M__(m)->nowait = 1;                                 \
-    pthread_cond_signal(__MC__(m));                                                 \
+    if(__M__(m)->nowait == 0)                                                       \
+        pthread_cond_signal(__MC__(m));                                             \
+    __M__(m)->nowait = 1;                                                           \
     pthread_mutex_unlock(__MM__(m));                                                \
 }}while(0)
 #define MUTEX_DESTROY(m)                                                            \
