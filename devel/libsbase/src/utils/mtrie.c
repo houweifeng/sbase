@@ -8,11 +8,6 @@
 #include <sys/stat.h>
 #include "mtrie.h"
 #include "mutex.h"
-#ifdef MAP_LOCKED
-#define MMAP_SHARED MAP_SHARED|MAP_LOCKED
-#else
-#define MMAP_SHARED MAP_SHARED
-#endif
 #define MTRNODE_COPY(new, old)                                                  \
 do                                                                              \
 {                                                                               \
