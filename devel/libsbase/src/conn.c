@@ -212,26 +212,6 @@ do{                                                                             
         conn->s_state = 0;                                                                  \
     }                                                                                       \
 }
-#define CONN_PUSH_MESSAGE(conn, msgid)                                                      \
-do                                                                                          \
-{                                                                                           \
-    if(conn && conn->d_state == 0)                                                          \
-    {                                                                                       \
-        qmessage_push(conn->message_queue, msgid,                                           \
-                conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
-        PPARENT(conn)->wakeup(PPARENT(conn));                                               \
-    }                                                                                       \
-}while(0)
-#define CONN__PUSH__MESSAGE(conn, msgid)                                                    \
-do                                                                                          \
-{                                                                                           \
-    if(conn)                                                                                \
-    {                                                                                       \
-        qmessage_push(conn->message_queue, msgid,                                           \
-                conn->index, conn->fd, -1, conn->parent, conn, NULL);                       \
-        PPARENT(conn)->wakeup(PPARENT(conn));                                               \
-    }                                                                                       \
-}while(0)
 
 #define CONN_CHUNK_READ(conn, n)                                                            \
 do                                                                                          \
@@ -256,7 +236,7 @@ do                                                                              
                     "on %s:%d via %d", LL(CHK_SIZE(conn->chunk)), conn->remote_ip,          \
                     conn->remote_port, conn->local_ip, conn->local_port, conn->fd);         \
             conn->s_state = S_STATE_DATA_HANDLING;                                          \
-            CONN_PUSH_MESSAGE(conn, MESSAGE_DATA);                                          \
+            conn_push_message(conn, MESSAGE_DATA);                                          \
         }                                                                                   \
     }                                                                                       \
 }while(0)
@@ -661,7 +641,7 @@ int conn_shut(CONN *conn, int d_state, int e_state)
         {
             conn->d_state |= d_state;
             if(conn->e_state == E_STATE_OFF) conn->e_state = e_state;
-            CONN__PUSH__MESSAGE(conn, MESSAGE_SHUT);
+            conn__push__message(conn, MESSAGE_SHUT);
         }
         MUTEX_UNLOCK(conn->mutex);
     }
@@ -737,7 +717,7 @@ void conn_evtimer_handler(void *arg)
     if(conn)
     {
         DEBUG_LOGGER(conn->logger, "evtimer_handler[%d](%p) on remote[%s:%d] local[%s:%d] via %d", conn->evid, PPL(conn->evtimer), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        CONN_PUSH_MESSAGE(conn, MESSAGE_TIMEOUT);
+        conn_push_message(conn, MESSAGE_TIMEOUT);
     }
     return ;
 }
@@ -1073,7 +1053,7 @@ int conn_write_handler(CONN *conn)
                     if(SENDQTOTAL(conn) < 1) 
                     {
                         CONN_OUTEVENT_DEL(conn);
-                        CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+                        conn_push_message(conn, MESSAGE_END);
                     }
                 }
             }
@@ -1155,7 +1135,7 @@ int conn_send_handler(CONN *conn)
                     if(SENDQTOTAL(conn) < 1) 
                     {
                         CONN_OUTEVENT_DEL(conn);
-                        CONN_PUSH_MESSAGE(conn, MESSAGE_END);
+                        conn_push_message(conn, MESSAGE_END);
                     }
                     ret = 0; break;
                 }
@@ -1243,7 +1223,7 @@ end:
             else
             {
                 conn->s_state = S_STATE_PACKET_HANDLING;
-                CONN_PUSH_MESSAGE(conn, MESSAGE_PACKET);
+                conn_push_message(conn, MESSAGE_PACKET);
                 ACCESS_LOGGER(conn->logger, "Got-packet to message_queue:%d from %s:%d on %s:%d via %d", QMTOTAL(conn->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             }
         }
@@ -1338,7 +1318,7 @@ int conn_bind_proxy(CONN *conn, CONN *child)
         conn->session.childid = child->index;
         conn->session.child = child;
         DEBUG_LOGGER(conn->logger, "Bind proxy connection[%s:%d] to connection[%s:%d]", conn->remote_ip, conn->remote_port, child->remote_ip, child->remote_port);
-        CONN_PUSH_MESSAGE(conn, MESSAGE_PROXY);
+        conn_push_message(conn, MESSAGE_PROXY);
         ret = 0;
     }
     return ret;
@@ -1476,7 +1456,7 @@ int conn__read__chunk(CONN *conn)
             {
                 DEBUG_LOGGER(conn->logger, "Chunk completed %lld bytes from %s:%d on %s:%d via %d", LL(CHK_SIZE(conn->chunk)), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
                 conn->s_state = S_STATE_DATA_HANDLING;
-                CONN_PUSH_MESSAGE(conn, MESSAGE_DATA);
+                conn_push_message(conn, MESSAGE_DATA);
             }
             if(n > 0)
             {
