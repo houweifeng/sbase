@@ -1,4 +1,4 @@
-EXTRA_DIST = libsbase.spec rc.lechod rc.lechod.ini rc.xhttpd rc.xhttpd.ini
+EXTRA_DIST = libsbase.spec rc.lechod rc.lechod.ini rc.xhttpd rc.xhttpd.ini ssl.sh
 install: install-ini
 
 conftodir = "`echo $(sysconfdir)|sed -e 's|/usr/etc|/etc|'`"
