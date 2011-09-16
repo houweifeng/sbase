@@ -397,7 +397,7 @@ static const HTTP_ELEMENT http_methods[] =
 };
 
 /* file ext support list */
-#define HTTP_MIME_NUM 88
+#define HTTP_MIME_NUM 89
 static const HTTP_ELEMENT http_mime_types[]=
 {
     {0, 4, "html", "text/html"},
@@ -487,7 +487,8 @@ static const HTTP_ELEMENT http_mime_types[]=
     {84, 3, "asf", "video/x-ms-asf"},
     {85, 3, "wmv", "video/x-ms-wmv"},
     {86, 3, "avi", "video/x-msvideo"},
-    {87, 3, "dmg", "application/octet-stream"}
+    {87, 3, "dmg", "application/octet-stream"},
+    {88, 3, "php", "text/html"}
 };
 /*
 static const char *ftypes[] = {
