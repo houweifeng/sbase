@@ -908,9 +908,13 @@ int sbase_initialize(SBASE *sbase, char *conf)
     httpd->session.oob_handler = &xhttpd_oob_handler;
     cacert_file = iniparser_getstr(dict, "XHTTPD:cacert_file");
     privkey_file = iniparser_getstr(dict, "XHTTPD:privkey_file");
-    if(cacert_file && privkey_file && iniparser_getint(dict, "XHTTPD:is_use_SSL", 0))
+    if(cacert_file && access(cacert_file, F_OK) == 0 
+            && privkey_file && access(privkey_file, F_OK) == 0 
+            && iniparser_getint(dict, "XHTTPD:is_use_SSL", 0) 
+            && (n = iniparser_getint(dict, "XHTTPD:SSL_port", 0)) > 0)
     {
         httpd->is_use_SSL = 1;
+        httpd->port = n;
         httpd->cacert_file = cacert_file;
         httpd->privkey_file = privkey_file;
     }
