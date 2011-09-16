@@ -36,6 +36,7 @@
 #define UL(x) ((unsigned long int)x)
 static SBASE *sbase = NULL;
 static SERVICE *httpd = NULL;
+static SERVICE *httpsd = NULL;
 static dictionary *dict = NULL;
 static char *httpd_home = "/tmp/xhttpd/html";
 static int http_indexes_view = 0;
@@ -537,15 +538,16 @@ int xhttpd_bind_proxy(CONN *conn, char *host, int port)
     CONN *new_conn = NULL;
     SESSION session = {0};
     char *ip = NULL;
+    SERVICE *service = NULL;
 
-    if(conn && host && port > 0)
+    if(conn && host && port > 0 && (service = (SERVICE *)conn->service))
     {
         if(ip)
         {
             memset(&session, 0, sizeof(SESSION));
             session.packet_type = PACKET_PROXY;
             session.timeout = httpd_proxy_timeout;
-            if((new_conn = httpd->newproxy(httpd, conn, -1, -1, ip, port, &session)))
+            if((new_conn = service->newproxy(service, conn, -1, -1, ip, port, &session)))
             {
                 new_conn->start_cstate(new_conn);
                 return 0;
@@ -847,6 +849,26 @@ int sbase_initialize(SBASE *sbase, char *conf)
     sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
     sbase->set_evlog_level(sbase, iniparser_getint(dict, "SBASE:evlog_level", 0));
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
+    cacert_file = iniparser_getstr(dict, "XHTTPD:cacert_file");
+    privkey_file = iniparser_getstr(dict, "XHTTPD:privkey_file");
+    if(iniparser_getint(dict, "XHTTPD:is_use_SSL", 0)) 
+    {
+        n = iniparser_getint(dict, "XHTTPD:SSL_port", 0);
+        if(n > 0 && cacert_file && access(cacert_file, F_OK) == 0 
+                && privkey_file && access(privkey_file, F_OK) == 0 
+                && (httpsd = service_init()))
+        {
+            httpsd->is_use_SSL = 1;
+            httpsd->port = n;
+            httpsd->cacert_file = cacert_file;
+            httpsd->privkey_file = privkey_file;
+        }
+        else
+        {
+            fprintf(stderr, "initialize SSL[cacert:%s key:%s port:%d] failed, %s\n", cacert_file, privkey_file, n, strerror(errno));
+            _exit(-1);
+        }
+    }
     /* XHTTPD */
     if((httpd = service_init()) == NULL)
     {
@@ -906,17 +928,23 @@ int sbase_initialize(SBASE *sbase, char *conf)
     httpd->session.packet_handler = &xhttpd_packet_handler;
     httpd->session.data_handler = &xhttpd_data_handler;
     httpd->session.oob_handler = &xhttpd_oob_handler;
-    cacert_file = iniparser_getstr(dict, "XHTTPD:cacert_file");
-    privkey_file = iniparser_getstr(dict, "XHTTPD:privkey_file");
-    if(cacert_file && access(cacert_file, F_OK) == 0 
-            && privkey_file && access(privkey_file, F_OK) == 0 
-            && iniparser_getint(dict, "XHTTPD:is_use_SSL", 0) 
-            && (n = iniparser_getint(dict, "XHTTPD:SSL_port", 0)) > 0)
+    if(httpsd)
     {
-        httpd->is_use_SSL = 1;
-        httpd->port = n;
-        httpd->cacert_file = cacert_file;
-        httpd->privkey_file = privkey_file;
+        httpsd->family = iniparser_getint(dict, "XHTTPD:inet_family", AF_INET);
+        httpsd->sock_type = iniparser_getint(dict, "XHTTPD:socket_type", SOCK_STREAM);
+        httpsd->ip = iniparser_getstr(dict, "XHTTPD:service_ip");
+        httpsd->working_mode = iniparser_getint(dict, "XHTTPD:working_mode", WORKING_THREAD);
+        httpsd->service_type = iniparser_getint(dict, "XHTTPD:service_type", S_SERVICE);
+        httpsd->service_name = iniparser_getstr(dict, "XHTTPD:service_name");
+        httpsd->nprocthreads = iniparser_getint(dict, "XHTTPD:nprocthreads", 1);
+        httpsd->ndaemons = iniparser_getint(dict, "XHTTPD:ndaemons", 0);
+        httpsd->niodaemons = iniparser_getint(dict, "XHTTPD:niodaemons", 2);
+        httpsd->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
+        httpsd->nworking_tosleep = iniparser_getint(dict, "XHTTPD:nworking_tosleep", SB_NWORKING_TOSLEEP);
+        httpsd->set_log(httpd, iniparser_getstr(dict, "XHTTPD:SSL_logfile"));
+        httpsd->set_log_level(httpd, iniparser_getint(dict, "XHTTPD:SSL_log_level", 0));
+        httpsd->flag = httpd->flag;
+        memcpy(&(httpsd->session), &(httpd->session), sizeof(SESSION));
     }
     //httpd home
     if((http_headers_map = http_headers_map_init()) == NULL)
@@ -999,6 +1027,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     }
     /* server */
     //fprintf(stdout, "Parsing for server...\n");
+    if(httpsd) sbase->add_service(sbase, httpsd);
     return sbase->add_service(sbase, httpd);
     /*
        if(httpd->sock_type == SOCK_DGRAM 

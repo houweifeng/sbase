@@ -492,6 +492,7 @@ typedef struct _CONN
     EVBASE *outevbase;
     void *parent;
     void *queue;
+    void *service;
     //void *xqueue;
     /* SSL */
     void *ssl;
