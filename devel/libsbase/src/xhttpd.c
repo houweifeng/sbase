@@ -611,9 +611,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     i = 0;
                     found = 0;
                     if(p > file && *(p-1) != '/') *p++ = '/';
-                    strcpy(p, "index.html");
-                    if(lstat(file, &st) == 0) found = 1;
-                    /*
+                    //strcpy(p, "index.html");
+                    //if(lstat(file, &st) == 0) found = 1;
                     if(access(file, F_OK) == 0) found = 1;
                     while(i < nindexes && http_indexes[i])
                     {
@@ -628,7 +627,6 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         }
                         ++i;
                     }
-                    */
                     //index view
                     if(found == 0 && http_indexes_view && (*p = '\0') >= 0)
                     {
