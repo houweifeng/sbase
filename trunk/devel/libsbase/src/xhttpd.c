@@ -620,8 +620,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     {
                         pp = p;
                         pp += sprintf(pp, "%s", http_indexes[i]);
-                        //if(access(file, F_OK) == 0 && lstat(file, &st) == 0)
-                        if(access(file, F_OK) == 0)
+                        if(access(file, F_OK) == 0 && lstat(file, &st) == 0)
+                        //if(access(file, F_OK) == 0)
                         {
                             found = 1;
                             p = pp;
