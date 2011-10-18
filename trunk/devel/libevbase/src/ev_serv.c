@@ -451,7 +451,7 @@ int main(int argc, char **argv)
         sa.sin_family = AF_INET;
         sa.sin_addr.s_addr = INADDR_ANY;
         sa.sin_port = htons(port);
-        sa_len = sizeof(struct sockaddr_in );
+        sa_len = sizeof(struct sockaddr_in);
         /* Initialize inet */ 
         lfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
         /* set multicast */
