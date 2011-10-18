@@ -57,8 +57,7 @@ static char *_ymonths[]= {
 	fprintf(stdout, "\"\n");							\
 }
 
-#define SHOW_LOG(format...)								
-/*
+//#define SHOW_LOG(format...)								
 #define SHOW_LOG(format...)								\
 {											\
 	LOG_HEADER(stdout);                                                             \
@@ -67,5 +66,4 @@ static char *_ymonths[]= {
         fprintf(stdout, "\"\n");                                                        \
 	fflush(stdout);									\
 }
-*/
 #endif

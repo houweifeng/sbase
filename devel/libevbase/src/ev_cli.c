@@ -27,7 +27,7 @@
 #define CONN_MAX 40960
 #endif
 #define EV_BUF_SIZE 8192
-static running_status = 0;
+static int running_status = 0;
 static EVBASE *evbase = NULL;
 static int ev_sock_type = 0;
 static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
@@ -94,7 +94,7 @@ int new_request()
 {
     struct sockaddr_in  lsa;
     socklen_t lsa_len = -1;
-    int fd = 0, flag = 0;
+    int fd = 0, flag = 0, n = 0;
 
     if(ncompleted > 0 && ncompleted%1000 == 0)
     {
@@ -135,6 +135,10 @@ int new_request()
             }
 #endif
         }
+        lsa_len = sizeof(struct sockaddr);
+        memset(&lsa, 0, lsa_len);
+        getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
+        SHOW_LOG("Connected to %s:%d via %d port:%d", ip, port, fd, ntohs(lsa.sin_port));
         /* set FD NON-BLOCK */
         flag = fcntl(fd, F_GETFL, 0);
         flag |= O_NONBLOCK;
@@ -148,6 +152,26 @@ int new_request()
         {
             event_set(&conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
                     (void *)&(conns[fd].event), &ev_udp_handler);
+            if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &lsa.sin_addr, sizeof(struct in_addr)) < 0)
+            {
+                FATAL_LOG("Setsockopt(IP_MULTICAST_IF) failed, %s", strerror(errno));
+                return -1;
+            }
+            n = atoi(ip);
+            if(n >= 224 && n <= 239)
+            {
+                struct ip_mreq mreq;
+                memset(&mreq, 0, sizeof(struct ip_mreq));
+                mreq.imr_multiaddr.s_addr = inet_addr(ip);
+                mreq.imr_interface.s_addr = INADDR_ANY;
+                if(setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
+                {
+                    FATAL_LOG("Setsockopt(IP_ADD_MEMBERSHIP) failed, %s", strerror(errno));
+                    return -1;
+                }
+                int loop = 0;
+                setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
+            }
         }
         evbase->add(evbase, &(conns[fd].event));
         conns[fd].nresp = 0;
@@ -155,10 +179,6 @@ int new_request()
             conns[fd].nreq = sprintf(conns[fd].request, "GET / HTTP/1.0\r\nConnection: Keep-Alive\r\n\r\n");
         else
             conns[fd].nreq = sprintf(conns[fd].request, "GET / HTTP/1.0\r\n\r\n");
-        lsa_len = sizeof(struct sockaddr);
-        memset(&lsa, 0, lsa_len);
-        getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
-        SHOW_LOG("Connected to %s:%d via %d port:%d", ip, port, fd, ntohs(lsa.sin_port));
     }
     else
     {
