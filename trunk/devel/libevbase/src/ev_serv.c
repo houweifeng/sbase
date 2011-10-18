@@ -102,7 +102,7 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
     socklen_t rsa_len ;
     int n = 0, opt = 1;
     SHOW_LOG("fd[%d] ev[%d] arg[%p]", fd, ev_flags, arg);
-    if(fd == lfd )
+    if(fd == lfd)
     {
         if((ev_flags & E_READ))
         {
@@ -130,7 +130,6 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
                 SHOW_LOG("Received %d bytes from %s:%d via %d, %s", conns[rfd].n, 
                         inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd, conns[rfd].buffer);
                 //return ;
-                /*
                 if(multicast_addr != INADDR_NONE)
                 {
                     struct ip_mreq mreq;
@@ -143,7 +142,6 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
                         return ;
                     }
                 }
-                */
                 if(connect(rfd, (struct sockaddr *)&rsa, rsa_len) == 0)
                 {
                     SHOW_LOG("Connected %s:%d via %d",
@@ -180,7 +178,7 @@ err_end:
                 conns[fd].buffer[conns[fd].n] = 0;
                 if(strstr(conns[fd].buffer, "\r\n\r\n"))
                 {
-                    SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
+                    //SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
                     SHOW_LOG("Updating event[%p] on %d ", &conns[fd].event, fd);
                     event_add(&conns[fd].event, E_WRITE);	
                     SHOW_LOG("Updated event[%p] on %d ", &conns[fd].event, fd);
@@ -308,7 +306,7 @@ void ev_handler(int fd, int ev_flags, void *arg)
             {
                 conns[fd].n += n;
                 conns[fd].buffer[conns[fd].n] = 0;
-                SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
+                //SHOW_LOG("Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
                 if(strstr(conns[fd].buffer, "\r\n\r\n"))
                 {
                     if(strcasestr(conns[fd].buffer, "Keep-Alive")) conns[fd].keepalive = 1;
@@ -410,7 +408,6 @@ int main(int argc, char **argv)
     out_data_len = sprintf(out_data, "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(out_block), out_block);
     kout_data_len = sprintf(kout_data, "HTTP/1.0 200 OK\r\nConnection: Keep-Alive\r\nContent-Length: %d\r\n\r\n%s", (int)strlen(out_block), out_block);
 
-
     /* Initialize global vars */
     if((conns = (CONN *)calloc(CONN_MAX, sizeof(CONN))))
     {
@@ -449,6 +446,22 @@ int main(int argc, char **argv)
         sa_len = sizeof(struct sockaddr_in );
         /* Initialize inet */ 
         lfd = socket(AF_INET, ev_sock_list[ev_sock_type], 0);
+        /* set multicast */
+        if(ev_sock_list[ev_sock_type] == SOCK_DGRAM && multicast_ip)
+        {
+            struct ip_mreq mreq;
+            memset(&mreq, 0, sizeof(struct ip_mreq));
+            mreq.imr_multiaddr.s_addr = multicast_addr = inet_addr(multicast_ip);
+            mreq.imr_interface.s_addr = INADDR_ANY;
+            if(setsockopt(lfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
+            {
+                SHOW_LOG("Setsockopt(MULTICAST) failed, %s", strerror(errno));
+                return -1;
+            }
+            SHOW_LOG("added to multicast:%s", multicast_ip);
+            int loop = 0;
+            setsockopt(lfd, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
+        }
 #ifdef USE_SSL
         /*
            if(lfd > 0 && is_use_ssl && ev_sock_list[ev_sock_type] == SOCK_STREAM)
@@ -471,10 +484,10 @@ int main(int argc, char **argv)
            */
 #endif
         if(setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR,(char *)&opt, (socklen_t) sizeof(opt)) != 0
+                /*
 #ifdef TCP_NODELAY
                 || setsockopt(lfd, SOL_TCP, TCP_NODELAY, (char *)&opt, (socklen_t) sizeof(opt)) != 0
 #endif
-                /*
 #ifdef TCP_CORK
                 || setsockopt(lfd, SOL_TCP, TCP_CORK, (char *)&opt, (socklen_t) sizeof(opt)) != 0
 #endif
@@ -511,19 +524,7 @@ int main(int argc, char **argv)
                 return -1;
             }
         }
-        /* set multicast */
-        if(ev_sock_list[ev_sock_type] == SOCK_DGRAM && multicast_ip)
-        {
-            struct ip_mreq mreq;
-            memset(&mreq, 0, sizeof(struct ip_mreq));
-            mreq.imr_multiaddr.s_addr = multicast_addr = inet_addr(multicast_ip);
-            mreq.imr_interface.s_addr = INADDR_ANY;
-            if(setsockopt(lfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
-            {
-                SHOW_LOG("Setsockopt(MULTICAST) failed, %s", strerror(errno));
-                return -1;
-            }
-        }
+
         SHOW_LOG("Initialize evbase ");
         /*
         for(i = 0; i < nprocess; i++)
@@ -554,7 +555,7 @@ running:
             //evbase->set_evops(evbase, EOP_POLL);
             SHOW_LOG("Initialized event ");
             if(ev_sock_list[ev_sock_type] == SOCK_STREAM)
-                event_set(&conns[lfd].event, lfd, E_READ|E_EPOLL_ET|E_PERSIST, 
+                event_set(&conns[lfd].event, lfd, E_READ|E_PERSIST, 
                         (void *)&conns[lfd].event, &ev_handler);
             else 
                 event_set(&conns[lfd].event, lfd, E_READ|E_PERSIST, 
