@@ -138,7 +138,7 @@ int new_request()
         lsa_len = sizeof(struct sockaddr);
         memset(&lsa, 0, lsa_len);
         getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
-        SHOW_LOG("Connected to %s:%d via %d port:%d", ip, port, fd, ntohs(lsa.sin_port));
+        SHOW_LOG("Connected to remote[%s:%d] local[%s:%d] via %d", ip, port, inet_ntoa(lsa.sin_addr), ntohs(lsa.sin_port), fd);
         /* set FD NON-BLOCK */
         flag = fcntl(fd, F_GETFL, 0);
         flag |= O_NONBLOCK;
@@ -152,14 +152,10 @@ int new_request()
         {
             event_set(&conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
                     (void *)&(conns[fd].event), &ev_udp_handler);
-            if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &lsa.sin_addr, sizeof(struct in_addr)) < 0)
-            {
-                FATAL_LOG("Setsockopt(IP_MULTICAST_IF) failed, %s", strerror(errno));
-                return -1;
-            }
             n = atoi(ip);
             if(n >= 224 && n <= 239)
             {
+                /*
                 struct ip_mreq mreq;
                 memset(&mreq, 0, sizeof(struct ip_mreq));
                 mreq.imr_multiaddr.s_addr = inet_addr(ip);
@@ -170,7 +166,17 @@ int new_request()
                     return -1;
                 }
                 int loop = 0;
-                setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
+                if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop)) != 0)
+                {
+                    FATAL_LOG("Setsockopt(IP_MULTICAST_IF) failed, %s", strerror(errno));
+                    return -1;
+                }
+                */
+                if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &lsa.sin_addr, sizeof(struct in_addr)) < 0)
+                {
+                    FATAL_LOG("Setsockopt(IP_MULTICAST_IF) failed, %s", strerror(errno));
+                    return -1;
+                }
             }
         }
         evbase->add(evbase, &(conns[fd].event));
