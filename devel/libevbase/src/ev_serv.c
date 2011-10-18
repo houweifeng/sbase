@@ -186,15 +186,23 @@ err_end:
             }	
             else
             {
-                if(n < 0 )
-                    FATAL_LOG("Reading from %d failed, %s", fd, strerror(errno));
-                goto err;
+                if(errno == ECONNREFUSED)
+                {
+                    ev_flags |= E_WRITE;        
+                }
+                else
+                {
+                    FATAL_LOG("Reading from %d failed, %d/%s", fd, errno, strerror(errno));
+                    goto err;
+                }
             }
             DEBUG_LOG("E_READ on %d end", fd);
         }
         if(ev_flags & E_WRITE)
         {
             SHOW_LOG("E_WRITE on %d end", fd);
+            //getpeername(fd, (struct sockaddr *)&rsa, &rsa_len);
+            //if((n = sendto(fd, conns[fd].buffer, conns[fd].n, 0, (struct sockaddr *)&rsa, rsa_len)) > 0)
             if((n = write(fd, conns[fd].buffer, conns[fd].n)) > 0 )
             {
                 SHOW_LOG("Echo %d bytes to %d", n, fd);
