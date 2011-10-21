@@ -121,8 +121,8 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
                 _exit(-1);
                 return ;
             }
-            rsa_len = sizeof(struct sockaddr_in);
             memset(&rsa, 0 , rsa_len);
+            rsa_len = sizeof(struct sockaddr);
             if((n = conns[rfd].n = recvfrom(fd, conns[rfd].buffer, EV_BUF_SIZE - 1, 0, 
                             (struct sockaddr *)&rsa, &rsa_len)) > 0 )
             {
@@ -186,15 +186,8 @@ err_end:
             }	
             else
             {
-                if(errno == ECONNREFUSED)
-                {
-                    ev_flags |= E_WRITE;        
-                }
-                else
-                {
-                    FATAL_LOG("Reading from %d failed, %d/%s", fd, errno, strerror(errno));
-                    goto err;
-                }
+                FATAL_LOG("Reading from %d failed, %d/%s", fd, errno, strerror(errno));
+                goto err;
             }
             DEBUG_LOG("E_READ on %d end", fd);
         }
@@ -205,12 +198,13 @@ err_end:
             //if((n = sendto(fd, conns[fd].buffer, conns[fd].n, 0, (struct sockaddr *)&rsa, rsa_len)) > 0)
             if((n = write(fd, conns[fd].buffer, conns[fd].n)) > 0 )
             {
+                conns[fd].n = 0;
                 SHOW_LOG("Echo %d bytes to %d", n, fd);
             }
             else
             {
                 if(n < 0)
-                    FATAL_LOG("Echo data to %d failed, %s", fd, strerror(errno));	
+                    FATAL_LOG("Echo data len:%d to %d failed, %s", conns[fd].n, fd, strerror(errno));	
                 goto err;
             }
             event_del(&conns[fd].event, E_WRITE);
@@ -245,13 +239,6 @@ void ev_handler(int fd, int ev_flags, void *arg)
                         inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port),
                         rfd, ++connections);
                 conns[rfd].fd = rfd;
-                /*
-                   else
-                   {
-                   FATAL_LOG("Accept new connection failed, %s", strerror(errno));
-                   return ;
-                   }
-                   */
                 if(is_use_ssl)
                 {
 #ifdef USE_SSL
