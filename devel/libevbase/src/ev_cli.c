@@ -35,9 +35,8 @@ static int ev_sock_count  = 2;
 static int is_use_ssl = 0;
 static int ncompleted = 0;
 static int nrequest = 0;
-static struct sockaddr_in xlsa;
 static struct sockaddr_in xsa;
-static socklen_t xsa_len = sizeof(struct sockaddr_in);
+static socklen_t xsa_len = sizeof(struct sockaddr);
 static int sock_type = 0;
 static char *ip = NULL;
 static int port = 0;
@@ -95,7 +94,7 @@ int new_request()
 {
     int fd = 0, flag = 0, n = 0, opt = 1;
     struct sockaddr_in  lsa;
-    socklen_t lsa_len = -1;
+    socklen_t lsa_len = 0;
 
     if(ncompleted > 0 && ncompleted%1000 == 0)
     {
@@ -105,7 +104,6 @@ int new_request()
     if(nrequest < limit && (fd = socket(AF_INET, sock_type, 0)) > 0)
     {
         conns[fd].fd = fd;
-
         if(is_use_ssl && sock_type == SOCK_STREAM)
         {
 #ifdef USE_SSL
@@ -132,9 +130,6 @@ int new_request()
 #endif
         }
         /* set FD NON-BLOCK */
-        flag = fcntl(fd, F_GETFL, 0);
-        flag |= O_NONBLOCK;
-        fcntl(fd, F_SETFL, flag);
         if(sock_type == SOCK_STREAM)
         {
             /* Connect */
@@ -143,34 +138,37 @@ int new_request()
                 FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
                 _exit(-1);
             }
+            flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
+            fcntl(fd, F_SETFL, flag);
             event_set(&conns[fd].event, fd, E_READ|E_WRITE|E_PERSIST, 
                     (void *)&(conns[fd].event), &ev_handler);
         }
         else
         {
+            memset(&lsa, 0, sizeof(struct sockaddr));
+            lsa.sin_family = AF_INET;
+            if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
+                        (char *)&opt, (socklen_t) sizeof(int)) != 0
+#ifdef SO_REUSEPORT
+                    || setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, 
+                        (char *)&opt, (socklen_t) sizeof(int)) != 0
+#endif
+                    || bind(fd, (struct sockaddr *)&lsa, sizeof(struct sockaddr)) != 0) 
+            {
+                FATAL_LOG("Bind %d to %s:%d failed, %s",
+                        fd, inet_ntoa(lsa.sin_addr), ntohs(lsa.sin_port), strerror(errno));
+                close(fd);
+                return -1;
+            }
+            /* Connect */
+            if(connect(fd, (struct sockaddr *)&xsa, xsa_len) != 0)
+            {
+                FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
+                _exit(-1);
+            }
             n = atoi(ip);
             if(n >= 224 && n <= 239)
             {
-                if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 
-                            (char *)&opt, (socklen_t) sizeof(int)) != 0
-#ifdef SO_REUSEPORT
-                        || setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, 
-                            (char *)&opt, (socklen_t) sizeof(int)) != 0
-#endif
-                        || bind(fd, (struct sockaddr *)&xlsa, sizeof(struct sockaddr)) != 0) 
-                {
-                    FATAL_LOG("Bind %d to %s:%d failed, %s",
-                            fd, inet_ntoa(lsa.sin_addr), ntohs(lsa.sin_port), strerror(errno));
-                    close(fd);
-                    return -1;
-                }
-                /* Connect */
-                if(connect(fd, (struct sockaddr *)&xsa, xsa_len) != 0)
-                {
-                    FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
-                    _exit(-1);
-                }
-                lsa_len = xsa_len;
                 getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
                 SHOW_LOG("Connected to remote[%s:%d] local[%s:%d] via %d", ip, port, inet_ntoa(lsa.sin_addr), ntohs(lsa.sin_port), fd);
                 if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &lsa.sin_addr, sizeof(struct in_addr)) < 0)
@@ -343,11 +341,11 @@ err:
 
 int main(int argc, char **argv)
 {
-    int i = 0, rfd = 0, n = 0, multicast_port = 0, opt = 1;
+    int i = 0;
 
-    if(argc < 6)
+    if(argc < 7)
     {
-        fprintf(stderr, "Usage:%s sock_type(0/TCP|1/UDP) iskeepalive ip port concurrecy limit multicast_port\n", argv[0]);	
+        fprintf(stderr, "Usage:%s sock_type(0/TCP|1/UDP) iskeepalive ip port concurrecy limit\n", argv[0]);	
         _exit(-1);
     }	
     ev_sock_type = atoi(argv[1]);
@@ -362,7 +360,6 @@ int main(int argc, char **argv)
     port = atoi(argv[4]);
     conn_num = atoi(argv[5]);
     limit = atoi(argv[6]);
-    if(argc > 7) multicast_port = atoi(argv[7]);
     TIMER_INIT(timer);
     /* Set resource limit */
     setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, CONN_MAX);	
@@ -371,40 +368,11 @@ int main(int argc, char **argv)
     {
         //memset(events, 0, sizeof(EVENT *) * CONN_MAX);
         /* Initialize inet */ 
-        memset(&xlsa, 0, sizeof(struct sockaddr_in));	
-        n = atoi(ip);
-        if(n >= 224 && n <= 239)
-        {
-            if(multicast_port <= 0)
-            {
-                fprintf(stderr, "multicast port must >= 0");
-                _exit(-1);
-            }
-            memset(&xsa, 0, sizeof(struct sockaddr_in));	
-            xsa.sin_family = AF_INET;
-            xsa.sin_addr.s_addr = inet_addr(ip);
-            xsa.sin_port = htons(port);
-            xsa_len = sizeof(struct sockaddr);
-            xlsa.sin_family = AF_INET;
-            xlsa.sin_addr.s_addr = INADDR_ANY;
-            xlsa.sin_port = htons(multicast_port);
-            if((rfd = socket(AF_INET, SOCK_DGRAM, 0)) <= 0 
-                    || setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR, 
-                        (char *)&opt, (socklen_t) sizeof(int)) != 0
-#ifdef SO_REUSEPORT
-                    || setsockopt(rfd, SOL_SOCKET, SO_REUSEPORT, 
-                        (char *)&opt, (socklen_t) sizeof(int)) != 0
-#endif
-                    || bind(rfd, (struct sockaddr *)&xlsa, xsa_len) != 0) 
-            {
-                FATAL_LOG("Connect %d to %s:%d failed, %s",
-                        rfd, inet_ntoa(xlsa.sin_addr), ntohs(xlsa.sin_port), strerror(errno));
-                close(rfd);
-                _exit(-1);
-                return -1;
-            }
-        }
-
+        memset(&xsa, 0, sizeof(struct sockaddr_in));	
+        xsa.sin_family = AF_INET;
+        xsa.sin_addr.s_addr = inet_addr(ip);
+        xsa.sin_port = htons(port);
+        xsa_len = sizeof(struct sockaddr);
         /* set evbase */
         if((evbase = evbase_init(0)))
         {
