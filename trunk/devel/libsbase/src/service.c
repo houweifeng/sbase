@@ -560,8 +560,8 @@ err_conn:
                     MMB_PUSH(conn->buffer, p, n);
                     if((parent = (PROCTHREAD *)(conn->parent)))
                     {
-                        qmessage_push(parent->message_queue, 
-                                MESSAGE_INPUT, -1, conn->fd, -1, conn, parent, NULL);
+                        qmessage_push(parent->message_queue, MESSAGE_BUFFER, conn->index, conn->fd, 
+                                -1, parent, conn, NULL);
                         parent->wakeup(parent);
                     }
                     ACCESS_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
@@ -1255,11 +1255,15 @@ int service_add_multicast(SERVICE *service, char *multicast_ip)
     {
         memset(&mreq, 0, sizeof(struct ip_mreq));
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
-        mreq.imr_interface.s_addr = inet_addr(service->ip);
+        //mreq.imr_interface.s_addr = INADDR_ANY;
         if((ret = setsockopt(service->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
                         (char*)&mreq, sizeof(struct ip_mreq))) == 0)
         {
             DEBUG_LOGGER(service->logger, "added multicast:%s to service[%p]->fd[%d]",multicast_ip, service, service->fd);
+        }
+        else
+        {
+            WARN_LOGGER(service->logger, "added multicast:%s to service[%p]->fd[%d] failed, %s",multicast_ip, service, service->fd, strerror(errno));
         }
     }
     return ret;
@@ -1271,7 +1275,7 @@ int service_drop_multicast(SERVICE *service, char *multicast_ip)
     struct ip_mreq mreq;
     int ret = -1;
 
-    if(service && service->sock_type == SOCK_DGRAM && service->ip && service->fd)
+    if(service && service->sock_type == SOCK_DGRAM && service->ip && service->fd > 0)
     {
         memset(&mreq, 0, sizeof(struct ip_mreq));
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
