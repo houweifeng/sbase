@@ -94,7 +94,7 @@ int new_request()
 {
     int fd = 0, flag = 0, n = 0, opt = 1;
     struct sockaddr_in  lsa;
-    socklen_t lsa_len = 0;
+    socklen_t lsa_len = sizeof(struct sockaddr);
 
     if(ncompleted > 0 && ncompleted%1000 == 0)
     {
@@ -166,11 +166,11 @@ int new_request()
                 FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
                 _exit(-1);
             }
+            getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
+            SHOW_LOG("Connected to remote[%s:%d] local[%s:%d] via %d", ip, port, inet_ntoa(lsa.sin_addr), ntohs(lsa.sin_port), fd);
             n = atoi(ip);
             if(n >= 224 && n <= 239)
             {
-                getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
-                SHOW_LOG("Connected to remote[%s:%d] local[%s:%d] via %d", ip, port, inet_ntoa(lsa.sin_addr), ntohs(lsa.sin_port), fd);
                 if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &lsa.sin_addr, sizeof(struct in_addr)) < 0)
                 {
                     FATAL_LOG("Setsockopt(IP_MULTICAST_IF) failed, %s", strerror(errno));
