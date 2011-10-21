@@ -160,12 +160,15 @@ int new_request()
                 close(fd);
                 return -1;
             }
+            //while(1)sleep(1);
             /* Connect */
+            /*
             if(connect(fd, (struct sockaddr *)&xsa, xsa_len) != 0)
             {
                 FATAL_LOG("Connect to %s:%d failed, %s", ip, port, strerror(errno));
                 _exit(-1);
             }
+            */
             getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
             SHOW_LOG("Connected to remote[%s:%d] local[%s:%d] via %d", ip, port, inet_ntoa(lsa.sin_addr), ntohs(lsa.sin_port), fd);
             n = atoi(ip);
@@ -202,7 +205,7 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
     socklen_t rsa_len = sizeof(struct sockaddr);
     if(ev_flags & E_READ)
     {
-        if( ( n = recvfrom(fd, conns[fd].response, EV_BUF_SIZE - 1, 
+        if((n = recvfrom(fd, conns[fd].response, EV_BUF_SIZE - 1, 
                         0, (struct sockaddr *)&rsa, &rsa_len)) > 0 )
         {
             SHOW_LOG("Read %d bytes from %d", n, fd);
@@ -219,7 +222,7 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
     }
     if(ev_flags & E_WRITE)
     {
-        if((n = write(fd, conns[fd].request, conns[fd].nreq) ) == conns[fd].nreq)
+        if((n = sendto(fd, conns[fd].request, conns[fd].nreq, 0, &xsa, sizeof(struct sockaddr))) == conns[fd].nreq)
         {
             SHOW_LOG("Wrote %d bytes via %d", n, fd);
         }
