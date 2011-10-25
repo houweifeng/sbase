@@ -1766,7 +1766,7 @@ int conn_add_multicast(CONN *conn, char *multicast_ip)
     struct ip_mreq mreq;
     int ret = -1;
 
-    if(conn && conn->fd > 0)
+    if(conn && !(conn->flags & SB_MULTICAST_IN) && conn->fd > 0)
     {
         memset(&mreq, 0, sizeof(struct ip_mreq));
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
@@ -1774,6 +1774,7 @@ int conn_add_multicast(CONN *conn, char *multicast_ip)
                         (char*)&mreq, sizeof(struct ip_mreq))) == 0)
         {
             DEBUG_LOGGER(conn->logger, "added multicast:%s to conn[%p]->fd[%d]",multicast_ip, conn, conn->fd);
+            conn->flags |= SB_MULTICAST_IN;
             return 0;
         }
         else
@@ -1840,6 +1841,7 @@ void conn_reset(CONN *conn)
         conn->gindex = -1;
         conn->d_state = 0;
         conn->e_state = 0;
+        conn->flags = 0;
         memset(conn->xids, 0, sizeof(int) * SB_XIDS_MAX);
         /* connection */
         conn->fd = 0;

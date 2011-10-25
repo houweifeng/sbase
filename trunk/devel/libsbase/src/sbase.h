@@ -50,6 +50,7 @@ extern "C" {
 #define SB_SCHED_REALTIME       0x2000
 #define SB_CPU_SET              0x4000
 #define SB_NEWCONN_DELAY        0x8000
+#define SB_MULTICAST_IN         0x01
 /* service type */
 #define S_SERVICE               0x00
 #define C_SERVICE               0x01
@@ -471,6 +472,8 @@ typedef struct _CONN
     int  remote_port;
     int  local_port;
     int  nsendq;
+    int  flags;
+    int  bits;
     /* xid */
     int xids[SB_XIDS_MAX];
     EVENT event;
