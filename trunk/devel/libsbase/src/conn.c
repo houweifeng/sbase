@@ -1760,6 +1760,29 @@ int conn_newtask(CONN *conn, CALLBACK *handler)
     }
     return -1;
 }
+/* add multicast */
+int conn_add_multicast(CONN *conn, char *multicast_ip)
+{
+    struct ip_mreq mreq;
+    int ret = -1;
+
+    if(conn && conn->fd > 0)
+    {
+        memset(&mreq, 0, sizeof(struct ip_mreq));
+        mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
+        if((ret = setsockopt(conn->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
+                        (char*)&mreq, sizeof(struct ip_mreq))) == 0)
+        {
+            DEBUG_LOGGER(conn->logger, "added multicast:%s to conn[%p]->fd[%d]",multicast_ip, conn, conn->fd);
+            return 0;
+        }
+        else
+        {
+            WARN_LOGGER(conn->logger, "added multicast:%s to conn[%p]->fd[%d] failed, %s",multicast_ip, conn, conn->fd, strerror(errno));
+        }
+    }
+    return -1;
+}
 
 /* transaction handler */
 int conn_transaction_handler(CONN *conn, int tid)
@@ -1983,6 +2006,7 @@ CONN *conn_init()
         conn->set_session           = conn_set_session;
         conn->over_session          = conn_over_session;
         conn->newtask               = conn_newtask;
+        conn->add_multicast         = conn_add_multicast;
         conn->reset_xids            = conn_reset_xids;
         conn->reset_state           = conn_reset_state;
         conn->reset                 = conn_reset;
