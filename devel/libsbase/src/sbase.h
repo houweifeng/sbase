@@ -575,6 +575,7 @@ typedef struct _CONN
     int (*set_session)(struct _CONN *, SESSION *session);
     int (*over_session)(struct _CONN *);
     int (*newtask)(struct _CONN *, CALLBACK *);
+    int (*add_multicast)(struct _CONN *, char *);
     int (*get_service_id)(struct _CONN *);
     char remote_ip[SB_IP_MAX];
     char local_ip[SB_IP_MAX];

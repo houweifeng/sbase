@@ -545,12 +545,12 @@ err_conn:
 #ifdef SO_REUSEPORT
                 && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                && setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) ==0
-                && setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == 0
+                //&& setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) ==0
+                //&& setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == 0
                         && bind(fd, (struct sockaddr *)&(service->sa), 
-                            sizeof(struct sockaddr_in)) == 0
+                            sizeof(struct sockaddr)) == 0
                         && connect(fd, (struct sockaddr *)&rsa, 
-                            sizeof(struct sockaddr_in)) == 0
+                            sizeof(struct sockaddr)) == 0
                         && (conn = service_addconn(service, service->sock_type, fd, 
                                 ip, port, service->ip, service->port, 
                                 &(service->session), NULL, CONN_STATUS_FREE)))

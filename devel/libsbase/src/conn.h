@@ -122,6 +122,9 @@ int conn_over_session(CONN *conn);
 /* new task */
 int conn_newtask(CONN *conn, CALLBACK *);
 
+/* add multicast */
+int conn_add_multicast(CONN *conn, char *ip);
+
 /* transaction handler */
 int conn_transaction_handler(CONN *conn, int tid);
 
