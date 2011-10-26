@@ -106,16 +106,16 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
     {
         if((ev_flags & E_READ))
         {
-            if((rfd = socket(AF_INET, SOCK_DGRAM, 0)) <= 0 
+            if((rfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) <= 0 
                 || setsockopt(rfd, SOL_SOCKET, SO_REUSEADDR, 
                     (char *)&opt, (socklen_t) sizeof(int)) != 0
 #ifdef SO_REUSEPORT
                 || setsockopt(rfd, SOL_SOCKET, SO_REUSEPORT, 
                     (char *)&opt, (socklen_t) sizeof(int)) != 0
 #endif
-                || bind(rfd, (struct sockaddr *)&sa, sa_len) != 0) 
+              )
             {
-                FATAL_LOG("Connect %d to %s:%d failed, %s",
+                FATAL_LOG("new socket %d to %s:%d failed, %s",
                     rfd, inet_ntoa(sa.sin_addr), ntohs(sa.sin_port), strerror(errno));
                 close(rfd);
                 _exit(-1);
@@ -142,7 +142,8 @@ void ev_udp_handler(int fd, int ev_flags, void *arg)
                         return ;
                     }
                 }
-                if(connect(rfd, (struct sockaddr *)&rsa, rsa_len) == 0)
+                if(connect(rfd, (struct sockaddr *)&rsa, rsa_len) == 0
+                 && bind(rfd, (struct sockaddr *)&sa, sa_len) != 0) 
                 {
                     SHOW_LOG("Connected %s:%d via %d",
                             inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port), rfd);

@@ -30,7 +30,7 @@
 static int running_status = 0;
 static EVBASE *evbase = NULL;
 static int ev_sock_type = 0;
-static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM};
+static int ev_sock_list[] = {SOCK_STREAM, SOCK_DGRAM, SOCK_RDM};
 static int ev_sock_count  = 2;
 static int is_use_ssl = 0;
 static int ncompleted = 0;
@@ -92,7 +92,7 @@ int setrlimiter(char *name, int rlimit, int nset)
 
 int new_request()
 {
-    int fd = 0, flag = 0, n = 0, opt = 1;
+    int fd = 0, flag = 0, n = 0, opt = 1, prot = 0;
     struct sockaddr_in  lsa;
     socklen_t lsa_len = sizeof(struct sockaddr);
 
@@ -101,7 +101,8 @@ int new_request()
         TIMER_SAMPLE(timer);
         fprintf(stdout, "request:%d completed:%d time:%lld avg:%lld\n", nrequest, ncompleted, PT_USEC_U(timer), (long long int)ncompleted * 1000000ll/PT_USEC_U(timer));
     }
-    if(nrequest < limit && (fd = socket(AF_INET, sock_type, 0)) > 0)
+    if(sock_type == SOCK_DGRAM) prot = IPPROTO_UDP;
+    if(nrequest < limit && (fd = socket(AF_INET, sock_type, prot)) > 0)
     {
         conns[fd].fd = fd;
         if(is_use_ssl && sock_type == SOCK_STREAM)
@@ -174,6 +175,15 @@ int new_request()
             n = atoi(ip);
             if(n >= 224 && n <= 239)
             {
+                struct ip_mreq mreq;
+                memset(&mreq, 0, sizeof(struct ip_mreq));
+                mreq.imr_multiaddr.s_addr = inet_addr(ip);
+                mreq.imr_interface.s_addr = INADDR_ANY;
+                if(setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP,(char*)&mreq, sizeof(mreq)) != 0)
+                {
+                    SHOW_LOG("Setsockopt(MULTICAST) failed, %s", strerror(errno));
+                    return -1;
+                }
                 if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &lsa.sin_addr, sizeof(struct in_addr)) < 0)
                 {
                     FATAL_LOG("Setsockopt(IP_MULTICAST_IF) failed, %s", strerror(errno));
