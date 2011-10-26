@@ -51,7 +51,7 @@ CONN *http_newconn(int id, char *ip, int port, int is_ssl)
 
     if(running_status && ip && port > 0)
     {
-        if(is_ssl) service->session.is_use_SSL = 1;
+        if(is_ssl) service->session.flags |= SB_USE_SSL;
         if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
         {
             conn->c_id = id;

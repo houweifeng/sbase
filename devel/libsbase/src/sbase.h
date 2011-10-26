@@ -156,8 +156,6 @@ typedef struct _CB_DATA
 typedef struct _SESSION
 {
     /* SSL/timeout */
-    int  flag;
-    int  is_use_SSL;
     int  flags;
     int  timeout;
     int  childid;
