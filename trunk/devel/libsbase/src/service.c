@@ -540,13 +540,34 @@ err_conn:
                 ip = inet_ntoa(rsa.sin_addr);
                 port = ntohs(rsa.sin_port);
                 linger.l_onoff = 1;linger.l_linger = 0;opt = 1;
-                if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
+                if(service->session.flags & SB_MULTICAST)
+                {
+                    if((conn = service_getconn(service, 0)))
+                    {
+                        strcpy(conn->remote_ip, ip); 
+                        conn->remote_port = port;
+                        i++;
+                        p = buf;
+                        MMB_PUSH(conn->buffer, p, n);
+                        if((parent = (PROCTHREAD *)(conn->parent)))
+                        {
+                            qmessage_push(parent->message_queue, MESSAGE_BUFFER, conn->index, conn->fd, 
+                                    -1, parent, conn, NULL);
+                            parent->wakeup(parent);
+                        }
+                    }
+                    else
+                    {
+                        FATAL_LOGGER(service->logger, "NONE-RESOUCE for handling connection[%s:%d]  buffer:%d", ip, port,  MMB_NDATA(conn->buffer));
+
+                    }
+                    continue;
+                }
+                else if((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0 
                 && setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                 && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                //&& setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) ==0
-                //&& setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)) == 0
                         && bind(fd, (struct sockaddr *)&(service->sa), 
                             sizeof(struct sockaddr)) == 0
                         && connect(fd, (struct sockaddr *)&rsa, 
@@ -646,23 +667,33 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 //opt = 3;setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &opt, sizeof(opt)); 
                 opt = 1;setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
             }
-            if(sess && (sess->flag & O_NONBLOCK))
+            if(sess)
             {
-                flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
-                if(fcntl(fd, F_SETFL, flag) != 0) goto err_conn;
-                if((connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
-                    || errno == EINPROGRESS))
+                if(sess->flags & SB_MULTICAST)
                 {
-                    goto new_conn;
+                    bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr));
                 }
-                else 
-                    goto err_conn;
-            }
-            else
-            {
-                if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
-                    goto new_conn;
-                else goto err_conn;
+                else
+                {
+                    if((sess->flag & O_NONBLOCK))
+                    {
+                        flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
+                        if(fcntl(fd, F_SETFL, flag) != 0) goto err_conn;
+                        if((connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
+                                    || errno == EINPROGRESS))
+                        {
+                            goto new_conn;
+                        }
+                        else 
+                            goto err_conn;
+                    }
+                    else
+                    {
+                        if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
+                            goto new_conn;
+                        else goto err_conn;
+                    }
+                }
             }
 new_conn:
             getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
@@ -1571,7 +1602,7 @@ void service_state(void *arg)
 
     if(service)
     {
-        if(service->service_type == C_SERVICE)
+        if(service->service_type == C_SERVICE || (service->session.flags & SB_MULTICAST))
         {
             if(service->ngroups > 0)service_stategroup(service);
             else

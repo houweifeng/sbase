@@ -23,7 +23,11 @@ int conn_read_chunk(CONN *conn)
 }
 int conn_write_chunk(CONN *conn, CHUNK *cp)
 {
-	if(conn->ssl) 
+    if(conn->session.flags & SB_MULTICAST)
+    {
+        return CHUNK_SENDTO(cp, conn->fd, conn->remote_ip, conn->remote_port);
+    }
+	else if(conn->ssl) 
     {
         return CHUNK_WRITE_SSL(cp, conn->ssl);
     }
@@ -935,7 +939,7 @@ int conn_read_handler(CONN *conn)
 
     if(conn)
     {
-        if(conn->session.is_use_OOB && (n = MMB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
+        if((conn->session.flags & SB_USE_OOB) && (n = MMB_RECV(conn->oob, conn->fd, MSG_OOB)) > 0)
         {
             conn->recv_oob_total += n;
             DEBUG_LOGGER(conn->logger, "Received %d bytes OOB total %lld from %s:%d on %s:%d via %d", n, LL(conn->recv_oob_total), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
@@ -1046,7 +1050,14 @@ int conn_write_handler(CONN *conn)
                 if(chunk_over)
                 {
                     CONN_OUTEVENT_DEL(conn);
-                    conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
+                    if(conn->session.flags & SB_MULTICAST)
+                    {
+                        conn_over_session(conn);                        
+                    }
+                    else
+                    {
+                        conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
+                    }
                 }
                 else
                 {
@@ -1743,7 +1754,7 @@ int conn_over_session(CONN *conn)
     if(conn)
     {
         SESSION_RESET(conn);
-        if(PPARENT(conn)->service->service_type == C_SERVICE)
+        if((conn->flags & SB_MULTICAST) || PPARENT(conn)->service->service_type == C_SERVICE)
             PPARENT(conn)->service->freeconn(PPARENT(conn)->service, conn);
         ret = 0;
     }
