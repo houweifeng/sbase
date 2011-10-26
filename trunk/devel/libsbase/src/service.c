@@ -643,7 +643,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             rsa.sin_addr.s_addr = inet_addr(remote_ip);
             rsa.sin_port = htons(remote_port);
 #ifdef HAVE_SSL
-            if(sess->is_use_SSL &&  sock_type == SOCK_STREAM && service->c_ctx)
+            if((sess->flags & SB_USE_SSL) &&  sock_type == SOCK_STREAM && service->c_ctx)
             {
                 if((ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
                         && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0 
@@ -762,7 +762,7 @@ CONN *service_newproxy(SERVICE *service, CONN *parent, int inet_family, int sock
                 && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
         {
 #ifdef HAVE_SSL
-            if(sess->is_use_SSL && sock_type == SOCK_STREAM && service->c_ctx)
+            if((sess->flags & SB_USE_SSL) && sock_type == SOCK_STREAM && service->c_ctx)
             {
                 //DEBUG_LOGGER(service->logger, "SSL_newproxy() to %s:%d",remote_ip, remote_port);
                 if((ssl = SSL_new(XSSL_CTX(service->c_ctx))) 
