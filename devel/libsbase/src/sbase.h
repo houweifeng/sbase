@@ -26,6 +26,7 @@ extern "C" {
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
 #define SB_INIT_CHUNKS          256
+#define SB_CONNS_LIMIT          256
 #define SB_QCONN_MAX            256
 #define SB_CHUNKS_MAX           256
 #define SB_QBLOCK_MAX           16
