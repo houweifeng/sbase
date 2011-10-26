@@ -585,7 +585,7 @@ invalid_url:
         service->family = AF_INET;
         service->sock_type = SOCK_STREAM;
         service->service_name = "benchmark";
-        service->session.flag = O_NONBLOCK;
+        service->session.flags = SB_NONBLOCK;
         service->session.packet_type = PACKET_DELIMITER;
         service->session.packet_delimiter = "\r\n\r\n";
         service->session.packet_delimiter_length = 4;

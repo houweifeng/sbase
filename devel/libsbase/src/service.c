@@ -675,7 +675,7 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                 }
                 else
                 {
-                    if((sess->flag & O_NONBLOCK))
+                    if((sess->flags & SB_NONBLOCK))
                     {
                         flag = fcntl(fd, F_GETFL, 0)|O_NONBLOCK;
                         if(fcntl(fd, F_SETFL, flag) != 0) goto err_conn;
