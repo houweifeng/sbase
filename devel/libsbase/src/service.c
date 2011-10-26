@@ -1607,10 +1607,10 @@ void service_state(void *arg)
             if(service->ngroups > 0)service_stategroup(service);
             else
             {
-                if(service->running_connections < service->client_connections_limit)
+                if(service->running_connections < service->conns_limit)
                 {
-                    //DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",service->ip, service->port, service->client_connections_limit,service->running_connections);
-                    n = service->client_connections_limit - service->running_connections;
+                    //DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",service->ip, service->port, service->conns_limit,service->running_connections);
+                    n = service->conns_limit - service->running_connections;
                     while(n > 0)
                     {
                         if(service->newconn(service, -1, -1, NULL, -1, NULL) == NULL)
