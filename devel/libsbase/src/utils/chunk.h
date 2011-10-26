@@ -78,6 +78,8 @@ int chunk_read(void *chunk, int fd);
 int chunk_read_SSL(void *chunk, void *ssl);
 /* writting from chunk */
 int chunk_write(void *chunk, int fd);
+/* chunk sendto */
+int chunk_sendto(void *chunk, int fd, char *ip, int port);
 /* writting from chunk with SSL */
 int chunk_write_SSL(void *chunk, void *ssl);
 /* fill chunk memory */
@@ -106,6 +108,7 @@ int chunk_file(void *chunk, char *file, off_t offset, off_t len);
 #define CHUNK_READ(ptr, fd) ((CHK(ptr)->type == CHUNK_MEM)?chunk_read(ptr, fd):chunk_read_to_file(ptr, fd))
 #define CHUNK_READ_SSL(ptr, ssl) ((CHK(ptr)->type == CHUNK_MEM)?chunk_read_SSL(ptr, ssl):chunk_read_to_file_SSL(ptr, ssl))
 #define CHUNK_WRITE(ptr, fd) ((CHK(ptr)->type == CHUNK_MEM)?chunk_write(ptr, fd):chunk_write_from_file(ptr, fd))
+#define CHUNK_SENDTO(ptr, fd, ip, port) chunk_sendto(ptr, fd, ip, port)
 #define CHUNK_WRITE_SSL(ptr, ssl) ((CHK(ptr)->type == CHUNK_MEM)?chunk_write_SSL(ptr, ssl):chunk_write_from_file_SSL(ptr, ssl))
 #define CHUNK_FILL(ptr, data, ndata) ((CHK(ptr)->type == CHUNK_MEM)?chunk_mem_fill(ptr, data, ndata):chunk_file_fill(ptr, data, ndata))
 #ifdef __cplusplus

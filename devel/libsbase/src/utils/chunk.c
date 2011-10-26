@@ -6,7 +6,10 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "chunk.h"
 #include "xmm.h"
 /* initialize chunk */
@@ -134,6 +137,30 @@ int chunk_write(void *chunk, int fd)
     {
         CHK(chunk)->left -= n;
         CHK(chunk)->end += n;
+    }
+    return n;
+}
+
+
+/* sendto ip:port from chunk */
+int chunk_sendto(void *chunk, int fd, char *ip, int port)
+{
+    int n = -1;
+    struct sockaddr_in sa;
+
+    if(chunk && ip && port > 0 && fd > 0 && CHK(chunk)->left > 0 
+            && CHK(chunk)->data && CHK(chunk)->end)
+    {
+        memset(&sa, 0, sizeof(struct sockaddr));
+        sa.sin_family = AF_INET;
+        sa.sin_addr.s_addr = inet_addr(ip);
+        sa.sin_port = htons(port);
+        if((n = sendto(fd, CHK(chunk)->end, CHK(chunk)->left, 
+                        0, (struct sockaddr *)&sa, sizeof(sa))) > 0)
+        {
+            CHK(chunk)->left -= n;
+            CHK(chunk)->end += n;
+        }
     }
     return n;
 }
