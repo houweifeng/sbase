@@ -456,6 +456,7 @@ typedef struct _CONN
     int index;
     int groupid;
     int gindex;
+    int xindex;
     int s_id;
     int s_state;
     int timeout;
@@ -476,7 +477,6 @@ typedef struct _CONN
     int  local_port;
     int  nsendq;
     int  flags;
-    int  bits;
     /* xid */
     int xids[SB_XIDS_MAX];
     EVENT event;
@@ -568,6 +568,7 @@ typedef struct _CONN
     void (*freechunk)(struct _CONN *, CB_DATA *chunk);
     void(*buffer_handler)(struct _CONN *);
     void(*chunk_handler)(struct _CONN *);
+    void(*free_handler)(struct _CONN *);
     void(*end_handler)(struct _CONN *);
     void(*shut_handler)(struct _CONN *);
     void(*shutout_handler)(struct _CONN *);
