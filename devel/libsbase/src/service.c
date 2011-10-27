@@ -184,7 +184,9 @@ int service_run(SERVICE *service)
     if(service)
     {
         //added to evtimer 
-        if(service->heartbeat_interval > 0 || service->service_type == C_SERVICE)
+        if((service->session.flags & SB_MULTICAST) 
+                || service->heartbeat_interval > 0 
+                || service->service_type == C_SERVICE)
         {
             if(service->heartbeat_interval < 1) service->heartbeat_interval = SB_HEARTBEAT_INTERVAL;
             service->evid = EVTIMER_ADD(service->evtimer, service->heartbeat_interval, 
@@ -539,14 +541,15 @@ err_conn:
             {
                 ip = inet_ntoa(rsa.sin_addr);
                 port = ntohs(rsa.sin_port);
-                linger.l_onoff = 1;linger.l_linger = 0;opt = 1;
-                if(service->session.flags & SB_MULTICAST)
+                //linger.l_onoff = 1;linger.l_linger = 0;opt = 1;
+                if((service->session.flags & SB_MULTICAST))
                 {
+                    ACCESS_LOGGER(service->logger, "Accepted new connection[%s:%d] ndata:%d nconns_free:%d", ip, port, n, service->nconns_free);
                     if((conn = service_getconn(service, 0)))
+                    //if((conn = service->newconn(service, -1, -1, ip, port, NULL)))
                     {
                         strcpy(conn->remote_ip, ip); 
                         conn->remote_port = port;
-                        i++;
                         p = buf;
                         MMB_PUSH(conn->buffer, p, n);
                         if((parent = (PROCTHREAD *)(conn->parent)))
@@ -555,6 +558,7 @@ err_conn:
                                     -1, parent, conn, NULL);
                             parent->wakeup(parent);
                         }
+                        i++;
                     }
                     else
                     {
@@ -585,7 +589,6 @@ err_conn:
                                 -1, parent, conn, NULL);
                         parent->wakeup(parent);
                     }
-                    ACCESS_LOGGER(service->logger, "Accepted new connection[%s:%d] via %d buffer:%d", ip, port, fd, MMB_NDATA(conn->buffer));
                     continue;
                 }
                 else
@@ -671,7 +674,15 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             {
                 if(sess->flags & SB_MULTICAST)
                 {
-                    bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr));
+                    if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
+#ifdef SO_REUSEPORT
+                    && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
+#endif
+                    && bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) == 0
+                     && connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
+                        goto new_conn;
+                    else
+                        goto err_conn;
                 }
                 else
                 {
@@ -912,6 +923,24 @@ int service_pushconn(SERVICE *service, CONN *conn)
                         ++x;
                     }
                 }
+                else
+                {
+                    if(service->service_type == C_SERVICE || (service->session.flags & SB_MULTICAST))
+                    {
+                        x = 0;
+                        while(x < service->conns_limit)
+                        {
+                            if(service->conns_free[x] == 0)
+                            {
+                                service->conns_free[x] = i;
+                                ++(service->nconns_free);
+                                conn->xindex = x;
+                                break;
+                            }
+                            ++x;
+                        }
+                    }
+                }
                 if(i > service->index_max) service->index_max = i;
                 ret = 0;
                 //DEBUG_LOGGER(service->logger, "Added new conn[%p][%s:%d] on %s:%d via %d d_state:%d index[%d] of total %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->d_state,conn->index, service->running_connections);
@@ -957,6 +986,19 @@ int service_popconn(SERVICE *service, CONN *conn)
                     --(service->groups[id].nconnected);
                 }
                 --(service->groups[id].total);
+            }
+            else
+            {
+                if(service->service_type == C_SERVICE || (service->session.flags & SB_MULTICAST))
+                {
+                    if((x = conn->xindex) >= 0 && x < service->conns_limit
+                            && service->conns_free[x] > 0 
+                            && service->conns_free[x] == conn->index)
+                    {
+                        service->conns_free[x] = 0;
+                        --(service->nconns_free);
+                    }
+                }
             }
             service->connections[conn->index] = NULL;
             service->running_connections--;
@@ -1028,15 +1070,27 @@ CONN *service_getconn(SERVICE *service, int groupid)
         }
         else
         {
-            while(service->nconns_free > 0)
+            x = 0;
+            while(x < service->conns_limit && service->nconns_free > 0)
             {
-                x = --(service->nconns_free);
-                if((i = service->conns_free[x]) >= 0 && i < SB_CONN_MAX 
+                if((i = service->conns_free[x]) > 0 
                         && (conn = service->connections[i]))
                 {
-                    conn->start_cstate(conn);
-                    break;
+                    if(conn->status == CONN_STATUS_FREE && conn->d_state == D_STATE_FREE 
+                            && conn->c_state == C_STATE_FREE)
+                    {
+                        conn->xindex = -1;
+                        service->conns_free[x] = 0;
+                        --(service->nconns_free);
+                        conn->start_cstate(conn);
+                        break;
+                    }
+                    else 
+                    {
+                        conn = NULL;
+                    }
                 }
+                ++x;
             }
         }
         MUTEX_UNLOCK(service->mutex);
@@ -1077,8 +1131,26 @@ int service_freeconn(SERVICE *service, CONN *conn)
         }
         else
         {
-            x = service->nconns_free++; 
-            service->conns_free[x] = conn->index;
+            if(service->nconns_free < service->conns_limit)
+            {
+                x = 0;
+                while(x < service->conns_limit)
+                {
+                    if(service->conns_free[x] == 0)
+                    {
+                        service->nconns_free++;
+                        service->conns_free[x] = conn->index;
+                        conn->xindex = x;
+                        conn->over_cstate(conn);
+                        break;
+                    }
+                    ++x;
+                }
+            }
+            else
+            {
+                conn->close(conn);
+            }
         }
         MUTEX_UNLOCK(service->mutex);
         return 0;

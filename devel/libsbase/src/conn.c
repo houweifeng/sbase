@@ -428,6 +428,19 @@ void conn_end_handler(CONN *conn)
     return ;
 }
 
+/* free handler  */
+void conn_free_handler(CONN *conn)
+{
+    CONN_CHECK(conn, D_STATE_CLOSE);
+
+    if(conn)
+    {
+        if(conn->session.flags & SB_MULTICAST) 
+            PPARENT(conn)->service->freeconn(PPARENT(conn)->service, conn);
+    }
+    return ;
+}
+
 void conn_output_handler(int event_fd, int event, void *arg)
 {
     CONN *conn = (CONN *)arg;
@@ -1052,7 +1065,7 @@ int conn_write_handler(CONN *conn)
                     CONN_OUTEVENT_DEL(conn);
                     if(conn->session.flags & SB_MULTICAST)
                     {
-                        conn_over_session(conn);                        
+                        conn_push_message(conn, MESSAGE_FREE);
                     }
                     else
                     {
@@ -1138,7 +1151,14 @@ int conn_send_handler(CONN *conn)
                 if(chunk_over)
                 {
                     CONN_OUTEVENT_DEL(conn);
-                    conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
+                    if(conn->session.flags & SB_MULTICAST)
+                    {
+                        conn_push_message(conn, MESSAGE_FREE);
+                    }
+                    else
+                    {
+                        conn_shut(conn, D_STATE_CLOSE, E_STATE_OFF);
+                    }
                     ret = 0;break;
                 }
                 else
@@ -1754,7 +1774,7 @@ int conn_over_session(CONN *conn)
     if(conn)
     {
         SESSION_RESET(conn);
-        if((conn->flags & SB_MULTICAST) || PPARENT(conn)->service->service_type == C_SERVICE)
+        if(PPARENT(conn)->service->service_type == C_SERVICE)
             PPARENT(conn)->service->freeconn(PPARENT(conn)->service, conn);
         ret = 0;
     }
@@ -1850,6 +1870,7 @@ void conn_reset(CONN *conn)
         conn->groupid = -1;
         conn->index = -1;
         conn->gindex = -1;
+        conn->xindex = -1;
         conn->d_state = 0;
         conn->e_state = 0;
         conn->flags = 0;
@@ -2013,6 +2034,7 @@ CONN *conn_init()
         conn->freechunk             = conn_freechunk;
         conn->buffer_handler        = conn_buffer_handler;
         conn->chunk_handler         = conn_chunk_handler;
+        conn->free_handler          = conn_free_handler;
         conn->end_handler           = conn_end_handler;
         conn->shut_handler          = conn_shut_handler;
         conn->shutout_handler       = conn_shutout_handler;

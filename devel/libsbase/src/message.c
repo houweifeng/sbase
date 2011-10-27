@@ -243,6 +243,9 @@ void qmessage_handler(void *qmsg, void *logger)
                 case MESSAGE_END :
                     conn->end_handler(conn);
                     break;
+                case MESSAGE_FREE :
+                    conn->free_handler(conn);
+                    break;
                 case MESSAGE_TRANSACTION :
                     conn->transaction_handler(conn, msg->tid);
                     break;
