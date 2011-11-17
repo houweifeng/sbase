@@ -174,6 +174,17 @@ void sbase_evtimer_handler(void *arg)
     return ;
 }
 
+/* run service */
+int sbase_run_service(SBASE *sbase, SERVICE *service)
+{
+    if(sbase && service)
+    {
+        service->evbase = sbase->evbase;
+        service->cond = sbase->cond;
+        service->run(service);
+    }
+    return 0;
+}
 /* running all service */
 int sbase_running(SBASE *sbase, int useconds)
 {
@@ -248,9 +259,7 @@ running:
             {
                 if((service = sbase->services[i]))
                 {
-                    service->evbase = sbase->evbase;
-                    service->cond = sbase->cond;
-                    service->run(service);
+                    sbase->run_service(sbase, service);
                 }
             }
         }
@@ -338,6 +347,7 @@ SBASE *sbase_init()
         sbase->set_evlog	    = sbase_set_evlog;
         sbase->set_evlog_level	= sbase_set_evlog_level;
         sbase->add_service	    = sbase_add_service;
+        sbase->run_service	    = sbase_run_service;
         sbase->remove_service	= sbase_remove_service;
         sbase->running 		    = sbase_running;
         sbase->stop 		    = sbase_stop;

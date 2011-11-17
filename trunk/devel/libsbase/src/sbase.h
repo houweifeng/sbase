@@ -219,6 +219,7 @@ typedef struct _SBASE
 	int  (*set_evlog_level)(struct _SBASE *, int level);
 	
 	int  (*add_service)(struct _SBASE *, struct _SERVICE *);
+    int  (*run_service)(struct _SBASE *, struct _SERVICE *);
 	void (*remove_service)(struct _SBASE *, struct _SERVICE *);
     int  (*running)(struct _SBASE *, int time_usec);
 	void (*stop)(struct _SBASE *);
