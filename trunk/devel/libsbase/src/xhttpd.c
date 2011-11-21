@@ -132,7 +132,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
                     {
                         if(*s == 0x20 || *s > 127)
                         {
-                            e += sprintf(e, "%%%02x", *s);
+                            e += sprintf(e, "%%%02x", *s++);
                         }else *e++ = *s++;
                     }
                     *e = '\0';
