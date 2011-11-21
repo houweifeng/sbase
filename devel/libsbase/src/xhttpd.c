@@ -128,7 +128,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
                     e = url;
                     while(*s != '\0') 
                     {
-                        if(*s == 0x20 && *s > 127)
+                        if(*s == 0x20 || *s > 127)
                         {
                             e += sprintf(e, "%%%02x", *s);
                         }else *e++ = *s++;
