@@ -120,6 +120,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
                     "<head><body><h1 align=center>xhttpd</h1>", path);
             p += sprintf(p, "<hr noshade><table><tr align=left>"
                     "<th width=500>Name</th></tr>");
+            if(path[1] != '\0') p += sprintf(p, "<tr><td><a href='../'>..</a></td></tr>");
             while((ent = readdir(dirp)) != NULL)
             {
                 if(ent->d_name[0] != '.' && ent->d_reclen > 0)
@@ -136,12 +137,11 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
                     }
                     *e = '\0';
                     sprintf(line, "%s/%s", dir, ent->d_name);
-                    newdir = NULL;
                     if(ent->d_type == DT_DIR || (newdir = opendir(line)))
                     {
-                        p += sprintf(p, "<td><a href='%s/' >%s/</a></td>", 
-                                url, ent->d_name);
                         if(newdir) closedir(newdir);
+                        p += sprintf(p, "<td><a href='%s%s/' >%s/</a></td>", 
+                                path, url, ent->d_name);
                     }
                     else
                     {
