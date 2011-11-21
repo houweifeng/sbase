@@ -103,12 +103,13 @@ int xhttpd_packet_reader(CONN *conn, CB_DATA *buffer)
 /* xhttpd index view */
 int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
 {
-    char buf[HTTP_BUF_SIZE], url[HTTP_PATH_MAX], *p = NULL, *e = NULL, *pp = NULL;
+    char buf[HTTP_BUF_SIZE], url[HTTP_PATH_MAX], line[HTTP_PATH_MAX],
+         *p = NULL, *e = NULL, *pp = NULL;
     int len = 0, n = 0, keepalive = 0;
     struct dirent *ent = NULL;
     unsigned char *s = NULL;
+    DIR *dirp = NULL, *newdir = NULL;
     CB_DATA *block = NULL;
-    DIR *dirp = NULL;
 
     if(conn && dir && path && (dirp = opendir(dir)))
     {
@@ -134,10 +135,13 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
                         }else *e++ = *s++;
                     }
                     *e = '\0';
-                    if(ent->d_type == DT_DIR)
+                    sprintf(line, "%s/%s", dir, ent->d_name);
+                    newdir = NULL;
+                    if(ent->d_type == DT_DIR || (newdir = opendir(line)))
                     {
                         p += sprintf(p, "<td><a href='%s/' >%s/</a></td>", 
                                 url, ent->d_name);
+                        if(newdir) closedir(newdir);
                     }
                     else
                     {
@@ -576,6 +580,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     off_t from = 0, to = 0, len = 0;
     HTTP_REQ http_req = {0} ;
     struct stat st = {0};
+    DIR *newdir = NULL;
 
     if(conn && packet)
     {
@@ -608,20 +613,22 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 p += sprintf(p, "%s", http_req.path);
             if((n = (p - file)) > 0 && lstat(file, &st) == 0)
             {
-                if((S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode)) && !S_ISREG(st.st_mode))
+                newdir = NULL;
+                if(S_ISDIR(st.st_mode) || (newdir=opendir(file)))
                 {
+                    if(newdir) closedir(newdir);
                     i = 0;
                     found = 0;
                     if(p > file && *(p-1) != '/') *p++ = '/';
                     //strcpy(p, "index.html");
                     //if(lstat(file, &st) == 0) found = 1;
-                    if(access(file, F_OK) == 0) found = 1;
+                    //if(access(file, F_OK) == 0) found = 1;
                     while(i < nindexes && http_indexes[i])
                     {
                         pp = p;
                         pp += sprintf(pp, "%s", http_indexes[i]);
                         if(access(file, F_OK) == 0 && lstat(file, &st) == 0)
-                        //if(access(file, F_OK) == 0)
+                            //if(access(file, F_OK) == 0)
                         {
                             found = 1;
                             p = pp;
