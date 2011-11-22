@@ -855,8 +855,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     sbase->set_log_level(sbase, iniparser_getint(dict, "SBASE:log_level", 0));
     sbase->set_evlog(sbase, iniparser_getstr(dict, "SBASE:evlogfile"));
     sbase->set_evlog_level(sbase, iniparser_getint(dict, "SBASE:evlog_level", 0));
-    if(sbase->connections_limit > 0)
-        setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
+    setrlimiter("RLIMIT_NOFILE", RLIMIT_NOFILE, sbase->connections_limit);
     cacert_file = iniparser_getstr(dict, "XHTTPD:cacert_file");
     privkey_file = iniparser_getstr(dict, "XHTTPD:privkey_file");
     if(iniparser_getint(dict, "XHTTPD:is_use_SSL", 0)) 
