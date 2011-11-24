@@ -251,39 +251,42 @@ running_threads:
         memset(&ioparam, 0, sizeof(struct sched_param));
         pthread_attr_init(&attr);
         pthread_attr_init(&ioattr);
-        pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-        pthread_attr_setinheritsched(&ioattr, PTHREAD_EXPLICIT_SCHED);
-        pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
-        pthread_attr_setscope(&ioattr, PTHREAD_SCOPE_SYSTEM);
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-        pthread_attr_setdetachstate(&ioattr, PTHREAD_CREATE_JOINABLE);
-        if(service->flag & SB_SCHED_FIFO)
+        if(getuid() == 0)
         {
-            pthread_attr_setschedpolicy(&ioattr, SCHED_FIFO);
-            ioparam.sched_priority = sched_get_priority_max(SCHED_FIFO);
-            pthread_attr_setschedparam(&ioattr, &ioparam);
-            pthread_setschedparam(pthread_self(), SCHED_RR, &ioparam);
-            pthread_attr_setschedpolicy(&attr, SCHED_RR);
-            param.sched_priority = sched_get_priority_max(SCHED_RR) - 1;
-            pthread_attr_setschedparam(&attr, &param);
-        }
-        else if(service->flag & SB_SCHED_RR)
-        {
-            pthread_attr_setschedpolicy(&ioattr, SCHED_RR);
-            ioparam.sched_priority = sched_get_priority_max(SCHED_RR);
-            pthread_attr_setschedparam(&ioattr, &ioparam);
-            pthread_setschedparam(pthread_self(), SCHED_RR, &ioparam);
-            pthread_attr_setschedpolicy(&attr, SCHED_RR);
-            param.sched_priority = sched_get_priority_max(SCHED_RR) - 1;
-            pthread_attr_setschedparam(&attr, &param);
-        }
-        else
-        {
-            pthread_attr_setschedpolicy(&ioattr, SCHED_RR);
-            ioparam.sched_priority = sched_get_priority_max(SCHED_RR);
-            pthread_attr_setschedparam(&ioattr, &ioparam);
-            pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
-            pthread_setschedparam(pthread_self(), SCHED_OTHER, &param);
+            pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+            pthread_attr_setinheritsched(&ioattr, PTHREAD_EXPLICIT_SCHED);
+            pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+            pthread_attr_setscope(&ioattr, PTHREAD_SCOPE_SYSTEM);
+            pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+            pthread_attr_setdetachstate(&ioattr, PTHREAD_CREATE_JOINABLE);
+            if(service->flag & SB_SCHED_FIFO)
+            {
+                pthread_attr_setschedpolicy(&ioattr, SCHED_FIFO);
+                ioparam.sched_priority = sched_get_priority_max(SCHED_FIFO);
+                pthread_attr_setschedparam(&ioattr, &ioparam);
+                pthread_setschedparam(pthread_self(), SCHED_RR, &ioparam);
+                pthread_attr_setschedpolicy(&attr, SCHED_RR);
+                param.sched_priority = sched_get_priority_max(SCHED_RR) - 1;
+                pthread_attr_setschedparam(&attr, &param);
+            }
+            else if(service->flag & SB_SCHED_RR)
+            {
+                pthread_attr_setschedpolicy(&ioattr, SCHED_RR);
+                ioparam.sched_priority = sched_get_priority_max(SCHED_RR);
+                pthread_attr_setschedparam(&ioattr, &ioparam);
+                pthread_setschedparam(pthread_self(), SCHED_RR, &ioparam);
+                pthread_attr_setschedpolicy(&attr, SCHED_RR);
+                param.sched_priority = sched_get_priority_max(SCHED_RR) - 1;
+                pthread_attr_setschedparam(&attr, &param);
+            }
+            else
+            {
+                pthread_attr_setschedpolicy(&ioattr, SCHED_RR);
+                ioparam.sched_priority = sched_get_priority_max(SCHED_RR);
+                pthread_attr_setschedparam(&ioattr, &ioparam);
+                pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
+                pthread_setschedparam(pthread_self(), SCHED_OTHER, &param);
+            }
         }
         /* initialize iodaemons */
         if(service->niodaemons > SB_THREADS_MAX) service->niodaemons = SB_THREADS_MAX;
