@@ -256,7 +256,7 @@ int http_argv_parse(char *p, char *end, HTTP_REQ *http_req)
             high = 0;low = 0;
             //if(*s == '?'){argv->k = pp - http_req->line; ++s;}
             if(*s == '+'){*pp++ = 0x20; ++s;}
-            else if(*s == '=' && argv->k && !argv->v)
+            else if(*s == '=' && argv->k && !(argv->v))
             {
                 if(argv->k > 0) argv->nk = pp - http_req->line - argv->k;
                 if(pp >= epp) break;
@@ -265,7 +265,6 @@ int http_argv_parse(char *p, char *end, HTTP_REQ *http_req)
                 ++s;
             }
             else if(*s == '&' && argv->k && argv->v)
-                //|| *s == 0x20 || *s == '\t')
             {
                 argv->nv = pp - http_req->line - argv->v;
                 if(pp >= epp) break;
@@ -273,8 +272,9 @@ int http_argv_parse(char *p, char *end, HTTP_REQ *http_req)
                 http_req->nline = pp - http_req->line;
                 http_req->nargvs++;
                 argv++;
-                if(*s++ == '&') argv->k = pp - http_req->line;
-                else break;
+                argv->k = pp - http_req->line;
+                argv->v = 0;
+                ++s;
             }
             else if(*s == '%' && s < (end - 2) && HEX2CH(*(s+1), high)  
                     && HEX2CH(*(s+2), low))
