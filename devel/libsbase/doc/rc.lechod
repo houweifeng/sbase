@@ -15,20 +15,17 @@ LECHODARGS=" -d -c /usr/local/etc/lechod.ini > /dev/null 2>&1 "
 
 start() 
 {
-        echo -n $"Starting lechod: "
-        daemon /usr/local/sbin/lechod $LECHODARGS
-
-	touch /var/lock/subsys/lechod
-        echo
+    echo -n $"Starting lechod: "
+    daemon /usr/local/sbin/lechod $LECHODARGS
+    echo
 }
 
 stop() 
 {
-        echo -n $"Shutting down lechod: "
-	killproc lechod
+    echo -n $"Shutting down lechod: "
+    killproc lechod
 
-	rm -f  /var/lock/subsys/lechod
-        echo
+    echo
 }
 
 [ -f /usr/local/sbin/lechod ] || exit 0
@@ -45,14 +42,8 @@ case "$1" in
 	stop
 	start
 	;;
-  condrestart)
-	[ -e /var/lock/subsys/lechod ] && (stop; start)
-	;;
-  status)
-  	status hidd
-	;;
   *)
-        echo $"Usage: $0 {start|stop|restart|reload|condrestart}"
+        echo $"Usage: $0 {start|stop|restart|reload}"
         exit 1
 esac
 
