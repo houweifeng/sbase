@@ -587,21 +587,23 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         p = packet->data;end = packet->data + packet->ndata;
         //return xhttpd_index_view(conn, &http_req, httpd_home, "/");
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) goto err;
+        //get vhost
+        host = "";
+        if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
+        {
+            p = http_req.hlines + n;
+            if(strncasecmp(p, "www.", 4) == 0) p += 4;
+            host = p;
+            while(*p != ':' && *p != '\0')++p;
+            *p = '\0';
+            n = p - host;
+            if((i = mtrie_get(namemap, host, n) - 1) >= 0) 
+                home = httpd_vhosts[i].home;
+        }
+        REALLOG(logger, "host[%s] %s[%s] remote[%s:%d]", host, http_methods[http_req.reqid].e, http_req.path, conn->remote_ip, conn->remote_port);
         if(http_req.reqid == HTTP_GET)
         {
-            REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
-            //get vhost
-            if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
-            {
-                p = http_req.hlines + n;
-                if(strncasecmp(p, "www.", 4) == 0) p += 4;
-                host = p;
-                while(*p != ':' && *p != '\0')++p;
-                *p = '\0';
-                n = p - host;
-                if((i = mtrie_get(namemap, host, n) - 1) >= 0) 
-                    home = httpd_vhosts[i].home;
-            }
+            
             if(home == NULL) home = httpd_home;
             if(home == NULL) goto err;
             p = file;
@@ -775,7 +777,6 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         }
         else if(http_req.reqid == HTTP_POST)
         {
-            REALLOG(logger, "[%s:%d] POST %s", conn->remote_ip, conn->remote_port, http_req.path);
             if((n = http_req.headers[HEAD_ENT_CONTENT_LENGTH]) > 0 
                     && (p = (http_req.hlines + n)) && (n = atoi(p)) > 0)
             {
