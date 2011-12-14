@@ -589,7 +589,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) goto err;
         if(http_req.reqid == HTTP_GET)
         {
-            //REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
+            REALLOG(logger, "[%s:%d] GET %s", conn->remote_ip, conn->remote_port, http_req.path);
             //get vhost
             if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
             {
@@ -775,7 +775,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         }
         else if(http_req.reqid == HTTP_POST)
         {
-            //REALLOG(logger, "[%s:%d] POST %s", conn->remote_ip, conn->remote_port, http_req.path);
+            REALLOG(logger, "[%s:%d] POST %s", conn->remote_ip, conn->remote_port, http_req.path);
             if((n = http_req.headers[HEAD_ENT_CONTENT_LENGTH]) > 0 
                     && (p = (http_req.hlines + n)) && (n = atoi(p)) > 0)
             {
