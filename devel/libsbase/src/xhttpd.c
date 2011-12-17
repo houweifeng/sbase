@@ -574,9 +574,9 @@ int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
     int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0, keepalive = 0;
-    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = NULL,
+    char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = "",
          *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
-         *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL, *agent = "";
+         *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL, *agent = "", *referer = "";
     off_t from = 0, to = 0, len = 0;
     HTTP_REQ http_req = {0} ;
     struct stat st = {0};
@@ -588,13 +588,16 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         //return xhttpd_index_view(conn, &http_req, httpd_home, "/");
         if(http_request_parse(p, end, &http_req, http_headers_map) == -1) goto err;
         //get vhost
-        host = "";
         if((n = http_req.headers[HEAD_REQ_HOST]) > 0)
         {
             p = http_req.hlines + n;
             if(strncasecmp(p, "www.", 4) == 0) p += 4;
             host = p;
-            while(*p != ':' && *p != '\0')++p;
+            while(*p != ':' && *p != '\0')
+	    {
+		if(*p >= 'A' && *p <= 'Z') *p -= 'A' - 'a';
+		++p;
+	    }
             *p = '\0';
             n = p - host;
             if((i = mtrie_get(namemap, host, n) - 1) >= 0) 
@@ -604,7 +607,11 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         {
             agent = http_req.hlines + n;
         }
-        REALLOG(logger, "host[%s] %s[%s] remote[%s:%d] agent[%s]", host, http_methods[http_req.reqid].e, http_req.path, conn->remote_ip, conn->remote_port, agent);
+        if((n = http_req.headers[HEAD_REQ_USER_AGENT]) > 0)
+        {
+            referer = http_req.hlines + n;
+        }
+        REALLOG(logger, "host[%s] %s[%s] remote[%s:%d] agent[%s] referer[%s]", host, http_methods[http_req.reqid].e, http_req.path, conn->remote_ip, conn->remote_port, agent, referer);
         if(http_req.reqid == HTTP_GET)
         {
             
