@@ -607,7 +607,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         {
             agent = http_req.hlines + n;
         }
-        if((n = http_req.headers[HEAD_REQ_USER_AGENT]) > 0)
+        if((n = http_req.headers[HEAD_REQ_REFERER]) > 0)
         {
             referer = http_req.hlines + n;
         }
