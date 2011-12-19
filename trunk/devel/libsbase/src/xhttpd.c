@@ -570,6 +570,7 @@ int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
     }
     return -1;
 }
+#define HTTPD_ACCESS_LOG(logger, conn, respid, host, http_req, agent, referer) REALLOG(logger, "%d host[%s] %s[%s] remote[%s:%d] agent[%s] referer[%s]", respid, host, http_methods[http_req.reqid].e, http_req.path, conn->remote_ip, conn->remote_port, agent, referer)
 
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
@@ -616,10 +617,8 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         {
             referer = http_req.hlines + n;
         }
-        REALLOG(logger, "host[%s] %s[%s] remote[%s:%d] agent[%s] referer[%s]", host, http_methods[http_req.reqid].e, http_req.path, conn->remote_ip, conn->remote_port, agent, referer);
         if(http_req.reqid == HTTP_GET)
         {
-            
             if(home == NULL) home = httpd_home;
             if(home == NULL) goto err;
             p = file;
@@ -658,8 +657,14 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if(found == 0 && http_indexes_view && (*p = '\0') >= 0)
                     {
                         end = --p;
-                        if(xhttpd_index_view(conn, &http_req, file, root) == 0) return 0; 
-                        else goto err;
+
+                        if(xhttpd_index_view(conn, &http_req, file, root) == 0) 
+                        {
+                            HTTPD_ACCESS_LOG(logger, conn, RESP_OK, host, http_req, agent, referer);
+                            return 0; 
+                        }
+                        else 
+                            goto err;
                     }
                 }
                 s = mime = line + HTTP_PATH_MAX - 1;
@@ -679,6 +684,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 //no content
                 if(st.st_size == 0)
                 {
+                    HTTPD_ACCESS_LOG(logger, conn, RESP_NOCONTENT, host, http_req, agent, referer);
                     return conn->push_chunk(conn, HTTP_NO_CONTENT, 
                             strlen(HTTP_NO_CONTENT));
                 }
@@ -686,6 +692,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 else if((n = http_req.headers[HEAD_REQ_IF_MODIFIED_SINCE]) > 0
                         && str2time(http_req.hlines + n) == st.st_mtime)
                 {
+                    HTTPD_ACCESS_LOG(logger, conn, RESP_NOTMODIFIED, host, http_req, agent, referer);
                     return conn->push_chunk(conn, HTTP_NOT_MODIFIED, 
                             strlen(HTTP_NOT_MODIFIED));
                 }
@@ -749,6 +756,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                                 &http_req, host, is_need_compress, mimeid, file, 
                                 root, from, to, &st) == 0)
                     {
+                        HTTPD_ACCESS_LOG(logger, conn, RESP_OK, host, http_req, agent, referer);
                         return 0;
                     }
                     else 
@@ -756,11 +764,17 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
                     p = buf;
                     if(from > 0)
+                    {
+                        HTTPD_ACCESS_LOG(logger, conn, RESP_PARTIALCONTENT, host, http_req, agent, referer);
                         p += sprintf(p, "HTTP/1.1 206 Partial Content\r\nAccept-Ranges: bytes\r\n"
                                 "Content-Range: bytes %lld-%lld/%lld\r\n", 
                                 LL(from), LL(to - 1), LL(st.st_size));
+                    }
                     else
+                    {
+                        HTTPD_ACCESS_LOG(logger, conn, RESP_OK, host, http_req, agent, referer);
                         p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
+                    }
                     if(mimeid >= 0)
                         p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
                     else
