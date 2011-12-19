@@ -43,6 +43,7 @@ static int http_indexes_view = 0;
 static char *http_indexes[HTTP_INDEX_MAX];
 static int nindexes = 0;
 static char *http_default_charset = "UTF-8";
+static char *httpd_access_log_dir = "/tmp/xhttpd/log";
 static int httpd_compress = 1;
 static char *httpd_compress_cachedir = "/tmp/xhttpd/cache";
 static HTTP_VHOST httpd_vhosts[HTTP_VHOST_MAX];
@@ -52,7 +53,7 @@ static void *namemap = NULL;
 static void *hostmap = NULL;
 static void *urlmap = NULL;
 static void *http_headers_map = NULL;
-static void *logger = NULL;
+static void *default_logger = NULL;
 
 /* mkdir recursive */
 int xhttpd_mkdir(char *path, int mode)
@@ -483,7 +484,7 @@ COMPRESS:
                 {
                     if(symlink(zfile, linkfile) != 0 || write(fd, zstream, zlen) <= 0 )
                     {
-                        FATAL_LOGGER(logger, "symlink/write to %s failed, %s", 
+                        FATAL_LOGGER(default_logger, "symlink/write to %s failed, %s", 
                                 linkfile, strerror(errno));
                     }
                     close(fd); 
@@ -581,6 +582,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
     HTTP_REQ http_req = {0} ;
     struct stat st = {0};
     DIR *newdir = NULL;
+    void *logger = default_logger;
 
     if(conn && packet)
     {
@@ -601,7 +603,10 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
             *p = '\0';
             n = p - host;
             if((i = mtrie_get(namemap, host, n) - 1) >= 0) 
+	    {
+		logger = httpd_vhosts[i].logger;
                 home = httpd_vhosts[i].home;
+	    }
         }
         if((n = http_req.headers[HEAD_REQ_USER_AGENT]) > 0)
         {
@@ -851,7 +856,7 @@ static void xhttpd_sigpipe(int sig)
 /* Initialize from ini file */
 int sbase_initialize(SBASE *sbase, char *conf)
 {
-    char *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL;
+    char *s = NULL, *p = NULL, *cacert_file = NULL, *privkey_file = NULL, path[HTTP_PATH_MAX];
     int n = 0, i = 0;
 
     if((dict = iniparser_new(conf)) == NULL)
@@ -1003,6 +1008,12 @@ int sbase_initialize(SBASE *sbase, char *conf)
             return -1;
         }
     }
+    if((p = iniparser_getstr(dict, "XHTTPD:access_log_dir")))
+    {
+	httpd_access_log_dir = p;
+	sprintf(path, "%s/httpd_access.log", p);
+        LOGGER_INIT(default_logger, path);
+    }
     //name map
     if((namemap = mtrie_init()))
     {
@@ -1033,6 +1044,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
                 httpd_vhosts[nvhosts].home = p;
                 while(*p != ']' && *p != 0x20 && *p != '\t') ++p;
                 *p++ = '\0';
+		sprintf(path, "%s/%s.access.log", httpd_access_log_dir, httpd_vhosts[nvhosts].name );
+		LOGGER_INIT(httpd_vhosts[nvhosts].logger, path);
                 ++nvhosts;
             }
         }
@@ -1040,10 +1053,6 @@ int sbase_initialize(SBASE *sbase, char *conf)
     //host map
     hostmap = mtrie_init();
     urlmap = mtrie_init();
-    if((p = iniparser_getstr(dict, "XHTTPD:access_log")))
-    {
-        LOGGER_INIT(logger, p);
-    }
     /* server */
     //fprintf(stdout, "Parsing for server...\n");
     if(httpsd) sbase->add_service(sbase, httpsd);
@@ -1062,7 +1071,7 @@ int main(int argc, char **argv)
 {
     pid_t pid;
     char *conf = NULL, *p = NULL, ch = 0;
-    int is_daemon = 0;
+    int is_daemon = 0, i = 0;
 
     /* get configure file */
     while((ch = getopt(argc, argv, "c:d")) != -1)
@@ -1145,7 +1154,12 @@ int main(int argc, char **argv)
     if(hostmap) mtrie_clean(hostmap);
     if(urlmap) mtrie_clean(urlmap);
     if(http_headers_map) http_headers_map_clean(http_headers_map);
-    LOGGER_CLEAN(logger);
+    for(i = 0; i < nvhosts; i++)
+    {
+	LOGGER_CLEAN(httpd_vhosts[i].logger);
+	httpd_vhosts[i].logger = NULL;
+    }
+    LOGGER_CLEAN(default_logger);
     if(dict)iniparser_free(dict);
     return 0;
 }

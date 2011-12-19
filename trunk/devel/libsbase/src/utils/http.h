@@ -35,6 +35,7 @@ typedef struct _HTTP_VHOST
 {
     char *name;
     char *home;
+    void *logger;
 }HTTP_VHOST;
 typedef struct _HTTP_ELEMENT
 {
