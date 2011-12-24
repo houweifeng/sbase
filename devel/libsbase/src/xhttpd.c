@@ -570,7 +570,7 @@ int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
     }
     return -1;
 }
-#define HTTPD_ACCESS_LOG(logger, conn, respid, host, http_req, agent, referer) REALLOG(logger, "%d host[%s] %s[%s] remote[%s:%d] agent[%s] referer[%s]", respid, host, http_methods[http_req.reqid].e, http_req.path, conn->remote_ip, conn->remote_port, agent, referer)
+#define HTTPD_ACCESS_LOG(logger, conn, respid, host, http_req, agent, referer) REALLOG(logger, "%s host[%s] %s[%s] remote[%s:%d] agent[%s] referer[%s]", response_status[respid].e, host, http_methods[http_req.reqid].e, http_req.path, conn->remote_ip, conn->remote_port, agent, referer)
 
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
