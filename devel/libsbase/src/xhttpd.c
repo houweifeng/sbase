@@ -580,7 +580,7 @@ int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
 /* packet handler */
 int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
-    int i = 0, n = 0, found = 0, nmime = 0, mimeid = 0, is_need_compress = 0, keepalive = 0;
+    int i = 0, n = 0, found = 0, nmime = 0, mimeid = -1, is_need_compress = 0, keepalive = 0;
     char buf[HTTP_BUF_SIZE], file[HTTP_PATH_MAX], line[HTTP_PATH_MAX], *host = "",
          *mime = NULL, *home = NULL, *pp = NULL, *p = NULL, *end = NULL, *root = NULL, 
          *s = NULL, *outfile = NULL, *name = NULL, *encoding = NULL, *agent = "", *referer = "";
@@ -675,7 +675,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 s = mime = line + HTTP_PATH_MAX - 1;
                 *s = '\0';
                 pp = --p ;
-                while(pp > file && *pp != '.')
+                while(pp > file && *pp != '.' && *pp != '/')
                 {
                     if(*pp >= 'A' && *pp <= 'Z')
                     {
@@ -685,7 +685,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     --pp;
                 }
                 //while( > file && *mime != '.')--mime;
-                if(mime > line) nmime = s - mime;
+                if(*pp == '.' && mime > line) nmime = s - mime;
                 //no content
                 if(st.st_size == 0)
                 {
@@ -781,9 +781,17 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                         p += sprintf(p, "HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n");
                     }
                     if(mimeid >= 0)
+                    {
                         p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
+                    }
+                    else if(nmime > 0)
+                    {
+                        p += sprintf(p, "Content-Type: application/octet-stream; charset=%s\r\n",  http_default_charset);
+                    }
                     else
+                    {
                         p += sprintf(p, "Content-Type: text/plain; charset=%s\r\n",  http_default_charset);
+                    }
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                     {
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
@@ -799,7 +807,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "%s", "\r\n");//date end
                     if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
                     if(name) 
-                        p += sprintf(p, "Content-Disposition: attachment; filename=\"%s\";\r\n",name);
+                        p += sprintf(p, "Content-Disposition: attachment; filename=\"%s\"\r\n",name);
                     p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL),p);p += sprintf(p,"\r\n");
                     p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
