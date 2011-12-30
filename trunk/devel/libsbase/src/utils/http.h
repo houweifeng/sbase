@@ -398,7 +398,7 @@ static const HTTP_ELEMENT http_methods[] =
 };
 
 /* file ext support list */
-#define HTTP_MIME_NUM 89
+#define HTTP_MIME_NUM 99
 static const HTTP_ELEMENT http_mime_types[]=
 {
     {0, 4, "html", "text/html"},
@@ -489,7 +489,17 @@ static const HTTP_ELEMENT http_mime_types[]=
     {85, 3, "wmv", "video/x-ms-wmv"},
     {86, 3, "avi", "video/x-msvideo"},
     {87, 3, "dmg", "application/octet-stream"},
-    {88, 3, "php", "text/html"}
+    {88, 3, "php", "text/plain"},
+    {89, 2, "am", "text/plain"},
+    {90, 2, "in", "text/plain"},
+    {91, 3, "cpp", "text/plain"},
+    {92, 1, "c", "text/plain"},
+    {93, 1, "h", "text/plain"},
+    {94, 2, "m4", "text/plain"},
+    {95, 2, "sh", "text/plain"},
+    {96, 5, "guess", "text/plain"},
+    {97, 3, "sub", "text/plain"},
+    {98, 3, "awk", "text/plain"}
 };
 /*
 static const char *ftypes[] = {

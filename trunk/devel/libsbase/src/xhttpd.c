@@ -24,7 +24,7 @@
 #include "stime.h"
 #include "logger.h"
 #include "message.h"
-#define XHTTPD_VERSION 		    "0.1.0"
+#define XHTTPD_VERSION 		    "1.0.4"
 #define HTTP_RESP_OK            "HTTP/1.1 200 OK"
 #define HTTP_BAD_REQUEST        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_NOT_FOUND          "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
@@ -380,8 +380,8 @@ int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, char *host, int is_n
 {
     char zfile[HTTP_PATH_MAX], zoldfile[HTTP_PATH_MAX], linkfile[HTTP_PATH_MAX], 
          buf[HTTP_BUF_SIZE], *encoding = NULL, *outfile = NULL, *p = NULL;
+    int fd = 0, inlen = 0, zlen = 0, i = 0, id = 0, keepalive = 0, n = 0;
     unsigned char *block = NULL, *in = NULL, *zstream = NULL;
-    int fd = 0, inlen = 0, zlen = 0, i = 0, id = 0, keepalive = 0;
     off_t offset = 0, len = 0;
     struct stat zst = {0};
 
@@ -504,13 +504,19 @@ OVER:
         if(mimeid >= 0)
             p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
         else
-            p += sprintf(p, "Content-Type: Unkown; charset=%s\r\n",  http_default_charset);
-        /*
+        {
+            p += sprintf(p, "Content-Type: application/octet-stream; charset=%s\r\n",  http_default_charset);
+        }
         if((n = http_req->headers[HEAD_GEN_CONNECTION]) > 0)
         {
             p += sprintf(p, "Connection: %s\r\n", http_req->hlines + n);
+            if(strcasestr(http_req->hlines + n, "close") == NULL)
+                keepalive = 1;
         }
-        */
+        else
+        {
+            p += sprintf(p, "Connection: close\r\n");
+        }
         p += sprintf(p, "Last-Modified:");
         p += GMTstrdate(st->st_mtime, p);
         p += sprintf(p, "%s", "\r\n");//date end
@@ -518,7 +524,6 @@ OVER:
         if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
         p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
         p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);p += sprintf(p, "\r\n");
-        p += sprintf(p, "Connection: close\r\n");
         p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
         conn->push_chunk(conn, buf, (p - buf));
         if(zstream && zlen > 0)
@@ -778,7 +783,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     if(mimeid >= 0)
                         p += sprintf(p, "Content-Type: %s; charset=%s\r\n", http_mime_types[mimeid].s, http_default_charset);
                     else
-                        p += sprintf(p, "Content-Type: Unkown; charset=%s\r\n",  http_default_charset);
+                        p += sprintf(p, "Content-Type: text/plain; charset=%s\r\n",  http_default_charset);
                     if((n = http_req.headers[HEAD_GEN_CONNECTION]) > 0)
                     {
                         p += sprintf(p, "Connection: %s\r\n", http_req.hlines + n);
@@ -794,7 +799,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     p += sprintf(p, "%s", "\r\n");//date end
                     if(encoding) p += sprintf(p, "Content-Encoding: %s\r\n", encoding);
                     if(name) 
-                        p += sprintf(p, "Content-Disposition: attachment, filename=\"%s\"\r\n",name);
+                        p += sprintf(p, "Content-Disposition: attachment; filename=\"%s\";\r\n",name);
                     p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL),p);p += sprintf(p,"\r\n");
                     p += sprintf(p, "Content-Length: %lld\r\n", LL(len));
                     p += sprintf(p, "Server: xhttpd/%s\r\n\r\n", XHTTPD_VERSION);
