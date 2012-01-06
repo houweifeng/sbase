@@ -140,7 +140,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
                     sprintf(line, "%s/%s", dir, ent->d_name);
                     if(ent->d_type == DT_DIR || (newdir = opendir(line)))
                     {
-                        if(newdir) closedir(newdir);
+                        if(newdir){closedir(newdir);newdir = NULL;}
                         p += sprintf(p, "<td><a href='%s%s/' >%s/</a></td>", 
                                 path, url, ent->d_name);
                     }
@@ -638,7 +638,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 newdir = NULL;
                 if(S_ISDIR(st.st_mode) || (newdir=opendir(file)))
                 {
-                    if(newdir) closedir(newdir);
+                    if(newdir){closedir(newdir);newdir = NULL;}
                     i = 0;
                     found = 0;
                     if(p > file && *(p-1) != '/') *p++ = '/';
