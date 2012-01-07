@@ -154,6 +154,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
             }
             p += sprintf(p, "</table>");
             p += sprintf(p, "<hr noshade>");
+            p += sprintf(p, "<script src=\"http://s5.cnzz.com/stat.php?id=3705266&web_id=3705266&show=pic2\" language=\"JavaScript\"></script>");
             p += sprintf(p, "<em></body></html>");
             len = (p - pp);
             p = buf;
@@ -602,17 +603,17 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
             if(strncasecmp(p, "www.", 4) == 0) p += 4;
             host = p;
             while(*p != ':' && *p != '\0')
-	    {
-		if(*p >= 'A' && *p <= 'Z') *p -= 'A' - 'a';
-		++p;
-	    }
+            {
+                if(*p >= 'A' && *p <= 'Z') *p -= 'A' - 'a';
+                ++p;
+            }
             *p = '\0';
             n = p - host;
             if((i = mtrie_get(namemap, host, n) - 1) >= 0) 
-	    {
-		logger = httpd_vhosts[i].logger;
+            {
+                logger = httpd_vhosts[i].logger;
                 home = httpd_vhosts[i].home;
-	    }
+            }
         }
         if((n = http_req.headers[HEAD_REQ_USER_AGENT]) > 0)
         {
