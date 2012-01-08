@@ -24,7 +24,7 @@ mutex.h
 
 libevbase_la_CPPFLAGS = -Wall
 include_HEADERS = evbase.h
-bin_PROGRAMS = ev_serv ev_cli evdns_cli
+bin_PROGRAMS = ev_serv ev_cli evdns_cli ev_httpd
 ev_serv_SOURCES = ev_serv.c evbase.h log.h
 ev_serv_CPPFLAGS = -Wall
 ev_serv_LDFLAGS = -static
@@ -37,6 +37,9 @@ evdns_cli_SOURCES = evdns_cli.c evbase.h log.h evdns.h evdns.c timer.h
 evdns_cli_CPPFLAGS = -Wall
 evdns_cli_LDFLAGS = -static
 evdns_cli_LDADD = libevbase.la
+ev_httpd_SOURCES = ev_httpd.c evbase.h 
+ev_httpd_CPPFLAGS = -Wall
+ev_httpd_LDFLAGS = -static
+ev_httpd_LDADD = libevbase.la
 #sepoll_SOURCES = sepoll.c log.h
 #sepoll_CPPFLAGS = -Wall
-
