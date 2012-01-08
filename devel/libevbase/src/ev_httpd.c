@@ -1,9 +1,9 @@
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -12,7 +12,7 @@
 #ifdef HAVE_EVKQUEUE
 #define CONN_MAX 1024
 #else
-#define CONN_MAX 1024
+#define CONN_MAX 4096
 #endif
 #define EV_BUF_SIZE 1024
 #define CONN_BACKLOG_MAX 8192
@@ -27,11 +27,17 @@ typedef struct _CONN
     int x;
     int nout;
     int n;
+    int keepalive;
     EVENT event;
     char out[EV_BUF_SIZE];
     char buffer[EV_BUF_SIZE];
 }CONN;
 static CONN *conns = NULL;
+static char *out_block = "<html><head><title>hello</title></head><body>hello</body></html>";
+static char out_data[EV_BUF_SIZE];
+static int out_data_len = 0;
+static char kout_data[EV_BUF_SIZE];
+static int kout_data_len = 0;
 void ev_handler(int fd, int ev_flags, void *arg)
 {
     int rfd = 0, n = 0, out_len = 0;
@@ -45,7 +51,7 @@ void ev_handler(int fd, int ev_flags, void *arg)
         {
             while((rfd = accept(fd, (struct sockaddr *)&rsa, &rsa_len)) > 0)
             {
-                fprintf(stderr, "Accept new connection %s:%d via %d total %d ",
+                fprintf(stderr, "Accept new connection %s:%d via %d total %d\r\n",
                         inet_ntoa(rsa.sin_addr), ntohs(rsa.sin_port),
                         rfd, ++connections);
                 conns[rfd].fd = rfd;
@@ -55,14 +61,12 @@ void ev_handler(int fd, int ev_flags, void *arg)
                 event_set(&(conns[rfd].event), rfd, E_READ|E_PERSIST,
                             (void *)&(conns[rfd].event), &ev_handler);
                 evbase->add(evbase, &(conns[rfd].event));
-                fprintf(stderr, "add event_fd:%d E_READ\n", rfd);
             }
             return ;
         }
     }
     else
     {
-        fprintf(stderr, "EVENT %d on %d", ev_flags, fd);
         if(ev_flags & E_READ)
         {
             n = read(fd, conns[fd].buffer+conns[fd].n, EV_BUF_SIZE - conns[fd].n);
@@ -70,21 +74,18 @@ void ev_handler(int fd, int ev_flags, void *arg)
             {
                 conns[fd].n += n;
                 conns[fd].buffer[conns[fd].n] = 0;
-                fprintf(stderr, "Read %d bytes from %d, %s", n, fd, conns[fd].buffer);
                 if(strstr(conns[fd].buffer, "\r\n\r\n"))
                 {
                     if(strcasestr(conns[fd].buffer, "Keep-Alive")) conns[fd].keepalive = 1;
-                    fprintf(stderr, "Updating event[%p] on %d ", &conns[fd].event, fd);
                     conns[fd].x = 0;
                     conns[fd].n = 0;
                     event_add(&conns[fd].event, E_WRITE);	
-                    fprintf(stderr, "Updated event[%p] on %d ", &conns[fd].event, fd);
                 }
             }		
             else
             {
                 if(n < 0 )
-                    FATAL_LOG("Reading from %d failed, %s", fd, strerror(errno));
+                    fprintf(stderr, "Reading data from %d failed, %s\r\n", fd, strerror(errno));
                 goto err;
             }
         }
@@ -96,7 +97,6 @@ void ev_handler(int fd, int ev_flags, void *arg)
             if(n > 0 )
             {
                 conns[fd].x += n;
-                //fprintf(stdout, "keepalive:%s\n", conns[fd].buffer);
                 if(conns[fd].x < out_len) return ;
                 if(conns[fd].x  == out_len)
                 {
@@ -105,12 +105,11 @@ void ev_handler(int fd, int ev_flags, void *arg)
                     if(conns[fd].keepalive == 0) goto err;
                     conns[fd].keepalive = 0;
                 }
-                fprintf(stderr, "Echo %d bytes to %d", n, fd);
             }
             else
             {
                 if(n < 0)
-                    FATAL_LOG("Echo data to %d failed, %s", fd, strerror(errno));	
+                    fprintf(stderr, "writting data to %d failed, %s\r\n", fd, strerror(errno));	
                 goto err;
             }
             event_del(&conns[fd].event, E_WRITE);
@@ -122,7 +121,7 @@ err:
             memset(&(conns[fd]), 0, sizeof(CONN));
             shutdown(fd, SHUT_RDWR);
             close(fd);
-            fprintf(stderr, "Connection %d closed", fd);
+            fprintf(stderr, "Connection %d closed\r\n", fd);
         }
         return ;
     }
@@ -134,7 +133,7 @@ int main(int argc, char **argv)
 
     if(argc < 2)
     {
-        fprintf(stderr, "Usage:%s port\n", argv[0]);	
+        fprintf(stderr, "Usage:%s port\r\n", argv[0]);	
         _exit(-1);
     }	
     port = atoi(argv[1]);
@@ -154,19 +153,19 @@ int main(int argc, char **argv)
 #endif
           )
         {
-            fprintf(stderr, "setsockopt[SO_REUSEADDR] on fd[%d] failed, %s", fd, strerror(errno));
+            fprintf(stderr, "set[SO_REUSEADDR] on fd[%d] failed, %s\r\n", fd, strerror(errno));
             _exit(-1);
         }
         /* Bind */
         if(bind(lfd, (struct sockaddr *)&sa, sa_len) != 0 )
         {
-            fprintf(stderr, "Binding failed, %s", strerror(errno));
+            fprintf(stderr, "Binding failed, %s\r\n", strerror(errno));
             return -1;
         }
         /* set FD NON-BLOCK */
         if(fcntl(lfd, F_SETFL, fcntl(lfd, F_GETFL, 0)|O_NONBLOCK) != 0 )
         {
-            fprintf(stderr,"Setting NON-BLOCK failed, %s", strerror(errno));
+            fprintf(stderr,"Setting NON-BLOCK failed, %s\r\n", strerror(errno));
             return -1;
         }
         /* Listen */
@@ -175,6 +174,12 @@ int main(int argc, char **argv)
             fprintf(stderr, "Listening port:%d  failed, %s", port,strerror(errno));
             return -1;
         }
+        out_data_len = sprintf(out_data, "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n"
+                "Content-Length: %d\r\n\r\n%s", (int)strlen(out_block), out_block);
+        kout_data_len = sprintf(kout_data, "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n"
+                "Connection: Keep-Alive\r\nContent-Length: %d\r\n\r\n%s", 
+                (int)strlen(out_block), out_block);
+
         /* set evbase */
         if((evbase = evbase_init(0)))
         {
