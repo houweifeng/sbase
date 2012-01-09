@@ -12,6 +12,7 @@ static char *httpd_home = "/tmp";
 #define HTTP_NOT_FOUND          "HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n" 
 #define HTTP_PATH_MAX  1024
 #define HTTP_LINE_MAX  4096
+#define HTTP_TIMEOUT   10000000
 #define LHTTPD_VERSION "1.0.0"
 #define LL(xxx) ((long long int)xxx)
 #define HEX2CH(c, x) ( ((x = (c - '0')) >= 0 && x < 10) \
@@ -59,9 +60,9 @@ int GMTstrdate(time_t times, char *date)
 }
 int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
-    char *s = NULL, *end = NULL, *p = NULL, path[HTTP_PATH_MAX], 
-         line[HTTP_LINE_MAX];
-    int high = 0, low = 0, n = 0;
+    char *s = NULL, *end = NULL, *p = NULL, 
+         path[HTTP_PATH_MAX], line[HTTP_LINE_MAX];
+    int high = 0, low = 0, keepalive = 0;
     struct stat st;
 
 	if(conn)
@@ -84,6 +85,7 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     URLDECODE(s, end, high, low, p);
                 }
                 *p = '\0';
+                if(s < end && strcasestr(s, "Keep-Alive"))keepalive = 1;
                 if(lstat(path, &st) != 0) goto not_found;
                 if(S_ISDIR(st.st_mode))
                 {
@@ -96,15 +98,21 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 if(S_ISREG(st.st_mode) && st.st_size > 0)
                 {
                     p = line;
-                    p += sprintf(p, "HTTP/1.0 200 OK\r\nConnection: close\r\n"
-                            "Content-Length: %lld\r\nLast-Modified:", LL(st.st_size));
+                    p += sprintf(p, "HTTP/1.0 200 OK\r\nContent-Length: %lld\r\n"
+                            "Last-Modified:", LL(st.st_size));
                     p += GMTstrdate(st.st_mtime, p);p += sprintf(p, "%s", "\r\n");
                     p += sprintf(p, "Date: ");p += GMTstrdate(time(NULL), p);
                     p += sprintf(p, "\r\n");
+                    if(keepalive) p += sprintf(p, "Connection: Keep-Alive\r\n");
+                    else p += sprintf(p, "Connection: close\r\n");
                     p += sprintf(p, "Server: lhttpd/%s\r\n\r\n", LHTTPD_VERSION);
                     conn->push_chunk(conn, line, (p - line));
                     conn->push_file(conn, path, 0, st.st_size);
-                    return conn->over(conn);
+                    if(keepalive) 
+                        conn->set_timeout(conn, HTTP_TIMEOUT);
+                    else
+                        conn->over(conn);
+                    return 0;
                 }
                 else
                 {
@@ -126,7 +134,7 @@ int lhttpd_timeout_handler(CONN *conn)
 {
     if(conn)
     {
-        conn->over(conn);
+        conn->close(conn);
         return 0;
     }
     return -1;
@@ -157,8 +165,6 @@ int main(int argc, char **argv)
     {
         exit(EXIT_FAILURE);
     }
-    sbase->usec_sleep = SB_USEC_SLEEP;
-    sbase->connections_limit = 10240;
     if((lhttpd = service_init()) == NULL)
     {
         fprintf(stderr, "Initialize service failed, %s", strerror(errno));
