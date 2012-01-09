@@ -1,8 +1,10 @@
 #define _GNU_SOURCE
 #include <signal.h>
+#include <unistd.h>
 #include <locale.h>
 #include <sbase.h>
 #include <time.h>
+#include <sys/stat.h>
 static SBASE *sbase = NULL;
 static SERVICE *lhttpd = NULL;
 static char *httpd_home = "/tmp";
