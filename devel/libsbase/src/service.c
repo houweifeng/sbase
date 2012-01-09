@@ -868,7 +868,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             }
             else if(service->working_mode == WORKING_THREAD && service->nprocthreads > 0)
             {
-                //WARN_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
+                WARN_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 index = fd % service->nprocthreads;
                 if(service->procthreads && (procthread = service->procthreads[index])) 
                 {
