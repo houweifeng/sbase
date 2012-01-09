@@ -4,7 +4,6 @@
 #include <sys/resource.h>
 #include <sbase.h>
 #include <time.h>
-#include "logger.h"
 static int is_detail = 0;
 static SBASE *sbase = NULL;
 static SERVICE *lhttpd = NULL;
@@ -73,17 +72,13 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
 	if(conn)
     {
-        fprintf(stdout, "%s::%d OK\r\n", __FILE__, __LINE__);
         if(packet && (s = packet->data) 
                 && (n = packet->ndata) > 0)
         {
             end = s + packet->ndata;
-            fprintf(stdout, "%s::%d OK\r\n", __FILE__, __LINE__);
             while(*s == 0x20 || *s == '\t')s++;
-            fprintf(stdout, "%s::%d OK\r\n", __FILE__, __LINE__);
             if(s < end && strncasecmp(s, "get", 3) == 0)
             {
-                fprintf(stdout, "%s::%d OK\r\n", __FILE__, __LINE__);
                 s += 3;        
                 while(*s == 0x20 || *s == '\t')s++;
                 if(*s != '/') goto err;
@@ -189,7 +184,7 @@ int main(int argc, char **argv)
         return -1;
     }
     sbase->usec_sleep = SB_USEC_SLEEP;
-    sbase->connections_limit = 65536;
+    sbase->connections_limit = 10240;
     if((lhttpd = service_init()) == NULL)
     {
         fprintf(stderr, "Initialize service failed, %s", strerror(errno));
