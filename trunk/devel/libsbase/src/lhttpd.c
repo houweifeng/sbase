@@ -3,7 +3,7 @@
 #include <locale.h>
 #include <sys/resource.h>
 #include <sbase.h>
-#include "stime.h"
+#include <time.h>
 #include "logger.h"
 static int is_detail = 0;
 static SBASE *sbase = NULL;
@@ -35,6 +35,35 @@ do                                                                              
     }                                                                               \
     else *pp++ = *s++;                                                              \
 }while(0)
+int GMTstrdate(time_t times, char *date)
+{
+    static char *_wdays_[]={"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+    static char *_ymonths_[]= {"Jan", "Feb", "Mar","Apr", "May", "Jun",
+        "Jul", "Aug", "Sep","Oct", "Nov", "Dec"};
+    struct tm *tp = NULL;
+    time_t timep = 0;
+    int n = 0;
+
+    if(date)
+    {
+        if(times > 0)
+        {
+            tp = gmtime(&times);
+        }
+        else
+        {
+            time(&timep);
+            tp = gmtime(&timep);
+        }
+        if(tp)
+        {
+            n = sprintf(date, "%s, %02d %s %d %02d:%02d:%02d GMT", _wdays_[tp->tm_wday],
+                    tp->tm_mday, _ymonths_[tp->tm_mon], 1900+tp->tm_year, tp->tm_hour,
+                    tp->tm_min, tp->tm_sec);
+        }
+    }
+    return n;
+}
 int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 {
     char *s = NULL, *end = NULL, *p = NULL, path[HTTP_PATH_MAX], 
@@ -44,13 +73,17 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
 
 	if(conn)
     {
+        fprintf(stdout, "%s::%d OK\r\n", __FILE__, __LINE__);
         if(packet && (s = packet->data) 
                 && (n = packet->ndata) > 0)
         {
             end = s + packet->ndata;
+            fprintf(stdout, "%s::%d OK\r\n", __FILE__, __LINE__);
             while(*s == 0x20 || *s == '\t')s++;
+            fprintf(stdout, "%s::%d OK\r\n", __FILE__, __LINE__);
             if(s < end && strncasecmp(s, "get", 3) == 0)
             {
+                fprintf(stdout, "%s::%d OK\r\n", __FILE__, __LINE__);
                 s += 3;        
                 while(*s == 0x20 || *s == '\t')s++;
                 if(*s != '/') goto err;
@@ -62,6 +95,7 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 {
                     URLDECODE(s, end, high, low, p);
                 }
+                if(*p == '/') p += sprintf(p, "index.html");
                 *p = '\0';
                 if(lstat(path, &st) != 0)
                 {
@@ -75,6 +109,9 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                             "Content-Length: %lld\r\nLast-Modified:", LL(st.st_size));
                     p += GMTstrdate(st.st_mtime, p);
                     p += sprintf(p, "%s", "\r\n");
+                    p += sprintf(p, "Date: ");
+                    p += GMTstrdate(time(NULL), p);
+                    p += sprintf(p, "\r\n");
                     p += sprintf(p, "Server: lhttpd/%s\r\n\r\n", LHTTPD_VERSION);
                     conn->push_chunk(conn, line, (p - line));
                     conn->push_file(conn, path, 0, st.st_size);
@@ -117,9 +154,8 @@ static void lhttpd_stop(int sig)
 }
 int main(int argc, char **argv)
 {
-    pid_t pid;
-    char *conf = NULL, *p = NULL, ch = 0;
     int is_daemon = 0;
+    pid_t pid;
 
     /* locale */
     setlocale(LC_ALL, "C");
@@ -152,6 +188,8 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
         return -1;
     }
+    sbase->usec_sleep = SB_USEC_SLEEP;
+    sbase->connections_limit = 65536;
     if((lhttpd = service_init()) == NULL)
     {
         fprintf(stderr, "Initialize service failed, %s", strerror(errno));
@@ -161,19 +199,22 @@ int main(int argc, char **argv)
     lhttpd->sock_type = SOCK_STREAM;
     lhttpd->ip = "0.0.0.0";
     lhttpd->port = 2080;
+    lhttpd->flag = SB_USE_COND|SB_USE_OUTDAEMON|SB_EVENT_LOCK;
+    lhttpd->use_cond_wait = 1;
     lhttpd->working_mode = WORKING_THREAD;
     lhttpd->service_type = S_SERVICE;
     lhttpd->service_name = "lhttpd";
     lhttpd->nprocthreads = 8;
     lhttpd->niodaemons = 2;
-    lhttpd->ndaemons = 0;
-    lhttpd->session.timeout = 10000000;
     lhttpd->session.packet_type= PACKET_DELIMITER;
     lhttpd->session.packet_delimiter = "\r\n\r\n";
     lhttpd->session.packet_delimiter_length = strlen(lhttpd->session.packet_delimiter);
     lhttpd->session.buffer_size = SB_BUF_SIZE;
     lhttpd->session.packet_handler = &lhttpd_packet_handler;
     lhttpd->session.timeout_handler = &lhttpd_timeout_handler;
+    lhttpd->set_log(lhttpd, "/tmp/lhttpd.log");
+    lhttpd->set_log_level(lhttpd, 2);
+    httpd_home = "/data/www";
     if(sbase->add_service(sbase, lhttpd) != 0)
     {
         fprintf(stderr, "add service lhttpd failed, %s\r\n", strerror(errno));

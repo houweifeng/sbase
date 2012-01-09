@@ -43,8 +43,7 @@ lechod_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
 
-lhttpd_SOURCES = lhttpd.c utils/stime.h utils/stime.c \
-				 utils/logger.h utils/logger.c
+lhttpd_SOURCES = lhttpd.c 
 lhttpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 lhttpd_LDADD = libsbase.la
 lhttpd_LDFLAGS = -static
