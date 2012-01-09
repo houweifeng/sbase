@@ -38,7 +38,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-sbin_PROGRAMS = xhttpd$(EXEEXT) lechod$(EXEEXT)
+sbin_PROGRAMS = xhttpd$(EXEEXT) lechod$(EXEEXT) lhttpd$(EXEEXT)
 bin_PROGRAMS = wbenchmark$(EXEEXT)
 subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
@@ -73,6 +73,10 @@ PROGRAMS = $(bin_PROGRAMS) $(sbin_PROGRAMS)
 am_lechod_OBJECTS = lechod-lechod.$(OBJEXT) lechod-iniparser.$(OBJEXT)
 lechod_OBJECTS = $(am_lechod_OBJECTS)
 lechod_DEPENDENCIES = libsbase.la
+am_lhttpd_OBJECTS = lhttpd-lhttpd.$(OBJEXT) lhttpd-stime.$(OBJEXT) \
+	lhttpd-logger.$(OBJEXT)
+lhttpd_OBJECTS = $(am_lhttpd_OBJECTS)
+lhttpd_DEPENDENCIES = libsbase.la
 am_wbenchmark_OBJECTS = wbenchmark-wbenchmark.$(OBJEXT) \
 	wbenchmark-logger.$(OBJEXT) wbenchmark-xmm.$(OBJEXT)
 wbenchmark_OBJECTS = $(am_wbenchmark_OBJECTS)
@@ -94,10 +98,10 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
+SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) $(lhttpd_SOURCES) \
 	$(wbenchmark_SOURCES) $(xhttpd_SOURCES)
 DIST_SOURCES = $(libsbase_la_SOURCES) $(lechod_SOURCES) \
-	$(wbenchmark_SOURCES) $(xhttpd_SOURCES)
+	$(lhttpd_SOURCES) $(wbenchmark_SOURCES) $(xhttpd_SOURCES)
 includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(include_HEADERS)
 ETAGS = etags
@@ -241,6 +245,12 @@ lechod_SOURCES = lechod.c iniparser.h iniparser.c
 lechod_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
 lechod_LDADD = libsbase.la
 lechod_LDFLAGS = -static
+lhttpd_SOURCES = lhttpd.c utils/stime.h utils/stime.c \
+				 utils/logger.h utils/logger.c
+
+lhttpd_CPPFLAGS = -I utils -D_FILE_OFFSET_BITS=64 -Wall 
+lhttpd_LDADD = libsbase.la
+lhttpd_LDFLAGS = -static
 wbenchmark_SOURCES = wbenchmark.c utils/mutex.h utils/logger.h utils/logger.c \
 					utils/xmm.h utils/xmm.c utils/timer.h
 
@@ -368,6 +378,9 @@ clean-sbinPROGRAMS:
 lechod$(EXEEXT): $(lechod_OBJECTS) $(lechod_DEPENDENCIES) 
 	@rm -f lechod$(EXEEXT)
 	$(LINK) $(lechod_LDFLAGS) $(lechod_OBJECTS) $(lechod_LDADD) $(LIBS)
+lhttpd$(EXEEXT): $(lhttpd_OBJECTS) $(lhttpd_DEPENDENCIES) 
+	@rm -f lhttpd$(EXEEXT)
+	$(LINK) $(lhttpd_LDFLAGS) $(lhttpd_OBJECTS) $(lhttpd_LDADD) $(LIBS)
 wbenchmark$(EXEEXT): $(wbenchmark_OBJECTS) $(wbenchmark_DEPENDENCIES) 
 	@rm -f wbenchmark$(EXEEXT)
 	$(LINK) $(wbenchmark_LDFLAGS) $(wbenchmark_OBJECTS) $(wbenchmark_LDADD) $(LIBS)
@@ -383,6 +396,9 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod-iniparser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lechod-lechod.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lhttpd-lhttpd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lhttpd-logger.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lhttpd-stime.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-chunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-conn.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsbase_la-evtimer.Plo@am__quote@
@@ -531,6 +547,48 @@ lechod-iniparser.obj: iniparser.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='iniparser.c' object='lechod-iniparser.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lechod_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lechod-iniparser.obj `if test -f 'iniparser.c'; then $(CYGPATH_W) 'iniparser.c'; else $(CYGPATH_W) '$(srcdir)/iniparser.c'; fi`
+
+lhttpd-lhttpd.o: lhttpd.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lhttpd-lhttpd.o -MD -MP -MF "$(DEPDIR)/lhttpd-lhttpd.Tpo" -c -o lhttpd-lhttpd.o `test -f 'lhttpd.c' || echo '$(srcdir)/'`lhttpd.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lhttpd-lhttpd.Tpo" "$(DEPDIR)/lhttpd-lhttpd.Po"; else rm -f "$(DEPDIR)/lhttpd-lhttpd.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lhttpd.c' object='lhttpd-lhttpd.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lhttpd-lhttpd.o `test -f 'lhttpd.c' || echo '$(srcdir)/'`lhttpd.c
+
+lhttpd-lhttpd.obj: lhttpd.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lhttpd-lhttpd.obj -MD -MP -MF "$(DEPDIR)/lhttpd-lhttpd.Tpo" -c -o lhttpd-lhttpd.obj `if test -f 'lhttpd.c'; then $(CYGPATH_W) 'lhttpd.c'; else $(CYGPATH_W) '$(srcdir)/lhttpd.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lhttpd-lhttpd.Tpo" "$(DEPDIR)/lhttpd-lhttpd.Po"; else rm -f "$(DEPDIR)/lhttpd-lhttpd.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lhttpd.c' object='lhttpd-lhttpd.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lhttpd-lhttpd.obj `if test -f 'lhttpd.c'; then $(CYGPATH_W) 'lhttpd.c'; else $(CYGPATH_W) '$(srcdir)/lhttpd.c'; fi`
+
+lhttpd-stime.o: utils/stime.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lhttpd-stime.o -MD -MP -MF "$(DEPDIR)/lhttpd-stime.Tpo" -c -o lhttpd-stime.o `test -f 'utils/stime.c' || echo '$(srcdir)/'`utils/stime.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lhttpd-stime.Tpo" "$(DEPDIR)/lhttpd-stime.Po"; else rm -f "$(DEPDIR)/lhttpd-stime.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/stime.c' object='lhttpd-stime.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lhttpd-stime.o `test -f 'utils/stime.c' || echo '$(srcdir)/'`utils/stime.c
+
+lhttpd-stime.obj: utils/stime.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lhttpd-stime.obj -MD -MP -MF "$(DEPDIR)/lhttpd-stime.Tpo" -c -o lhttpd-stime.obj `if test -f 'utils/stime.c'; then $(CYGPATH_W) 'utils/stime.c'; else $(CYGPATH_W) '$(srcdir)/utils/stime.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lhttpd-stime.Tpo" "$(DEPDIR)/lhttpd-stime.Po"; else rm -f "$(DEPDIR)/lhttpd-stime.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/stime.c' object='lhttpd-stime.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lhttpd-stime.obj `if test -f 'utils/stime.c'; then $(CYGPATH_W) 'utils/stime.c'; else $(CYGPATH_W) '$(srcdir)/utils/stime.c'; fi`
+
+lhttpd-logger.o: utils/logger.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lhttpd-logger.o -MD -MP -MF "$(DEPDIR)/lhttpd-logger.Tpo" -c -o lhttpd-logger.o `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lhttpd-logger.Tpo" "$(DEPDIR)/lhttpd-logger.Po"; else rm -f "$(DEPDIR)/lhttpd-logger.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='lhttpd-logger.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lhttpd-logger.o `test -f 'utils/logger.c' || echo '$(srcdir)/'`utils/logger.c
+
+lhttpd-logger.obj: utils/logger.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lhttpd-logger.obj -MD -MP -MF "$(DEPDIR)/lhttpd-logger.Tpo" -c -o lhttpd-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/lhttpd-logger.Tpo" "$(DEPDIR)/lhttpd-logger.Po"; else rm -f "$(DEPDIR)/lhttpd-logger.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/logger.c' object='lhttpd-logger.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lhttpd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lhttpd-logger.obj `if test -f 'utils/logger.c'; then $(CYGPATH_W) 'utils/logger.c'; else $(CYGPATH_W) '$(srcdir)/utils/logger.c'; fi`
 
 wbenchmark-wbenchmark.o: wbenchmark.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(wbenchmark_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT wbenchmark-wbenchmark.o -MD -MP -MF "$(DEPDIR)/wbenchmark-wbenchmark.Tpo" -c -o wbenchmark-wbenchmark.o `test -f 'wbenchmark.c' || echo '$(srcdir)/'`wbenchmark.c; \
