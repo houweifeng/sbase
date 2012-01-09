@@ -122,6 +122,7 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
             service->sbase  = sbase;
             service->message_queue = sbase->message_queue;
             service->usec_sleep = sbase->usec_sleep;
+            if(sbase->connections_limit == 0) sbase->connections_limit = SB_CONN_MAX;
             service->connections_limit = sbase->connections_limit;
             if(service->logger == NULL) 
             {
