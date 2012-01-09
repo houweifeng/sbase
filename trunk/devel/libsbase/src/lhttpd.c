@@ -90,12 +90,15 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 {
                     URLDECODE(s, end, high, low, p);
                 }
-                if(*p == '/') p += sprintf(p, "index.html");
                 *p = '\0';
-                if(lstat(path, &st) != 0)
+                if(lstat(path, &st) != 0) goto not_found;
+                if(S_ISDIR(st.st_mode))
                 {
-                    conn->push_chunk(conn, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
-                    return conn->over(conn);
+                    if(*(p-1) == '/')
+                        p += sprintf(p, "index.html");
+                    else
+                        p += sprintf(p, "/index.html");
+                    if(lstat(path, &st) != 0) goto not_found;
                 }
                 if(S_ISREG(st.st_mode) && st.st_size > 0)
                 {
@@ -121,8 +124,10 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
         }
 err:
         conn->push_chunk(conn, HTTP_BAD_REQUEST, strlen(HTTP_BAD_REQUEST));
-        conn->over(conn);
-        return 0;
+        return conn->over(conn);
+not_found:
+        conn->push_chunk(conn, HTTP_NOT_FOUND, strlen(HTTP_NOT_FOUND));
+        return conn->over(conn);
     }
     return -1;
 }
