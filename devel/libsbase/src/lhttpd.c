@@ -174,8 +174,8 @@ int main(int argc, char **argv)
     lhttpd->sock_type = SOCK_STREAM;
     lhttpd->ip = "0.0.0.0";
     lhttpd->port = 2080;
-    lhttpd->flag = SB_USE_COND|SB_USE_OUTDAEMON|SB_EVENT_LOCK;
     lhttpd->use_cond_wait = 1;
+    lhttpd->flag = SB_USE_COND|SB_USE_OUTDAEMON|SB_EVENT_LOCK;
     lhttpd->working_mode = WORKING_THREAD;
     lhttpd->service_type = S_SERVICE;
     lhttpd->service_name = "lhttpd";
