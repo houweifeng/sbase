@@ -993,8 +993,8 @@ int sbase_initialize(SBASE *sbase, char *conf)
         httpsd->niodaemons = iniparser_getint(dict, "XHTTPD:niodaemons", 2);
         httpsd->use_cond_wait = iniparser_getint(dict, "XHTTPD:use_cond_wait", 1);
         httpsd->nworking_tosleep = iniparser_getint(dict, "XHTTPD:nworking_tosleep", SB_NWORKING_TOSLEEP);
-        httpsd->set_log(httpd, iniparser_getstr(dict, "XHTTPD:SSL_logfile"));
-        httpsd->set_log_level(httpd, iniparser_getint(dict, "XHTTPD:SSL_log_level", 0));
+        httpsd->set_log(httpsd, iniparser_getstr(dict, "XHTTPD:SSL_logfile"));
+        httpsd->set_log_level(httpsd, iniparser_getint(dict, "XHTTPD:SSL_log_level", 0));
         httpsd->flag = httpd->flag;
         memcpy(&(httpsd->session), &(httpd->session), sizeof(SESSION));
     }
