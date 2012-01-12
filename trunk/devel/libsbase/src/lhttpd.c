@@ -176,7 +176,7 @@ int main(int argc, char **argv)
     lhttpd->ip = "0.0.0.0";
     lhttpd->port = 2080;
     lhttpd->use_cond_wait = 1;
-    lhttpd->flag = SB_USE_COND|SB_USE_OUTDAEMON|SB_EVENT_LOCK;
+    lhttpd->flag = SB_USE_COND|SB_USE_OUTDAEMON;
     lhttpd->working_mode = WORKING_THREAD;
     lhttpd->service_type = S_SERVICE;
     lhttpd->service_name = "lhttpd";
