@@ -10,6 +10,7 @@
 #define __HTTP_H__
 #define HTTP_IP_MAX 		    16
 #define HTTP_VHOST_MAX     	    256
+#define HTTP_HOST_MAX     	    64
 #define HTTP_INDEX_MAX     	    32
 #define HTTP_INDEXES_MAX   	    1048576
 #define HTTP_URL_PATH_MAX  	    1024
@@ -551,6 +552,7 @@ typedef struct _HTTP_REQ
     HTTP_KV auth;
     HTTP_KV argvs[HTTP_ARGVS_MAX];
     HTTP_KV cookies[HTTP_COOKIES_MAX];
+    char host[HTTP_HOST_MAX];
     char path[HTTP_URL_PATH_MAX];
     char hlines[HTTP_HEADER_MAX];
     char line[HTTP_ARGV_LINE_MAX];
