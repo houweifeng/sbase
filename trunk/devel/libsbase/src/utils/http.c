@@ -410,6 +410,11 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
         */
         //path
         while(s < end && *s == 0x20)++s;
+        if(strncasecmp(s, "http://", 7) == 0)
+        {
+            s += 7;
+            while(s < end && *s != '/')++s;
+        }
         ps = http_req->path;
         eps = ps + HTTP_URL_PATH_MAX;
         while(s < end && *s != 0x20 && *s != '\r' && *s != '?' && ps < eps)
