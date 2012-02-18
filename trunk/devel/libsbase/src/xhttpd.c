@@ -32,6 +32,7 @@
 #define HTTP_NO_CONTENT         "HTTP/1.1 206 No Content\r\nContent-Length: 0\r\n\r\n"
 #define HTTP_LINE_SIZE          65536
 #define HTTP_VIEW_SIZE          131072
+#define HTTPD_TIMEOUT           10000000
 #define LL(x) ((long long)x)
 #define UL(x) ((unsigned long int)x)
 static SBASE *sbase = NULL;
@@ -178,6 +179,7 @@ int xhttpd_index_view(CONN *conn, HTTP_REQ *http_req, char *dir, char *path)
                 conn->freechunk(conn, block);
             //fprintf(stdout, "buf:%s pp:%s\n", buf, pp);
             if(!keepalive) conn->over(conn);
+            else conn->set_timeout(conn, HTTPD_TIMEOUT);
         }
         closedir(dirp);
         return 0;
@@ -537,6 +539,7 @@ OVER:
         }
         if(zstream) free(zstream);
         if(!keepalive)conn->over(conn);
+        else conn->set_timeout(conn, HTTPD_TIMEOUT);
         return 0;
     }
 err:
@@ -575,6 +578,14 @@ int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
         return xhttpd_resp_handler(conn, packet);
     }
     return -1;
+}
+int xhttpd_timeout_handler(CONN *conn)
+{
+    if(conn)
+    {
+        conn->over(conn);
+    }
+    return 0;
 }
 #define HTTPD_ACCESS_LOG(logger, conn, respid, host, http_req, agent, referer) REALLOG(logger, "%s host[%s] %s[%s] remote[%s:%d] agent[%s] referer[%s]", response_status[respid].e, host, http_methods[http_req.reqid].e, http_req.path, conn->remote_ip, conn->remote_port, agent, referer)
 
@@ -815,6 +826,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     conn->push_chunk(conn, buf, p - buf);
                     conn->push_file(conn, outfile, from, len);
                     if(!keepalive) conn->over(conn);
+                    else conn->set_timeout(conn, HTTPD_TIMEOUT);
                     return 0;
                 }
             }
@@ -978,6 +990,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     httpd->session.buffer_size = iniparser_getint(dict, "XHTTPD:buffer_size", SB_BUF_SIZE);
     httpd->session.packet_reader = &xhttpd_packet_reader;
     httpd->session.packet_handler = &xhttpd_packet_handler;
+    httpd->session.timeout_handler = &xhttpd_timeout_handler;
     httpd->session.data_handler = &xhttpd_data_handler;
     httpd->session.oob_handler = &xhttpd_oob_handler;
     if(httpsd)
