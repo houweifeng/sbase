@@ -789,17 +789,16 @@ new_conn:
             getsockname(fd, (struct sockaddr *)&lsa, &lsa_len);
             local_ip    = inet_ntoa(lsa.sin_addr);
             local_port  = ntohs(lsa.sin_port);
+            if(parent->session.timeout == 0)
+                parent->session.timeout = SB_PROXY_TIMEOUT;
+            parent->session.packet_type |= PACKET_PROXY;
+            sess->packet_type |= PACKET_PROXY;
+            sess->parent = parent;
+            sess->parentid = parent->index;
+            sess->timeout = SB_PROXY_TIMEOUT;;
             if((conn = service_addconn(service, sock_type, fd, remote_ip, remote_port, 
                             local_ip, local_port, sess, ssl, CONN_STATUS_FREE)))
             {
-                if(conn->session.timeout == 0)
-                    conn->session.timeout = SB_PROXY_TIMEOUT;
-                if(parent->session.timeout == 0)
-                    parent->session.timeout = SB_PROXY_TIMEOUT;
-                parent->session.packet_type |= PACKET_PROXY;
-                conn->session.packet_type |= PACKET_PROXY;
-                conn->session.parent = parent;
-                conn->session.parentid = parent->index;
                 return conn;
             }
 err_conn:
@@ -951,10 +950,11 @@ int service_pushconn(SERVICE *service, CONN *conn)
         //for proxy
         if((conn->session.packet_type & PACKET_PROXY)
                 && (parent = (CONN *)(conn->session.parent)) 
-                && conn->session.parentid  >= 0 
-                && conn->session.parentid < service->index_max 
+                && conn->session.parentid  > 0 
+                && conn->session.parentid <= service->index_max 
                 && conn->session.parent == service->connections[conn->session.parentid])
         {
+            //DEBUG_LOGGER(service->logger, "proxy conn[%p][%s:%d] on %s:%d via %d on parent:%d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->session.parent);
             parent->bind_proxy(parent, conn);
         }
         MUTEX_UNLOCK(service->mutex);
@@ -1166,7 +1166,7 @@ CONN *service_findconn(SERVICE *service, int index)
     if(service && service->lock == 0)
     {
         MUTEX_LOCK(service->mutex);
-        if(index >= 0 && index <= service->index_max)
+        if(index > 0 && index <= service->index_max)
         {
             if((conn = service->connections[index]) && (conn->s_state & D_STATE_CLOSE))
                 conn = NULL;
@@ -1397,7 +1397,7 @@ int service_broadcast(SERVICE *service, char *data, int len)
 
     if(service && service->lock == 0 && service->running_connections > 0)
     {
-        for(i = 0; i < service->index_max; i++)
+        for(i = 1; i < service->index_max; i++)
         {
             if((conn = service->connections[i]))
             {
@@ -1575,11 +1575,11 @@ void service_stop(SERVICE *service)
             if(service->fd > 0){shutdown(service->fd, SHUT_RDWR);close(service->fd); service->fd = -1;}
         }
         //stop all connections 
-        if(service->connections && service->index_max >= 0)
+        if(service->connections && service->index_max > 0)
         {
             WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
             MUTEX_LOCK(service->mutex);
-            for(i = 0; i <= service->index_max; i++)
+            for(i = 1; i <= service->index_max; i++)
             {
                 if((conn = service->connections[i]))
                 {
