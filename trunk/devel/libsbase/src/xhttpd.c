@@ -410,7 +410,7 @@ int xhttpd_compress_handler(CONN *conn, HTTP_REQ *http_req, char *host, int is_n
                     sprintf(zfile, "%s.%lu", linkfile, UL(st->st_mtime));
                     if(access(zfile, F_OK) == 0)
                     {
-                        lstat(zfile, &zst);
+                        stat(zfile, &zst);
                         outfile = zfile;
                         from = 0;
                         len = zst.st_size;
@@ -645,7 +645,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 p += sprintf(p, "/%s", http_req.path);
             else
                 p += sprintf(p, "%s", http_req.path);
-            if((n = (p - file)) > 0 && lstat(file, &st) == 0)
+            if((n = (p - file)) > 0 && stat(file, &st) == 0)
             {
                 newdir = NULL;
                 if(S_ISDIR(st.st_mode) || (newdir=opendir(file)))
@@ -661,7 +661,7 @@ int xhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                     {
                         pp = p;
                         pp += sprintf(pp, "%s", http_indexes[i]);
-                        if(access(file, F_OK) == 0 && lstat(file, &st) == 0)
+                        if(access(file, F_OK) == 0 && stat(file, &st) == 0)
                             //if(access(file, F_OK) == 0)
                         {
                             found = 1;
