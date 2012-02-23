@@ -993,6 +993,7 @@ int sbase_initialize(SBASE *sbase, char *conf)
     httpd->session.timeout_handler = &xhttpd_timeout_handler;
     httpd->session.data_handler = &xhttpd_data_handler;
     httpd->session.oob_handler = &xhttpd_oob_handler;
+    httpd->session.timeout = HTTPD_TIMEOUT;
     if(httpsd)
     {
         httpsd->family = iniparser_getint(dict, "XHTTPD:inet_family", AF_INET);
