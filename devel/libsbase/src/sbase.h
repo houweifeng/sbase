@@ -165,6 +165,7 @@ typedef struct _SESSION
     int  packet_length;
     int  packet_delimiter_length;
     int  buffer_size;
+    int  xids[SB_XIDS_MAX];
 
 
     void *child;
