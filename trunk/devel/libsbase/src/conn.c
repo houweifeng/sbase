@@ -969,7 +969,7 @@ int conn_read_handler(CONN *conn)
                 && CHK_LEFT(conn->chunk) > 0)
         {
             if(conn->buffer.ndata > 0) ret = conn__read__chunk(conn);
-            if(conn->buffer.ndata <= 0){CONN_CHUNK_READ(conn, n);ret = n;}
+            if(conn->buffer.ndata <= 0){CONN_CHUNK_READ(conn, n);if(n == 0)ret = -1;}
             return ret;
             //goto end;
         }
