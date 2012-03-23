@@ -705,6 +705,15 @@ int conn_terminate(CONN *conn)
                 conn->proxy_handler(conn);
             }
         }
+        if((conn->s_state & S_STATE_CHUNK_READING) && MMB_NDATA(conn->buffer) > 0
+                && conn->session.chunk_reader)
+        {
+            if(conn->session.chunk_reader(conn, PCB(conn->buffer)) > 0)
+            {
+                conn->session.chunk_handler(conn, PCB(conn->buffer));
+                conn->e_state = E_STATE_OFF;
+            }
+        }
         if(conn->e_state == E_STATE_ON && conn->session.error_handler)
         {
             DEBUG_LOGGER(conn->logger, "error handler session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);

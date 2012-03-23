@@ -180,6 +180,7 @@ typedef struct _SESSION
     int (*packet_handler)(struct _CONN *, CB_DATA *packet);
     int (*data_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*chunk_reader)(struct _CONN *, CB_DATA *buffer);
+    int (*chunk_handler)(struct _CONN *, CB_DATA *chunk);
     int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, char *file);
     int (*oob_handler)(struct _CONN *, CB_DATA *oob);
     int (*timeout_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
