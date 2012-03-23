@@ -21,6 +21,21 @@ int conn_read_chunk(CONN *conn)
 	if(conn->ssl) return CHUNK_READ_SSL(&conn->chunk, conn->ssl);
 	else return CHUNK_READ(&conn->chunk, conn->fd);
 }
+/* reading chunk */
+int conn_chunk_reading(CONN *conn)
+{
+    int ret = -1, n = 0;
+
+    if(conn)
+    {
+        if((n = conn->session.chunk_reader(conn, PCB(conn->buffer))) > 0)
+        {
+            ret = conn->recv_chunk(conn, n);
+        }
+    }
+    return ret;
+}
+
 int conn_write_chunk(CONN *conn, CHUNK *cp)
 {
     if(conn->session.flags & SB_MULTICAST)
@@ -221,7 +236,7 @@ do{                                                                             
 do                                                                                          \
 {                                                                                           \
     /* read to chunk */                                                                     \
-    if(conn->s_state == S_STATE_READ_CHUNK)                                                 \
+    if(conn->s_state &  S_STATE_READ_CHUNK)                                                 \
     {                                                                                       \
         if((n = conn_read_chunk(conn)) <= 0)                                                \
         {                                                                                   \
@@ -341,12 +356,17 @@ void conn_buffer_handler(CONN *conn)
 /* write */
 void conn_chunk_handler(CONN *conn)
 {
-    int ret = -1;
     CONN_CHECK(conn, D_STATE_CLOSE);
+    int ret = -1;
 
     if(conn)
     {
-        if(conn->s_state == S_STATE_READ_CHUNK) ret = conn__read__chunk(conn);
+        if(conn->s_state & S_STATE_CHUNK_READING)
+        {
+            ret =  conn_chunk_reading(conn);
+            return ;
+        }
+        if(conn->s_state & S_STATE_READ_CHUNK) ret = conn__read__chunk(conn);
     }
     return ;
 }
@@ -963,8 +983,10 @@ int conn_read_handler(CONN *conn)
             // CONN TIMER sample 
             return (ret = 0);
         }
+        /* reading chunk */
+        if(conn->s_state & S_STATE_CHUNK_READING) return conn_chunk_reading(conn);
         /* Receive to chunk with chunk_read_state before reading to buffer */
-        if(conn->s_state == S_STATE_READ_CHUNK
+        if(conn->s_state & S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
                 && CHK_LEFT(conn->chunk) > 0)
         {
@@ -1473,7 +1495,7 @@ int conn__read__chunk(CONN *conn)
 
     if(conn)
     {
-        if(conn->s_state == S_STATE_READ_CHUNK
+        if(conn->s_state & S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
                 && CHK_LEFT(conn->chunk) > 0
                 && MMB_NDATA(conn->buffer) > 0)
@@ -1578,6 +1600,29 @@ int conn_chunk_reader(CONN *conn)
         //MUTEX_LOCK(conn->mutex);
         ret = conn__read__chunk(conn);
         //MUTEX_UNLOCK(conn->mutex);
+    }
+    return ret;
+}
+
+/* reading chunk */
+int conn_read2chunk(CONN *conn)
+{
+    int ret = -1;
+
+    if(conn)
+    {
+        DEBUG_LOGGER(conn->logger, "Ready for reading-chunk from %s:%d on %s:%d via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        //chunk_mem(&(conn->chunk), size);
+        conn->s_state = S_STATE_READ_CHUNK|S_STATE_CHUNK_READING;
+        if(conn->d_state & D_STATE_CLOSE)
+        {
+            conn->chunk_reading(conn);
+        }
+        else
+        {
+            PUSH_INQMESSAGE(conn, MESSAGE_CHUNK);
+        }
+        ret = 0;
     }
     return ret;
 }

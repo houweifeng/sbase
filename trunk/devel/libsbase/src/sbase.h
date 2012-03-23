@@ -82,7 +82,7 @@ extern "C" {
 #define S_STATE_PACKET_HANDLING 0x08
 #define S_STATE_DATA_HANDLING   0x10
 #define S_STATE_TASKING         0x20
-#define S_STATE_REQ             0x40
+#define S_STATE_CHUNK_READING   0x40
 #define S_STATE_CLOSE           0x80
 #define S_STATES                0xee
 #endif
@@ -179,6 +179,7 @@ typedef struct _SESSION
     int (*packet_reader)(struct _CONN *, CB_DATA *buffer);
     int (*packet_handler)(struct _CONN *, CB_DATA *packet);
     int (*data_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
+    int (*chunk_reader)(struct _CONN *, CB_DATA *buffer);
     int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, char *file);
     int (*oob_handler)(struct _CONN *, CB_DATA *oob);
     int (*timeout_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
@@ -558,6 +559,7 @@ typedef struct _CONN
 
     /* chunk */
     int (*chunk_reader)(struct _CONN *);
+    int (*chunk_reading)(struct _CONN *);
     int (*recv_chunk)(struct _CONN *, int size);
     int (*recv2_chunk)(struct _CONN *, int size, char *data, int ndata);
     int (*recv_file)(struct _CONN *, char *file, long long offset, long long size);
