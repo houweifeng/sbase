@@ -16,7 +16,7 @@
 #endif
 int conn__push__message(CONN *conn, int message_id);
 int conn_shut(CONN *conn, int d_state, int e_state);
-int conn_read_chunk(CONN *conn)
+int conn_reading_chunk(CONN *conn)
 {
 	if(conn->ssl) return CHUNK_READ_SSL(&conn->chunk, conn->ssl);
 	else return CHUNK_READ(&conn->chunk, conn->fd);
@@ -238,7 +238,7 @@ do                                                                              
     /* read to chunk */                                                                     \
     if(conn->s_state &  S_STATE_READ_CHUNK)                                                 \
     {                                                                                       \
-        if((n = conn_read_chunk(conn)) <= 0)                                                \
+        if((n = conn_reading_chunk(conn)) <= 0)                                             \
         {                                                                                   \
             FATAL_LOGGER(conn->logger, "Reading %d bytes data from conn[%p][%s:%d] ssl:%p " \
                     "on %s:%d via %d failed, %s", n, conn, conn->remote_ip, conn->remote_port,  \
@@ -1614,7 +1614,7 @@ int conn_chunk_reader(CONN *conn)
 }
 
 /* reading chunk */
-int conn_read2chunk(CONN *conn)
+int conn_read_chunk(CONN *conn)
 {
     int ret = -1;
 
@@ -2076,6 +2076,8 @@ CONN *conn_init()
         conn->transaction_handler   = conn_transaction_handler;
         conn->save_cache            = conn_save_cache;
         conn->chunk_reader          = conn_chunk_reader;
+        conn->chunk_reading         = conn_chunk_reading;
+        conn->read_chunk            = conn_read_chunk;
         conn->recv_chunk            = conn_recv_chunk;
         conn->recv2_chunk           = conn_recv2_chunk;
         conn->push_chunk            = conn_push_chunk;
