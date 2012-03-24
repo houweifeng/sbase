@@ -243,7 +243,7 @@ do{                                                                             
 do                                                                                          \
 {                                                                                           \
     /* read to chunk */                                                                     \
-    if(conn->s_state &  S_STATE_READ_CHUNK)                                                 \
+    if(conn->s_state ==  S_STATE_READ_CHUNK)                                                \
     {                                                                                       \
         if((n = conn_reading_chunk(conn)) <= 0)                                             \
         {                                                                                   \
@@ -999,10 +999,8 @@ int conn_read_handler(CONN *conn)
             // CONN TIMER sample 
             return (ret = 0);
         }
-        /* reading chunk */
-        if(conn->s_state & S_STATE_CHUNK_READING) return conn_chunk_reading(conn);
         /* Receive to chunk with chunk_read_state before reading to buffer */
-        if(conn->s_state & S_STATE_READ_CHUNK
+        if(conn->s_state == S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
                 && CHK_LEFT(conn->chunk) > 0)
         {
@@ -1037,6 +1035,8 @@ int conn_read_handler(CONN *conn)
         }
         if(conn->s_state == 0 && conn->packet.ndata == 0)
             ret = conn->packet_reader(conn);
+        /* reading chunk */
+        if(conn->s_state & S_STATE_CHUNK_READING) ret = conn_chunk_reading(conn);
         ret = 0;
     }
     return ret;
@@ -1553,7 +1553,7 @@ int conn__read__chunk(CONN *conn)
 
     if(conn)
     {
-        if(conn->s_state & S_STATE_READ_CHUNK
+        if(conn->s_state == S_STATE_READ_CHUNK
                 && conn->session.packet_type != PACKET_PROXY
                 && CHK_LEFT(conn->chunk) > 0
                 && MMB_NDATA(conn->buffer) > 0)
