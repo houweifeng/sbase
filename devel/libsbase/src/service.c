@@ -864,7 +864,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             }
             else if(service->working_mode == WORKING_THREAD && service->nprocthreads > 0)
             {
-                WARN_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
+                ACCESS_LOGGER(service->logger, "adding connection[%p][%s:%d] local[%s:%d] dstate:%d via %d", conn, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->d_state, conn->fd);
                 index = fd % service->nprocthreads;
                 if(service->procthreads && (procthread = service->procthreads[index])) 
                 {
@@ -1566,7 +1566,7 @@ void service_stop(SERVICE *service)
         if(service->acceptor)
         {
             service->acceptor->stop(service->acceptor);
-            WARN_LOGGER(service->logger, "Ready for stop threads[acceptor]");
+            ACCESS_LOGGER(service->logger, "Ready for stop threads[acceptor]");
             if(service->fd > 0){shutdown(service->fd, SHUT_RDWR);close(service->fd); service->fd = -1;}
             PROCTHREAD_EXIT(service->acceptor->threadid, NULL);
         }
@@ -1577,7 +1577,7 @@ void service_stop(SERVICE *service)
         //stop all connections 
         if(service->connections && service->index_max > 0)
         {
-            WARN_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
+            ACCESS_LOGGER(service->logger, "Ready for close connections[%d]",  service->index_max);
             MUTEX_LOCK(service->mutex);
             for(i = 1; i <= service->index_max; i++)
             {
@@ -1591,7 +1591,7 @@ void service_stop(SERVICE *service)
         //iodaemons
         if(service->niodaemons > 0)
         {
-            WARN_LOGGER(service->logger, "Ready for stop iodaemons:%d", service->niodaemons);
+            ACCESS_LOGGER(service->logger, "Ready for stop iodaemons:%d", service->niodaemons);
             for(i = 0; i < service->niodaemons; i++)
             {
                 if(service->iodaemons[i])
@@ -1604,7 +1604,7 @@ void service_stop(SERVICE *service)
         //outdaemon
         if(service->outdaemon)
         {
-            WARN_LOGGER(service->logger, "Ready for stop threads[outdaemon]");
+            ACCESS_LOGGER(service->logger, "Ready for stop threads[outdaemon]");
             service->outdaemon->stop(service->outdaemon);
             if(service->working_mode == WORKING_THREAD)
             {
@@ -1614,7 +1614,7 @@ void service_stop(SERVICE *service)
         //threads
         if(service->nprocthreads > 0)
         {
-            WARN_LOGGER(service->logger, "Ready for stop procthreads");
+            ACCESS_LOGGER(service->logger, "Ready for stop procthreads");
             for(i = 0; i < service->nprocthreads; i++)
             {
                 if(service->procthreads[i])
@@ -1627,7 +1627,7 @@ void service_stop(SERVICE *service)
         //daemons
         if(service->ndaemons > 0)
         {
-            WARN_LOGGER(service->logger, "Ready for stop daemons");
+            ACCESS_LOGGER(service->logger, "Ready for stop daemons");
             for(i = 0; i < service->ndaemons; i++)
             {
                 if(service->daemons[i])
@@ -1641,7 +1641,7 @@ void service_stop(SERVICE *service)
         //daemon
         if(service->daemon)
         {
-            WARN_LOGGER(service->logger, "Ready for stop threads[daemon]");
+            ACCESS_LOGGER(service->logger, "Ready for stop threads[daemon]");
             service->daemon->stop(service->daemon);
             if(service->working_mode == WORKING_THREAD)
             {
@@ -1653,7 +1653,7 @@ void service_stop(SERVICE *service)
         /*tracker */
         if(service->tracker)
         {
-            WARN_LOGGER(service->logger, "Ready for stop threads[tracker]");
+            ACCESS_LOGGER(service->logger, "Ready for stop threads[tracker]");
             service->tracker->stop(service->tracker);
             if(service->working_mode == WORKING_THREAD)
             {
@@ -1662,7 +1662,7 @@ void service_stop(SERVICE *service)
         }
         /*remove event */
         event_destroy(&(service->event));
-        WARN_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
+        ACCESS_LOGGER(service->logger, "over for stop service[%s]", service->service_name);
     }
     return ;
 }

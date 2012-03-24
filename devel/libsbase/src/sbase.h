@@ -180,7 +180,7 @@ typedef struct _SESSION
     int (*packet_handler)(struct _CONN *, CB_DATA *packet);
     int (*data_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*chunk_reader)(struct _CONN *, CB_DATA *buffer);
-    int (*chunk_handler)(struct _CONN *, CB_DATA *chunk);
+    int (*chunk_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
     int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, char *file);
     int (*oob_handler)(struct _CONN *, CB_DATA *oob);
     int (*timeout_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
@@ -489,6 +489,7 @@ typedef struct _CONN
     MMBLOCK buffer;
     MMBLOCK packet;
     MMBLOCK cache;
+    MMBLOCK header;
     MMBLOCK oob;
     MMBLOCK exchange;
     CHUNK chunk;
@@ -557,6 +558,7 @@ typedef struct _CONN
     int (*push_exchange)(struct _CONN *, void *data, int size);
     int (*transaction_handler)(struct _CONN *, int );
     int (*save_cache)(struct _CONN *, void *data, int size);
+    int (*save_header)(struct _CONN *, void *data, int size);
 
     /* chunk */
     int (*chunk_reader)(struct _CONN *);

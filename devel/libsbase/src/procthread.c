@@ -81,7 +81,7 @@ void procthread_run(void *arg)
     {
         struct sched_param param;
         pthread_getschedparam(pthread_self(), &policy, &param);
-        WARN_LOGGER(pth->logger, "Ready for running thread[%p] policy:%d SCHED_FIFO:%d SCHED_RR:%d SCHED_OTHER:%d", (void*)((long)(pth->threadid)), policy, SCHED_FIFO, SCHED_RR, SCHED_OTHER);
+        ACCESS_LOGGER(pth->logger, "Ready for running thread[%p] policy:%d SCHED_FIFO:%d SCHED_RR:%d SCHED_OTHER:%d", (void*)((long)(pth->threadid)), policy, SCHED_FIFO, SCHED_RR, SCHED_OTHER);
         pth->running_status = 1;
         if(pth->usec_sleep > 1000000) sec = pth->usec_sleep/1000000;
         usec = pth->usec_sleep % 1000000;
@@ -118,11 +118,11 @@ void procthread_run(void *arg)
                 {
                     if(pth == pth->service->outdaemon)
                     {
-                        WARN_LOGGER(pth->logger, "outdaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                        ACCESS_LOGGER(pth->logger, "outdaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                     }
                     else
                     {
-                        WARN_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
+                        ACCESS_LOGGER(pth->logger, "iodaemon_loop(%d/%d) q[%p]{total:%d left:%d}", i, k, pth->message_queue, QMTOTAL(pth->message_queue), QNLEFT(pth->message_queue));
                     }
                 }
                 if(pth->message_queue && (k = QMTOTAL(pth->message_queue)) > 0)
@@ -140,11 +140,11 @@ void procthread_run(void *arg)
             }while(pth->running_status);
             if(pth == pth->service->outdaemon)
             {
-                WARN_LOGGER(pth->logger, "Ready for stop outdaemons[%p]", pth);
+                ACCESS_LOGGER(pth->logger, "Ready for stop outdaemons[%p]", pth);
             }
             else
             {
-                WARN_LOGGER(pth->logger, "Ready for stop iodaemons[%p]", pth);
+                ACCESS_LOGGER(pth->logger, "Ready for stop iodaemons[%p]", pth);
             }
         }
         else if(pth->listenfd > 0)
@@ -153,7 +153,7 @@ void procthread_run(void *arg)
             {
                 service_accept_handler(pth->service);
             }while(pth->running_status);
-            WARN_LOGGER(pth->logger, "Ready for stop threads[acceptor]");
+            ACCESS_LOGGER(pth->logger, "Ready for stop threads[acceptor]");
         }
         else
         {
@@ -179,7 +179,7 @@ void procthread_run(void *arg)
                             nanosleep(&ts, NULL);
                     }
                 }while(pth->running_status);
-                WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
+                ACCESS_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
             else
             {
@@ -194,12 +194,12 @@ void procthread_run(void *arg)
                     nanosleep(&ts, NULL);
                     //WARN_LOGGER(pth->logger, "over threads[%p]->qmessage[%p]_handler(%d)", (void *)(pth->threadid),pth->message_queue, QMTOTAL(pth->message_queue));
                 }while(pth->running_status);
-                WARN_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
+                ACCESS_LOGGER(pth->logger, "ready to exit threads/daemons[%d]", pth->index);
             }
         }
         if(pth->message_queue && QMTOTAL(pth->message_queue) > 0)
             qmessage_handler(pth->message_queue, pth->logger);
-        WARN_LOGGER(pth->logger, "terminate threads[%d][%p] evbase[%p] qmessage[%p] ioqmessage[%p] qtotal:%d", pth->index, (void *)(pth->threadid), pth->evbase, pth->message_queue, pth->inqmessage, QMTOTAL(pth->message_queue));
+        ACCESS_LOGGER(pth->logger, "terminate threads[%d][%p] evbase[%p] qmessage[%p] ioqmessage[%p] qtotal:%d", pth->index, (void *)(pth->threadid), pth->evbase, pth->message_queue, pth->inqmessage, QMTOTAL(pth->message_queue));
     }
 #ifdef HAVE_PTHREAD
     pthread_exit(NULL);

@@ -28,6 +28,11 @@ int conn_chunk_reading(CONN *conn)
 
     if(conn)
     {
+        if(conn->session.chunk_reader == NULL)
+        {
+            WARN_LOGGER(conn->logger, "NO session.chunk_reader() on connection remote[%s:%d] local[%s:%d] via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+            return ret;
+        }
         if((n = conn->session.chunk_reader(conn, PCB(conn->buffer))) > 0)
         {
             ret = conn->recv_chunk(conn, n);
@@ -710,7 +715,7 @@ int conn_terminate(CONN *conn)
         {
             if(conn->session.chunk_reader(conn, PCB(conn->buffer)) > 0)
             {
-                conn->session.chunk_handler(conn, PCB(conn->buffer));
+                conn->session.chunk_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->buffer));
                 conn->e_state = E_STATE_OFF;
             }
         }
@@ -1015,7 +1020,7 @@ int conn_read_handler(CONN *conn)
         }
         if(n < 1)
         {
-            WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d from %s:%d on %s:%d via %d failed, %s", n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
+            ACCESS_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d from %s:%d on %s:%d via %d failed, %s", n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
             return ret;
         }
         else
@@ -1491,6 +1496,22 @@ int conn_save_cache(CONN *conn, void *data, int size)
         MMB_RESET(conn->cache);
         MMB_PUSH(conn->cache, data, size);
         DEBUG_LOGGER(conn->logger, "Saved cache size[%d] remote[%s:%d] local[%s:%d] via %d", MMB_NDATA(conn->cache), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        ret = 0;
+    }
+    return ret;
+}
+
+/* save header to connection  */
+int conn_save_header(CONN *conn, void *data, int size)
+{
+    int ret = -1;
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
+    if(conn)
+    {
+        MMB_RESET(conn->header);
+        MMB_PUSH(conn->header, data, size);
+        DEBUG_LOGGER(conn->logger, "Saved header size[%d] remote[%s:%d] local[%s:%d] via %d", MMB_NDATA(conn->header), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         ret = 0;
     }
     return ret;
@@ -2075,6 +2096,7 @@ CONN *conn_init()
         conn->push_exchange         = conn_push_exchange;
         conn->transaction_handler   = conn_transaction_handler;
         conn->save_cache            = conn_save_cache;
+        conn->save_header           = conn_save_header;
         conn->chunk_reader          = conn_chunk_reader;
         conn->chunk_reading         = conn_chunk_reading;
         conn->read_chunk            = conn_read_chunk;
