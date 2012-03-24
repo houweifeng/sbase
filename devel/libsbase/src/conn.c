@@ -35,7 +35,9 @@ int conn_chunk_reading(CONN *conn)
         }
         if((n = conn->session.chunk_reader(conn, PCB(conn->buffer))) > 0)
         {
-            ret = conn->recv_chunk(conn, n);
+            conn->s_state = S_STATE_DATA_HANDLING;
+            conn_push_message(conn, MESSAGE_DATA);
+            ret = 0;
         }
     }
     return ret;
@@ -359,7 +361,7 @@ void conn_buffer_handler(CONN *conn)
 }
 
 /* write */
-void conn_chunk_handler(CONN *conn)
+void conn_chunkio_handler(CONN *conn)
 {
     CONN_CHECK(conn, D_STATE_CLOSE);
     int ret = -1;
@@ -1334,6 +1336,32 @@ int conn_oob_handler(CONN *conn)
     return ret;
 }
 
+/* chunk   handler */
+int conn_chunk_handler(CONN *conn)
+{
+    int ret = -1;
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+    PROCTHREAD *parent = NULL;
+
+    if(conn && (parent = PPARENT(conn)))
+    {
+        {
+            WARN_LOGGER(conn->logger, "NO session.chunk_handler(%p) parent->qtotal:%d on %s:%d local[%s:%d] via %d", conn->session.packet_handler, QMTOTAL(parent->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+            return ret;
+        }
+        ret = conn->session.chunk_handler(conn, PCB(conn->packet), 
+                PCB(conn->cache), PCB(conn->buffer));
+        ACCESS_LOGGER(conn->logger, "over chunk_handler(%p) parent->qtotal:%d on %s:%d local[%s:%d] via %d", conn->session.packet_handler, QMTOTAL(parent->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        //reset session
+        if(conn->s_state == S_STATE_DATA_HANDLING)
+        {
+            SESSION_RESET(conn);
+            DEBUG_LOGGER(conn->logger, "Reset chunk_handler(%p) buffer:%d on %s:%d via %d", conn->session.chunk_handler, conn->buffer.ndata, conn->remote_ip, conn->remote_port, conn->fd);
+        }
+    }
+    return ret;
+}
+
 /* chunk data  handler */
 int conn_data_handler(CONN *conn)
 {
@@ -1367,7 +1395,7 @@ int conn_data_handler(CONN *conn)
         if(conn->s_state == S_STATE_DATA_HANDLING)
         {
             SESSION_RESET(conn);
-            DEBUG_LOGGER(conn->logger, "Reset data_handler(%p) buffer:%d on %s:%d via %d", conn->session.packet_handler, conn->buffer.ndata, conn->remote_ip, conn->remote_port, conn->fd);
+            DEBUG_LOGGER(conn->logger, "Reset data_handler(%p) buffer:%d on %s:%d via %d", conn->session.data_handler, conn->buffer.ndata, conn->remote_ip, conn->remote_port, conn->fd);
         }
     }
     return ret;
@@ -2089,6 +2117,7 @@ CONN *conn_init()
         conn->packet_reader         = conn_packet_reader;
         conn->packet_handler        = conn_packet_handler;
         conn->oob_handler           = conn_oob_handler;
+        conn->chunk_handler         = conn_chunk_handler;
         conn->data_handler          = conn_data_handler;
         conn->bind_proxy            = conn_bind_proxy;
         conn->proxy_handler         = conn_proxy_handler;
@@ -2111,7 +2140,7 @@ CONN *conn_init()
         conn->mnewchunk             = conn_mnewchunk;
         conn->freechunk             = conn_freechunk;
         conn->buffer_handler        = conn_buffer_handler;
-        conn->chunk_handler         = conn_chunk_handler;
+        conn->chunkio_handler       = conn_chunkio_handler;
         conn->free_handler          = conn_free_handler;
         conn->end_handler           = conn_end_handler;
         conn->shut_handler          = conn_shut_handler;

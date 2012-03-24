@@ -34,7 +34,8 @@ extern "C" {
 #define MESSAGE_SHUTOUT         0x14
 #define MESSAGE_OUT             0x15
 #define MESSAGE_FREE            0x16
-#define MESSAGE_MAX		        0x16
+#define MESSAGE_CHUNKIO         0x17
+#define MESSAGE_MAX		        0x17
 static char *messagelist[] = 
 {
     "",
@@ -59,7 +60,8 @@ static char *messagelist[] =
 	"MESSAGE_END",
 	"MESSAGE_SHUTOUT",
     "MESSAGE_OUT",
-    "MESSAGE_FREE"
+    "MESSAGE_FREE",
+    "MESSAGE_CHUNKIO"
 };
 typedef struct _MESSAGE
 {

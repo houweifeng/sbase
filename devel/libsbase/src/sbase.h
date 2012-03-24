@@ -551,6 +551,7 @@ typedef struct _CONN
     int (*packet_reader)(struct _CONN *);
     int (*packet_handler)(struct _CONN *);
     int (*oob_handler)(struct _CONN *);
+    int (*chunk_handler)(struct _CONN *);
     int (*data_handler)(struct _CONN *);
     int (*bind_proxy)(struct _CONN *, struct _CONN *);
     int (*proxy_handler)(struct _CONN *);
@@ -575,7 +576,7 @@ typedef struct _CONN
     CB_DATA* (*mnewchunk)(struct _CONN *, int size);
     void (*freechunk)(struct _CONN *, CB_DATA *chunk);
     void(*buffer_handler)(struct _CONN *);
-    void(*chunk_handler)(struct _CONN *);
+    void(*chunkio_handler)(struct _CONN *);
     void(*free_handler)(struct _CONN *);
     void(*end_handler)(struct _CONN *);
     void(*shut_handler)(struct _CONN *);
