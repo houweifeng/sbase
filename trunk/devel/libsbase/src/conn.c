@@ -35,8 +35,12 @@ int conn_chunk_reading(CONN *conn)
         }
         if((n = conn->session.chunk_reader(conn, PCB(conn->buffer))) > 0)
         {
-            conn->s_state = S_STATE_DATA_HANDLING;
-            conn_push_message(conn, MESSAGE_CHUNK);
+            chunk_mem(&(conn->chunk), n);
+            conn->s_state = S_STATE_READ_CHUNK;
+            conn__read__chunk(conn);
+            //conn->recv_chunk(conn, n);
+            //conn->s_state = S_STATE_DATA_HANDLING;
+            //conn_push_message(conn, MESSAGE_CHUNK);
             ret = 0;
         }
     }
@@ -368,12 +372,13 @@ void conn_chunkio_handler(CONN *conn)
 
     if(conn)
     {
-        if(conn->s_state & S_STATE_CHUNK_READING)
+        if(conn->s_state == S_STATE_CHUNK_READING)
         {
             ret =  conn_chunk_reading(conn);
             return ;
         }
-        if(conn->s_state & S_STATE_READ_CHUNK) ret = conn__read__chunk(conn);
+        if(conn->s_state == S_STATE_READ_CHUNK) 
+            ret = conn__read__chunk(conn);
     }
     return ;
 }
@@ -712,11 +717,13 @@ int conn_terminate(CONN *conn)
                 conn->proxy_handler(conn);
             }
         }
-        if((conn->s_state & S_STATE_CHUNK_READING) && MMB_NDATA(conn->buffer) > 0
+        if((conn->s_state == S_STATE_CHUNK_READING) && MMB_NDATA(conn->buffer) > 0
                 && conn->session.chunk_reader)
         {
+            WARN_LOGGER(conn->logger, "chunk_reader() session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
             if(conn->session.chunk_reader(conn, PCB(conn->buffer)) > 0)
             {
+                WARN_LOGGER(conn->logger, "chunk_reader() session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
                 conn->session.chunk_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->buffer));
                 conn->e_state = E_STATE_OFF;
             }
@@ -1036,7 +1043,8 @@ int conn_read_handler(CONN *conn)
         if(conn->s_state == 0 && conn->packet.ndata == 0)
             ret = conn->packet_reader(conn);
         /* reading chunk */
-        if(conn->s_state & S_STATE_CHUNK_READING) ret = conn_chunk_reading(conn);
+        if(conn->s_state == S_STATE_CHUNK_READING) 
+            ret = conn_chunk_reading(conn);
         ret = 0;
     }
     return ret;
@@ -1671,7 +1679,7 @@ int conn_read_chunk(CONN *conn)
     if(conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for reading-chunk from %s:%d on %s:%d via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        conn->s_state = S_STATE_READ_CHUNK|S_STATE_CHUNK_READING;
+        conn->s_state = S_STATE_CHUNK_READING;
         if(conn->d_state & D_STATE_CLOSE)
         {
             conn->chunk_reading(conn);
