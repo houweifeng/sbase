@@ -720,10 +720,10 @@ int conn_terminate(CONN *conn)
         if((conn->s_state == S_STATE_CHUNK_READING) && MMB_NDATA(conn->buffer) > 0
                 && conn->session.chunk_reader)
         {
-            WARN_LOGGER(conn->logger, "chunk_reader() session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
+            DEBUG_LOGGER(conn->logger, "chunk_reader() session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
             if(conn->session.chunk_reader(conn, PCB(conn->buffer)) > 0)
             {
-                WARN_LOGGER(conn->logger, "chunk_reader() session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
+                DEBUG_LOGGER(conn->logger, "chunk_handler() session[%s:%d] local[%s:%d] via %d cid:%d %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->c_id, conn->packet.ndata);
                 conn->session.chunk_handler(conn, PCB(conn->packet), PCB(conn->cache), PCB(conn->buffer));
                 conn->e_state = E_STATE_OFF;
             }
