@@ -306,6 +306,7 @@ do                                                                              
 {                                                                                           \
     if(conn && conn->d_state == 0)                                                          \
     {                                                                                       \
+        CONN_EVTIMER_SET(conn);                                                             \
         qmessage_push(conn->inqmessage, msgid,                                              \
                 conn->index, conn->fd, -1, conn->indaemon, conn, NULL);                     \
         INWAKEUP(conn);                                                                     \

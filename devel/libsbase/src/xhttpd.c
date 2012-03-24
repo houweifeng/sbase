@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <locale.h>
 #include <dirent.h>
+#include <pwd.h>
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -579,7 +580,8 @@ int xhttpd_xpacket_handler(CONN *conn, CB_DATA *packet)
     }
     return -1;
 }
-int xhttpd_timeout_handler(CONN *conn)
+
+int xhttpd_timeout_handler(CONN *conn, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk)
 {
     if(conn)
     {
@@ -1111,9 +1113,10 @@ int sbase_initialize(SBASE *sbase, char *conf)
 
 int main(int argc, char **argv)
 {
-    pid_t pid;
-    char *conf = NULL, *p = NULL, ch = 0;
+    struct passwd *user = NULL;
+    char *conf = NULL,ch = 0;
     int is_daemon = 0, i = 0;
+    pid_t pid;
 
     /* get configure file */
     while((ch = getopt(argc, argv, "c:d")) != -1)
@@ -1167,7 +1170,13 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
         return -1;
     }
+    if((user = getpwnam("xhttpd")) == NULL || setuid(user->pw_uid) ) 
+    {
+        fprintf(stderr, "setuid() for xhttpd failed, %s\r\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
     fprintf(stdout, "Initialized successed\n");
+    /*
     if(httpd->sock_type == SOCK_DGRAM 
             && (p = iniparser_getstr(dict, "XHTTPD:multicast")))
     {
@@ -1186,6 +1195,7 @@ int main(int argc, char **argv)
         }
 
     }
+    */
     //fprintf(stdout, "%s::%d sizeof(SERVICE):%u sizeof(SBASE):%u sizeof(PROCTHREAD):%u sizeof(CONN):%u sizeof(SESSION):%u sizeof(CNGROUP):%u sizeof(struct sockaddr_in):%u sizeof(MUTEX):%d\n", __FILE__, __LINE__, sizeof(SERVICE), sizeof(SBASE), sizeof(PROCTHREAD), sizeof(CONN), sizeof(SESSION), sizeof(CNGROUP), sizeof(struct sockaddr_in), sizeof(MUTEX));
     //fprintf(stdout, "sizeof(EVENT):%d sizeof(EVBASE):%d sizeof(MUTEX):%d sizeof(struct timeval):%d\n", sizeof(EVENT), sizeof(EVBASE), sizeof(MUTEX), sizeof(struct timeval));
     //fprintf(stdout, "sizeof(SERVICE):%d sizeof(CHUNK):%d sizeof(MESSAGE):%d sizeof(MUTEX):%d sizeof(CONN):%d sizeof(HTTP_REQ):%d sizeof(LOGGER):%d sizeof(struct timeval):%d sizeof(struct stat):%d sizeof(pthread_t):%d\n", sizeof(SERVICE), sizeof(CHUNK), sizeof(QMESSAGE), sizeof(MUTEX), sizeof(CONN), sizeof(HTTP_REQ), sizeof(LOGGER), sizeof(struct timeval), sizeof(struct stat), sizeof(pthread_mutex_t));
