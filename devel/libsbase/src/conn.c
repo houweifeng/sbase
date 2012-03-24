@@ -1678,7 +1678,7 @@ int conn_read_chunk(CONN *conn)
         }
         else
         {
-            PUSH_INQMESSAGE(conn, MESSAGE_CHUNK);
+            PUSH_INQMESSAGE(conn, MESSAGE_CHUNKIO);
         }
         ret = 0;
     }
@@ -1701,7 +1701,7 @@ int conn_recv_chunk(CONN *conn, int size)
         }
         else
         {
-            PUSH_INQMESSAGE(conn, MESSAGE_CHUNK);
+            PUSH_INQMESSAGE(conn, MESSAGE_CHUNKIO);
         }
         ret = 0;
     }
@@ -1728,7 +1728,7 @@ int conn_recv2_chunk(CONN *conn, int size, char *data, int ndata)
         }
         else
         {
-            PUSH_INQMESSAGE(conn, MESSAGE_CHUNK);
+            PUSH_INQMESSAGE(conn, MESSAGE_CHUNKIO);
         }
         ret = 0;
     }
@@ -1776,7 +1776,7 @@ int conn_recv_file(CONN *conn, char *filename, long long offset, long long size)
         }
         else
         {
-            PUSH_INQMESSAGE(conn, MESSAGE_CHUNK);
+            PUSH_INQMESSAGE(conn, MESSAGE_CHUNKIO);
         }
         ret = 0;
     }
