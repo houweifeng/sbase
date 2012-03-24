@@ -36,7 +36,7 @@ int conn_chunk_reading(CONN *conn)
         if((n = conn->session.chunk_reader(conn, PCB(conn->buffer))) > 0)
         {
             conn->s_state = S_STATE_DATA_HANDLING;
-            conn_push_message(conn, MESSAGE_DATA);
+            conn_push_message(conn, MESSAGE_CHUNK);
             ret = 0;
         }
     }
@@ -1345,6 +1345,7 @@ int conn_chunk_handler(CONN *conn)
 
     if(conn && (parent = PPARENT(conn)))
     {
+        if(conn->session.chunk_handler == NULL)
         {
             WARN_LOGGER(conn->logger, "NO session.chunk_handler(%p) parent->qtotal:%d on %s:%d local[%s:%d] via %d", conn->session.packet_handler, QMTOTAL(parent->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
             return ret;
@@ -1670,7 +1671,6 @@ int conn_read_chunk(CONN *conn)
     if(conn)
     {
         DEBUG_LOGGER(conn->logger, "Ready for reading-chunk from %s:%d on %s:%d via %d", conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
-        //chunk_mem(&(conn->chunk), size);
         conn->s_state = S_STATE_READ_CHUNK|S_STATE_CHUNK_READING;
         if(conn->d_state & D_STATE_CLOSE)
         {
