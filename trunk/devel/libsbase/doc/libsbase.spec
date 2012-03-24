@@ -43,11 +43,14 @@ install -c -m644 doc/rc.xhttpd.ini %{buildroot}/%{_sysconfdir}/xhttpd.ini
 %post
 
 ldconfig
+useradd -M -s /sbin/nologin xhttpd
 /sbin/chkconfig --add xhttpd && /sbin/chkconfig --level 345 xhttpd on
 
 %preun
+
 [ "`pstree|grep xhttpd|wc -l`" -gt "0" ] && /sbin/service xhttpd stop
 /sbin/chkconfig --del xhttpd
+userdel xhttpd
 
 %files
 %defattr(-, root, root, 0755)
