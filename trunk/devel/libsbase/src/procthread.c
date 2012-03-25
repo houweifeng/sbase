@@ -229,7 +229,7 @@ int procthread_newtask(PROCTHREAD *pth, CALLBACK *task_handler, void *arg)
     if(pth && pth->message_queue && task_handler && pth->lock == 0)
     {
         PUSH_TASK_MESSAGE(pth, MESSAGE_TASK, -1, -1, -1, task_handler, arg);
-        DEBUG_LOGGER(pth->logger, "Added message task to procthreads[%d]", pth->index);
+        //DEBUG_LOGGER(pth->logger, "Added message task to procthreads[%d]", pth->index);
         ret = 0;
     }
     return ret;

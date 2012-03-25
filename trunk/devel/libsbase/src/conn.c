@@ -306,7 +306,6 @@ do                                                                              
 {                                                                                           \
     if(conn && conn->d_state == 0)                                                          \
     {                                                                                       \
-        CONN_EVTIMER_SET(conn);                                                             \
         qmessage_push(conn->inqmessage, msgid,                                              \
                 conn->index, conn->fd, -1, conn->indaemon, conn, NULL);                     \
         INWAKEUP(conn);                                                                     \
@@ -1035,7 +1034,7 @@ int conn_read_handler(CONN *conn)
         {
             conn->recv_data_total += n;
         }
-        ACCESS_LOGGER(conn->logger, "Received %d bytes nbuffer:%d/%d  left:%d data total %lld from %s:%d on %s:%d via %d", n, conn->buffer.ndata, MMB_SIZE(conn->buffer), MMB_LEFT(conn->buffer), LL(conn->recv_data_total), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        ACCESS_LOGGER(conn->logger, "Received %d bytes s_state:%d npacket:%d nbuffer:%d/%d  left:%d data total %lld from %s:%d on %s:%d via %d", n, conn->s_state, conn->packet.ndata, conn->buffer.ndata, MMB_SIZE(conn->buffer), MMB_LEFT(conn->buffer), LL(conn->recv_data_total), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         if(conn->session.packet_type & PACKET_PROXY)
         {
             ret = conn->proxy_handler(conn);
@@ -1320,7 +1319,7 @@ int conn_packet_handler(CONN *conn)
     {
         ACCESS_LOGGER(conn->logger, "packet_handler(%p) on %s:%d local[%s:%d] via %d", conn->session.packet_handler, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
         ret = conn->session.packet_handler(conn, PCB(conn->packet));
-        ACCESS_LOGGER(conn->logger, "over packet_handler(%p) parent->qtotal:%d on %s:%d local[%s:%d] via %d", conn->session.packet_handler, QMTOTAL(parent->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+        ACCESS_LOGGER(conn->logger, "over packet_handler(%p) parent->qtotal:%d on %s:%d local[%s:%d] via %d s_state:%d", conn->session.packet_handler, QMTOTAL(parent->message_queue), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, conn->s_state);
 
         if(conn->s_state == S_STATE_PACKET_HANDLING)
         {
@@ -1903,6 +1902,7 @@ int conn_newtask(CONN *conn, CALLBACK *handler)
     }
     return -1;
 }
+
 /* add multicast */
 int conn_add_multicast(CONN *conn, char *multicast_ip)
 {
