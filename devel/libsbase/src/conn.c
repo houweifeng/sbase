@@ -867,13 +867,12 @@ int conn_timeout_handler(CONN *conn)
 
     if(conn && conn->evid >= 0)
     {
-        if(conn->evstate == EVSTATE_WAIT)
+        if(conn->evstate == EVSTATE_WAIT && conn->session.evtimeout_handler)
         {
             conn->evstate = EVSTATE_INIT;
             conn_over_timeout(conn);
-            if(conn->session.evtimeout_handler)
-                ret = conn->session.evtimeout_handler(conn);
-            return 0;
+            ret = conn->session.evtimeout_handler(conn);
+            return ret;
         }
         if(conn->session.timeout_handler)
         {
