@@ -841,6 +841,23 @@ int conn_over_evstate(CONN *conn)
     return -1;
 }
 
+/* set timeout */
+int conn_wait_evtimeout(CONN *conn, int timeout_usec)
+{
+    int ret = -1;
+
+    CONN_CHECK_RET(conn, D_STATE_CLOSE, -1);
+
+    if(conn && timeout_usec > 0)
+    {
+        conn->evstate = EVSTATE_WAIT;
+        conn->timeout = timeout_usec;
+        CONN_EVTIMER_SET(conn);
+        DEBUG_LOGGER(conn->logger, "set evtimer[%p] etimeout[%d] evid:%d  s_state:%d on %s:%d local[%s:%d] via %d", PPL(conn->evtimer), conn->timeout, conn->evid, conn->s_state, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
+    }
+    return ret;
+}
+
 /* timeout handler */
 int conn_timeout_handler(CONN *conn)
 {
@@ -850,6 +867,14 @@ int conn_timeout_handler(CONN *conn)
 
     if(conn && conn->evid >= 0)
     {
+        if(conn->evstate == EVSTATE_WAIT)
+        {
+            conn->evstate = EVSTATE_INIT;
+            conn_over_timeout(conn);
+            if(conn->session.evtimeout_handler)
+                ret = conn->session.evtimeout_handler(conn);
+            return 0;
+        }
         if(conn->session.timeout_handler)
         {
             DEBUG_LOGGER(conn->logger, "timeout_handler(%d) on remote[%s:%d] local[%s:%d] via %d", conn->timeout, conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd);
@@ -2116,6 +2141,7 @@ CONN *conn_init()
         conn->set_timeout           = conn_set_timeout;
         conn->over_timeout          = conn_over_timeout;
         conn->timeout_handler       = conn_timeout_handler;
+        conn->wait_evtimeout        = conn_wait_evtimeout;
         conn->wait_evstate          = conn_wait_evstate;
         conn->over_evstate          = conn_over_evstate;
         conn->push_message          = conn_push_message;

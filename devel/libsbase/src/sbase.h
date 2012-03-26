@@ -184,6 +184,7 @@ typedef struct _SESSION
     int (*file_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, char *file);
     int (*oob_handler)(struct _CONN *, CB_DATA *oob);
     int (*timeout_handler)(struct _CONN *, CB_DATA *packet, CB_DATA *cache, CB_DATA *chunk);
+    int (*evtimeout_handler)(struct _CONN *);
     int (*transaction_handler)(struct _CONN *, int tid);
     int (*ok_handler)(struct _CONN *);
 }SESSION;
@@ -532,6 +533,7 @@ typedef struct _CONN
     /* event state */
 #define EVSTATE_INIT   0
 #define EVSTATE_WAIT   1 
+    int (*wait_evtimeout)(struct _CONN *, int timeout_usec);
     int (*wait_evstate)(struct _CONN *);
     int (*over_evstate)(struct _CONN *);
 
