@@ -600,6 +600,8 @@ int conn_set(CONN *conn)
     int flag = 0;
     if(conn && conn->fd > 0 )
     {
+        //non-block
+        fcntl(conn->fd, F_SETFL, fcntl(conn->fd, F_GETFL, 0)|O_NONBLOCK);
         //timeout
         conn->evid = -1;
         if(conn->parent && conn->session.timeout > 0) conn->set_timeout(conn, conn->session.timeout);
