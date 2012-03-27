@@ -1051,7 +1051,7 @@ int conn_read_handler(CONN *conn)
         }
         if(n < 1)
         {
-            ACCESS_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d from %s:%d on %s:%d via %d failed, %s", n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
+            WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d from %s:%d on %s:%d via %d failed, %s", n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
             return ret;
         }
         else
