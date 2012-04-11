@@ -5,20 +5,22 @@ conftodir = "$(DESTDIR)`echo $(sysconfdir)|sed -e 's|/usr/etc|/etc|'`"
 
 sysconftodir = $(conftodir)
 
+initdir = "$(conftodir)/rc.d/init.d"
+
 install-ini:
 	@echo install xhttpd.ini lechod.ini to $(sysconftodir)
 	@test -d $(sysconftodir)      || mkdir -p $(sysconftodir)
-	@test -d $(sysconftodir)/init.d || mkdir -p $(sysconftodir)/init.d
+	@test -d $(initdir) || mkdir -p $(initdir)
 	@test -f $(sysconftodir)/lechod.ini \
 		|| cp -p $(top_srcdir)/doc/rc.lechod.ini $(sysconftodir)/lechod.ini
 	@test -f $(sysconftodir)/xhttpd.ini \
 		|| cp -p $(top_srcdir)/doc/rc.xhttpd.ini $(sysconftodir)/xhttpd.ini
-	@test -f $(sysconftodir)/init.d/lechod \
-		|| cp -p $(top_srcdir)/doc/rc.lechod $(sysconftodir)/init.d/lechod
-	@test -f $(sysconftodir)/init.d/xhttpd \
-		|| cp -p $(top_srcdir)/doc/rc.xhttpd $(sysconftodir)/init.d/xhttpd
+	@test -f $(initdir)/lechod \
+		|| cp -p $(top_srcdir)/doc/rc.lechod $(initdir)/lechod
+	@test -f $(initdir)/xhttpd \
+		|| cp -p $(top_srcdir)/doc/rc.xhttpd $(initdir)/xhttpd
 	@perl -i -p -e "s@/usr/local/sbin@$(prefix)/sbin@g" \
-		$(sysconftodir)/init.d/xhttpd $(sysconftodir)/init.d/lechod
+		$(initdir)/xhttpd $(initdir)/lechod
 	@perl -i -p -e "s@/usr/local/etc@$(sysconftodir)@g" \
-		$(sysconftodir)/init.d/xhttpd  $(sysconftodir)/init.d/lechod
+		$(initdir)/xhttpd  $(initdir)/lechod
 
