@@ -1,11 +1,11 @@
 EXTRA_DIST = libsbase.spec rc.lechod rc.lechod.ini rc.xhttpd rc.xhttpd.ini ssl.sh
 install: install-ini
 
-conftodir = "$(DESTDIR)`echo $(sysconfdir)|sed -e 's|/usr/etc|/etc|'`"
+conftodir = "`echo $(sysconfdir)|sed -e 's|/usr/etc|/etc|'`"
 
-sysconftodir = $(conftodir)
+initdir = "$(DESTDIR)$(conftodir)/rc.d/init.d"
 
-initdir = "$(conftodir)/rc.d/init.d"
+sysconftodir = "$(DESTDIR)$(conftodir)"
 
 install-ini:
 	@echo install xhttpd.ini lechod.ini to $(sysconftodir)
@@ -21,6 +21,6 @@ install-ini:
 		|| cp -p $(top_srcdir)/doc/rc.xhttpd $(initdir)/xhttpd
 	@perl -i -p -e "s@/usr/local/sbin@$(prefix)/sbin@g" \
 		$(initdir)/xhttpd $(initdir)/lechod
-	@perl -i -p -e "s@/usr/local/etc@$(sysconftodir)@g" \
+	@perl -i -p -e "s@/usr/local/etc@$(conftodir)@g" \
 		$(initdir)/xhttpd  $(initdir)/lechod
 
