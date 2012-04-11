@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE  500
+//#define _XOPEN_SOURCE  500
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/file.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include "logger.h"
@@ -181,9 +182,12 @@ int logger_write(LOGGER *logger, int level, char *_file_, int _line_, char *form
         va_start(ap, format);
         s += vsnprintf(s, LOGGER_LINE_LIMIT - (s - buf), format, ap);
         va_end(ap);
+        *s++ = '\r';
         *s++ = '\n';
-        if(logger->fd > 0) ret = pwrite(logger->fd, buf, s - buf, SEEK_END);
-        //if(logger->fd > 0) ret = write(logger->fd, buf, s - buf);
+        //if(logger->fd > 0) ret = pwrite(logger->fd, buf, s - buf, (off_t)0);
+        MUTEX_LOCK(logger->mutex);
+        ret = write(logger->fd, buf, s - buf);
+        MUTEX_UNLOCK(logger->mutex);
     }
     return ret;
 }
