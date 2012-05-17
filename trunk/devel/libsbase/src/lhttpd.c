@@ -87,14 +87,14 @@ int lhttpd_packet_handler(CONN *conn, CB_DATA *packet)
                 }
                 *p = '\0';
                 if(s < end && strcasestr(s, "Keep-Alive"))keepalive = 1;
-                if(lstat(path, &st) != 0) goto not_found;
+                if(stat(path, &st) != 0) goto not_found;
                 if(S_ISDIR(st.st_mode))
                 {
                     if(*(p-1) == '/')
                         p += sprintf(p, "index.html");
                     else
                         p += sprintf(p, "/index.html");
-                    if(lstat(path, &st) != 0) goto not_found;
+                    if(stat(path, &st) != 0) goto not_found;
                 }
                 if(S_ISREG(st.st_mode) && st.st_size > 0)
                 {
