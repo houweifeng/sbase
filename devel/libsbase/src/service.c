@@ -681,8 +681,8 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
 #ifdef SO_REUSEPORT
                     && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
+                    && bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) == 0
                     )
-                    //&& bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) == 0)
                      //&& connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
                         goto new_conn;
                     else
