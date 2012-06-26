@@ -1170,6 +1170,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
         return -1;
     }
+    //fprintf(stdout, "Initialized successed%d/%d\n", sizeof(CNGROUP), sizeof(SERVICE));
     if((user = getpwnam("xhttpd")) == NULL || setuid(user->pw_uid) ) 
     {
         fprintf(stderr, "setuid() for xhttpd failed, %s\r\n", strerror(errno));
