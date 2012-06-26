@@ -565,7 +565,7 @@ err_conn:
                     }
                     else
                     {
-                        FATAL_LOGGER(service->logger, "NONE-RESOUCE for handling connection[%s:%d]  buffer:%d", ip, port,  MMB_NDATA(conn->buffer));
+                        FATAL_LOGGER(service->logger, "NONE-RESOUCE for handling connection[%s:%d]", ip, port);
 
                     }
                     continue;
@@ -681,12 +681,17 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
 #ifdef SO_REUSEPORT
                     && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                    && bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) == 0
                     )
-                     //&& connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) == 0)
+                    {
+                        if(inet_ip && inet_port > 0) 
+                        {
+                            if(bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) != 0
+                                || connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) != 0)
+                                goto err_conn;
+                        }
                         goto new_conn;
-                    else
-                        goto err_conn;
+                    }
+                    goto err_conn;
                 }
                 else
                 {
@@ -1007,6 +1012,7 @@ int service_popconn(SERVICE *service, CONN *conn)
                     {
                         service->conns_free[x] = 0;
                         --(service->nconns_free);
+                        --(service->nconnections);
                     }
                 }
             }
@@ -1691,21 +1697,22 @@ void service_state(void *arg)
         if(service->service_type == C_SERVICE || (service->session.flags & SB_MULTICAST))
         {
             if(service->ngroups > 0)service_stategroup(service);
-            else
+            if(service->nconnections < service->conns_limit)
             {
-                if(service->running_connections < service->conns_limit)
+                //DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",service->ip, service->port, service->conns_limit,service->running_connections);
+                n = service->conns_limit - service->nconnections;
+                while(n > 0)
                 {
-                    //DEBUG_LOGGER(service->logger, "Ready for state connection[%s:%d][%d] running:%d ",service->ip, service->port, service->conns_limit,service->running_connections);
-                    n = service->conns_limit - service->running_connections;
-                    while(n > 0)
+                    if(service->newconn(service, -1, -1, NULL, -1, NULL) == NULL)
                     {
-                        if(service->newconn(service, -1, -1, NULL, -1, NULL) == NULL)
-                        {
-                            //FATAL_LOGGER(service->logger, "connect to %s:%d failed, %s", service->ip, service->port, strerror(errno));
-                            break;
-                        }
-                        n--;
+                        //FATAL_LOGGER(service->logger, "connect to %s:%d failed, %s", service->ip, service->port, strerror(errno));
+                        break;
                     }
+                    else
+                    {
+                        service->nconnections++;
+                    }
+                    n--;
                 }
             }
         }
