@@ -851,6 +851,7 @@ CONN *service_addconn(SERVICE *service, int sock_type, int fd, char *remote_ip, 
             conn->sock_type = sock_type;
             conn->evtimer   = service->evtimer;
             conn->logger    = service->logger;
+            conn->groupid   = session->groupid;
             conn->set_session(conn, session);
             /* add  to procthread */
             if(service->working_mode == WORKING_PROC)
@@ -920,7 +921,12 @@ int service_pushconn(SERVICE *service, CONN *conn)
                         {
                             service->groups[id].conns_free[x] = i;
                             ++(service->groups[id].nconns_free);
+                            if(conn->status == CONN_STATUS_FREE)
+                            {
+                                ++(service->groups[id].nconnected);
+                            }
                             conn->gindex = x;
+                            DEBUG_LOGGER(service->logger, "added conn[%s:%d] remote[%s:%d] via %d to groups[%d][%d] free:%d", conn->local_ip, conn->local_port, conn->remote_ip, conn->remote_port, conn->fd, id, x, service->groups[id].nconns_free);
                             break;
                         }
                         ++x;
@@ -1478,6 +1484,7 @@ int service_castgroup(SERVICE *service, char *data, int len)
 int service_stategroup(SERVICE *service)
 {
     CONN *conn = NULL;
+    SESSION session = {0};
     int i = 0;
 
     if(service && service->lock == 0 && service->ngroups > 0)
@@ -1486,15 +1493,18 @@ int service_stategroup(SERVICE *service)
         {
             if(service->groups[i].total >= service->groups[i].limit && service->groups[i].nconnected <= 0) 
             {
-                //ACCESS_LOGGER(service->logger, "ignore stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
+                //DEBUG_LOGGER(service->logger, "ignore stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
                 continue;
             }
+            //DEBUG_LOGGER(service->logger, "stategroup(%d) total:%d nconnected:%d limit:%d", i, service->groups[i].total, service->groups[i].nconnected, service->groups[i].limit);
+            memcpy(&session, &(service->groups[i].session), sizeof(SESSION));
+            session.groupid = i;
             while(service->groups[i].limit > 0  
                     && service->groups[i].total < service->groups[i].limit
                     && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
-                            service->groups[i].port, &(service->groups[i].session))))
+                            service->groups[i].port, &session)))
             {
-                conn->groupid = i;
+                //conn->groupid = i;
                 service->groups[i].total++;
                 if(service->groups[i].nconnected <= 0) break;
             }

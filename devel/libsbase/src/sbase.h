@@ -21,7 +21,7 @@ extern "C" {
 #define SB_BACKLOG_MAX          40960
 #define SB_IP_MAX               16
 #define SB_XIDS_MAX             16
-#define SB_GROUPS_MAX           16
+#define SB_GROUPS_MAX           32
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
@@ -165,6 +165,8 @@ typedef struct _SESSION
     int  packet_length;
     int  packet_delimiter_length;
     int  buffer_size;
+    int  groupid;
+    int  bits;
     int  xids[SB_XIDS_MAX];
 
 
