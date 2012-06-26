@@ -262,7 +262,7 @@ typedef struct _SERVICE
     int index_max;
     int running_connections;
     int nconns_free;
-    int nconnection;
+    int nconnections;
     int conns_limit;
     int nqchunks;
     int service_type;
