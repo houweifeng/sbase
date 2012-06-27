@@ -21,7 +21,7 @@ extern "C" {
 #define SB_BACKLOG_MAX          40960
 #define SB_IP_MAX               16
 #define SB_XIDS_MAX             16
-#define SB_GROUPS_MAX           64
+#define SB_GROUPS_MAX           256
 #define SB_SERVICE_MAX          256
 #define SB_THREADS_MAX          256
 #define SB_INIT_CONNS           256
@@ -244,7 +244,7 @@ typedef struct _CNGROUP
   int   limit;
   int   total;
   int   nconns_free;
-  int   conns_free[SB_GROUP_CONN_MAX];
+  unsigned short conns_free[SB_GROUP_CONN_MAX];
   char  ip[SB_IP_MAX];
   SESSION session;
 }CNGROUP;
