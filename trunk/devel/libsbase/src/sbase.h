@@ -300,6 +300,7 @@ typedef struct _SERVICE
     CALLBACK *heartbeat_handler;
     void (*set_heartbeat)(struct _SERVICE *, int interval, CALLBACK *handler, void *arg);
     void (*active_heartbeat)(struct _SERVICE *);
+    void (*onrunning)(struct _SERVICE *);
 
     /* working mode */
     struct _PROCTHREAD *tracker;
