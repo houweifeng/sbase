@@ -183,6 +183,7 @@ int sbase_run_service(SBASE *sbase, SERVICE *service)
         service->evbase = sbase->evbase;
         service->cond = sbase->cond;
         service->run(service);
+        if(service->onrunning) service->onrunning(service);
     }
     return 0;
 }
