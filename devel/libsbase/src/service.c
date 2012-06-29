@@ -677,18 +677,17 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             {
                 if(sess->flags & SB_MULTICAST)
                 {
+                    unsigned char ttl = (unsigned char)sess->multicast_ttl;
                     if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                     && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
                     && bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) == 0
+                    && setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == 0
                     )
                     {
                         if(inet_ip && inet_port > 0)
                         {
-                            //opt = 0;setsockopt(fd,IPPROTO_IP,IP_MULTICAST_LOOP,&opt,sizeof(opt));
-                            opt = sess->multicast_ttl;
-                            setsockopt(fd, IPPROTO_IP,IP_MULTICAST_TTL,&opt,sizeof(opt));
                             if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) != 0)
                                 goto err_conn;
                         }
