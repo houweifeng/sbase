@@ -2,8 +2,8 @@
 
 Summary: Server Base Library for TCP/UDP communication
 Name: libsbase
-Version: 0.5.8
-Release: 5%{?dist}
+Version: 1.0.6
+Release: 3%{?dist}
 License: BSD
 Group: System Environment/Libraries
 URL: http://code.google.com/p/sbase/
@@ -42,15 +42,15 @@ install -c -m644 doc/rc.xhttpd.ini %{buildroot}/%{_sysconfdir}/xhttpd.ini
 
 %post
 
-ldconfig
-useradd -M -s /sbin/nologin xhttpd
+/sbin/ldconfig
+/usr/sbin/useradd -M -s /sbin/nologin xhttpd
 /sbin/chkconfig --add xhttpd && /sbin/chkconfig --level 345 xhttpd on
 
 %preun
 
 [ "`pstree|grep xhttpd|wc -l`" -gt "0" ] && /sbin/service xhttpd stop
 /sbin/chkconfig --del xhttpd
-userdel xhttpd
+/usr/sbin/userdel xhttpd
 
 %files
 %defattr(-, root, root, 0755)
