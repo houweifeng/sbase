@@ -677,17 +677,18 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
             {
                 if(sess->flags & SB_MULTICAST)
                 {
-                    unsigned char ttl = (unsigned char)sess->multicast_ttl;
+                    unsigned char op = (unsigned char)sess->multicast_ttl;
                     if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == 0
 #ifdef SO_REUSEPORT
                     && setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == 0
 #endif
-                    && bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) == 0
-                    && setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == 0
                     )
                     {
-                        if(inet_ip && inet_port > 0)
+                        if(inet_ip && inet_port > 0 
+                        && bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) == 0)
                         {
+                            setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, &op, sizeof(op));
+                            op = 0;setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &op, sizeof(op));
                             if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) != 0)
                                 goto err_conn;
                         }
@@ -1369,7 +1370,7 @@ int service_set_session(SERVICE *service, SESSION *session)
 int service_add_multicast(SERVICE *service, char *multicast_ip)
 {
     struct ip_mreq mreq;
-    int ret = -1;
+    int ret = -1, op = 0;
 
     if(service && service->lock == 0 && service->sock_type == SOCK_DGRAM && multicast_ip 
             && service->ip && service->fd > 0)
@@ -1377,6 +1378,7 @@ int service_add_multicast(SERVICE *service, char *multicast_ip)
         memset(&mreq, 0, sizeof(struct ip_mreq));
         mreq.imr_multiaddr.s_addr = inet_addr(multicast_ip);
         //mreq.imr_interface.s_addr = INADDR_ANY;
+        setsockopt(service->fd, IPPROTO_IP, IP_MULTICAST_LOOP, &op, sizeof(op));
         if((ret = setsockopt(service->fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, 
                         (char*)&mreq, sizeof(struct ip_mreq))) == 0)
         {
@@ -1509,7 +1511,7 @@ int service_stategroup(SERVICE *service)
             session.groupid = i;
             while(service->groups[i].limit > 0  
                     && service->groups[i].total < service->groups[i].limit
-                    && (conn = service_newconn(service, 0, 0, service->groups[i].ip,
+                    && (conn = service_newconn(service, -1, -1, service->groups[i].ip,
                             service->groups[i].port, &session)))
             {
                 //conn->groupid = i;
