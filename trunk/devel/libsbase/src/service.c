@@ -684,8 +684,11 @@ CONN *service_newconn(SERVICE *service, int inet_family, int socket_type,
                     && bind(fd, (struct sockaddr *)&(service->sa), sizeof(struct sockaddr)) == 0
                     )
                     {
-                        if(inet_ip && inet_port > 0) 
+                        if(inet_ip && inet_port > 0)
                         {
+                            //opt = 0;setsockopt(fd,IPPROTO_IP,IP_MULTICAST_LOOP,&opt,sizeof(opt));
+                            opt = sess->multicast_ttl;
+                            setsockopt(fd, IPPROTO_IP,IP_MULTICAST_TTL,&opt,sizeof(opt));
                             if(connect(fd, (struct sockaddr *)&rsa, sizeof(rsa)) != 0)
                                 goto err_conn;
                         }

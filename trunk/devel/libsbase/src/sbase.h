@@ -166,7 +166,7 @@ typedef struct _SESSION
     int  packet_delimiter_length;
     int  buffer_size;
     int  groupid;
-    int  bits;
+    int  multicast_ttl;
     int  xids[SB_XIDS_MAX];
 
 
