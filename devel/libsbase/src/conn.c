@@ -467,6 +467,7 @@ void conn_free_handler(CONN *conn)
 
     if(conn)
     {
+        SESSION_RESET(conn);
         if(conn->session.flags & SB_MULTICAST) 
             PPARENT(conn)->service->freeconn(PPARENT(conn)->service, conn);
     }
@@ -1912,6 +1913,8 @@ int conn_over_session(CONN *conn)
     {
         SESSION_RESET(conn);
         if(PPARENT(conn)->service->service_type == C_SERVICE)
+            PPARENT(conn)->service->freeconn(PPARENT(conn)->service, conn);
+        if(conn->session.flags & SB_MULTICAST) 
             PPARENT(conn)->service->freeconn(PPARENT(conn)->service, conn);
         ret = 0;
     }
