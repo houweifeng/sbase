@@ -244,7 +244,7 @@ typedef struct _CNGROUP
   int   limit;
   int   total;
   int   nconns_free;
-  ushort   conns_free[SB_GROUP_CONN_MAX];
+  int   conns_free[SB_GROUP_CONN_MAX];
   char  ip[SB_IP_MAX];
   SESSION session;
 }CNGROUP;
@@ -285,7 +285,7 @@ typedef struct _SERVICE
     int cond;
     int flag;
     int nworking_tosleep;
-    ushort conns_free[SB_CONN_MAX];
+    int conns_free[SB_CONN_MAX];
 
     struct  sockaddr_in sa;
     EVENT event;
