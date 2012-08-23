@@ -124,7 +124,7 @@ int sbase_add_service(SBASE *sbase, SERVICE  *service)
             service->usec_sleep = sbase->usec_sleep;
             if(sbase->connections_limit == 0) sbase->connections_limit = SB_CONN_MAX;
             service->connections_limit = sbase->connections_limit;
-            if(service->logger == NULL) 
+            if(service->logger == NULL && sbase->logger) 
             {
                 fprintf(stdout, "replace %s logger with sbase\n", service->service_name);
                 service->logger = sbase->logger;
