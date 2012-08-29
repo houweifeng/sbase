@@ -1,3 +1,3 @@
 SUBDIRS = src doc
-EXTRA_DIST = debian.sh
+EXTRA_DIST = debian.sh control control
 
