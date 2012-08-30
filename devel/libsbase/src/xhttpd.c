@@ -1120,7 +1120,7 @@ int main(int argc, char **argv)
     pid_t pid;
 
     /* get configure file */
-    while((ch = getopt(argc, argv, "c:d")) != -1)
+    while((ch = getopt(argc, argv, "c:d")) != (char)-1)
     {
         if(ch == 'c') conf = optarg;
         else if(ch == 'd') is_daemon = 1;
