@@ -18,6 +18,7 @@ AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
 if test "$havepthread" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
     LDFLAGS="${LDFLAGS} -lpthread"
+    LIBS="${LIBS} -lpthread"
 fi
 
 #semaphore
@@ -100,6 +101,7 @@ AC_CHECK_LIB(ssl, SSL_read, havessl=yes)
 if test "$havessl" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
     LDFLAGS="${LDFLAGS} -lssl -lcrypto"
+    LIBS="${LIBS} -lssl -lcrypto"
 fi
 
 # Checks for header files.
