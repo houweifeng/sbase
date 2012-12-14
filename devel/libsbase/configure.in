@@ -25,6 +25,7 @@ AC_CHECK_LIB(pthread,pthread_create,havepthread=yes)
 if test "$havepthread" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_PTHREAD"
     LDFLAGS="${LDFLAGS} -pthread"
+    LIBS="${LIBS} -pthread"
 fi
 #ssl
 havessl=no
@@ -32,6 +33,7 @@ AC_CHECK_LIB(ssl, SSL_read, havessl=yes)
 if test "$havessl" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_SSL"
     LDFLAGS="${LDFLAGS} -lssl -lcrypto"
+    LIBS="${LIBS} -lssl -lcrypto"
 fi
 #zlib
 havezlib=no
@@ -39,6 +41,7 @@ AC_CHECK_LIB(z, compress, havezlib=yes)
 if test "$havezlib" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_ZLIB"
     LDFLAGS="${LDFLAGS} -lz"
+    LIBS="${LIBS} -lz"
 fi
 #bz2lib
 havebz2lib=no
@@ -46,6 +49,7 @@ AC_CHECK_LIB(bz2, BZ2_bzCompress, havebz2lib=yes)
 if test "$havebz2lib" = "yes" ; then
     CPPFLAGS="${CPPFLAGS} -DHAVE_BZ2LIB"
     LDFLAGS="${LDFLAGS} -lbz2"
+    LIBS="${LIBS} -lbz2"
 fi
 
 # FIXME: Replace `main' with a function in `-levbase':
