@@ -251,7 +251,7 @@ do                                                                              
     {                                                                                       \
         if((n = conn_reading_chunk(conn)) <= 0)                                             \
         {                                                                                   \
-            FATAL_LOGGER(conn->logger, "Reading %d bytes data from conn[%p][%s:%d] ssl:%p " \
+            ACCESS_LOGGER(conn->logger, "Reading %d bytes data from conn[%p][%s:%d] ssl:%p " \
                     "on %s:%d via %d failed, %s", n, conn, conn->remote_ip, conn->remote_port,  \
                     conn->ssl, conn->local_ip, conn->local_port, conn->fd, strerror(errno));    \
             break;                                                                          \
@@ -1274,7 +1274,7 @@ int conn_packet_reader(CONN *conn)
         /* Remove invalid packet type */
         if(!(packet_type & PACKET_ALL))
         {
-            FATAL_LOGGER(conn->logger, "Unkown packet_type[%d] from %s:%d on conn[%p] %s:%d via %d", packet_type, conn->remote_ip, conn->remote_port, conn, conn->local_ip, conn->local_port, conn->fd);
+            WARN_LOGGER(conn->logger, "Unkown packet_type[%d] from %s:%d on conn[%p] %s:%d via %d", packet_type, conn->remote_ip, conn->remote_port, conn, conn->local_ip, conn->local_port, conn->fd);
             /* Terminate connection */
             conn_shut(conn, D_STATE_CLOSE, E_STATE_ON);
         }
