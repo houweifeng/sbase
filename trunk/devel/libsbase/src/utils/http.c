@@ -1,8 +1,10 @@
 #include "http.h"
 #include "mtrie.h"
 #ifdef _HTTP_CHARSET_CONVERT
+#define _GNU_SOURCE
 #include <iconv.h>
 #include "chardet.h"
+#include "stime.h"
 #include "zstream.h"
 #define CHARSET_MAX 256
 #endif
@@ -49,6 +51,7 @@ do                                                                              
     }                                                                               \
     else *pp++ = *s++;                                                              \
 }while(0)
+static const char *http_encodings[] = {"deflate", "gzip", "bzip2", "compress"}; 
 static unsigned long crc32_tab[] = {
     0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL, 0x076dc419L,
     0x706af48fL, 0xe963a535L, 0x9e6495a3L, 0x0edb8832L, 0x79dcb8a4L,
@@ -370,6 +373,139 @@ int http_cookie_parse(char *p, char *end, HTTP_REQ *http_req)
     return n;
 }
 
+/* HTTP response cookie parser */
+int http_resp_cookie_parse(char *p, char *end, HTTP_RESPONSE *http_resp)
+{    
+    char *s = NULL, *pp = NULL, *epp = NULL, *ss = NULL, *sp = NULL;
+    HTTP_COOKIE *cookie = NULL;
+    int n = 0;
+
+    if(p && (s = p) < end && http_resp && http_resp->ncookies < HTTP_COOKIES_MAX)
+    {
+        cookie = &(http_resp->cookies[http_resp->ncookies]);
+        if(http_resp->nhline == 0) http_resp->nhline = 1;
+        pp = http_resp->hlines + http_resp->nhline;
+        epp = http_resp->hlines + HTTP_HEADER_MAX;
+        while(*s == 0x20 || *s == '\t')++s;
+        if((sp = strchr(s, '='))  && (n = (sp - s)) > 0 && pp < epp) 
+        {
+            /* name */
+            cookie->kv.k = pp - http_resp->hlines;
+            while(s < sp)
+            {
+                *pp++ = *s++; 
+            }
+            cookie->kv.nk = pp - http_resp->hlines - cookie->kv.k; 
+            *pp++ = '\0';
+            s = ++sp;
+            /* value */
+            cookie->kv.v = pp - http_resp->hlines;
+            while(pp < epp && *s != ';' && *s != '\r' && s < end)
+            {
+                *pp++ = *s++; 
+            }
+            if(*s == ';') ++s;
+            cookie->kv.nv = pp - http_resp->hlines - cookie->kv.v;
+            *pp++ = '\0';
+            /* expire */
+            sp = "expires=";
+            n = strlen(sp);
+            if((ss = strstr(s, sp)))
+            {
+                s = ss + n;
+                sp = pp;
+                cookie->expire_off = pp - http_resp->hlines;
+                while(pp < epp && *s != ';' && *s != '\r' && s < end)
+                {
+                    *pp++ = *s++; 
+                }
+                if(*s == ';') ++s;
+                cookie->expire_len = pp - sp; 
+                *pp++ = '\0';
+            }
+            /* path */
+            sp = "path=";
+            n = strlen(sp);
+            if((ss = strstr(s, sp)))
+            {
+                s = ss + n;
+                sp = pp;
+                cookie->path_off = pp - http_resp->hlines;
+                while(pp < epp && *s != ';' && *s != '\r' && s < end)
+                {
+                    *pp++ = *s++; 
+                }
+                if(*s == ';') ++s;
+                cookie->path_len = pp - sp; 
+                *pp++ = '\0';
+            }
+            /* domain */
+            sp = "domain=";
+            n = strlen(sp);
+            if((ss = strstr(s, sp)))
+            {
+                s = ss + n;
+                sp = pp;
+                cookie->domain_off = pp - http_resp->hlines;
+                while(pp < epp && *s != ';' && *s != '\r' && s < end)
+                {
+                    *pp++ = *s++;
+                }
+                if(*s == ';') ++s;
+                cookie->domain_len = pp - sp; 
+                *pp++ = '\0';
+            }
+            http_resp->ncookies++;
+        }
+        http_resp->nhline = pp - http_resp->hlines;
+        n = s - p;
+    }
+    return n;
+}
+
+/* cookie line */
+int http_cookie_line(HTTP_RESPONSE *http_resp, char *cookie)
+{
+    char *p = NULL, *bs = NULL;
+    int ret = 0, i = 0;
+
+    if(http_resp && (p = cookie))
+    {
+        if(http_resp->ncookies > 0)
+        {
+            bs = http_resp->hlines;
+            i = 0;
+            do
+            {
+                p += sprintf(p, "%.*s=%.*s;", 
+                        http_resp->cookies[i].kv.nk, bs + http_resp->cookies[i].kv.k, 
+                        http_resp->cookies[i].kv.nv, bs + http_resp->cookies[i].kv.v); 
+                if(http_resp->cookies[i].expire_len > 0)
+                {
+                    /* expire */
+                    p += sprintf(p, "e=%u;", (unsigned int)str2time(bs+http_resp->cookies[i].expire_off));
+                }
+                if(http_resp->cookies[i].path_len > 0)
+                {
+                    /* path */
+                    p += sprintf(p, "p=%.*s;", http_resp->cookies[i].path_len,
+                            bs + http_resp->cookies[i].path_off);
+                }
+                if(http_resp->cookies[i].domain_len > 0)
+                {
+                    /* domain */
+                    p += sprintf(p, "h=%.*s;", http_resp->cookies[i].domain_len,
+                            bs + http_resp->cookies[i].domain_off);
+                }
+                *p++ = '\n';
+            }while(++i < http_resp->ncookies);
+            *p++ = '\0';
+            ret  = p - cookie;
+        }
+    }
+    return ret;
+}
+
 /* HTTP HEADER parser */
 int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
 {
@@ -410,17 +546,6 @@ int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map)
         */
         //path
         while(s < end && *s == 0x20)++s;
-        if(strncasecmp(s, "http://", 7) == 0)
-        {
-            s += 7;
-            ps = http_req->host;
-            while(s < end && *s != '/' && *s != 0x20)
-            {
-                if(*s >= 'A' && *s <= 'Z') *ps++ = *s++ - ('A' - 'a');
-                else *ps++ = *s++;
-            }
-            *ps = '\0';
-        }
         ps = http_req->path;
         eps = ps + HTTP_URL_PATH_MAX;
         while(s < end && *s != 0x20 && *s != '\r' && *s != '?' && ps < eps)
@@ -517,8 +642,7 @@ end:
 int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
 {
     char line[HTTP_HEAD_MAX], *x = NULL, *s = p, *es = NULL, *pp = NULL, *epp = NULL;
-    int i  = 0, ret = -1, high = 0, low = 0, n = 0;
-    HTTP_KV *cookie = NULL, *ecookie = NULL;
+    int i  = 0, ret = -1, n = 0; //high = 0, low = 0;
 
     if(p && end)
     {
@@ -527,7 +651,7 @@ int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
         while(s < end && *s != 0x20 && *s != 0x09 && pp < epp)*pp++ = *s++;
         while(s < end && (*s == 0x20 || *s == 0x09) && pp < epp)*pp++ = *s++;
         x = s; 
-        while(s < end && *s >= '0' && *s <= '9')++s;
+        while(s < end && *s >= '0' && *s <= '9')*pp++ = *s++;
         if((n = (s - x)) > 0 && (i = (mtrie_get(map, x, n) - 1)) >= 0)
         {
             http_resp->respid = i;
@@ -545,15 +669,13 @@ int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
         while(s < end && *s != '\r' && *s != '\n' && *s != '\0' && pp < epp) *pp++ = *s++;
         while(s < end && (*s == '\r' || *s == '\n'))++s;
         *pp++ = '\0';
-        cookie = &(http_resp->cookies[http_resp->ncookies]);
-        ecookie = &(http_resp->cookies[HTTP_COOKIES_MAX + 1]);
         while(s < end)
         {
             //parse response  code 
             /* ltrim */
             while(*s == 0x20)s++;
             es = line;
-            while(s < end && *s != 0x20)
+            while(s < end && *s != 0x20 && *s != ':')
             {
                 if(*s >= 'A' && *s <= 'Z')
                 {
@@ -561,8 +683,10 @@ int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
                 }
                 else *es++ = *s++;
             }
+            if(*s == ':') *es++ = *s++;
             *es = '\0';
             n = es - line;
+            //fprintf(stdout, "%s::%d line:%s\n", __FILE__, __LINE__, line);
             if((i = (mtrie_get(map, line, n) - 1)) >= 0)
             {
                 http_resp->headers[i] = pp - http_resp->hlines;
@@ -583,35 +707,12 @@ int http_response_parse(char *p, char *end, HTTP_RESPONSE *http_resp, void *map)
                 }
             }
             */
-            if(i == HEAD_RESP_SET_COOKIE && cookie < ecookie)
+            if(i == HEAD_RESP_SET_COOKIE)
             {
-                cookie->k = pp - http_resp->hlines;
-                while(s < end && *s != '\r' && *s != '=' && pp < epp) 
-                {
-                    URLDECODE(s, end, high, low, pp);
-                }
-                if(*s == '=')
-                {
-                    cookie->nk = pp - http_resp->hlines - cookie->k;
-                    *pp++ = *s++;
-                    cookie->v = pp - http_resp->hlines;
-                    while(s < end && *s != ';' && *s != 0x20 && *s != '\r' && pp < epp) 
-                    {
-                        URLDECODE(s, end, high, low, pp);
-                    }
-                    cookie->nv = pp - http_resp->hlines - cookie->v;
-                    cookie++;
-                    http_resp->ncookies++;
-                }
-                while(s < end && *s != '\r' && pp < epp) 
-                {
-                    URLDECODE(s, end, high, low, pp);
-                }
+                s += http_resp_cookie_parse(s, end, http_resp);
+                pp = http_resp->hlines + http_resp->nhline;
             }
-            else
-            {
-                while(s < end && *s != '\r' && pp < epp)*pp++ = *s++;
-            }
+            while(s < end && *s != '\r' && pp < epp)*pp++ = *s++;
             if(pp >= epp) goto end;
             *pp++ = '\0';
             http_resp->nhline = pp - http_resp->hlines;
@@ -782,6 +883,67 @@ void http_charset_convert_free(char *data)
 {
     if(data) free(data);
 }
+
+/* hextodec */
+int http_hextodec(char *hex, int len)
+{
+    int k = 0, n = 0, x = 0;
+    char s = 0;
+
+    if(hex && len > 0)
+    {
+        k = len  - 1;
+        x = 1;
+        while(k >= 0)
+        {
+            s = hex[k]; 
+            if(s >= 'A' && s <= 'F') n += (10 + (s - 'A')) * x;
+            else if(s >= 'a' && s <= 'f') n += (10 + (s - 'a')) * x;
+            else if(s >= '0' && s <= '9') n += (s - '0') * x;
+            --s;
+            x <<= 4;
+            --k;
+        }
+    }
+    return n;
+}
+
+/* HTTP chunkd */
+int http_chunked_parse(HTTP_CHUNK *chunk, char *data, int ndata)
+{
+    char *p = NULL, *end = NULL, *pp = NULL;
+    int ret = -1, n = 0, k = 0;
+
+    if(chunk && (p = data) && (end = data + ndata) > p)
+    {
+        k = 0;
+        while(p < end) 
+        {
+            pp = p;
+            while(p < end && ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') 
+                        || (*p >= '0' && *p <= '9')))++p;
+            n = http_hextodec(pp, p - pp);
+            while(p < end && *p != '\r' && *p != '\n')++p;
+            p += 2;
+            if(n == 0)
+            {
+                while(p < end && *p != '\r' && *p != '\n')++p;
+                if(p < end && *p++ == '\r' && p < end && *p++ == '\n')
+                    ret = p - data;
+                //fprintf(stdout, "%s::%d ret:%d\r\n", __FILE__, __LINE__, ret);
+                break;
+            }
+            chunk->chunks[k].off = p - data;
+            chunk->chunks[k].len = n;
+            p += n;
+            p += 2;
+            ++k;
+        }
+        chunk->nchunks = k;
+    }
+    return ret;
+}
+
 #ifdef _DEBUG_HTTP
 int main(int argc, char **argv)
 {
@@ -789,6 +951,12 @@ int main(int argc, char **argv)
     HTTP_RESPONSE http_resp = {0};
     char buf[HTTP_BUFFER_SIZE], block[HTTP_BUFFER_SIZE], *p = NULL, *end = NULL;
     int i = 0, n = 0;
+    void *http_headers_map = NULL;
+    if((http_headers_map = http_headers_map_init()) == NULL)
+    {
+        fprintf(stderr, "Initialize http_headers_map failed");
+        _exit(-1);
+    }
     /* test request parser */
     if((p = buf) && (n = sprintf(p, "%s %s HTTP/1.0\r\nHost: %s\r\n"
                     "Cookie: %s\r\nAuthorization: %s\r\nConnection: close\r\n\r\n", "GET",
@@ -801,7 +969,7 @@ int main(int argc, char **argv)
                     "ZHNqZmxzZGpmbHNkamZsa3NkamZsZHNm")) > 0)
     {
         end = p + n;
-        if(http_request_parse(p, end, &http_req) != -1)
+        if(http_request_parse(p, end, &http_req, http_headers_map) != -1)
         {
             if((n = sprintf(buf, "%s", "client=safari&rls=zh-cn"
                             "&q=base64%E7%BC%96%E7%A0%81%E8%A7%84%E5%88%99"
@@ -860,7 +1028,10 @@ int main(int argc, char **argv)
                    )) > 0)
     {
         end = buf + n;
-        if(http_response_parse(buf, end, &http_resp) != -1)
+        char headers[HTTP_BUF_SIZE];
+        strcpy(headers, "HTTP/1.0 403 Forbidden\r\nConnection:keep-alive\r\nContent-Encoding:gzip\r\nContent-Type:text/html; charset=gbk\r\nDate:Sun, 23 Dec 2012 12:51:50 GMT\r\nServer:Tengine\r\nSet-Cookie:miM4_faa5_lastact=1356267109%09forum.php%09forumdisplay; expires=Mon, 24-Dec-2012 12:51:49 GMT; path=/; domain=.cjdby.net\r\nSet-Cookie:miM4_faa5_stats_qc_reg=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/; domain=.cjdby.net\r\nSet-Cookie:miM4_faa5_cloudstatpost=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/; domain=.cjdby.net\r\nSet-Cookie:miM4_faa5_forum_lastvisit=D_5_1353928356D_4_1356267109; expires=Sun, 30-Dec-2012 12:51:49 GMT; path=/; domain=.cjdby.net\r\nTransfer-Encoding:chunked\r\nVary:Accept-Encoding\r\nVary:Accept-Encoding\r\nX-Powered-By:PHP/5.3.19\r\n\r\n");
+        end = headers + strlen(headers);
+        if(http_response_parse(headers, end, &http_resp, http_headers_map) != -1)
         {
 
             fprintf(stdout, "---------------------HEADERS---------------------\n"); 
@@ -875,10 +1046,16 @@ int main(int argc, char **argv)
             fprintf(stdout, "---------------------COOKIES---------------------\n"); 
             for(i = 0; i < http_resp.ncookies; i++)
             {
-                fprintf(stdout, "%d: %.*s => %.*s\n", i, 
-                        http_resp.cookies[i].nk, http_resp.hlines + http_resp.cookies[i].k, 
-                        http_resp.cookies[i].nv, http_resp.hlines + http_resp.cookies[i].v);
+                fprintf(stdout, "%d: %.*s => %.*s;expire[%.*s];path[%.*s];domain[%.*s];\n", i, 
+                        http_resp.cookies[i].kv.nk, http_resp.hlines + http_resp.cookies[i].kv.k, 
+                        http_resp.cookies[i].kv.nv, http_resp.hlines + http_resp.cookies[i].kv.v,
+                        http_resp.cookies[i].expire_len, http_resp.hlines + http_resp.cookies[i].expire_off,
+                        http_resp.cookies[i].path_len, http_resp.hlines + http_resp.cookies[i].path_off,
+                        http_resp.cookies[i].domain_len, http_resp.hlines + http_resp.cookies[i].domain_off
+                        );
             }
+            if((n = http_cookie_line(&http_resp, buf)) > 0)
+                fprintf(stdout, "%s\n", buf);
             fprintf(stdout, "---------------------COOKIES END---------------------\n"); 
 
         }

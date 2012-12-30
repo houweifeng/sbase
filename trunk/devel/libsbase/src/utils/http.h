@@ -10,7 +10,6 @@
 #define __HTTP_H__
 #define HTTP_IP_MAX 		    16
 #define HTTP_VHOST_MAX     	    256
-#define HTTP_HOST_MAX     	    64
 #define HTTP_INDEX_MAX     	    32
 #define HTTP_INDEXES_MAX   	    1048576
 #define HTTP_URL_PATH_MAX  	    1024
@@ -31,13 +30,18 @@
 #define HTTP_ENCODING_BZIP2  	0x04
 #define HTTP_ENCODING_COMPRESS  0x08
 #define HTTP_ENCODING_NUM       4
-static const char *http_encodings[] = {"deflate", "gzip", "bzip2", "compress"}; 
+#define HTTP_CHUNKED_MAX        256
 typedef struct _HTTP_VHOST
 {
     char *name;
     char *home;
     void *logger;
 }HTTP_VHOST;
+typedef struct _HTTPK
+{
+    int off;
+    int len;
+}HTTPK;
 typedef struct _HTTP_ELEMENT
 {
 	int  id;
@@ -528,6 +532,22 @@ typedef struct _HTTP_KV
     unsigned short k;
     unsigned short v;
 }HTTP_KV;
+typedef struct _HTTP_COOKIE
+{
+    HTTP_KV kv;
+    unsigned short expire_off;
+    unsigned short expire_len;
+    unsigned short path_off;
+    unsigned short path_len;
+    unsigned short domain_off;
+    unsigned short domain_len;
+}HTTP_COOKIE;
+typedef struct _HTTP_CHUNK
+{
+    HTTPK chunks[HTTP_CHUNKED_MAX];
+    int nchunks;
+    int bits;
+}HTTP_CHUNK;
 typedef struct _HTTP_RESPONSE
 {
     int respid;
@@ -536,7 +556,7 @@ typedef struct _HTTP_RESPONSE
     int nhline;
     int headers[HTTP_HEADER_NUM];
     char hlines[HTTP_HEADER_MAX];
-    HTTP_KV cookies[HTTP_COOKIES_MAX];
+    HTTP_COOKIE cookies[HTTP_COOKIES_MAX];
 }HTTP_RESPONSE;
 typedef struct _HTTP_REQ
 {
@@ -552,7 +572,6 @@ typedef struct _HTTP_REQ
     HTTP_KV auth;
     HTTP_KV argvs[HTTP_ARGVS_MAX];
     HTTP_KV cookies[HTTP_COOKIES_MAX];
-    char host[HTTP_HOST_MAX];
     char path[HTTP_URL_PATH_MAX];
     char hlines[HTTP_HEADER_MAX];
     char line[HTTP_ARGV_LINE_MAX];
@@ -565,6 +584,12 @@ void http_headers_map_clean(void *map);
 int http_request_parse(char *p, char *end, HTTP_REQ *http_req, void *map);
 /* HTTP argvs  parser */
 int http_argv_parse(char *p, char *end, HTTP_REQ *http_req);
+/* parse cookie */
+int http_cookie_parse(char *p, char *end, HTTP_REQ *http_req);
+/* parse cookie */
+int http_resp_cookie_parse(char *p, char *end, HTTP_RESPONSE *resp);
+/* cookie line */
+int http_cookie_line(HTTP_RESPONSE *http_resp, char *cookie);
 /* HTTP response HEADER parser */
 int http_response_parse(char *p, char *end, HTTP_RESPONSE *resp, void *map);
 /* return HTTP key/value */
@@ -577,4 +602,6 @@ void http_charset_convert_free(char *data);
 int http_base64encode(char *src, int src_len, char *dst);
 int http_base64decode(unsigned char *src, int src_len, unsigned char *dst);
 unsigned long http_crc32(unsigned char *in, unsigned int inlen);
+int http_chunked_parse(HTTP_CHUNK *chunk, char *data, int ndata);
+int http_hextodec(char *hex, int len);
 #endif
