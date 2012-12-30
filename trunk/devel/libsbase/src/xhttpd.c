@@ -36,6 +36,7 @@
 #define HTTPD_TIMEOUT           10000000
 #define LL(x) ((long long)x)
 #define UL(x) ((unsigned long int)x)
+static const char *http_encodings[] = {"deflate", "gzip", "bzip2", "compress"}; 
 static SBASE *sbase = NULL;
 static SERVICE *httpd = NULL;
 static SERVICE *httpsd = NULL;
