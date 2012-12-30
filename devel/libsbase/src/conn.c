@@ -251,9 +251,7 @@ do                                                                              
     {                                                                                       \
         if((n = conn_reading_chunk(conn)) <= 0)                                             \
         {                                                                                   \
-            ACCESS_LOGGER(conn->logger, "Reading %d bytes data from conn[%p][%s:%d] ssl:%p " \
-                    "on %s:%d via %d failed, %s", n, conn, conn->remote_ip, conn->remote_port,  \
-                    conn->ssl, conn->local_ip, conn->local_port, conn->fd, strerror(errno));    \
+            WARN_LOGGER(conn->logger, "Reading %d bytes (recv:%lld sent:%lld) data from conn[%p][%s:%d] ssl:%p on %s:%d via %d failed, %s", n, LL(conn->recv_data_total), LL(conn->sent_data_total), conn, conn->remote_ip, conn->remote_port,  conn->ssl, conn->local_ip, conn->local_port, conn->fd, strerror(errno));    \
             break;                                                                          \
         }                                                                                   \
         ACCESS_LOGGER(conn->logger, "Read %d bytes ndata:%d left:%lld to chunk from %s:%d"   \
@@ -342,6 +340,7 @@ void conn_outevent_handler(CONN *conn)
             }
             else 
             {
+                conn->sent_data_total += ret;
                 if(SENDQTOTAL(conn) > 0)
                 {
                     CONN_OUTEVENT_ADD(conn);
@@ -500,6 +499,10 @@ void conn_output_handler(int event_fd, int event, void *arg)
                 CONN_OUTEVENT_DESTROY(conn);
                 conn_shut(conn, D_STATE_CLOSE|D_STATE_RCLOSE|D_STATE_WCLOSE, E_STATE_ON);
                 return ;
+            }
+            else
+            {
+                conn->sent_data_total += ret;
             }
             //CONN_UPDATE_EVTIMER(conn, evtimer, evid);
         }
@@ -1054,7 +1057,7 @@ int conn_read_handler(CONN *conn)
         }
         if(n < 1)
         {
-            WARN_LOGGER(conn->logger, "Reading data %d bytes ptr:%p buffer-left:%d qleft:%d from %s:%d on %s:%d via %d failed, %s", n, MMB_END(conn->buffer), MMB_LEFT(conn->buffer), SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
+            WARN_LOGGER(conn->logger, "Reading data %d bytes (recv:%lld sent:%lld) ptr:%p buffer-left:%d qleft:%d from %s:%d on %s:%d via %d failed, %s", n, LL(conn->recv_data_total), LL(conn->sent_data_total), MMB_END(conn->buffer), MMB_LEFT(conn->buffer), SENDQTOTAL(conn), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, strerror(errno));
             return ret;
         }
         else
@@ -1193,7 +1196,7 @@ int conn_send_handler(CONN *conn)
                     {
                         if(errno != EINTR && errno != EAGAIN)
                         {
-                            WARN_LOGGER(conn->logger, "write %d byte(s) (total sent %lld) to %s:%d on %s:%d via %d leave %lld qtotal:%d failed, %s", n, LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left), SENDQTOTAL(conn), strerror(errno));
+                            WARN_LOGGER(conn->logger, "write %d byte(s) (recv:%lld sent:%lld) to %s:%d on %s:%d via %d leave %lld qtotal:%d failed, %s", n, LL(conn->recv_data_total), LL(conn->sent_data_total), conn->remote_ip, conn->remote_port, conn->local_ip, conn->local_port, conn->fd, LL(CHK(cp)->left), SENDQTOTAL(conn), strerror(errno));
 #ifdef HAVE_SSL
                             if(conn->ssl) ERR_print_errors_fp(stdout);
 #endif
