@@ -29,13 +29,6 @@ Server Base Library for TCP/UDP communication
 %install
 %{__rm} -rf %{buildroot}
 %{__make} install DESTDIR="%{buildroot}"
-perl -i -p -e "s@/usr/local@%{_prefix}@g" doc/rc.lechod doc/rc.xhttpd
-perl -i -p -e "s@%{_prefix}/etc@%{_sysconfdir}@g" doc/rc.lechod doc/rc.xhttpd
-mkdir -p %{buildroot}/%{_sysconfdir}/rc.d/init.d
-install -c -m755  doc/rc.lechod %{buildroot}/%{_sysconfdir}/rc.d/init.d/lechod
-install -c -m644 doc/rc.lechod.ini %{buildroot}/%{_sysconfdir}/lechod.ini
-install -c -m755  doc/rc.xhttpd %{buildroot}/%{_sysconfdir}/rc.d/init.d/xhttpd
-install -c -m644 doc/rc.xhttpd.ini %{buildroot}/%{_sysconfdir}/xhttpd.ini
 
 %clean
 %{__rm} -rf %{buildroot}
